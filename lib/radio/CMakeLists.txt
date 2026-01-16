@@ -26,6 +26,12 @@ if (ZEROMQ_FOUND AND ENABLE_ZEROMQ)
     list(APPEND OCUDU_RADIO_LIBRARIES ocudu_radio_zmq)
 endif (ZEROMQ_FOUND AND ENABLE_ZEROMQ)
 
+if (Sidekiq_FOUND AND ENABLE_SIDEKIQ)
+    add_subdirectory(sidekiq)
+    list(APPEND OCUDU_RADIO_DEFINITIONS -DENABLE_SIDEKIQ)
+    list(APPEND OCUDU_RADIO_LIBRARIES ocudu_radio_sidekiq)
+endif (Sidekiq_FOUND AND ENABLE_SIDEKIQ)
+
 add_definitions(${OCUDU_RADIO_DEFINITIONS})
 target_link_libraries(ocudu_radio ${OCUDU_RADIO_LIBRARIES} ocudulog dl)
 

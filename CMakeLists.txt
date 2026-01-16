@@ -62,6 +62,7 @@ option(ENABLE_RTSAN          "Enable clang real-time sanitizer"             OFF)
 option(ENABLE_GCOV           "Enable code coverage"                         OFF)
 option(ENABLE_BACKWARD       "Enable backward"                              ON)
 option(ENABLE_UHD            "Enable UHD"                                   ON)
+option(ENABLE_SIDEKIQ        "Enable Sidekiq"                               ON)
 option(ENABLE_ZEROMQ         "Enable ZeroMQ"                                ON)
 option(ENABLE_FFTW           "Enable FFTW"                                  ON)
 option(ENABLE_MKL            "Enable Intel MKL"                             ON)
@@ -485,6 +486,22 @@ if (YAML_CPP_FOUND)
 else (YAML_CPP_FOUND)
     message(FATAL_ERROR "yaml-cpp is required to build ${CMAKE_PROJECT_NAME}")
 endif (YAML_CPP_FOUND)
+
+# SKIQ
+if (ENABLE_SIDEKIQ)
+    find_package(Sidekiq)
+    if (Sidekiq_FOUND)
+        sbom_add(
+            PACKAGE            "Sidekiq"
+            DOWNLOAD_LOCATION  "https://support.epiqsolutions.com/viewforum.php?f=148"
+            SUPPLIER           "EPIQ Design Solutions LLC"
+            LICENSE            "Software Library License V3.0 (Proprietary)"
+            VERSION            ${Sidekiq_VERSION}
+        )
+    endif (Sidekiq_FOUND)
+else (ENABLE_SIDEKIQ)
+    unset(Sidekiq_FOUND CACHE)
+endif (ENABLE_SIDEKIQ)
 
 # ZeroMQ
 if (ENABLE_ZEROMQ)

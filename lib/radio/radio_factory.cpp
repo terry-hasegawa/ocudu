@@ -3,6 +3,10 @@
 
 #include "ocudu/radio/radio_factory.h"
 
+#ifdef ENABLE_SIDEKIQ
+#include "sidekiq/radio_factory_sidekiq_impl.h"
+#endif // ENABLE_SIDEKIQ
+
 #ifdef ENABLE_UHD
 #include "uhd/radio_uhd_impl.h"
 #endif // ENABLE_UHD
@@ -26,6 +30,9 @@ struct radio_factory_entry {
 } // namespace
 
 static const std::vector<radio_factory_entry> radio_factory_available_factories = {
+#ifdef ENABLE_SIDEKIQ
+    {"sidekiq", []() { return std::make_unique<radio_factory_sidekiq_impl>(); }},
+#endif // ENABLE_SIDEKIQ
 #ifdef ENABLE_UHD
     {"uhd", []() { return std::make_unique<radio_factory_uhd_impl>(); }},
 #endif // ENABLE_UHD
