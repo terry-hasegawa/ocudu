@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: BSD-3-Clause-Open-MPI
 
 #include "ocudu/support/resource_usage/power_consumption.h"
+#include "perf_event_powercap_reader_impl.h"
 #include "powercap_energy_reader_impl.h"
 #include "rapl_msr_energy_reader_impl.h"
 
@@ -21,12 +22,17 @@ class dummy_energy_consumption_reader : public energy_consumption_reader
 std::unique_ptr<energy_consumption_reader>
 resource_usage_utils::build_energy_consumption_reader(ocudulog::basic_logger& logger)
 {
-  // First try to build Powercap energy consumption reader.
+  // First try to build Powercap energy consumption reader via sysfs.
   if (auto reader = build_sysfs_powercap_reader(logger)) {
     return reader;
   }
 
-  // Try to build RAPL MSR energy consumption reader.
+  // Try perf_event_open() based RAPL reader (requires CAP_PERFMON, kernel >= 5.8).
+  if (auto reader = build_perf_event_reader(logger)) {
+    return reader;
+  }
+
+  // Fall back to RAPL MSR reader (requires CAP_SYS_RAWIO).
   if (auto reader = build_rapl_msr_reader(logger)) {
     return reader;
   }
