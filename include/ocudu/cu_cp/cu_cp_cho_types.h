@@ -16,11 +16,13 @@ namespace ocudu::ocucp {
 /// Conditional Reconfiguration ID used by CHO procedures. Range is 1..8.
 using cond_recfg_id_t = bounded_integer<uint8_t, 1, 8>;
 
-/// \brief Single target candidate for intra-CU CHO orchestration.
+/// \brief Single target candidate for CHO orchestration.
 struct cu_cp_cho_target_candidate {
   pci_t               pci = INVALID_PCI;
   nr_cell_global_id_t cgi;
-  du_index_t          du_index = du_index_t::invalid;
+  du_index_t          du_index = du_index_t::invalid; ///< Invalid for inter-CU (Xn) candidates.
+  /// Xn-C peer index for inter-CU candidates. When set, the target is served by a remote CU-CP.
+  std::optional<xnc_peer_index_t> xnc_index;
 };
 
 /// \brief Request for intra-CU CHO orchestration.

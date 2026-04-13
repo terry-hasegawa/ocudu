@@ -17,6 +17,7 @@
 #include "ocudu/cu_cp/cu_cp_types.h"
 #include "ocudu/e1ap/cu_cp/e1ap_cu_cp_bearer_context_update.h"
 #include "ocudu/ran/plmn_identity.h"
+#include "ocudu/xnap/xnap_types.h"
 #include <optional>
 
 namespace ocudu::ocucp {
@@ -47,15 +48,23 @@ struct cu_cp_ue_handover_context {
 /// \brief Single CHO candidate cell context.
 struct cu_cp_cho_candidate {
   cond_recfg_id_t cond_recfg_id{
-      cond_recfg_id_t(bounded_integer_invalid_tag{})};             ///< Conditional reconfiguration ID (1-8 per 3GPP).
-  pci_t               target_pci = INVALID_PCI;                    ///< Target cell PCI.
-  nr_cell_global_id_t target_cgi;                                  ///< Target cell global identity.
-  cu_cp_ue_index_t    target_ue_index = cu_cp_ue_index_t::invalid; ///< Target UE index allocated for this candidate.
-  byte_buffer         prepared_rrc_recfg;                          ///< Pre-packed RRCReconfiguration for this target.
-  unsigned            rrc_reconfig_transaction_id = 0; ///< RRC transaction ID for this candidate's reconfiguration.
+      cond_recfg_id_t(bounded_integer_invalid_tag{})};          ///< Conditional reconfiguration ID (1-8 per 3GPP).
+  pci_t               target_pci = INVALID_PCI;                 ///< Target cell PCI.
+  nr_cell_global_id_t target_cgi;                               ///< Target cell global identity.
+  cu_cp_ue_index_t target_ue_index = cu_cp_ue_index_t::invalid; ///< Target UE index; invalid for inter-CU candidates.
+  byte_buffer      prepared_rrc_recfg;                          ///< Pre-packed RRCReconfiguration for this target.
+  unsigned         rrc_reconfig_transaction_id = 0; ///< RRC transaction ID for this candidate's reconfiguration.
 
   /// \brief E1AP bearer context modification request for CU-UP tunnel update after CHO completion.
   e1ap_bearer_context_modification_request bearer_context_mod_request;
+
+  /// Xn-C peer index; set when the target is served by a remote CU-CP (inter-CU CHO via Xn).
+  std::optional<xnc_peer_index_t> xnc_index;
+  /// Target XNAP UE ID returned in HO Request Ack; needed for ConditionalHandoverCancel.
+  peer_xnap_ue_id_t peer_xnap_ue_id = peer_xnap_ue_id_t::invalid;
+
+  /// \brief Returns true if this candidate targets a remote CU-CP (Xn-based CHO).
+  bool is_inter_cu() const { return xnc_index.has_value(); }
 };
 
 /// \brief CHO context for a UE (supports 1-8 candidates per 3GPP).
