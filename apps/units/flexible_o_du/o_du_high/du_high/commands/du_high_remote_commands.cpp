@@ -350,10 +350,14 @@ static expected<pci_t, std::string> find_and_parse_pci(const nlohmann::json& obj
   if (it == obj.end()) {
     return make_unexpected(fmt::format("'{}' field is missing and it is mandatory", field));
   }
-  if (!it->is_number_integer() || it->get<int64_t>() < 0 || it->get<int64_t>() > 1007) {
-    return make_unexpected(fmt::format("'{}' value '{}' out of range [0, 1007]", field, it->get<int64_t>()));
+  if (!it->is_number_integer()) {
+    return make_unexpected(fmt::format("'{}' value type should be an integer", field));
   }
-  return static_cast<pci_t>(it->get<unsigned>());
+  const int64_t v = it->get<int64_t>();
+  if (v < 0 || v > 1007) {
+    return make_unexpected(fmt::format("'{}' value '{}' out of range [0, 1007]", field, v));
+  }
+  return static_cast<pci_t>(v);
 }
 
 static expected<sib2_info, std::string> parse_sib2(const nlohmann::json& content)
@@ -489,9 +493,17 @@ static expected<sib4_info, std::string> parse_sib4(const nlohmann::json& content
       return make_unexpected(std::string{"'inter_freq_carrier_freq_list' entries should be objects"});
     }
 
+    // NR-ARFCN, TS 38.101-1 Table 5.4.2.1-1: max value 3279165.
     auto arfcn_it = carrier_obj.find("arfcn");
-    if (arfcn_it == carrier_obj.end() || !arfcn_it->is_number_integer() || arfcn_it->get<int64_t>() < 0) {
-      return make_unexpected(std::string{"'arfcn' missing or not a non-negative integer in carrier list entry"});
+    if (arfcn_it == carrier_obj.end()) {
+      return make_unexpected(std::string{"'arfcn' field is missing in carrier list entry"});
+    }
+    if (!arfcn_it->is_number_integer()) {
+      return make_unexpected(std::string{"'arfcn' value type should be an integer"});
+    }
+    const int64_t arfcn_val = arfcn_it->get<int64_t>();
+    if (arfcn_val < 0 || arfcn_val > 3279165) {
+      return make_unexpected(fmt::format("'arfcn' value '{}' out of range [0, 3279165]", arfcn_val));
     }
 
     auto scs_it = carrier_obj.find("ssb_scs");
@@ -524,7 +536,7 @@ static expected<sib4_info, std::string> parse_sib4(const nlohmann::json& content
     }
 
     inter_freq_carrier_freq_info carrier;
-    carrier.arfcn                      = arfcn_it->get<uint32_t>();
+    carrier.arfcn                      = static_cast<uint32_t>(arfcn_val);
     carrier.ssb_scs                    = scs_exp.value();
     carrier.derive_ssb_index_from_cell = derive_it->get<bool>();
     carrier.q_rx_lev_min               = q_rx_lev_min_exp.value();

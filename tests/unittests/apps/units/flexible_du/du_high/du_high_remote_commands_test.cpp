@@ -414,6 +414,30 @@ TEST(sib_update_remote_command, sib3_invalid_q_offset_cell_value_returns_error)
   EXPECT_NE(res.error().find("q_offset_cell"), std::string::npos) << "actual: " << res.error();
 }
 
+TEST(sib_update_remote_command, sib4_arfcn_out_of_range_returns_error)
+{
+  // Above the 3GPP NR-ARFCN max of 3279165; without a range check, uint32_t truncation would
+  // silently accept a bogus value.
+  capturing_du_configurator mock;
+  sib_update_remote_command cmd{mock};
+
+  auto cell   = make_cell_skeleton();
+  cell["sib"] = {{"type", "sib4"},
+                 {"content",
+                  {{"inter_freq_carrier_freq_list",
+                    nlohmann::json::array({{{"arfcn", 5000000000ULL},
+                                            {"ssb_scs", 30},
+                                            {"derive_ssb_index_from_cell", true},
+                                            {"q_rx_lev_min", -70},
+                                            {"thresh_x_high_p", 16},
+                                            {"thresh_x_low_p", 4}}})}}}};
+
+  auto res = cmd.execute(wrap(cell));
+  ASSERT_FALSE(res.has_value());
+  EXPECT_NE(res.error().find("arfcn"), std::string::npos) << "actual: " << res.error();
+  EXPECT_NE(res.error().find("range"), std::string::npos) << "actual: " << res.error();
+}
+
 TEST(sib_update_remote_command, sib4_invalid_scs_value_returns_error)
 {
   capturing_du_configurator mock;
