@@ -9,7 +9,7 @@
 
 namespace ocudu {
 
-/// Remote command that modifies the SSB parameters.
+/// \brief Remote command that modifies the SSB parameters.
 class ssb_modify_remote_command : public app_services::remote_command
 {
   odu::du_configurator& configurator;
@@ -27,7 +27,7 @@ public:
   error_type<std::string> execute(const nlohmann::json& json) override;
 };
 
-/// Remote command that modifies the RRM policy ratio.
+/// \brief Remote command that modifies the RRM policy ratio.
 class rrm_policy_ratio_remote_command : public app_services::remote_command
 {
   odu::du_configurator& configurator;

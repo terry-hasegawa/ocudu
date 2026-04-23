@@ -238,7 +238,7 @@ static expected<nr_cell_global_id_t, std::string> parse_cgi(const nlohmann::json
     return make_unexpected(std::string{"'nci' object is missing and it is mandatory"});
   }
   if (!nci_key->is_number_unsigned()) {
-    return make_unexpected(std::string{"'nci' object value type should be an integer"});
+    return make_unexpected(std::string{"'nci' object value type should be an unsigned integer"});
   }
   auto nci = nr_cell_identity::create(nci_key->get<uint64_t>());
   if (!nci) {
@@ -251,6 +251,8 @@ static expected<nr_cell_global_id_t, std::string> parse_cgi(const nlohmann::json
   return cgi;
 }
 
+// q_hyst_t enum values equal the integer dB values (db4 = 4), but the enum skips 7, 9, 11, ...,
+// so the switch validates membership; a cast then performs the mapping.
 static expected<q_hyst_t, std::string> parse_q_hyst_db(const nlohmann::json& obj)
 {
   auto key = obj.find("q_hyst_db");
@@ -260,69 +262,32 @@ static expected<q_hyst_t, std::string> parse_q_hyst_db(const nlohmann::json& obj
   if (!key->is_number_integer()) {
     return make_unexpected(std::string{"'q_hyst_db' value type should be an integer"});
   }
-  int v = key->get<int>();
+  const int v = key->get<int>();
   switch (v) {
-    case 0:  return q_hyst_t::db0;
-    case 1:  return q_hyst_t::db1;
-    case 2:  return q_hyst_t::db2;
-    case 3:  return q_hyst_t::db3;
-    case 4:  return q_hyst_t::db4;
-    case 5:  return q_hyst_t::db5;
-    case 6:  return q_hyst_t::db6;
-    case 8:  return q_hyst_t::db8;
-    case 10: return q_hyst_t::db10;
-    case 12: return q_hyst_t::db12;
-    case 14: return q_hyst_t::db14;
-    case 16: return q_hyst_t::db16;
-    case 18: return q_hyst_t::db18;
-    case 20: return q_hyst_t::db20;
-    case 22: return q_hyst_t::db22;
-    case 24: return q_hyst_t::db24;
+    case 0: case 1: case 2: case 3: case 4: case 5: case 6:
+    case 8: case 10: case 12: case 14: case 16: case 18: case 20: case 22: case 24:
+      return static_cast<q_hyst_t>(v);
     default:
       return make_unexpected(fmt::format(
           "'q_hyst_db' value '{}' is invalid; valid values: 0,1,2,3,4,5,6,8,10,12,14,16,18,20,22,24", v));
   }
 }
 
+// q_offset_range_t enum values equal the signed integer dB values (db24 = 24, db_24 = -24),
+// with gaps at odd values above +/-5. Validate then cast.
 static expected<q_offset_range_t, std::string> parse_q_offset_range(const nlohmann::json& val,
-                                                                    const std::string&    field_name)
+                                                                    std::string_view      field_name)
 {
   if (!val.is_number_integer()) {
     return make_unexpected(fmt::format("'{}' value type should be an integer", field_name));
   }
-  int v = val.get<int>();
+  const int v = val.get<int>();
   switch (v) {
-    case -24: return q_offset_range_t::db_24;
-    case -22: return q_offset_range_t::db_22;
-    case -20: return q_offset_range_t::db_20;
-    case -18: return q_offset_range_t::db_18;
-    case -16: return q_offset_range_t::db_16;
-    case -14: return q_offset_range_t::db_14;
-    case -12: return q_offset_range_t::db_12;
-    case -10: return q_offset_range_t::db_10;
-    case -8:  return q_offset_range_t::db_8;
-    case -6:  return q_offset_range_t::db_6;
-    case -5:  return q_offset_range_t::db_5;
-    case -4:  return q_offset_range_t::db_4;
-    case -3:  return q_offset_range_t::db_3;
-    case -2:  return q_offset_range_t::db_2;
-    case -1:  return q_offset_range_t::db_1;
-    case 0:   return q_offset_range_t::db0;
-    case 1:   return q_offset_range_t::db1;
-    case 2:   return q_offset_range_t::db2;
-    case 3:   return q_offset_range_t::db3;
-    case 4:   return q_offset_range_t::db4;
-    case 5:   return q_offset_range_t::db5;
-    case 6:   return q_offset_range_t::db6;
-    case 8:   return q_offset_range_t::db8;
-    case 10:  return q_offset_range_t::db10;
-    case 12:  return q_offset_range_t::db12;
-    case 14:  return q_offset_range_t::db14;
-    case 16:  return q_offset_range_t::db16;
-    case 18:  return q_offset_range_t::db18;
-    case 20:  return q_offset_range_t::db20;
-    case 22:  return q_offset_range_t::db22;
-    case 24:  return q_offset_range_t::db24;
+    case -24: case -22: case -20: case -18: case -16: case -14: case -12: case -10:
+    case -8: case -6: case -5: case -4: case -3: case -2: case -1:
+    case 0: case 1: case 2: case 3: case 4: case 5: case 6:
+    case 8: case 10: case 12: case 14: case 16: case 18: case 20: case 22: case 24:
+      return static_cast<q_offset_range_t>(v);
     default:
       return make_unexpected(fmt::format(
           "'{}' value '{}' is invalid; valid values: -24,-22,-20,-18,-16,-14,-12,-10,-8,-6,-5,-4,-3,-2,-1,0,1,2,3,4,5,6,8,10,12,14,16,18,20,22,24",
@@ -331,13 +296,14 @@ static expected<q_offset_range_t, std::string> parse_q_offset_range(const nlohma
   }
 }
 
+// subcarrier_spacing is numerology-indexed (kHz30 = 1), so the switch is a genuine mapping.
 static expected<subcarrier_spacing, std::string> parse_scs_khz(const nlohmann::json& val,
-                                                               const std::string&    field_name)
+                                                               std::string_view      field_name)
 {
   if (!val.is_number_integer() || val.get<int64_t>() < 0) {
     return make_unexpected(fmt::format("'{}' value type should be a non-negative integer", field_name));
   }
-  unsigned v = val.get<unsigned>();
+  const unsigned v = val.get<unsigned>();
   switch (v) {
     case 15:  return subcarrier_spacing::kHz15;
     case 30:  return subcarrier_spacing::kHz30;
@@ -352,20 +318,42 @@ static expected<subcarrier_spacing, std::string> parse_scs_khz(const nlohmann::j
 
 template <typename T, T MIN, T MAX>
 static expected<bounded_integer<T, MIN, MAX>, std::string> parse_bounded_int(const nlohmann::json& val,
-                                                                             const std::string&    field_name)
+                                                                             std::string_view      field_name)
 {
   if (!val.is_number_integer()) {
     return make_unexpected(fmt::format("'{}' value type should be an integer", field_name));
   }
-  auto v = val.get<int64_t>();
+  const auto v = val.get<int64_t>();
   if (v < static_cast<int64_t>(MIN) || v > static_cast<int64_t>(MAX)) {
-    return make_unexpected(fmt::format("'{}' value '{}' out of range [{},{}]",
-                                       field_name,
-                                       v,
-                                       static_cast<int64_t>(MIN),
-                                       static_cast<int64_t>(MAX)));
+    return make_unexpected(fmt::format(
+        "'{}' value '{}' out of range [{},{}]", field_name, v, static_cast<int64_t>(MIN), static_cast<int64_t>(MAX)));
   }
   return bounded_integer<T, MIN, MAX>{static_cast<T>(v)};
+}
+
+// Look up a mandatory bounded-integer field in an object and parse it.
+template <typename T, T MIN, T MAX>
+static expected<bounded_integer<T, MIN, MAX>, std::string> find_and_parse_bounded(const nlohmann::json& obj,
+                                                                                  std::string_view      field)
+{
+  auto it = obj.find(field);
+  if (it == obj.end()) {
+    return make_unexpected(fmt::format("'{}' field is missing and it is mandatory", field));
+  }
+  return parse_bounded_int<T, MIN, MAX>(*it, field);
+}
+
+// Look up a mandatory PCI field (range 0..1007) in an object.
+static expected<pci_t, std::string> find_and_parse_pci(const nlohmann::json& obj, std::string_view field)
+{
+  auto it = obj.find(field);
+  if (it == obj.end()) {
+    return make_unexpected(fmt::format("'{}' field is missing and it is mandatory", field));
+  }
+  if (!it->is_number_integer() || it->get<int64_t>() < 0 || it->get<int64_t>() > 1007) {
+    return make_unexpected(fmt::format("'{}' value '{}' out of range [0, 1007]", field, it->get<int64_t>()));
+  }
+  return static_cast<pci_t>(it->get<unsigned>());
 }
 
 static expected<sib2_info, std::string> parse_sib2(const nlohmann::json& content)
@@ -378,51 +366,31 @@ static expected<sib2_info, std::string> parse_sib2(const nlohmann::json& content
   }
   sib2.q_hyst = q_hyst_exp.value();
 
-  auto thresh_serv_it = content.find("thresh_serving_low_p");
-  if (thresh_serv_it == content.end()) {
-    return make_unexpected(std::string{"'thresh_serving_low_p' field is missing and it is mandatory"});
-  }
-  auto thresh_serv_exp = parse_bounded_int<uint8_t, 0, 31>(*thresh_serv_it, "thresh_serving_low_p");
+  auto thresh_serv_exp = find_and_parse_bounded<uint8_t, 0, 31>(content, "thresh_serving_low_p");
   if (!thresh_serv_exp) {
     return make_unexpected(thresh_serv_exp.error());
   }
   sib2.thresh_serving_low_p = thresh_serv_exp.value();
 
-  auto reselect_prio_it = content.find("cell_reselection_priority");
-  if (reselect_prio_it == content.end()) {
-    return make_unexpected(std::string{"'cell_reselection_priority' field is missing and it is mandatory"});
-  }
-  auto reselect_prio_exp = parse_bounded_int<uint8_t, 0, 7>(*reselect_prio_it, "cell_reselection_priority");
+  auto reselect_prio_exp = find_and_parse_bounded<uint8_t, 0, 7>(content, "cell_reselection_priority");
   if (!reselect_prio_exp) {
     return make_unexpected(reselect_prio_exp.error());
   }
   sib2.cell_reselection_priority = reselect_prio_exp.value();
 
-  auto q_rx_lev_min_it = content.find("q_rx_lev_min");
-  if (q_rx_lev_min_it == content.end()) {
-    return make_unexpected(std::string{"'q_rx_lev_min' field is missing and it is mandatory"});
-  }
-  auto q_rx_lev_min_exp = parse_bounded_int<int8_t, -70, -22>(*q_rx_lev_min_it, "q_rx_lev_min");
+  auto q_rx_lev_min_exp = find_and_parse_bounded<int8_t, -70, -22>(content, "q_rx_lev_min");
   if (!q_rx_lev_min_exp) {
     return make_unexpected(q_rx_lev_min_exp.error());
   }
   sib2.q_rx_lev_min = q_rx_lev_min_exp.value();
 
-  auto s_intra_search_it = content.find("s_intra_search_p");
-  if (s_intra_search_it == content.end()) {
-    return make_unexpected(std::string{"'s_intra_search_p' field is missing and it is mandatory"});
-  }
-  auto s_intra_search_exp = parse_bounded_int<uint8_t, 0, 31>(*s_intra_search_it, "s_intra_search_p");
+  auto s_intra_search_exp = find_and_parse_bounded<uint8_t, 0, 31>(content, "s_intra_search_p");
   if (!s_intra_search_exp) {
     return make_unexpected(s_intra_search_exp.error());
   }
   sib2.s_intra_search_p = s_intra_search_exp.value();
 
-  auto t_reselection_it = content.find("t_reselection_nr");
-  if (t_reselection_it == content.end()) {
-    return make_unexpected(std::string{"'t_reselection_nr' field is missing and it is mandatory"});
-  }
-  auto t_reselection_exp = parse_bounded_int<uint8_t, 0, 7>(*t_reselection_it, "t_reselection_nr");
+  auto t_reselection_exp = find_and_parse_bounded<uint8_t, 0, 7>(content, "t_reselection_nr");
   if (!t_reselection_exp) {
     return make_unexpected(t_reselection_exp.error());
   }
@@ -445,14 +413,10 @@ static expected<sib3_info, std::string> parse_sib3(const nlohmann::json& content
       if (!neigh_obj.is_object()) {
         return make_unexpected(std::string{"'intra_freq_neigh_cell_list' entries should be objects"});
       }
-      auto pci_it = neigh_obj.find("pci");
-      if (pci_it == neigh_obj.end()) {
-        return make_unexpected(std::string{"'pci' field is missing in 'intra_freq_neigh_cell_list' entry"});
+      auto pci_exp = find_and_parse_pci(neigh_obj, "pci");
+      if (!pci_exp) {
+        return make_unexpected(pci_exp.error());
       }
-      if (!pci_it->is_number_integer() || pci_it->get<int64_t>() < 0 || pci_it->get<int64_t>() > 1007) {
-        return make_unexpected(fmt::format("'pci' value '{}' out of range [0, 1007]", pci_it->dump()));
-      }
-      unsigned pci_val = pci_it->get<unsigned>();
       auto q_offset_it = neigh_obj.find("q_offset_cell");
       if (q_offset_it == neigh_obj.end()) {
         return make_unexpected(std::string{"'q_offset_cell' field is missing in 'intra_freq_neigh_cell_list' entry"});
@@ -462,7 +426,7 @@ static expected<sib3_info, std::string> parse_sib3(const nlohmann::json& content
         return make_unexpected(q_offset_exp.error());
       }
       intra_freq_neigh_cell_info neigh;
-      neigh.pci           = static_cast<pci_t>(pci_val);
+      neigh.pci           = pci_exp.value();
       neigh.q_offset_cell = q_offset_exp.value();
       sib3.intra_freq_neigh_cell_list.push_back(neigh);
     }
@@ -478,36 +442,23 @@ static expected<sib3_info, std::string> parse_sib3(const nlohmann::json& content
       if (!excl_obj.is_object()) {
         return make_unexpected(std::string{"'intra_freq_excluded_cell_list' entries should be objects"});
       }
-      auto start_it = excl_obj.find("pci_start");
-      if (start_it == excl_obj.end() || !start_it->is_number_integer() || start_it->get<int64_t>() < 0 ||
-          start_it->get<int64_t>() > 1007) {
-        return make_unexpected(std::string{"'pci_start' missing or out of range [0, 1007] in excluded list entry"});
+      auto start_exp = find_and_parse_pci(excl_obj, "pci_start");
+      if (!start_exp) {
+        return make_unexpected(start_exp.error());
       }
-      unsigned start_val = start_it->get<unsigned>();
-      auto     range_it  = excl_obj.find("range");
+      auto range_it = excl_obj.find("range");
       if (range_it == excl_obj.end() || !range_it->is_number_integer() || range_it->get<int64_t>() < 0) {
-        return make_unexpected(std::string{"'range' missing or non-integer in excluded list entry"});
+        return make_unexpected(std::string{"'range' missing or not a non-negative integer in excluded list entry"});
       }
-      unsigned range_val = range_it->get<unsigned>();
+      const unsigned range_val = range_it->get<unsigned>();
+      // pci_range_t::range_t enum values equal the integer widths (n4 = 4, n1008 = 1008).
       pci_range_t pci_range;
-      pci_range.start = static_cast<pci_t>(start_val);
+      pci_range.start = start_exp.value();
       switch (range_val) {
-        case 1:    pci_range.size = pci_range_t::range_t::n1;    break;
-        case 4:    pci_range.size = pci_range_t::range_t::n4;    break;
-        case 8:    pci_range.size = pci_range_t::range_t::n8;    break;
-        case 12:   pci_range.size = pci_range_t::range_t::n12;   break;
-        case 16:   pci_range.size = pci_range_t::range_t::n16;   break;
-        case 24:   pci_range.size = pci_range_t::range_t::n24;   break;
-        case 32:   pci_range.size = pci_range_t::range_t::n32;   break;
-        case 48:   pci_range.size = pci_range_t::range_t::n48;   break;
-        case 64:   pci_range.size = pci_range_t::range_t::n64;   break;
-        case 84:   pci_range.size = pci_range_t::range_t::n84;   break;
-        case 96:   pci_range.size = pci_range_t::range_t::n96;   break;
-        case 128:  pci_range.size = pci_range_t::range_t::n128;  break;
-        case 168:  pci_range.size = pci_range_t::range_t::n168;  break;
-        case 252:  pci_range.size = pci_range_t::range_t::n252;  break;
-        case 504:  pci_range.size = pci_range_t::range_t::n504;  break;
-        case 1008: pci_range.size = pci_range_t::range_t::n1008; break;
+        case 1: case 4: case 8: case 12: case 16: case 24: case 32: case 48:
+        case 64: case 84: case 96: case 128: case 168: case 252: case 504: case 1008:
+          pci_range.size = static_cast<pci_range_t::range_t>(range_val);
+          break;
         default:
           return make_unexpected(fmt::format(
               "'range' value '{}' invalid; valid values: 1,4,8,12,16,24,32,48,64,84,96,128,168,252,504,1008",
@@ -557,29 +508,17 @@ static expected<sib4_info, std::string> parse_sib4(const nlohmann::json& content
       return make_unexpected(std::string{"'derive_ssb_index_from_cell' missing or non-boolean in carrier list entry"});
     }
 
-    auto q_rx_lev_min_it = carrier_obj.find("q_rx_lev_min");
-    if (q_rx_lev_min_it == carrier_obj.end()) {
-      return make_unexpected(std::string{"'q_rx_lev_min' missing in carrier list entry"});
-    }
-    auto q_rx_lev_min_exp = parse_bounded_int<int8_t, -70, -22>(*q_rx_lev_min_it, "q_rx_lev_min");
+    auto q_rx_lev_min_exp = find_and_parse_bounded<int8_t, -70, -22>(carrier_obj, "q_rx_lev_min");
     if (!q_rx_lev_min_exp) {
       return make_unexpected(q_rx_lev_min_exp.error());
     }
 
-    auto thresh_high_it = carrier_obj.find("thresh_x_high_p");
-    if (thresh_high_it == carrier_obj.end()) {
-      return make_unexpected(std::string{"'thresh_x_high_p' missing in carrier list entry"});
-    }
-    auto thresh_high_exp = parse_bounded_int<uint8_t, 0, 31>(*thresh_high_it, "thresh_x_high_p");
+    auto thresh_high_exp = find_and_parse_bounded<uint8_t, 0, 31>(carrier_obj, "thresh_x_high_p");
     if (!thresh_high_exp) {
       return make_unexpected(thresh_high_exp.error());
     }
 
-    auto thresh_low_it = carrier_obj.find("thresh_x_low_p");
-    if (thresh_low_it == carrier_obj.end()) {
-      return make_unexpected(std::string{"'thresh_x_low_p' missing in carrier list entry"});
-    }
-    auto thresh_low_exp = parse_bounded_int<uint8_t, 0, 31>(*thresh_low_it, "thresh_x_low_p");
+    auto thresh_low_exp = find_and_parse_bounded<uint8_t, 0, 31>(carrier_obj, "thresh_x_low_p");
     if (!thresh_low_exp) {
       return make_unexpected(thresh_low_exp.error());
     }

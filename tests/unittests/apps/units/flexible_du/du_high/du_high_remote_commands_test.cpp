@@ -20,7 +20,7 @@ public:
   bool                                         next_response_success = true;
 
   async_task<odu::du_mac_sched_control_config_response>
-  configure_ue_mac_scheduler(const odu::du_mac_sched_control_config& /*reconf*/) override
+  configure_ue_mac_scheduler(const odu::du_mac_sched_control_config&) override
   {
     return launch_async([](coro_context<async_task<odu::du_mac_sched_control_config_response>>& ctx) {
       CORO_BEGIN(ctx);
@@ -34,8 +34,8 @@ public:
     return odu::du_param_config_response{next_response_success};
   }
 
-  async_task<odu::du_param_config_response> handle_operator_config(const odu::du_param_config_request& /*req*/,
-                                                                   task_executor& /*exec*/) override
+  async_task<odu::du_param_config_response> handle_operator_config(const odu::du_param_config_request&,
+                                                                   task_executor&) override
   {
     return launch_async([](coro_context<async_task<odu::du_param_config_response>>& ctx) {
       CORO_BEGIN(ctx);
@@ -43,7 +43,7 @@ public:
     });
   }
 
-  void handle_ntn_param_update(const odu::du_ntn_param_update_request& /*req*/) override {}
+  void handle_ntn_param_update(const odu::du_ntn_param_update_request&) override {}
 };
 
 /// Build a minimal valid cell skeleton (plmn, nci) with an empty sib section that the caller fills in.
