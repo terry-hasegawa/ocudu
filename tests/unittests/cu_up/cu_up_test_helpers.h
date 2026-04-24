@@ -121,6 +121,8 @@ public:
 
   [[nodiscard]] bool release_teid(gtpu_teid_t teid) override { return true; }
 
+  bool is_teid_lingering(gtpu_teid_t teid) override { return true; }
+
   [[nodiscard]] bool full() override { return true; }
 
   uint32_t get_max_nof_teids() override { return UINT32_MAX; }

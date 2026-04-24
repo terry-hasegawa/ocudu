@@ -7,15 +7,27 @@
 #include "ocudu/gtpu/gtpu_teid_pool.h"
 #include "ocudu/ocudulog/logger.h"
 #include "ocudu/ocudulog/ocudulog.h"
+#include "ocudu/support/timers.h"
 #include <mutex>
 
 namespace ocudu {
 
+struct teid_pool_item {
+  bool         is_allocated = false;
+  tick_point_t released_by{0};
+};
+
 class gtpu_teid_pool_impl final : public gtpu_teid_pool
 {
 public:
-  explicit gtpu_teid_pool_impl(uint32_t max_nof_teids_) :
-    max_nof_teids(max_nof_teids_), teid_pool(max_nof_teids_), logger(ocudulog::fetch_basic_logger("GTPU"))
+  explicit gtpu_teid_pool_impl(uint32_t       max_nof_teids_,
+                               timer_duration teid_release_linger_time_,
+                               timer_manager& timers_) :
+    max_nof_teids(max_nof_teids_),
+    teid_pool(max_nof_teids_),
+    teid_release_linger_time(teid_release_linger_time_),
+    timers(timers_),
+    logger(ocudulog::fetch_basic_logger("GTPU"))
   {
   }
 
@@ -33,9 +45,9 @@ public:
     uint16_t tmp_idx = next_teid_idx;
     for (uint16_t n = 0; n < max_nof_teids; n++) {
       tmp_idx = (next_teid_idx + n) % max_nof_teids;
-      if (not teid_pool[tmp_idx]) {
-        teid_pool[tmp_idx] = true;
-        found              = true;
+      if (not teid_pool[tmp_idx].is_allocated) {
+        teid_pool[tmp_idx].is_allocated = true;
+        found                           = true;
         break;
       }
     }
@@ -46,6 +58,11 @@ public:
     next_teid_idx = (tmp_idx + 1) % max_nof_teids;
     teid          = gtpu_teid_t{tmp_idx + GTPU_TEID_MIN.value()};
     nof_teids++;
+    if (is_teid_lingering_no_lock(teid_pool[tmp_idx])) {
+      logger.warning("Reallocated lingering TEID. Consider increasing TEID pool. teid={} linger_time={}ms",
+                     teid.value(),
+                     teid_release_linger_time.count());
+    }
     return teid;
   }
 
@@ -53,13 +70,21 @@ public:
   {
     std::lock_guard<std::mutex> guard(pool_mutex);
     uint32_t                    teid_idx = teid.value() - GTPU_TEID_MIN.value();
-    if (not teid_pool[teid_idx]) {
+    if (not teid_pool[teid_idx].is_allocated) {
       logger.error("Trying to free non-allocated TEID. teid={}", teid);
       return false;
     }
-    teid_pool[teid_idx] = false;
+    teid_pool[teid_idx].is_allocated = false;
+    teid_pool[teid_idx].released_by  = timers.now();
     nof_teids--;
     return true;
+  }
+
+  bool is_teid_lingering(gtpu_teid_t teid) override
+  {
+    std::lock_guard<std::mutex> guard(pool_mutex);
+    uint32_t                    teid_idx = teid.value() - GTPU_TEID_MIN.value();
+    return is_teid_lingering_no_lock(teid_pool[teid_idx]);
   }
 
   [[nodiscard]] bool full() override
@@ -73,12 +98,19 @@ public:
 private:
   [[nodiscard]] bool full_no_lock() const { return nof_teids >= max_nof_teids; }
 
+  bool is_teid_lingering_no_lock(const teid_pool_item teid_item)
+  {
+    return timers.now() - teid_item.released_by < teid_release_linger_time.count();
+  }
+
   uint32_t       next_teid_idx = 0;
   uint32_t       nof_teids     = 0;
   const uint32_t max_nof_teids;
 
-  std::mutex        pool_mutex;
-  std::vector<bool> teid_pool;
+  std::mutex                  pool_mutex;
+  std::vector<teid_pool_item> teid_pool;
+  timer_duration              teid_release_linger_time;
+  timer_manager&              timers;
 
   ocudulog::basic_logger& logger;
 };

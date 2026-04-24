@@ -40,6 +40,11 @@ static void configure_cli11_ngu_gtpu_args(CLI::App& app, cu_up_unit_ngu_gtpu_con
   add_option(
       app, "--rate_limiter_period", gtpu_cfg.rate_limiter_period, "GTP-U RX rate limiter period (in milliseconds)")
       ->capture_default_str();
+  add_option(app,
+             "--teid_release_linger_time",
+             gtpu_cfg.gtpu_teid_release_linger_time,
+             "Error indication suppression time for released TEIDs (in milliseconds)")
+      ->capture_default_str();
   add_option(app, "--ignore_ue_ambr", gtpu_cfg.ignore_ue_ambr, "Ignore GTP-U DL UE-AMBR rate limiter")
       ->capture_default_str();
 }

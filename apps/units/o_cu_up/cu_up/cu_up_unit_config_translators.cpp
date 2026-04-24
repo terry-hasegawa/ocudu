@@ -20,11 +20,13 @@ ocuup::cu_up_config ocudu::generate_cu_up_config(const cu_up_unit_config& config
   out_cfg.statistics_report_period = std::chrono::seconds{config.metrics.cu_up_report_period};
 
   out_cfg.n3_cfg.gtpu_reordering_timer = std::chrono::milliseconds{config.ngu_cfg.gtpu_cfg.gtpu_reordering_timer_ms};
-  out_cfg.n3_cfg.gtpu_rate_limiting_period = config.ngu_cfg.gtpu_cfg.rate_limiter_period;
-  out_cfg.n3_cfg.gtpu_ignore_ue_ambr       = config.ngu_cfg.gtpu_cfg.ignore_ue_ambr;
-  out_cfg.n3_cfg.gtpu_queue_size           = config.ngu_cfg.gtpu_cfg.gtpu_queue_size;
-  out_cfg.n3_cfg.gtpu_batch_size           = config.ngu_cfg.gtpu_cfg.gtpu_batch_size;
-  out_cfg.n3_cfg.warn_on_drop              = config.warn_on_drop;
+
+  out_cfg.n3_cfg.gtpu_rate_limiting_period     = config.ngu_cfg.gtpu_cfg.rate_limiter_period;
+  out_cfg.n3_cfg.gtpu_teid_release_linger_time = config.ngu_cfg.gtpu_cfg.gtpu_teid_release_linger_time;
+  out_cfg.n3_cfg.gtpu_ignore_ue_ambr           = config.ngu_cfg.gtpu_cfg.ignore_ue_ambr;
+  out_cfg.n3_cfg.gtpu_queue_size               = config.ngu_cfg.gtpu_cfg.gtpu_queue_size;
+  out_cfg.n3_cfg.gtpu_batch_size               = config.ngu_cfg.gtpu_cfg.gtpu_batch_size;
+  out_cfg.n3_cfg.warn_on_drop                  = config.warn_on_drop;
 
   // E1AP-CU-UP config.
   // JSON metrics are not supported at E1AP for now, so only enable if log metrics are enabled.

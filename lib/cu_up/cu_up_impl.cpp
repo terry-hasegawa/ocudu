@@ -123,13 +123,17 @@ cu_up::cu_up(const cu_up_config& config_, const cu_up_dependencies& dependencies
   }
 
   // Create N3 TEID allocator
-  gtpu_allocator_creation_request n3_alloc_msg = {};
-  n3_alloc_msg.max_nof_teids                   = cfg.max_nof_ues * MAX_NOF_PDU_SESSIONS;
-  n3_teid_allocator                            = create_gtpu_allocator(n3_alloc_msg);
+  gtpu_allocator_creation_request n3_alloc_msg = {.max_nof_teids            = cfg.max_nof_ues * MAX_NOF_PDU_SESSIONS,
+                                                  .teid_release_linger_time = cfg.n3_cfg.gtpu_teid_release_linger_time,
+                                                  .timers                   = timers};
+
+  n3_teid_allocator = create_gtpu_allocator(n3_alloc_msg);
 
   // Create F1-U TEID allocator
-  gtpu_allocator_creation_request f1u_alloc_msg = {};
-  f1u_alloc_msg.max_nof_teids                   = cfg.max_nof_ues * MAX_NOF_PDU_SESSIONS;
+  // TODO: Allow configurability of F1-U TEID release linger time.
+  gtpu_allocator_creation_request f1u_alloc_msg = {.max_nof_teids            = cfg.max_nof_ues * MAX_NOF_PDU_SESSIONS,
+                                                   .teid_release_linger_time = GTPU_DEFAULT_TEID_RELEASE_LINGER_TIME,
+                                                   .timers                   = timers};
   f1u_teid_allocator                            = create_gtpu_allocator(f1u_alloc_msg);
 
   /// > Create e1ap

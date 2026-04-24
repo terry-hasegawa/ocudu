@@ -6,6 +6,7 @@
 
 #include "ocudu/adt/strong_type.h"
 #include "fmt/format.h"
+#include <chrono>
 
 namespace ocudu {
 
@@ -39,6 +40,9 @@ constexpr gtpu_teid_t GTPU_TEID_MIN = int_to_gtpu_teid(1);
 
 /// \brief Largest TEID value that is not used for path management.
 constexpr gtpu_teid_t GTPU_TEID_MAX = int_to_gtpu_teid(std::numeric_limits<uint32_t>::max());
+
+/// \brief Default error indication suppression time for recently released TEIDs.
+constexpr std::chrono::milliseconds GTPU_DEFAULT_TEID_RELEASE_LINGER_TIME{100};
 
 } // namespace ocudu
 

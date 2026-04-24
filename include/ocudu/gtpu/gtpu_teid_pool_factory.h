@@ -5,12 +5,15 @@
 #pragma once
 
 #include "ocudu/gtpu/gtpu_teid_pool.h"
+#include "ocudu/support/timers.h"
 #include <memory>
 
 namespace ocudu {
 
 struct gtpu_allocator_creation_request {
-  uint32_t max_nof_teids;
+  uint32_t       max_nof_teids;
+  timer_duration teid_release_linger_time;
+  timer_manager& timers;
 };
 
 std::unique_ptr<gtpu_teid_pool> create_gtpu_allocator(const gtpu_allocator_creation_request& msg);

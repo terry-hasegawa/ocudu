@@ -7,12 +7,14 @@
 
 using namespace ocudu;
 
-constexpr uint16_t MAX_TEIDS = 16;
+constexpr uint16_t       MAX_TEIDS = 16;
+constexpr timer_duration teid_release_linger_time{2};
 
 /// GTPU pool test
 TEST(gtpu_pool_test, normal_request_succeeds)
 {
-  gtpu_teid_pool_impl pool(MAX_TEIDS);
+  timer_manager       timers;
+  gtpu_teid_pool_impl pool(MAX_TEIDS, teid_release_linger_time, timers);
 
   for (unsigned n = GTPU_TEID_MIN.value(); n < 3 + GTPU_TEID_MIN.value(); ++n) {
     expected<gtpu_teid_t> teid = pool.request_teid();
@@ -23,7 +25,8 @@ TEST(gtpu_pool_test, normal_request_succeeds)
 
 TEST(gtpu_pool_test, full_pool_request_fails)
 {
-  gtpu_teid_pool_impl pool(MAX_TEIDS);
+  timer_manager       timers;
+  gtpu_teid_pool_impl pool(MAX_TEIDS, teid_release_linger_time, timers);
 
   for (unsigned n = GTPU_TEID_MIN.value(); n < MAX_TEIDS + GTPU_TEID_MIN.value(); ++n) {
     expected<gtpu_teid_t> teid = pool.request_teid();
@@ -36,7 +39,8 @@ TEST(gtpu_pool_test, full_pool_request_fails)
 
 TEST(gtpu_pool_test, request_after_all_release_succeeds)
 {
-  gtpu_teid_pool_impl pool(MAX_TEIDS);
+  timer_manager       timers;
+  gtpu_teid_pool_impl pool(MAX_TEIDS, teid_release_linger_time, timers);
 
   for (unsigned n = GTPU_TEID_MIN.value(); n < MAX_TEIDS + GTPU_TEID_MIN.value(); ++n) {
     expected<gtpu_teid_t> teid = pool.request_teid();
@@ -50,7 +54,8 @@ TEST(gtpu_pool_test, request_after_all_release_succeeds)
 
 TEST(gtpu_pool_test, request_after_few_free_succeeds)
 {
-  gtpu_teid_pool_impl pool(MAX_TEIDS);
+  timer_manager       timers;
+  gtpu_teid_pool_impl pool(MAX_TEIDS, teid_release_linger_time, timers);
 
   for (unsigned n = GTPU_TEID_MIN.value(); n < MAX_TEIDS + GTPU_TEID_MIN.value(); ++n) {
     expected<gtpu_teid_t> teid = pool.request_teid();
@@ -78,6 +83,61 @@ TEST(gtpu_pool_test, request_after_few_free_succeeds)
     expected<gtpu_teid_t> teid = pool.request_teid();
     ASSERT_EQ(false, teid.has_value());
   }
+}
+
+TEST(gtpu_pool_test, release_lingering_time)
+{
+  timer_manager       timers;
+  gtpu_teid_pool_impl pool(MAX_TEIDS, teid_release_linger_time, timers);
+
+  expected<gtpu_teid_t> teid1 = pool.request_teid();
+  expected<gtpu_teid_t> teid2 = pool.request_teid();
+  ASSERT_TRUE(teid1.has_value());
+  ASSERT_TRUE(teid2.has_value());
+
+  // Advance clock by lingering time.
+  for (unsigned i = 0; i < teid_release_linger_time.count(); i++) {
+    timers.tick();
+  }
+
+  // Nothing is lingering as nothing was released yet.
+  EXPECT_FALSE(pool.is_teid_lingering(teid1.value()));
+  EXPECT_FALSE(pool.is_teid_lingering(teid2.value()));
+
+  // Release TEID2.
+  ASSERT_TRUE(pool.release_teid(teid2.value()));
+
+  // Advance clock just before expiring the lingering time.
+  for (unsigned i = 0; i < teid_release_linger_time.count() - 1; i++) {
+    timers.tick();
+  }
+
+  // Only released TEID2 is lingering.
+  EXPECT_FALSE(pool.is_teid_lingering(teid1.value()));
+  EXPECT_TRUE(pool.is_teid_lingering(teid2.value()));
+
+  // Now also release TEID1.
+  ASSERT_TRUE(pool.release_teid(teid1.value()));
+
+  // Both are lingering now.
+  EXPECT_TRUE(pool.is_teid_lingering(teid1.value()));
+  EXPECT_TRUE(pool.is_teid_lingering(teid2.value()));
+
+  // Advance clock one more tick to expire lingering of TEID2.
+  timers.tick();
+
+  // Only released TEID1 is lingering, TEID2 is cooled down.
+  EXPECT_TRUE(pool.is_teid_lingering(teid1.value()));
+  EXPECT_FALSE(pool.is_teid_lingering(teid2.value()));
+
+  // Advance clock to expire the lingering time.
+  for (unsigned i = 0; i < teid_release_linger_time.count() - 1; i++) {
+    timers.tick();
+  }
+
+  // Both TEIDs are not lingering anymore.
+  EXPECT_FALSE(pool.is_teid_lingering(teid1.value()));
+  EXPECT_FALSE(pool.is_teid_lingering(teid2.value()));
 }
 
 int main(int argc, char** argv)

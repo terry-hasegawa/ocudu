@@ -81,8 +81,14 @@ private:
   null_dlt_pcap                      pcap;
 
   // N3 Configs.
-  n3_interface_config
-      n3_cfg{GTPU_PORT, std::chrono::milliseconds{0}, std::chrono::milliseconds{200}, true, 2048, 1, false};
+  n3_interface_config n3_cfg{GTPU_PORT,
+                             std::chrono::milliseconds{0},
+                             std::chrono::milliseconds{200},
+                             GTPU_DEFAULT_TEID_RELEASE_LINGER_TIME,
+                             true,
+                             2048,
+                             1,
+                             false};
 
   // UE context cfg.
   ue_context_cfg ue_cfg{{}, activity_notification_level_t::ue, std::chrono::seconds{30}, {}, 1000000000, {}};

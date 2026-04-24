@@ -19,6 +19,8 @@ public:
 
   [[nodiscard]] bool release_teid(gtpu_teid_t teid) override { return true; }
 
+  bool is_teid_lingering(gtpu_teid_t teid) override { return false; }
+
   [[nodiscard]] virtual bool full() override { return false; }
 
   virtual uint32_t get_max_nof_teids() override { return 1; }

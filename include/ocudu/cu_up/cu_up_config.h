@@ -32,13 +32,22 @@ struct network_interface_config {
 };
 
 struct n3_interface_config {
-  int                       upf_port = GTPU_PORT;      // TS 29.281 Sec. 4.4.2.3 Encapsulated T-PDUs
-  std::chrono::milliseconds gtpu_reordering_timer;     // N3 reordering timer
-  std::chrono::milliseconds gtpu_rate_limiting_period; // N3 token bucket rate limiting period.
-  bool                      gtpu_ignore_ue_ambr;       // Ignore DL UE-AMBR.
-  uint32_t                  gtpu_queue_size;           // GTP-U queue size in PDUs.
-  uint32_t                  gtpu_batch_size;           // Maximum number of GTP-U PDUs processed in a batch.
-  bool                      warn_on_drop;
+  /// TS 29.281 Sec. 4.4.2.3 Encapsulated T-PDUs.
+  int upf_port = GTPU_PORT;
+  /// N3 reordering timer.
+  std::chrono::milliseconds gtpu_reordering_timer;
+  /// N3 token bucket rate limiting period.
+  std::chrono::milliseconds gtpu_rate_limiting_period;
+  /// Error indication suppression time for released TEIDs.
+  std::chrono::milliseconds gtpu_teid_release_linger_time;
+  /// Ignore DL UE-AMBR.
+  bool gtpu_ignore_ue_ambr;
+  /// GTP-U queue size in PDUs.
+  uint32_t gtpu_queue_size;
+  /// Maximum number of GTP-U PDUs processed in a batch.
+  uint32_t gtpu_batch_size;
+  /// Warn whenever a PDU is dropped.
+  bool warn_on_drop;
 };
 
 struct cu_up_test_mode_config {

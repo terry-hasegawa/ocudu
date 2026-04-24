@@ -10,12 +10,25 @@
 
 namespace ocudu {
 
+/// \brief GTP-U TEID lingering interface.
+///
+/// This interface is used to check whether an unknown (non-allocated) TEID is still lingering after recent release.
+/// When removing a GTP-U tunnel and releasing the TEID, several in-flight PDUs may arrive during/after the procedure
+/// for which no GTP-U error indication shall be triggered.
+class gtpu_teid_lingering_interface
+{
+public:
+  virtual ~gtpu_teid_lingering_interface() = default;
+
+  virtual bool is_teid_lingering(gtpu_teid_t teid) = 0;
+};
+
 /// \brief GTP-U TEID pool
 ///
 /// This class provides a TEID pool that users can request unused TEIDs.
 /// This allows the CU-UP/DU to allocate unused local TEIDs safely even
 /// in the event of TEID wrap-around.
-class gtpu_teid_pool
+class gtpu_teid_pool : public gtpu_teid_lingering_interface
 {
 public:
   virtual ~gtpu_teid_pool() = default;

@@ -9,5 +9,5 @@ using namespace ocudu;
 
 std::unique_ptr<gtpu_teid_pool> ocudu::create_gtpu_allocator(const gtpu_allocator_creation_request& msg)
 {
-  return std::make_unique<gtpu_teid_pool_impl>(msg.max_nof_teids);
+  return std::make_unique<gtpu_teid_pool_impl>(msg.max_nof_teids, msg.teid_release_linger_time, msg.timers);
 }

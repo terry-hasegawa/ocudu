@@ -50,6 +50,7 @@ struct cu_up_unit_ngu_gtpu_config {
   unsigned                  gtpu_batch_size          = 256;
   unsigned                  gtpu_reordering_timer_ms = 0;
   std::chrono::milliseconds rate_limiter_period{100};
+  std::chrono::milliseconds gtpu_teid_release_linger_time{100};
   bool                      ignore_ue_ambr = true;
 };
 
