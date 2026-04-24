@@ -5,6 +5,7 @@
 #pragma once
 
 #include "ocudu/gtpu/gtpu_demux.h"
+#include "ocudu/gtpu/gtpu_teid_pool.h"
 #include "ocudu/pcap/dlt_pcap.h"
 #include "ocudu/support/executors/task_executor.h"
 #include <memory>
@@ -12,8 +13,9 @@
 namespace ocudu {
 
 struct gtpu_demux_creation_request {
-  gtpu_demux_cfg_t cfg       = {};
-  dlt_pcap*        gtpu_pcap = nullptr;
+  gtpu_demux_cfg_t               cfg                 = {};
+  gtpu_teid_lingering_interface* teid_linger_checker = nullptr;
+  dlt_pcap*                      gtpu_pcap           = nullptr;
 };
 
 /// Creates an instance of an GTP-U demux object.

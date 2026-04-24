@@ -7,6 +7,7 @@
 #include "gtpu_pdu.h"
 #include "gtpu_tunnel_logger.h"
 #include "ocudu/gtpu/gtpu_demux.h"
+#include "ocudu/gtpu/gtpu_teid_pool.h"
 #include "ocudu/ocudulog/ocudulog.h"
 #include "ocudu/pcap/dlt_pcap.h"
 #include "ocudu/support/executors/task_executor.h"
@@ -25,7 +26,9 @@ struct gtpu_demux_tunnel_ctx_t {
 class gtpu_demux_impl final : public gtpu_demux
 {
 public:
-  explicit gtpu_demux_impl(gtpu_demux_cfg_t cfg_, dlt_pcap& gtpu_pcap_);
+  explicit gtpu_demux_impl(gtpu_demux_cfg_t               cfg_,
+                           gtpu_teid_lingering_interface& teid_linger_checker_,
+                           dlt_pcap&                      gtpu_pcap_);
   ~gtpu_demux_impl() override = default;
 
   // gtpu_demux_rx_upper_layer_interface
@@ -59,9 +62,10 @@ private:
   // Actual demuxing, to be run in CU-UP executor.
   void handle_pdu_impl(gtpu_teid_t teid, gtpu_demux_pdu_ctx_t pdu_ctx);
 
-  const gtpu_demux_cfg_t cfg;
-  dlt_pcap&              gtpu_pcap;
-  std::atomic<bool>      stopped = false;
+  const gtpu_demux_cfg_t         cfg;
+  gtpu_teid_lingering_interface& teid_linger_checker;
+  dlt_pcap&                      gtpu_pcap;
+  std::atomic<bool>              stopped = false;
 
   // The map is modified by accessed the io_broker (to get the right executor)
   // and the modified by UE executors when setting up/tearing down.

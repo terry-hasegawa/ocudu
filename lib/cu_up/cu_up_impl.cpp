@@ -73,20 +73,28 @@ cu_up::cu_up(const cu_up_config& config_, const cu_up_dependencies& dependencies
 
   /// > Create and connect upper layers
 
-  // Create GTP-U demux
+  // Create N3 TEID allocator
+  gtpu_allocator_creation_request n3_alloc_msg = {.max_nof_teids            = cfg.max_nof_ues * MAX_NOF_PDU_SESSIONS,
+                                                  .teid_release_linger_time = cfg.n3_cfg.gtpu_teid_release_linger_time,
+                                                  .timers                   = timers};
+
+  n3_teid_allocator = create_gtpu_allocator(n3_alloc_msg);
+
+  // Create N3 GTP-U demux
   gtpu_demux_creation_request demux_msg = {};
   demux_msg.cfg.name                    = "NG-U-DEMUX";
   demux_msg.cfg.warn_on_drop            = cfg.n3_cfg.warn_on_drop;
   demux_msg.cfg.queue_size              = cfg.n3_cfg.gtpu_queue_size;
   demux_msg.cfg.batch_size              = cfg.n3_cfg.gtpu_batch_size;
   demux_msg.cfg.test_mode               = cfg.test_mode_cfg.enabled;
+  demux_msg.teid_linger_checker         = n3_teid_allocator.get();
   demux_msg.gtpu_pcap                   = dependencies.gtpu_pcap;
   ngu_demux                             = create_gtpu_demux(demux_msg);
 
   echo_exec_mapper = dependencies.exec_mapper->create_ue_executor_mapper();
   report_error_if_not(echo_exec_mapper != nullptr, "Could not create CU-UP executor for control TEID");
 
-  // Create GTP-U echo and register it at demux
+  // Create N3 GTP-U echo and register it at demux
   gtpu_echo_creation_message ngu_echo_msg                      = {};
   ngu_echo_msg.gtpu_pcap                                       = dependencies.gtpu_pcap;
   ngu_echo_msg.tx_upper                                        = &gtpu_gw_adapter;
@@ -121,13 +129,6 @@ cu_up::cu_up(const cu_up_config& config_, const cu_up_dependencies& dependencies
       ngu_demux->set_error_indication_tx(gtpu_gw_adapter, n3_bind_addr);
     }
   }
-
-  // Create N3 TEID allocator
-  gtpu_allocator_creation_request n3_alloc_msg = {.max_nof_teids            = cfg.max_nof_ues * MAX_NOF_PDU_SESSIONS,
-                                                  .teid_release_linger_time = cfg.n3_cfg.gtpu_teid_release_linger_time,
-                                                  .timers                   = timers};
-
-  n3_teid_allocator = create_gtpu_allocator(n3_alloc_msg);
 
   // Create F1-U TEID allocator
   // TODO: Allow configurability of F1-U TEID release linger time.

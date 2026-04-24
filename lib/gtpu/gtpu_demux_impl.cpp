@@ -10,8 +10,14 @@
 
 using namespace ocudu;
 
-gtpu_demux_impl::gtpu_demux_impl(gtpu_demux_cfg_t cfg_, dlt_pcap& gtpu_pcap_) :
-  cfg(std::move(cfg_)), gtpu_pcap(gtpu_pcap_), gen(rd()), logger(ocudulog::fetch_basic_logger("GTPU"))
+gtpu_demux_impl::gtpu_demux_impl(gtpu_demux_cfg_t               cfg_,
+                                 gtpu_teid_lingering_interface& teid_linger_checker_,
+                                 dlt_pcap&                      gtpu_pcap_) :
+  cfg(std::move(cfg_)),
+  teid_linger_checker(teid_linger_checker_),
+  gtpu_pcap(gtpu_pcap_),
+  gen(rd()),
+  logger(ocudulog::fetch_basic_logger("GTPU"))
 {
   logger.info("GTP-U demux. {}", cfg);
 }
@@ -95,7 +101,12 @@ void gtpu_demux_impl::handle_pdu(byte_buffer pdu, const sockaddr_storage& src_ad
     write_pcap(pdu);
     logger.info("Dropped GTP-U PDU, tunnel not found. teid={}", teid);
     if (teid.value() != 0 && tx_upper != nullptr) {
-      send_error_indication(read_teid, src_addr);
+      if (teid_linger_checker.is_teid_lingering(teid)) {
+        send_error_indication(read_teid, src_addr);
+      } else {
+        // TODO: Remove this block - for testing only.
+        logger.warning("Skipped error indication because of lingering teid={}", teid);
+      }
     }
     return;
   }
