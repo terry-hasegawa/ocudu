@@ -12,6 +12,7 @@
 #include "ocudu/f1u/cu_up/f1u_gateway.h"
 #include "ocudu/gtpu/gtpu_config.h"
 #include "ocudu/gtpu/gtpu_gateway.h"
+#include "ocudu/gtpu/gtpu_teid_pool.h"
 #include "ocudu/pcap/dlt_pcap.h"
 #include "ocudu/ran/gnb_cu_up_id.h"
 #include "ocudu/support/timers.h"
@@ -91,6 +92,8 @@ struct cu_up_config {
 struct cu_up_dependencies {
   /// Executor mapper.
   cu_up_executor_mapper* exec_mapper = nullptr;
+  /// F1-U TEID pool.
+  gtpu_teid_pool* f1u_teid_allocator = nullptr;
   /// F1-U gateway.
   f1u_cu_up_gateway* f1u_gateway = nullptr;
   /// Time manager.

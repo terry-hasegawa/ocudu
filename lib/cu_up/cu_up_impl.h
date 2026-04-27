@@ -66,7 +66,6 @@ private:
   std::unique_ptr<gtpu_demux>                        ngu_demux;
   std::unique_ptr<gtpu_echo>                         ngu_echo;
   std::unique_ptr<gtpu_teid_pool>                    n3_teid_allocator;
-  std::unique_ptr<gtpu_teid_pool>                    f1u_teid_allocator;
   std::unique_ptr<cu_up_manager>                     cu_up_mng;
 
   // Adapters

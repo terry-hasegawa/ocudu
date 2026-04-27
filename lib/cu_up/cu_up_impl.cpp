@@ -46,7 +46,6 @@ generate_cu_up_manager_impl_dependencies(std::atomic<bool>&         stop_command
                                          gtpu_demux&                ngu_demux,
                                          ngu_session_manager&       ngu_session_mngr,
                                          gtpu_teid_pool&            n3_teid_allocator,
-                                         gtpu_teid_pool&            f1u_teid_allocator,
                                          fifo_async_task_scheduler& main_ctrl_loop)
 {
   return {stop_command,
@@ -54,7 +53,7 @@ generate_cu_up_manager_impl_dependencies(std::atomic<bool>&         stop_command
           ngu_demux,
           ngu_session_mngr,
           n3_teid_allocator,
-          f1u_teid_allocator,
+          *dependencies.f1u_teid_allocator,
           *dependencies.exec_mapper,
           *dependencies.f1u_gateway,
           *dependencies.timers,
@@ -130,13 +129,6 @@ cu_up::cu_up(const cu_up_config& config_, const cu_up_dependencies& dependencies
     }
   }
 
-  // Create F1-U TEID allocator
-  // TODO: Allow configurability of F1-U TEID release linger time.
-  gtpu_allocator_creation_request f1u_alloc_msg = {.max_nof_teids            = cfg.max_nof_ues * MAX_NOF_PDU_SESSIONS,
-                                                   .teid_release_linger_time = GTPU_DEFAULT_TEID_RELEASE_LINGER_TIME,
-                                                   .timers                   = timers};
-  f1u_teid_allocator                            = create_gtpu_allocator(f1u_alloc_msg);
-
   /// > Create e1ap
   e1ap = create_e1ap(cfg.e1ap,
                      *dependencies.e1_conn_client,
@@ -145,15 +137,10 @@ cu_up::cu_up(const cu_up_config& config_, const cu_up_dependencies& dependencies
                      dependencies.exec_mapper->ctrl_executor());
 
   /// > Create CU-UP manager
-  cu_up_mng = std::make_unique<cu_up_manager_impl>(generate_cu_up_manager_impl_config(cfg),
-                                                   generate_cu_up_manager_impl_dependencies(stop_command,
-                                                                                            dependencies,
-                                                                                            *e1ap,
-                                                                                            *ngu_demux,
-                                                                                            *ngu_session_mngr,
-                                                                                            *n3_teid_allocator,
-                                                                                            *f1u_teid_allocator,
-                                                                                            main_ctrl_loop));
+  cu_up_mng = std::make_unique<cu_up_manager_impl>(
+      generate_cu_up_manager_impl_config(cfg),
+      generate_cu_up_manager_impl_dependencies(
+          stop_command, dependencies, *e1ap, *ngu_demux, *ngu_session_mngr, *n3_teid_allocator, main_ctrl_loop));
 
   /// > Connect E1AP to CU-UP manager
   e1ap_cu_up_mng_adapter.connect_cu_up_manager(*cu_up_mng);

@@ -5,6 +5,7 @@
 #include "cu_up_test_helpers.h"
 #include "lib/cu_up/cu_up_impl.h"
 #include "lib/e1ap/cu_up/e1ap_cu_up_asn1_helpers.h"
+#include "lib/gtpu/gtpu_teid_pool_impl.h"
 #include "ocudu/asn1/e1ap/e1ap.h"
 #include "ocudu/ran/pdcp_sn_util.h"
 #include "ocudu/support/executors/task_worker.h"
@@ -97,8 +98,10 @@ protected:
     worker   = std::make_unique<task_worker>("thread", 128, os_thread_realtime_priority::no_realtime());
     executor = make_task_executor_ptr(*worker);
 
-    exec_pool    = std::make_unique<dummy_cu_up_executor_mapper>(executor.get());
-    app_timers   = std::make_unique<timer_manager>(256);
+    exec_pool          = std::make_unique<dummy_cu_up_executor_mapper>(executor.get());
+    app_timers         = std::make_unique<timer_manager>(256);
+    f1u_teid_allocator = std::make_unique<gtpu_teid_pool_impl>(
+        16384 * MAX_NOF_PDU_SESSIONS, GTPU_DEFAULT_TEID_RELEASE_LINGER_TIME, *app_timers);
     f1u_gw       = std::make_unique<dummy_f1u_gateway>(f1u_bearer);
     broker       = create_io_broker(io_broker_type::epoll);
     upf_addr_str = "127.0.0.1";
@@ -129,11 +132,12 @@ protected:
   cu_up_dependencies get_default_cu_up_dependencies()
   {
     cu_up_dependencies deps;
-    deps.gtpu_pcap      = &dummy_pcap;
-    deps.exec_mapper    = exec_pool.get();
-    deps.e1_conn_client = &e1ap_client;
-    deps.f1u_gateway    = f1u_gw.get();
-    ngu_gw              = create_udp_gtpu_gateway(cu_up_udp_cfg, *broker, *executor, *executor);
+    deps.gtpu_pcap          = &dummy_pcap;
+    deps.exec_mapper        = exec_pool.get();
+    deps.e1_conn_client     = &e1ap_client;
+    deps.f1u_teid_allocator = f1u_teid_allocator.get();
+    deps.f1u_gateway        = f1u_gw.get();
+    ngu_gw                  = create_udp_gtpu_gateway(cu_up_udp_cfg, *broker, *executor, *executor);
     deps.ngu_gws.push_back(ngu_gw.get());
     deps.timers = app_timers.get();
     return deps;
@@ -160,6 +164,7 @@ protected:
 
   dummy_cu_cp_handler                e1ap_client;
   dummy_inner_f1u_bearer             f1u_bearer;
+  std::unique_ptr<gtpu_teid_pool>    f1u_teid_allocator;
   std::unique_ptr<dummy_f1u_gateway> f1u_gw;
   std::unique_ptr<io_broker>         broker;
   std::unique_ptr<gtpu_gateway>      ngu_gw;
