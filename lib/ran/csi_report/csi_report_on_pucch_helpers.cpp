@@ -7,7 +7,6 @@
 #include "ocudu/ran/csi_report/csi_report_config_helpers.h"
 #include "ocudu/ran/csi_report/csi_report_configuration.h"
 #include "ocudu/ran/csi_report/csi_report_data.h"
-#include "ocudu/ran/csi_report/csi_report_on_puxch_utils.h"
 #include "ocudu/support/error_handling.h"
 
 using namespace ocudu;
@@ -172,7 +171,7 @@ csi_report_size ocudu::get_csi_report_pucch_size(const csi_report_configuration&
   ocudu_assert(!config.subband.has_value(), "Subbands CSI reports are not supported on PUCCH.");
   using namespace units::literals;
 
-  unsigned nof_csi_antenna_ports = csi_report_get_nof_csi_rs_antenna_ports(config.pmi_codebook);
+  unsigned nof_csi_antenna_ports = get_precoding_codebook_antenna_ports(config.pmi_codebook);
 
   // Case for wideband PMI and CQI, TS38.214 Table 6.3.1.1.2-7.
   if (!config.subband.has_value()) {
@@ -220,7 +219,7 @@ csi_report_data ocudu::csi_report_unpack_pucch(const csi_report_packed& packed, 
 
   [[maybe_unused]] bool is_pmi_codebook_one_port = std::holds_alternative<pmi_codebook_one_port>(config.pmi_codebook);
   [[maybe_unused]] unsigned ri_restriction_size  = config.ri_restriction.size();
-  [[maybe_unused]] unsigned nof_csi_rs_antenna_ports = csi_report_get_nof_csi_rs_antenna_ports(config.pmi_codebook);
+  [[maybe_unused]] unsigned nof_csi_rs_antenna_ports = get_precoding_codebook_antenna_ports(config.pmi_codebook);
   ocudu_assert(is_pmi_codebook_one_port || (ri_restriction_size >= nof_csi_rs_antenna_ports),
                "The RI restriction set size, i.e., {}, is smaller than the number of CSI-RS ports, i.e., {}.",
                ri_restriction_size,

@@ -4,56 +4,14 @@
 
 #include "csi_report_on_puxch_helpers.h"
 #include "ocudu/adt/interval.h"
-#include "ocudu/ran/csi_report/csi_report_on_puxch_utils.h"
+#include "ocudu/ran/precoding/precoding_codebook_helpers.h"
 #include "ocudu/support/error_handling.h"
 
 using namespace ocudu;
 
 namespace {
 
-/// Collects PMI sizes.
-struct csi_report_typeI_single_panel_pmi_sizes {
-  unsigned i_1_1;
-  unsigned i_1_2;
-  unsigned i_1_3;
-  unsigned i_2;
-};
-
-} // namespace
-
-/// Gets PMI sizes for TypeI-SinglePanel, Mode 1 codebook configuration as per TS38.212 Table 6.3.1.1.2-1.
-static csi_report_typeI_single_panel_pmi_sizes
-csi_report_get_pmi_sizes_typeI_single_panel_mode1(const pmi_codebook_single_panel_info& panel_info,
-                                                  csi_report_data::ri_type              ri)
-{
-  unsigned nof_csi_rs_antenna_ports = 2 * panel_info.n1 * panel_info.n2;
-  unsigned N1                       = panel_info.n1;
-  unsigned N2                       = panel_info.n2;
-  unsigned O1                       = panel_info.o1;
-  unsigned O2                       = panel_info.o2;
-
-  if ((ri == 1) && (nof_csi_rs_antenna_ports > 2) && (N2 == 1)) {
-    return {log2_ceil(N1 * O1), log2_ceil(N2 * O2), 0, 2};
-  }
-
-  if ((ri == 2) && (nof_csi_rs_antenna_ports == 4) && (N2 == 1)) {
-    return {log2_ceil(N1 * O1), log2_ceil(N2 * O2), 1, 1};
-  }
-
-  if ((ri == 2) && (nof_csi_rs_antenna_ports > 4) && (N2 == 1)) {
-    return {log2_ceil(N1 * O1), log2_ceil(N2 * O2), 2, 1};
-  }
-
-  if (((ri == 3) || (ri == 4)) && (nof_csi_rs_antenna_ports == 4)) {
-    return {log2_ceil(N1 * O1), log2_ceil(N2 * O2), 0, 1};
-  }
-
-  report_error("Unhandled case with ri={} nof_csi_rs_antenna_ports={} N2={}.", ri, nof_csi_rs_antenna_ports, N2);
-}
-
-namespace {
-
-/// Calculates the RI/LI/CQI/CRI fields bit-widths for each codebook type.
+/// Calculates the RI/LI/CQI/CRI field bit-widths for each codebook type.
 struct ri_li_cqi_cri_size_calculator {
   /// Rank indicator restriction.
   const ri_restriction_type& ri_restriction;
@@ -99,7 +57,7 @@ struct ri_li_cqi_cri_size_calculator {
   /// Calculates the field bit-widths for Type I Single-panel codebooks.
   ri_li_cqi_cri_sizes operator()(const pmi_codebook_typeI_single_panel& pmi_codebook) const
   {
-    unsigned nof_csi_antenna_ports = csi_report_get_nof_csi_rs_antenna_ports(pmi_codebook);
+    unsigned nof_csi_antenna_ports = get_precoding_codebook_antenna_ports(pmi_codebook);
     ocudu_assert(nof_csi_antenna_ports == 4, "Only four ports are currently supported.");
 
     unsigned ri_uint              = ri.value();
@@ -159,8 +117,8 @@ struct pmi_size_calculator {
 
     unsigned count = 0;
 
-    csi_report_typeI_single_panel_pmi_sizes sizes =
-        csi_report_get_pmi_sizes_typeI_single_panel_mode1(get_single_panel_info(codebook.n1_n2), ri);
+    pmi_typeI_single_panel_param_sizes sizes =
+        get_pmi_sizes_typeI_single_panel(get_single_panel_info(codebook.n1_n2), ri.value());
 
     count += sizes.i_1_1;
     count += sizes.i_1_2;
@@ -182,50 +140,57 @@ struct pmi_unpacker {
   pmi_unpacker(const csi_report_packed& packed_, csi_report_data::ri_type ri_) : packed(packed_), ri(ri_) {}
 
   /// The default codebook reports an error.
-  csi_report_pmi operator()(const std::monostate&) const
+  precoding_matrix_indicator operator()(const std::monostate&) const
   {
     report_error("Failed to unpack PMI: invalid codebook configuration.");
     return {};
   }
 
-  /// PMI is not present for single-antenna port.
-  csi_report_pmi operator()(const pmi_codebook_one_port&) const { return {}; }
+  /// PMI is omitted present for single-antenna port.
+  precoding_matrix_indicator operator()(const pmi_codebook_one_port&) const { return {}; }
 
-  /// Unpack the PMI for two antenna port configuration.
-  csi_report_pmi operator()(const pmi_codebook_two_port&) const
+  /// Unpacks the PMI for the two-antenna-port configuration.
+  precoding_matrix_indicator operator()(const pmi_codebook_two_port&) const
   {
-    csi_report_pmi::two_antenna_port result;
+    pmi_two_antenna_port result;
     result.pmi = packed.extract(0, packed.size());
-    return csi_report_pmi{result};
+    return precoding_matrix_indicator{result};
   }
 
   /// Unpack the PMI for Type I Single-panel codebook configuration.
-  csi_report_pmi operator()(const pmi_codebook_typeI_single_panel& codebook) const
+  precoding_matrix_indicator operator()(const pmi_codebook_typeI_single_panel& codebook) const
   {
     ocudu_assert(codebook.mode == pmi_codebook_typeI_mode::one, "Only mode 1 is currently supported.");
 
-    unsigned                                        count = 0;
-    csi_report_pmi::typeI_single_panel_4ports_mode1 result;
-    csi_report_typeI_single_panel_pmi_sizes         sizes =
-        csi_report_get_pmi_sizes_typeI_single_panel_mode1(get_single_panel_info(codebook.n1_n2), ri);
+    unsigned                           count = 0;
+    pmi_typeI_single_panel_param_sizes sizes =
+        get_pmi_sizes_typeI_single_panel(get_single_panel_info(codebook.n1_n2), ri.value());
 
-    result.i_1_1 = packed.extract(count, sizes.i_1_1);
+    unsigned i_1_1 = packed.extract(count, sizes.i_1_1);
     count += sizes.i_1_1;
+
+    std::optional<unsigned> i_1_2;
     ocudu_assert(sizes.i_1_2 == 0, "PMI field i_1_2 size must be 0 bits for 4 ports.");
 
+    std::optional<unsigned> i_1_3;
     if (ri > 1) {
-      result.i_1_3.emplace(packed.extract(count, sizes.i_1_3));
+      i_1_3.emplace(packed.extract(count, sizes.i_1_3));
       count += sizes.i_1_3;
     }
 
-    result.i_2 = packed.extract(count, sizes.i_2);
+    unsigned i_2 = packed.extract(count, sizes.i_2);
     count += sizes.i_2;
 
     ocudu_assert(packed.size() == count,
                  "Packet input size (i.e., {}) does not match with the fields size (i.e., {})",
                  packed.size(),
                  count);
-    return csi_report_pmi{result};
+
+    return pmi_typeI_single_panel{.panel_config = pmi_codebook_single_panel_config::two_one,
+                                  .i_1_1        = i_1_1,
+                                  .i_1_2        = i_1_2,
+                                  .i_1_3        = i_1_3,
+                                  .i_2          = i_2};
   }
 };
 
@@ -258,9 +223,9 @@ csi_report_data::wideband_cqi_type ocudu::csi_report_unpack_wideband_cqi(csi_rep
   return packed.extract(0, 4);
 }
 
-csi_report_pmi ocudu::csi_report_unpack_pmi(const csi_report_packed&   packed,
-                                            const pmi_codebook_config& codebook,
-                                            csi_report_data::ri_type   ri)
+precoding_matrix_indicator ocudu::csi_report_unpack_pmi(const csi_report_packed&   packed,
+                                                        const pmi_codebook_config& codebook,
+                                                        csi_report_data::ri_type   ri)
 {
   return std::visit(pmi_unpacker{packed, ri}, codebook);
 }

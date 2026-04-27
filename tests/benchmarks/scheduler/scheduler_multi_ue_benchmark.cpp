@@ -175,13 +175,16 @@ public:
           }
           if (pucch.csi_rep_cfg.has_value()) {
             f2.csi =
-                csi_report_data{std::nullopt,
-                                4,
-                                std::nullopt,
-                                csi_report_pmi{csi_report_pmi::typeI_single_panel_4ports_mode1{0, std::nullopt, 0}},
-                                15,
-                                std::nullopt,
-                                true};
+
+                f2.csi =
+                    csi_report_data{std::nullopt,
+                                    4,
+                                    std::nullopt,
+                                    precoding_matrix_indicator{pmi_typeI_single_panel{
+                                        pmi_codebook_single_panel_config::two_one, 0, std::nullopt, std::nullopt, 0}},
+                                    15,
+                                    std::nullopt,
+                                    true};
           }
           pdu.pdu = f2;
           ind.ucis.push_back(pdu);
@@ -200,7 +203,8 @@ public:
               csi_report_data{std::nullopt,
                               4,
                               std::nullopt,
-                              csi_report_pmi{csi_report_pmi::typeI_single_panel_4ports_mode1{0, std::nullopt, 0}},
+                              precoding_matrix_indicator{pmi_typeI_single_panel{
+                                  pmi_codebook_single_panel_config::two_one, 0, std::nullopt, std::nullopt, 0}},
                               15,
                               std::nullopt,
                               true};

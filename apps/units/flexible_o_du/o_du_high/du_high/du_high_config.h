@@ -1151,6 +1151,7 @@ struct du_high_unit_test_mode_ue_config {
   unsigned pmi = 0;
   /// Precoding codebook indexes to be used in case of more than 2 antenna ports.
   unsigned i_1_1 = 0;
+  unsigned i_1_2 = 0;
   unsigned i_1_3 = 0;
   unsigned i_2   = 0;
 };

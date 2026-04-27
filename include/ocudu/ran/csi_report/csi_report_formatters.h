@@ -38,10 +38,10 @@ struct fmt::formatter<ocudu::csi_report_configuration> {
   }
 };
 
-/// Custom formatter for \c ocudu::csi_report_pmi.
+/// Custom formatter for \c ocudu::precoding_matrix_indicator.
 template <>
-struct fmt::formatter<ocudu::csi_report_pmi> {
-  /// Helper used to parse formatting options and format fields.
+struct fmt::formatter<ocudu::precoding_matrix_indicator> {
+  /// Helper used to parse formatting options and format the PMI fields.
   ocudu::delimited_formatter helper;
 
   /// Default constructor.
@@ -54,13 +54,13 @@ struct fmt::formatter<ocudu::csi_report_pmi> {
   }
 
   template <typename FormatContext>
-  auto format(const ocudu::csi_report_pmi& pmi, FormatContext& ctx) const
+  auto format(const ocudu::precoding_matrix_indicator& pmi, FormatContext& ctx) const
   {
-    if (const auto* two_ports_pmi = std::get_if<ocudu::csi_report_pmi::two_antenna_port>(&pmi.type)) {
+    if (const auto* two_ports_pmi = std::get_if<ocudu::pmi_two_antenna_port>(&pmi)) {
       helper.format_always(ctx, "pmi={}", two_ports_pmi->pmi);
-    } else if (const auto* four_ports_pmi =
-                   std::get_if<ocudu::csi_report_pmi::typeI_single_panel_4ports_mode1>(&pmi.type)) {
+    } else if (const auto* four_ports_pmi = std::get_if<ocudu::pmi_typeI_single_panel>(&pmi)) {
       helper.format_always(ctx, "i_1_1={}", four_ports_pmi->i_1_1);
+      helper.format_always(ctx, "i_1_2={}", four_ports_pmi->i_1_2);
       helper.format_always(ctx, "i_1_3={}", four_ports_pmi->i_1_3);
       helper.format_always(ctx, "i_2={}", four_ports_pmi->i_2);
     }

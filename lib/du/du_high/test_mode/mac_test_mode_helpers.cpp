@@ -3,7 +3,6 @@
 // Portions of this file may implement 3GPP specifications, which may be subject to additional licensing requirements.
 
 #include "mac_test_mode_helpers.h"
-#include "ocudu/ran/csi_report/csi_report_on_puxch_utils.h"
 #include "ocudu/scheduler/result/pucch_info.h"
 #include "ocudu/scheduler/result/pusch_info.h"
 
@@ -84,7 +83,7 @@ static void fill_csi_bits(bounded_bitset<uci_constants::MAX_NOF_CSI_PART1_OR_PAR
                           const du_test_mode_config::test_mode_ue_config&                 test_ue_cfg)
 {
   unsigned nof_ports =
-      pucch.csi_rep_cfg.has_value() ? csi_report_get_nof_csi_rs_antenna_ports(pucch.csi_rep_cfg->pmi_codebook) : 1;
+      pucch.csi_rep_cfg.has_value() ? get_precoding_codebook_antenna_ports(pucch.csi_rep_cfg->pmi_codebook) : 1;
   unsigned nof_allowed_ri = pucch.csi_rep_cfg.has_value() ? pucch.csi_rep_cfg->ri_restriction.count() : nof_ports;
   fill_csi_bits(payload, rnti, nof_ports, nof_allowed_ri, test_ue_cfg);
 }
@@ -98,7 +97,7 @@ static void fill_csi_bits(bounded_bitset<uci_constants::MAX_NOF_CSI_PART1_OR_PAR
     return;
   }
   const auto& csi_rep_cfg    = pusch.uci.value().csi.value().csi_rep_cfg;
-  unsigned    nof_ports      = csi_report_get_nof_csi_rs_antenna_ports(csi_rep_cfg.pmi_codebook);
+  unsigned    nof_ports      = get_precoding_codebook_antenna_ports(csi_rep_cfg.pmi_codebook);
   unsigned    nof_allowed_ri = csi_rep_cfg.ri_restriction.count();
   fill_csi_bits(payload, rnti, nof_ports, nof_allowed_ri, test_ue_cfg);
 }

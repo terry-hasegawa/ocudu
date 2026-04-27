@@ -25,6 +25,7 @@ struct du_test_mode_config {
     unsigned                ri;
     unsigned                pmi;
     unsigned                i_1_1;
+    std::optional<unsigned> i_1_2;
     std::optional<unsigned> i_1_3;
     unsigned                i_2;
     /// \brief Number of milliseconds of active traffic before all UEs in a cell are released. When set,

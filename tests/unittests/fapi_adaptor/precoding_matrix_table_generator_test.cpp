@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: BSD-3-Clause-Open-MPI
 
 #include "ocudu/fapi_adaptor/precoding_matrix_table_generator.h"
+#include "ocudu/ran/precoding/precoding_codebook_configuration.h"
 #include "ocudu/ran/precoding/precoding_codebooks.h"
 #include "ocudu/ran/precoding/precoding_weight_matrix_formatters.h"
 #include <fmt/ostream.h>
@@ -47,7 +48,7 @@ TEST(precoding_matrix_table_generator, two_port_one_layer)
   // Iterate over all possible PMI.
   for (unsigned pmi = 0; pmi != 4; ++pmi) {
     mac_pdsch_precoding_info info;
-    info.report.emplace(csi_report_pmi{csi_report_pmi::two_antenna_port{pmi}});
+    info.report.emplace(precoding_matrix_indicator{pmi_two_antenna_port{pmi}});
 
     unsigned index = mapper->map(info, 1);
 
@@ -68,7 +69,7 @@ TEST(precoding_matrix_table_generator, two_port_two_layer)
   // Iterate over all possible PMI.
   for (unsigned pmi = 0; pmi != 2; ++pmi) {
     mac_pdsch_precoding_info info;
-    info.report.emplace(csi_report_pmi{csi_report_pmi::two_antenna_port{pmi}});
+    info.report.emplace(precoding_matrix_indicator{pmi_two_antenna_port{pmi}});
 
     unsigned index = mapper->map(info, 2);
 
@@ -90,7 +91,8 @@ TEST(precoding_matrix_table_generator, four_port_typeI_single_panel_mode1_one_la
   for (unsigned i_1_1 = 0; i_1_1 != 8; ++i_1_1) {
     for (unsigned i_2 = 0; i_2 != 4; ++i_2) {
       mac_pdsch_precoding_info info;
-      info.report.emplace(csi_report_pmi{csi_report_pmi::typeI_single_panel_4ports_mode1{i_1_1, std::nullopt, i_2}});
+      info.report.emplace(precoding_matrix_indicator{
+          pmi_typeI_single_panel{pmi_codebook_single_panel_config::two_one, i_1_1, std::nullopt, std::nullopt, i_2}});
 
       unsigned index = mapper->map(info, 1);
 
@@ -114,7 +116,8 @@ TEST(precoding_matrix_table_generator, four_port_typeI_single_panel_mode1_two_la
     for (unsigned i_1_3 = 0; i_1_3 != 2; ++i_1_3) {
       for (unsigned i_2 = 0; i_2 != 2; ++i_2) {
         mac_pdsch_precoding_info info;
-        info.report.emplace(csi_report_pmi{csi_report_pmi::typeI_single_panel_4ports_mode1{i_1_1, {i_1_3}, i_2}});
+        info.report.emplace(precoding_matrix_indicator{
+            pmi_typeI_single_panel{pmi_codebook_single_panel_config::two_one, i_1_1, std::nullopt, i_1_3, i_2}});
 
         unsigned index = mapper->map(info, 2);
 
@@ -138,7 +141,8 @@ TEST(precoding_matrix_table_generator, four_port_typeI_single_panel_three_layer)
   for (unsigned i_1_1 = 0; i_1_1 != 8; ++i_1_1) {
     for (unsigned i_2 = 0; i_2 != 2; ++i_2) {
       mac_pdsch_precoding_info info;
-      info.report.emplace(csi_report_pmi{csi_report_pmi::typeI_single_panel_4ports_mode1{i_1_1, {}, i_2}});
+      info.report.emplace(precoding_matrix_indicator{
+          pmi_typeI_single_panel{pmi_codebook_single_panel_config::two_one, i_1_1, std::nullopt, std::nullopt, i_2}});
 
       unsigned index = mapper->map(info, 3);
 
@@ -161,7 +165,8 @@ TEST(precoding_matrix_table_generator, four_port_typeI_single_panel_four_layer)
   for (unsigned i_1_1 = 0; i_1_1 != 8; ++i_1_1) {
     for (unsigned i_2 = 0; i_2 != 2; ++i_2) {
       mac_pdsch_precoding_info info;
-      info.report.emplace(csi_report_pmi{csi_report_pmi::typeI_single_panel_4ports_mode1{i_1_1, {}, i_2}});
+      info.report.emplace(precoding_matrix_indicator{
+          pmi_typeI_single_panel{pmi_codebook_single_panel_config::two_one, i_1_1, std::nullopt, std::nullopt, i_2}});
 
       unsigned index = mapper->map(info, 4);
 

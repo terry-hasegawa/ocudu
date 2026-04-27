@@ -17,12 +17,15 @@ ue_channel_state_manager::ue_channel_state_manager(const scheduler_ue_expert_con
 {
   // Set initial precoding value when no CSI has yet been received.
   if (nof_dl_ports == 2) {
-    recommended_prg_info.resize(2, pdsch_precoding_info::prg_info{pdsch_precoding_info::prg_info::two_antenna_port{0}});
+    recommended_prg_info.resize(2, pdsch_precoding_info::prg_info{pmi_two_antenna_port{.pmi = 0}});
   } else if (nof_dl_ports == 4) {
     recommended_prg_info.resize(
         4,
-        pdsch_precoding_info::prg_info{
-            pdsch_precoding_info::prg_info::typeI_single_panel_4ports_mode1{0, std::nullopt, 0}});
+        pdsch_precoding_info::prg_info{pmi_typeI_single_panel{.panel_config = pmi_codebook_single_panel_config::two_one,
+                                                              .i_1_1        = 0,
+                                                              .i_1_2        = std::nullopt,
+                                                              .i_1_3        = std::nullopt,
+                                                              .i_2          = 0}});
   }
 }
 

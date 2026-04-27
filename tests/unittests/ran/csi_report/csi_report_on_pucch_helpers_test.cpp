@@ -7,7 +7,6 @@
 #include "ocudu/ran/csi_report/csi_report_formatters.h"
 #include "ocudu/ran/csi_report/csi_report_on_pucch_helpers.h"
 #include "ocudu/ran/csi_report/csi_report_on_pusch_helpers.h"
-#include "ocudu/ran/csi_report/csi_report_on_puxch_utils.h"
 #include <fmt/ostream.h>
 #include <gtest/gtest.h>
 #include <random>
@@ -21,21 +20,18 @@ auto to_tuple(const csi_report_data& data)
   return std::tie(data.cri, data.ri, data.li, data.pmi, data.first_tb_wideband_cqi, data.second_tb_wideband_cqi);
 }
 
-bool operator==(const csi_report_pmi& left, const csi_report_pmi& right)
+bool operator==(const precoding_matrix_indicator& left, const precoding_matrix_indicator& right)
 {
-  if (std::holds_alternative<csi_report_pmi::two_antenna_port>(left.type) &&
-      std::holds_alternative<csi_report_pmi::two_antenna_port>(right.type)) {
-    csi_report_pmi::two_antenna_port left2  = std::get<csi_report_pmi::two_antenna_port>(left.type);
-    csi_report_pmi::two_antenna_port right2 = std::get<csi_report_pmi::two_antenna_port>(right.type);
+  if (std::holds_alternative<pmi_two_antenna_port>(left) && std::holds_alternative<pmi_two_antenna_port>(right)) {
+    pmi_two_antenna_port left2  = std::get<pmi_two_antenna_port>(left);
+    pmi_two_antenna_port right2 = std::get<pmi_two_antenna_port>(right);
     return left2.pmi == right2.pmi;
   }
-  if (std::holds_alternative<csi_report_pmi::typeI_single_panel_4ports_mode1>(left.type) &&
-      std::holds_alternative<csi_report_pmi::typeI_single_panel_4ports_mode1>(right.type)) {
-    csi_report_pmi::typeI_single_panel_4ports_mode1 left2 =
-        std::get<csi_report_pmi::typeI_single_panel_4ports_mode1>(left.type);
-    csi_report_pmi::typeI_single_panel_4ports_mode1 right2 =
-        std::get<csi_report_pmi::typeI_single_panel_4ports_mode1>(right.type);
-    return (left2.i_1_1 == right2.i_1_1) && (left2.i_1_3 == right2.i_1_3) && (left2.i_2 == right2.i_2);
+  if (std::holds_alternative<pmi_typeI_single_panel>(left) && std::holds_alternative<pmi_typeI_single_panel>(right)) {
+    pmi_typeI_single_panel left2  = std::get<pmi_typeI_single_panel>(left);
+    pmi_typeI_single_panel right2 = std::get<pmi_typeI_single_panel>(right);
+    return (left2.i_1_1 == right2.i_1_1) && (left2.i_1_2 == right2.i_1_2) && (left2.i_1_3 == right2.i_1_3) &&
+           (left2.i_2 == right2.i_2);
   }
 
   return false;
@@ -96,7 +92,7 @@ protected:
     const pmi_codebook_config&   pmi_codebook = std::get<0>(GetParam());
     const csi_report_quantities& quantities   = std::get<1>(GetParam());
 
-    unsigned nof_csi_rs_antenna_ports = csi_report_get_nof_csi_rs_antenna_ports(pmi_codebook);
+    unsigned nof_csi_rs_antenna_ports = get_precoding_codebook_antenna_ports(pmi_codebook);
 
     configuration.nof_csi_rs_resources = nof_csi_rs_resources_dist(rgen);
     configuration.pmi_codebook         = pmi_codebook;
@@ -219,11 +215,11 @@ private:
     if (std::holds_alternative<pmi_codebook_two_port>(config.pmi_codebook)) {
       unsigned nof_pmi_bits = (ri == 1) ? 2 : 1;
 
-      csi_report_pmi::two_antenna_port type;
+      pmi_two_antenna_port type;
       type.pmi = rgen() & mask_lsb_ones<unsigned>(nof_pmi_bits);
 
-      csi_report_pmi pmi;
-      pmi.type.emplace<csi_report_pmi::two_antenna_port>(type);
+      precoding_matrix_indicator pmi;
+      pmi.emplace<pmi_two_antenna_port>(type);
       unpacked.pmi.emplace(pmi);
 
       packed.push_back(type.pmi, nof_pmi_bits);
@@ -243,15 +239,15 @@ private:
       unsigned i_2   = rgen() & mask_lsb_ones<unsigned>(nof_i_2_bits);
 
       // Set PMI values.
-      csi_report_pmi::typeI_single_panel_4ports_mode1 type;
+      pmi_typeI_single_panel type;
       type.i_1_1 = i_1_1;
       if (ri > 1) {
         type.i_1_3.emplace(i_1_3);
       }
       type.i_2 = i_2;
 
-      csi_report_pmi pmi;
-      pmi.type.emplace<csi_report_pmi::typeI_single_panel_4ports_mode1>(type);
+      precoding_matrix_indicator pmi;
+      pmi.emplace<pmi_typeI_single_panel>(type);
       unpacked.pmi.emplace(pmi);
 
       // Pack PMI values.

@@ -4,26 +4,10 @@
 
 #include "ocudu/ran/precoding/precoding_codebook_configuration.h"
 #include "ocudu/adt/to_array.h"
+#include "ocudu/ran/precoding/precoding_codebook_helpers.h"
 #include "ocudu/support/ocudu_assert.h"
 
 using namespace ocudu;
-
-/// Contains the parameters describing the antenna single-panel configurations according to TS38.214 Table 5.2.2.2.1-2.
-static constexpr auto single_panel_antenna_configurations = to_array<pmi_codebook_single_panel_info>({
-    {2, 1, 4, 1},  // Row 0
-    {2, 2, 4, 4},  // Row 1
-    {4, 1, 4, 1},  // Row 2
-    {3, 2, 4, 4},  // Row 3
-    {6, 1, 4, 1},  // Row 4
-    {4, 2, 4, 4},  // Row 5
-    {8, 1, 4, 1},  // Row 6
-    {4, 3, 4, 4},  // Row 7
-    {6, 2, 4, 4},  // Row 8
-    {12, 1, 4, 1}, // Row 9
-    {4, 4, 4, 4},  // Row 10
-    {8, 2, 4, 4},  // Row 11
-    {16, 1, 4, 1}, // Row 12
-});
 
 /// List of PMI codebook configurations indexed by \c precoding_codebook_identifier.
 static constexpr auto codebook_configurations = to_array<pmi_codebook_config>(
@@ -65,12 +49,6 @@ static constexpr auto codebook_configurations_string =
 static_assert(codebook_configurations.size() == pmi_codebook_id::max() + 1,
               "The number of codebook strings does not match the number of identifiers.");
 
-const pmi_codebook_single_panel_info& ocudu::get_single_panel_info(pmi_codebook_single_panel_config n1_n2)
-{
-  ocudu_assert(n1_n2 <= pmi_codebook_single_panel_config::sixteen_one, "Row index exceeds the table size.");
-  return single_panel_antenna_configurations[static_cast<unsigned>(n1_n2)];
-}
-
 static pmi_codebook_id to_id(std::monostate)
 {
   return 0;
@@ -106,4 +84,20 @@ const char* ocudu::to_string(const pmi_codebook_config& codebook)
 {
   pmi_codebook_id id = to_pmi_codebook_identifier(codebook);
   return codebook_configurations_string[id.value()];
+}
+
+unsigned ocudu::get_precoding_codebook_antenna_ports(const pmi_codebook_config& pmi_codebook)
+{
+  struct overloaded {
+    unsigned operator()(std::monostate) const { return 0; }
+    unsigned operator()(pmi_codebook_one_port) const { return 1; }
+    unsigned operator()(pmi_codebook_two_port) const { return 2; }
+    unsigned operator()(const pmi_codebook_typeI_single_panel& codebook) const
+    {
+      pmi_codebook_single_panel_info panel_config = get_single_panel_info(codebook.n1_n2);
+      return 2 * panel_config.n1 * panel_config.n2;
+    }
+  };
+
+  return std::visit(overloaded{}, pmi_codebook);
 }

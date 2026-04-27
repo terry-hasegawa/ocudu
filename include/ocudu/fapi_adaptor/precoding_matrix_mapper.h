@@ -14,8 +14,8 @@ namespace ocudu {
 struct mac_pdsch_precoding_info {
   /// \brief CSI-RS report.
   ///
-  /// This field is empty in case of omnidirectional precoding.
-  std::optional<csi_report_pmi> report;
+  /// This field is empty for omnidirectional precoding.
+  std::optional<precoding_matrix_indicator> report;
 };
 
 struct mac_pdcch_precoding_info {};

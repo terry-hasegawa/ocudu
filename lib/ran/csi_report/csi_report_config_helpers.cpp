@@ -3,7 +3,6 @@
 // Portions of this file may implement 3GPP specifications, which may be subject to additional licensing requirements.
 
 #include "ocudu/ran/csi_report/csi_report_config_helpers.h"
-#include "ocudu/ran/csi_report/csi_report_on_puxch_utils.h"
 
 using namespace ocudu;
 
@@ -84,7 +83,7 @@ bool ocudu::is_valid(const csi_report_configuration& config)
   }
 
   if (!std::holds_alternative<pmi_codebook_one_port>(config.pmi_codebook)) {
-    unsigned nof_csi_rs_ports = csi_report_get_nof_csi_rs_antenna_ports(config.pmi_codebook);
+    unsigned nof_csi_rs_ports = get_precoding_codebook_antenna_ports(config.pmi_codebook);
 
     // The RI restriction set size is too small to cover all possible ranks given the number of CSI-RS ports.
     if (config.ri_restriction.size() < nof_csi_rs_ports) {

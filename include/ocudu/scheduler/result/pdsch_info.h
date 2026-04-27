@@ -25,7 +25,7 @@ namespace ocudu {
 /// The precoding information associated with PDSCH PDUs.
 struct pdsch_precoding_info {
   /// Precoding Resource Block Group (PRG) information.
-  using prg_info = csi_report_pmi;
+  using prg_info = precoding_matrix_indicator;
 
   /// \brief Size in RBs of a precoding resource block group (PRG) to which same precoding and digital beamforming gets
   /// applied. Values: {1,...,275}.

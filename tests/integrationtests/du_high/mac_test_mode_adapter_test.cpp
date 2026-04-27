@@ -146,8 +146,11 @@ void PrintTo(const test_params& value, ::std::ostream* os)
   if (value.nof_ports == 2) {
     *os << fmt::format(" pmi={}", value.test_ue_cfg.pmi);
   } else if (value.nof_ports == 4) {
-    *os << fmt::format(
-        " i1_1={} i1_3={} i2={}", value.test_ue_cfg.i_1_1, value.test_ue_cfg.i_1_3, value.test_ue_cfg.i_2);
+    *os << fmt::format(" i1_1={} i1_2={} i1_3={} i2={}",
+                       value.test_ue_cfg.i_1_1,
+                       value.test_ue_cfg.i_1_2,
+                       value.test_ue_cfg.i_1_3,
+                       value.test_ue_cfg.i_2);
   }
 }
 
@@ -502,13 +505,17 @@ TEST_P(mac_test_mode_auto_uci_test, when_uci_is_forwarded_to_mac_then_test_mode_
       ASSERT_FALSE(report.pmi.has_value());
     } else {
       ASSERT_EQ(*report.ri, params.test_ue_cfg.ri);
+      ASSERT_TRUE(report.pmi.has_value());
       if (params.nof_ports == 2) {
-        ASSERT_TRUE(std::holds_alternative<csi_report_pmi::two_antenna_port>(report.pmi->type));
-        ASSERT_EQ(std::get<csi_report_pmi::two_antenna_port>(report.pmi->type).pmi, params.test_ue_cfg.pmi);
+        ASSERT_TRUE(std::holds_alternative<pmi_two_antenna_port>(*report.pmi));
+        ASSERT_EQ(std::get<pmi_two_antenna_port>(*report.pmi).pmi, params.test_ue_cfg.pmi);
       } else {
-        ASSERT_TRUE(std::holds_alternative<csi_report_pmi::typeI_single_panel_4ports_mode1>(report.pmi->type));
-        auto& t = std::get<csi_report_pmi::typeI_single_panel_4ports_mode1>(report.pmi->type);
+        ASSERT_TRUE(std::holds_alternative<pmi_typeI_single_panel>(*report.pmi));
+        auto& t = std::get<pmi_typeI_single_panel>(*report.pmi);
         ASSERT_EQ(t.i_1_1, params.test_ue_cfg.i_1_1);
+        if (t.i_1_2.has_value()) {
+          ASSERT_EQ(*t.i_1_2, params.test_ue_cfg.i_1_2);
+        }
         if (t.i_1_3.has_value()) {
           ASSERT_EQ(*t.i_1_3, params.test_ue_cfg.i_1_3);
         }
@@ -527,8 +534,8 @@ INSTANTIATE_TEST_SUITE_P(test_configs,
   test_params{1, {to_rnti(0x4601), 1, 10, 8, true, true, 5}},
   test_params{2, {to_rnti(0x4601), 1, 10, 8, true, true, 12,  2,  1}},
   test_params{2, {to_rnti(0x4601), 1, 10, 8, true, true, 3,   1,  3}},
-  test_params{4, {to_rnti(0x4601), 1, 10, 8, true, true, 12,  4,  0,   2,   0,  1}},
-  test_params{4, {to_rnti(0x4601), 1, 10, 8, true, true, 12,  1,  0,   1,   0,  3}},
-  test_params{4, {to_rnti(0x4601), 1, 10, 8, true, true, 12,  2,  0,   7,   1,  0}}
+  test_params{4, {to_rnti(0x4601), 1, 10, 8, true, true, 12,  4,  0,   2,  std::nullopt, 0,  1}},
+  test_params{4, {to_rnti(0x4601), 1, 10, 8, true, true, 12,  1,  0,   1,  std::nullopt, 0,  3}},
+  test_params{4, {to_rnti(0x4601), 1, 10, 8, true, true, 12,  2,  0,   7,  std::nullopt, 1,  0}}
 ));
 // clang-format on

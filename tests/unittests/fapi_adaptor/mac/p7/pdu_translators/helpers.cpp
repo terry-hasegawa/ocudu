@@ -268,21 +268,22 @@ static pdsch_information fill_valid_pdsch_information(coreset_configuration& cor
       pdsch_codeword{{modulation_scheme::QAM16, 220.F}, 5, pdsch_mcs_table::qam64, 2, units::bytes{128}});
 
   if (nof_ports == 2) {
-    pdsch_precoding_info& pm   = info.precoding.emplace();
-    pm.nof_rbs_per_prg         = 273U;
-    csi_report_pmi& csi_report = pm.prg_infos.emplace_back();
-    auto&           pmi        = csi_report.type.emplace<csi_report_pmi::two_antenna_port>();
-    pmi.pmi                    = 1;
+    pdsch_precoding_info& pm               = info.precoding.emplace();
+    pm.nof_rbs_per_prg                     = 273U;
+    precoding_matrix_indicator& csi_report = pm.prg_infos.emplace_back();
+    auto&                       pmi        = csi_report.emplace<pmi_two_antenna_port>();
+    pmi.pmi                                = 1;
   } else if (nof_ports == 4) {
-    pdsch_precoding_info& pm   = info.precoding.emplace();
-    pm.nof_rbs_per_prg         = 273U;
-    csi_report_pmi& csi_report = pm.prg_infos.emplace_back();
-    auto&           pmi        = csi_report.type.emplace<csi_report_pmi::typeI_single_panel_4ports_mode1>();
-    pmi.i_2                    = 1;
-    pmi.i_1_1                  = 1;
+    pdsch_precoding_info& pm               = info.precoding.emplace();
+    pm.nof_rbs_per_prg                     = 273U;
+    precoding_matrix_indicator& csi_report = pm.prg_infos.emplace_back();
+    auto&                       pmi        = csi_report.emplace<pmi_typeI_single_panel>();
+    pmi.i_2                                = 1;
+    pmi.i_1_1                              = 1;
   }
 
-  // By default fill 1 port precofing matrix, which means not configuring the precoding in the 'pdsch_information'
+  // By default, fill 1-port precoding matrix, which means not configuring the precoding in the 'pdsch_information'
+  // struct.
 
   return info;
 }

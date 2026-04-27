@@ -4,7 +4,6 @@
 #include "ocudu/fapi_adaptor/uci_part2_correspondence_generator.h"
 #include "uci_part2_mapper_functions.h"
 #include "ocudu/ran/csi_report/csi_report_on_pusch_helpers.h"
-#include "ocudu/ran/csi_report/csi_report_on_puxch_utils.h"
 
 using namespace ocudu;
 using namespace fapi_adaptor;
@@ -39,7 +38,7 @@ ocudu::fapi_adaptor::generate_uci_part2_correspondence(unsigned nof_csi_rs_resou
       // The maximum value of the RI restriction field depends on the number of CSI-RS ports which is derived from the
       // used codebook.
       for (unsigned ri_index         = 1,
-                    nof_csi_rs_ports = csi_report_get_nof_csi_rs_antenna_ports(pmi_codebook),
+                    nof_csi_rs_ports = get_precoding_codebook_antenna_ports(pmi_codebook),
                     ri_index_end     = pow2(nof_csi_rs_ports);
            ri_index != ri_index_end;
            ++ri_index) {

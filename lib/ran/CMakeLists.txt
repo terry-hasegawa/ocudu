@@ -30,6 +30,7 @@ add_library(ocudu_ran
         prach/prach_helper.cpp
         prach/prach_time_mapping.cpp
         precoding/precoding_codebook_configuration.cpp
+        precoding/precoding_codebook_helpers.cpp
         precoding/precoding_codebooks.cpp
         ptrs/ptrs_pattern.cpp
         pucch/pucch_info.cpp

@@ -1241,6 +1241,7 @@ static odu::du_test_mode_config generate_test_mode_config(const du_high_unit_con
                                                     test_ue.ri,
                                                     test_ue.pmi,
                                                     test_ue.i_1_1,
+                                                    test_ue.i_1_2,
                                                     test_ue.i_1_3,
                                                     test_ue.i_2,
                                                     attach_detach_duration,

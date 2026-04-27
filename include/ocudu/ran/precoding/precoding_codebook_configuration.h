@@ -21,21 +21,6 @@ struct pmi_codebook_one_port {};
 /// Precoding Matrix Indicator (PMI) codebook configuration for two CSI-RS antenna ports.
 struct pmi_codebook_two_port {};
 
-/// Single-panel codebook configuration of \f$(N_1, N_2)\f$ and \f$(O_1, O_2)\f$
-struct pmi_codebook_single_panel_info {
-  /// Parameter \f$N_1\f$.
-  unsigned n1;
-  /// Parameter \f$N_2\f$.
-  unsigned n2;
-  /// Parameter \f$O_1\f$.
-  unsigned o1;
-  /// Parameter \f$O_2\f$.
-  unsigned o2;
-};
-
-/// Returns single-panel codebook configuration of \f$(N_1, N_2)\f$ and \f$(O_1, O_2)\f$.
-const pmi_codebook_single_panel_info& get_single_panel_info(pmi_codebook_single_panel_config n1_n2);
-
 /// \brief Precoding Matrix Indicator (PMI) codebook configuration for Type I single-panel.
 ///
 /// The configuration is given by higher layer parameters <em>n1-n2</em> and \e codebookMode in the Information Element
@@ -71,5 +56,8 @@ const pmi_codebook_config& to_pmi_codebook_config(pmi_codebook_id identifier);
 
 /// Converts the PMI codebook configuration to a string.
 const char* to_string(const pmi_codebook_config& codebook);
+
+/// Gets the number of CSI-RS antenna ports from the PMI codebook configuration.
+unsigned get_precoding_codebook_antenna_ports(const pmi_codebook_config& pmi_codebook);
 
 } // namespace ocudu

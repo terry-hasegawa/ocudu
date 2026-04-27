@@ -4,6 +4,7 @@
 #include "ocudu/fapi_adaptor/precoding_matrix_mapper.h"
 #include "precoding_matrix_mapper_functions.h"
 #include "ocudu/ocudulog/ocudulog.h"
+#include "ocudu/ran/precoding/precoding_matrix_indicator.h"
 #include "ocudu/support/ocudu_assert.h"
 
 using namespace ocudu;
@@ -44,12 +45,12 @@ unsigned precoding_matrix_mapper::map(const mac_pdcch_precoding_info& precoding_
 
 /// Returns the precoding matrix index for the PDSCH codebook using the given offset, precoding information and number
 /// of ports.
-static unsigned get_pdsch_precoding_matrix_index(unsigned                offset,
-                                                 const csi_report_pmi&   precoding_info,
-                                                 unsigned                nof_ports,
-                                                 unsigned                nof_layers,
-                                                 unsigned                sector_id,
-                                                 ocudulog::basic_logger& logger)
+static unsigned get_pdsch_precoding_matrix_index(unsigned                          offset,
+                                                 const precoding_matrix_indicator& precoding_info,
+                                                 unsigned                          nof_ports,
+                                                 unsigned                          nof_layers,
+                                                 unsigned                          sector_id,
+                                                 ocudulog::basic_logger&           logger)
 {
   if (nof_ports == 1U) {
     logger.debug("Sector#{}: One port PDSCH precoding matrix, nof_layers={}", sector_id, nof_layers);
@@ -58,9 +59,8 @@ static unsigned get_pdsch_precoding_matrix_index(unsigned                offset,
   }
 
   if (nof_ports == 2U) {
-    ocudu_assert(std::holds_alternative<csi_report_pmi::two_antenna_port>(precoding_info.type),
-                 "Expected PMI information");
-    unsigned pmi = std::get<csi_report_pmi::two_antenna_port>(precoding_info.type).pmi;
+    ocudu_assert(std::holds_alternative<pmi_two_antenna_port>(precoding_info), "Expected PMI information");
+    unsigned pmi = std::get<pmi_two_antenna_port>(precoding_info).pmi;
 
     logger.debug("Sector#{}: Two ports PDSCH precoding matrix, pmi={}, nof_layers={}", sector_id, pmi, nof_layers);
 
@@ -68,9 +68,8 @@ static unsigned get_pdsch_precoding_matrix_index(unsigned                offset,
   }
 
   if (nof_ports == 4U) {
-    ocudu_assert(std::holds_alternative<csi_report_pmi::typeI_single_panel_4ports_mode1>(precoding_info.type),
-                 "Invalid PMI information");
-    const auto& report = std::get<csi_report_pmi::typeI_single_panel_4ports_mode1>(precoding_info.type);
+    ocudu_assert(std::holds_alternative<pmi_typeI_single_panel>(precoding_info), "Invalid PMI information");
+    const auto& report = std::get<pmi_typeI_single_panel>(precoding_info);
 
     logger.debug("Sector#{}: Four ports PDSCH precoding matrix, i11={}, i13={}, i2={}, nof_layers={}",
                  sector_id,

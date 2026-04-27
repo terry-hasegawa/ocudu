@@ -455,8 +455,8 @@ static auto make_ue_dl_msg_debug_log_entry(const dl_msg_alloc& ue_grant)
                    ue_grant.context.nof_retxs,
                    ue_grant.context.k1);
     if (ue_grant.pdsch_cfg.precoding.has_value() and not ue_grant.pdsch_cfg.precoding.value().prg_infos.empty()) {
-      const auto& prg_type = ue_grant.pdsch_cfg.precoding->prg_infos[0].type;
-      fmt::format_to(ctx.out(), " ri={} {}", ue_grant.pdsch_cfg.nof_layers, csi_report_pmi{prg_type});
+      const auto& prg_type = ue_grant.pdsch_cfg.precoding->prg_infos[0];
+      fmt::format_to(ctx.out(), " ri={} {}", ue_grant.pdsch_cfg.nof_layers, precoding_matrix_indicator{prg_type});
     }
     if (ue_grant.pdsch_cfg.codewords[0].new_data) {
       fmt::format_to(ctx.out(), " dl_bo={}", ue_grant.context.buffer_occupancy);

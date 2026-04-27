@@ -5,6 +5,7 @@
 #pragma once
 
 #include "ocudu/adt/bounded_integer.h"
+#include "ocudu/ran/precoding/precoding_matrix_indicator.h"
 #include <optional>
 #include <variant>
 
@@ -16,31 +17,7 @@ using cqi_value = bounded_integer<uint8_t, 0, 15>;
 /// Channel Quality Indicator type.
 using csi_report_wideband_cqi_type = cqi_value;
 
-/// Precoding Matrix Indicator (PMI).
-struct csi_report_pmi {
-  /// PMI field for two antenna port.
-  struct two_antenna_port {
-    /// PMI codebook index from TS38.214 Table 5.2.2.2.1-1
-    unsigned pmi;
-  };
-
-  /// \brief PMI field for Type I Single-Panel codebook, mode 1, and four antenna ports.
-  ///
-  /// This PMI codebook mode is described in TS38.214 Section 5.2.2.2.1.
-  struct typeI_single_panel_4ports_mode1 {
-    /// PMI parameter \f$i_{1,1}\f$.
-    unsigned i_1_1;
-    /// PMI parameter \f$i_{1,3}\f$. Only available for \f$\upsilon \in \{2,3,4\}\f$.
-    std::optional<unsigned> i_1_3;
-    /// PMI parameter \f$i_2\f$.
-    unsigned i_2;
-  };
-
-  /// Actual PMI value.
-  std::variant<two_antenna_port, typeI_single_panel_4ports_mode1> type;
-};
-
-/// Collects Channel State Information (CSI) report fields.
+/// Channel State Information (CSI) report fields.
 struct csi_report_data {
   /// Rank Indicator (RI) data type.
   using ri_type = bounded_integer<uint8_t, 1, 8>;
@@ -56,7 +33,7 @@ struct csi_report_data {
   /// Layer Indicator (LI) if reported.
   std::optional<li_type> li;
   /// PMI wideband information fields if reported.
-  std::optional<csi_report_pmi> pmi;
+  std::optional<precoding_matrix_indicator> pmi;
   /// Wideband CQI for the first TB.
   std::optional<wideband_cqi_type> first_tb_wideband_cqi;
   /// Wideband CQI for the second TB.
