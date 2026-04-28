@@ -381,7 +381,7 @@ int main(int argc, char** argv)
 
   // Create F1-U GW.
 
-  // Create F1-U TEID allocator
+  // Create F1-U TEID allocator (CU-UP)
   gtpu_allocator_creation_request f1u_alloc_msg = {
       .max_nof_teids = o_cu_up_app_unit->get_o_cu_up_unit_config().cu_up_cfg.max_nof_ues * MAX_NOF_PDU_SESSIONS,
       .teid_release_linger_time = GTPU_DEFAULT_TEID_RELEASE_LINGER_TIME,
