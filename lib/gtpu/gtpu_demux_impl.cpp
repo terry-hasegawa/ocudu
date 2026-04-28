@@ -101,7 +101,7 @@ void gtpu_demux_impl::handle_pdu(byte_buffer pdu, const sockaddr_storage& src_ad
     write_pcap(pdu);
     logger.info("Dropped GTP-U PDU, tunnel not found. teid={}", teid);
     if (teid.value() != 0 && tx_upper != nullptr) {
-      if (teid_linger_checker.is_teid_lingering(teid)) {
+      if (not teid_linger_checker.is_teid_lingering(teid)) {
         send_error_indication(read_teid, src_addr);
       } else {
         // TODO: Remove this block - for testing only.
