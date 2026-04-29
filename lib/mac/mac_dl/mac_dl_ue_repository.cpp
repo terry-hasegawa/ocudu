@@ -6,7 +6,7 @@
 
 using namespace ocudu;
 
-mac_dl_ue_context::mac_dl_ue_context(const mac_ue_create_request& req) : ue_index(req.ue_index)
+mac_dl_ue_context::mac_dl_ue_context(const mac_ue_create_request& req) : ue_index(req.ue_index), rnti(req.crnti)
 {
   // Store DL logical channel notifiers.
   addmod_logical_channels(req.bearers);

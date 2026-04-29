@@ -6,6 +6,7 @@
 #include "adapters/adapters.h"
 #include "adapters/du_high_adapter_factories.h"
 #include "adapters/f1ap_adapters.h"
+#include "test_mode/du_test_mode_controller.h"
 #include "test_mode/f1ap_test_mode_adapter.h"
 #include "ocudu/du/du_high/du_high_clock_controller.h"
 #include "ocudu/du/du_high/du_manager/du_manager_factory.h"
@@ -49,8 +50,21 @@ du_high_impl::du_high_impl(const du_high_configuration& config_, const du_high_d
   timers(dependencies.timer_ctrl->get_timer_manager()),
   adapters(std::make_unique<layer_connector>(timers, dependencies.exec_mapper->du_control_executor()))
 {
-  // Create layers
-  mac  = create_du_high_mac(mac_config{adapters->mac_ev_notifier,
+  if (cfg.test_cfg.test_ue.has_value()) {
+    test_mode_ctrl = std::make_unique<du_test_mode_controller>(
+        *cfg.test_cfg.test_ue, dependencies.exec_mapper->du_control_executor(), cfg.ran.cells.size());
+  }
+
+  f1ap = create_du_high_f1ap(*dependencies.f1c_client,
+                             adapters->f1_to_du_notifier,
+                             dependencies.exec_mapper->du_control_executor(),
+                             dependencies.exec_mapper->ue_mapper(),
+                             adapters->f1ap_paging_notifier,
+                             timers,
+                             cfg.test_cfg,
+                             test_mode_ctrl.get());
+
+  mac = create_du_high_mac(mac_config{adapters->mac_ev_notifier,
                                       dependencies.exec_mapper->ue_mapper(),
                                       dependencies.exec_mapper->cell_mapper(),
                                       dependencies.exec_mapper->du_control_executor(),
@@ -65,14 +79,12 @@ du_high_impl::du_high_impl(const du_high_configuration& config_, const du_high_d
                                                                  adapters->mac_ev_notifier},
                                       cfg.ran.sched_cfg},
                            cfg.test_cfg,
-                           cfg.ran.cells.size());
-  f1ap = create_du_high_f1ap(*dependencies.f1c_client,
-                             adapters->f1_to_du_notifier,
-                             dependencies.exec_mapper->du_control_executor(),
-                             dependencies.exec_mapper->ue_mapper(),
-                             adapters->f1ap_paging_notifier,
-                             timers,
-                             cfg.test_cfg);
+                           cfg.ran.cells.size(),
+                           test_mode_ctrl.get());
+
+  if (test_mode_ctrl != nullptr) {
+    test_mode_ctrl->connect(mac->get_pdu_handler(), *f1ap);
+  }
 
   du_mng = create_du_manager(du_manager_params{
       {cfg.ran.gnb_du_name, cfg.ran.gnb_du_id, 1, cfg.ran.cells, cfg.ran.srbs, cfg.ran.qos},

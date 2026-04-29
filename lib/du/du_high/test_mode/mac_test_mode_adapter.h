@@ -15,6 +15,8 @@
 namespace ocudu {
 namespace odu {
 
+class du_test_mode_controller;
+
 class phy_test_mode_adapter : public mac_result_notifier
 {
 public:
@@ -100,9 +102,6 @@ private:
   mac_test_mode_ue_repository& ue_info_mgr;
 
   slot_point last_slot_ind;
-
-  // Counter of how many test UEs have been created in this cell.
-  unsigned nof_test_ues_created = 0;
 };
 
 class mac_test_mode_adapter final : public mac_interface,
@@ -113,7 +112,8 @@ class mac_test_mode_adapter final : public mac_interface,
 public:
   explicit mac_test_mode_adapter(const du_test_mode_config::test_mode_ue_config& test_ue_cfg,
                                  mac_result_notifier&                            phy_notifier_,
-                                 unsigned                                        nof_cells);
+                                 unsigned                                        nof_cells,
+                                 du_test_mode_controller&                        ctrl_);
   ~mac_test_mode_adapter() override;
 
   void connect(std::unique_ptr<mac_interface> mac_ptr);
@@ -186,6 +186,8 @@ private:
   mac_test_mode_ue_repository ue_info_mgr;
 
   std::unique_ptr<phy_test_mode_adapter> phy_notifier;
+
+  du_test_mode_controller& ctrl;
 
   std::vector<std::unique_ptr<mac_test_mode_cell_adapter>> cell_info_handler;
 };

@@ -3,6 +3,7 @@
 // Portions of this file may implement 3GPP specifications, which may be subject to additional licensing requirements.
 
 #include "f1ap_test_mode_adapter.h"
+#include "du_test_mode_controller.h"
 #include "ocudu/asn1/f1ap/common.h"
 #include "ocudu/asn1/f1ap/f1ap.h"
 #include "ocudu/asn1/f1ap/f1ap_pdu_contents.h"
@@ -268,11 +269,7 @@ public:
   {
   }
 
-  void on_new_message(const f1ap_message& msg) override
-  {
-    // Forward message to F1AP-DU.
-    adapted_notif->on_new_message(msg);
-  }
+  void on_new_message(const f1ap_message& msg) override { adapted_notif->on_new_message(msg); }
 
 private:
   std::unique_ptr<f1ap_message_notifier> adapted_notif;
@@ -298,14 +295,18 @@ std::unique_ptr<f1ap_du> ocudu::odu::create_du_high_f1ap(f1c_connection_client& 
                                                          f1ap_ue_executor_mapper&   ue_exec_mapper,
                                                          f1ap_du_paging_notifier&   paging_notifier,
                                                          timer_manager&             timers,
-                                                         const du_test_mode_config& test_cfg)
+                                                         const du_test_mode_config& test_cfg,
+                                                         du_test_mode_controller*   ctrl)
 {
   if (not test_cfg.test_ue.has_value()) {
     return create_f1ap(f1c_client_handler, du_mng, ctrl_exec, ue_exec_mapper, paging_notifier, timers);
   }
 
-  // Create a F1AP test mode adapter that wraps the real F1AP and intercepts messages to the F1-C client.
+  ocudu_assert(ctrl != nullptr, "du_test_mode_controller must be present when test mode UE is configured");
+
   auto f1ap_testmode = std::make_unique<f1ap_test_mode_adapter>(*test_cfg.test_ue, f1c_client_handler);
-  f1ap_testmode->connect(create_f1ap(*f1ap_testmode, du_mng, ctrl_exec, ue_exec_mapper, paging_notifier, timers));
+  f1ap_testmode->connect(
+      create_f1ap(ctrl->get_f1c_wrapper(), du_mng, ctrl_exec, ue_exec_mapper, paging_notifier, timers));
+  ctrl->set_f1c_upstream(*f1ap_testmode);
   return f1ap_testmode;
 }

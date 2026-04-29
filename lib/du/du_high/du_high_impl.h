@@ -15,6 +15,8 @@
 namespace ocudu {
 namespace odu {
 
+class du_test_mode_controller;
+
 class du_high_impl final : public du_high
 {
 public:
@@ -58,6 +60,9 @@ private:
   std::unique_ptr<layer_connector> adapters;
 
   std::unique_ptr<scheduler_metrics_notifier> hub_metrics;
+
+  // Attach/detach cycling controller (only when attach_detach_duration is configured).
+  std::unique_ptr<du_test_mode_controller> test_mode_ctrl;
 
   // DU-high Layers.
   std::unique_ptr<du_manager>    du_mng;

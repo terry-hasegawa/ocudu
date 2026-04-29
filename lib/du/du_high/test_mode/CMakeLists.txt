@@ -2,8 +2,8 @@
 # SPDX-License-Identifier: BSD-3-Clause-Open-MPI
 # Portions of this file may implement 3GPP specifications, which may be subject to additional licensing requirements.
 
-
 add_library(ocudu_du_high_adapters
+        du_test_mode_controller.cpp
         mac_test_mode_adapter.cpp
         f1ap_test_mode_adapter.cpp
         mac_test_mode_helpers.cpp

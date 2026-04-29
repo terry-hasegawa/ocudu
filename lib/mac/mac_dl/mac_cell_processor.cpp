@@ -229,7 +229,13 @@ async_task<bool> mac_cell_processor::add_ue(const mac_ue_create_request& request
           return false;
         }
 
-        return ue_mng.add_ue(std::move(ue_inst));
+        const du_ue_index_t ue_idx = ue_inst.get_ue_index();
+        const rnti_t        rnti   = ue_inst.get_rnti();
+        if (ue_mng.add_ue(std::move(ue_inst))) {
+          logger.debug("ue={} rnti={} proc=\"MAC UE Creation\": MAC UE DL context created successfully.", ue_idx, rnti);
+          return true;
+        }
+        return false;
       },
       [this, ue_index = request.ue_index]() {
         logger.warning("ue={}: Postponed UE creation. Cause: Task queue is full", fmt::underlying(ue_index));

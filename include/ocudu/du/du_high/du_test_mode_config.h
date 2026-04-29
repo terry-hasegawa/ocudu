@@ -18,6 +18,9 @@ struct du_test_mode_config {
     /// Number of slots between consecutive test mode UE creations for a given cell.
     unsigned                ue_creation_stagger_slots = 10;
     std::optional<unsigned> auto_ack_indication_delay;
+    /// \brief Number of slots of active traffic before all UEs in a cell are released and recreated. When set, UEs
+    /// cycle through attach, traffic, detach, and attach again indefinitely. Unset disables cycling.
+    std::optional<unsigned> attach_detach_duration;
     bool                    pdsch_active;
     bool                    pusch_active;
     unsigned                cqi;

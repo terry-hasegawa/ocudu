@@ -8,12 +8,15 @@
 #include "ocudu/mac/mac.h"
 #include "ocudu/mac/mac_config.h"
 
-namespace ocudu {
-namespace odu {
+namespace ocudu::odu {
 
-/// \brief Create a MAC instance for DU-high. In case the test mode is enabled, the MAC messages will be intercepted.
-std::unique_ptr<mac_interface>
-create_du_high_mac(const mac_config& mac_cfg, const odu::du_test_mode_config& test_cfg, unsigned nof_cells);
+class du_test_mode_controller;
 
-} // namespace odu
-} // namespace ocudu
+/// \brief Create a MAC instance for DU-high. In case test mode is enabled, the MAC messages will be intercepted.
+/// When \p ctrl is non-null and attach/detach cycling is configured, the controller is wired for UE lifecycle.
+std::unique_ptr<mac_interface> create_du_high_mac(const mac_config&               mac_cfg,
+                                                  const odu::du_test_mode_config& test_cfg,
+                                                  unsigned                        nof_cells,
+                                                  du_test_mode_controller*        ctrl = nullptr);
+
+} // namespace ocudu::odu

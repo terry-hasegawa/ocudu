@@ -255,6 +255,7 @@ o_du_high_unit ocudu::make_o_du_high_unit(const o_du_high_unit_config&  o_du_hig
                                                       du_high_unit_cfg.test_mode_cfg.test_ue.nof_ues,
                                                       du_high_unit_cfg.test_mode_cfg.test_ue.ue_creation_stagger_slots,
                                                       du_high_unit_cfg.test_mode_cfg.test_ue.auto_ack_indication_delay,
+                                                      du_high_unit_cfg.test_mode_cfg.test_ue.attach_detach_duration,
                                                       du_high_unit_cfg.test_mode_cfg.test_ue.pdsch_active,
                                                       du_high_unit_cfg.test_mode_cfg.test_ue.pusch_active,
                                                       du_high_unit_cfg.test_mode_cfg.test_ue.cqi,

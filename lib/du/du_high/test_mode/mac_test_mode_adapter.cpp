@@ -4,6 +4,7 @@
 
 #include "mac_test_mode_adapter.h"
 #include "../adapters/du_high_adapter_factories.h"
+#include "du_test_mode_controller.h"
 #include "mac_test_mode_helpers.h"
 #include "ocudu/adt/ring_buffer.h"
 #include "ocudu/mac/mac_cell_timing_context.h"
@@ -386,39 +387,7 @@ void mac_test_mode_cell_adapter::on_new_uplink_scheduler_results(const mac_ul_sc
 
 void mac_test_mode_cell_adapter::on_cell_results_completion(slot_point slot)
 {
-  // Forward results to lower layers.
   result_notifier.on_cell_results_completion(slot);
-
-  // Check if more test mode UEs need to be created.
-  // Note: The UE creation should only start after last_slot_ind is valid, i.e., after we have the guarantee that
-  // the cell is active.
-  // Note: We interleave the creation of UEs of different cells across the ue_creation_stagger_slots period to avoid
-  // creating many UEs in the same slot.
-  const unsigned cell_offset_mod = test_ue_cfg.ue_creation_stagger_slots * cell_index / MAX_NOF_DU_CELLS;
-  if (nof_test_ues_created < test_ue_cfg.nof_ues and last_slot_ind.valid() and
-      slot.count() % test_ue_cfg.ue_creation_stagger_slots == cell_offset_mod) {
-    auto ulcch_buf = byte_buffer::create({0x34, 0x1e, 0x4f, 0xc0, 0x4f, 0xa6, 0x06, 0x3f, 0x00, 0x00, 0x00});
-    if (not ulcch_buf.has_value()) {
-      logger.warning("TEST_MODE: Postponing creation of test mode ue={}. Cause: Unable to allocate byte_buffer for "
-                     "UL-CCCH message",
-                     nof_test_ues_created);
-    }
-
-    const rnti_t test_ue_rnti =
-        to_rnti(to_value(test_ue_cfg.rnti) + (cell_index * test_ue_cfg.nof_ues) + nof_test_ues_created);
-
-    // Inject UL-CCCH message that will trigger the test mode UE creation.
-    pdu_handler.handle_rx_data_indication(
-        mac_rx_data_indication{slot, cell_index, {mac_rx_pdu{test_ue_rnti, 0, ulcch_buf.value().copy()}}});
-
-    // UL-CCCH message injected. Update counter.
-    logger.info("TEST_MODE: Starting UE with rnti={} creation on cell={}. There still {}/{} left to be created.",
-                test_ue_rnti,
-                fmt::underlying(cell_index),
-                test_ue_cfg.nof_ues - (nof_test_ues_created + 1),
-                test_ue_cfg.nof_ues);
-    nof_test_ues_created++;
-  }
 }
 
 // ----
@@ -457,11 +426,13 @@ void phy_test_mode_adapter::phy_cell::on_cell_results_completion(slot_point slot
 
 mac_test_mode_adapter::mac_test_mode_adapter(const odu::du_test_mode_config::test_mode_ue_config& test_ue_cfg_,
                                              mac_result_notifier&                                 phy_notifier_,
-                                             unsigned                                             nof_cells) :
+                                             unsigned                                             nof_cells,
+                                             du_test_mode_controller&                             ctrl_) :
   test_ue(test_ue_cfg_),
   event_handler(nof_cells),
   ue_info_mgr(event_handler, test_ue.rnti, test_ue.nof_ues, nof_cells),
-  phy_notifier(std::make_unique<phy_test_mode_adapter>(phy_notifier_))
+  phy_notifier(std::make_unique<phy_test_mode_adapter>(phy_notifier_)),
+  ctrl(ctrl_)
 {
 }
 
@@ -482,13 +453,18 @@ mac_cell_controller& mac_test_mode_adapter::add_cell(const mac_cell_creation_req
     get_ue_control_info_handler().handle_dl_buffer_state_update(
         {ue_info_mgr.rnti_to_du_ue_idx(rnti), lcid_t::LCID_SRB1, TEST_UE_DL_BUFFER_STATE_UPDATE_SIZE});
   };
+  // When the controller is active for cycling, it inserts its own cell result notifier wrapper between
+  // mac_test_mode_cell_adapter and the real PHY notifier, so it can observe MAC outputs for timing and Msg4.
+  mac_cell_result_notifier& cell_result_notifier =
+      ctrl.add_cell_notifier(cell_cfg.cell_index, phy_notifier->adapted_phy.get_cell(cell_cfg.cell_index));
+
   auto new_cell =
       std::make_unique<mac_test_mode_cell_adapter>(test_ue,
                                                    cell_cfg,
                                                    mac_adapted->get_control_info_handler(cell_cfg.cell_index),
                                                    mac_adapted->get_pdu_handler(),
                                                    mac_adapted->get_slot_handler(cell_cfg.cell_index),
-                                                   phy_notifier->adapted_phy.get_cell(cell_cfg.cell_index),
+                                                   cell_result_notifier,
                                                    func_dl_bs_push,
                                                    event_handler,
                                                    ue_info_mgr);
@@ -596,7 +572,20 @@ mac_test_mode_adapter::handle_ue_reconfiguration_request(const mac_ue_reconfigur
 
 async_task<mac_ue_delete_response> mac_test_mode_adapter::handle_ue_delete_request(const mac_ue_delete_request& cfg)
 {
-  return mac_adapted->get_ue_configurator().handle_ue_delete_request(cfg);
+  return launch_async([this, cfg](coro_context<async_task<mac_ue_delete_response>>& ctx) {
+    CORO_BEGIN(ctx);
+
+    // Await MAC UE removal.
+    CORO_AWAIT_VALUE(auto resp, mac_adapted->get_ue_configurator().handle_ue_delete_request(cfg));
+
+    // Update test mode adapter state.
+    if (ue_info_mgr.is_test_ue(cfg.rnti)) {
+      ue_info_mgr.remove_ue(cfg.rnti);
+      ctrl.on_ue_removed(cfg.rnti);
+    }
+
+    CORO_RETURN(resp);
+  });
 }
 
 bool mac_test_mode_adapter::handle_ul_ccch_msg(du_ue_index_t ue_index, byte_buffer pdu)
@@ -609,15 +598,18 @@ void mac_test_mode_adapter::handle_ue_config_applied(du_ue_index_t ue_idx)
   mac_adapted->get_ue_configurator().handle_ue_config_applied(ue_idx);
 }
 
-std::unique_ptr<mac_interface>
-ocudu::odu::create_du_high_mac(const mac_config& mac_cfg, const odu::du_test_mode_config& test_cfg, unsigned nof_cells)
+std::unique_ptr<mac_interface> ocudu::odu::create_du_high_mac(const mac_config&               mac_cfg,
+                                                              const odu::du_test_mode_config& test_cfg,
+                                                              unsigned                        nof_cells,
+                                                              du_test_mode_controller*        ctrl)
 {
   if (not test_cfg.test_ue.has_value()) {
     return create_mac(mac_cfg);
   }
 
   // Create a MAC test mode adapter that wraps the real MAC.
-  auto mac_testmode = std::make_unique<mac_test_mode_adapter>(*test_cfg.test_ue, mac_cfg.phy_notifier, nof_cells);
+  auto mac_testmode =
+      std::make_unique<mac_test_mode_adapter>(*test_cfg.test_ue, mac_cfg.phy_notifier, nof_cells, *ctrl);
   mac_testmode->connect(create_mac(mac_config{mac_cfg.ul_ccch_notifier,
                                               mac_cfg.ue_exec_mapper,
                                               mac_cfg.cell_exec_mapper,

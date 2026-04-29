@@ -784,6 +784,9 @@ static YAML::Node build_du_high_testmode_section(const du_high_unit_test_mode_co
     if (config.test_ue.auto_ack_indication_delay.has_value()) {
       ue_node["auto_ack_indication_delay"] = config.test_ue.auto_ack_indication_delay.value();
     }
+    if (config.test_ue.attach_detach_duration.has_value()) {
+      ue_node["attach_detach_duration"] = config.test_ue.attach_detach_duration.value();
+    }
     ue_node["pdsch_active"] = config.test_ue.pdsch_active;
     ue_node["pusch_active"] = config.test_ue.pusch_active;
     ue_node["cqi"]          = config.test_ue.cqi;

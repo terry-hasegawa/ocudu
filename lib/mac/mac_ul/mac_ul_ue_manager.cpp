@@ -25,10 +25,14 @@ bool mac_ul_ue_manager::add_ue(const mac_ue_create_request& request)
 
   // > Add UE Bearers
   if (not addmod_bearers(request.ue_index, request.bearers)) {
-    logger.warning("ue={}: \"UE Creation\" failed. Cause: Failed to add/mod UE bearers",
+    logger.warning("ue={}: \"MAC UE Creation\" failed. Cause: Failed to add/mod MAC UE UL bearers",
                    fmt::underlying(request.ue_index));
     return false;
   }
+
+  logger.debug("ue={} rnti={} proc=\"MAC UE Creation\": MAC UE UL context created successfully.",
+               request.ue_index,
+               request.crnti);
 
   return true;
 }

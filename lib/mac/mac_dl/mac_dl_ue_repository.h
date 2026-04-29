@@ -31,6 +31,7 @@ public:
   mac_dl_ue_context& operator=(mac_dl_ue_context&&) noexcept = default;
 
   du_ue_index_t get_ue_index() const { return ue_index; }
+  rnti_t        get_rnti() const { return rnti; }
 
   // DL Logical Channel methods.
   const slotted_id_table<lcid_t, mac_sdu_tx_builder*, MAX_NOF_RB_LCIDS>& logical_channels() const { return dl_bearers; }
@@ -41,6 +42,7 @@ public:
 
 private:
   du_ue_index_t                                                   ue_index;
+  rnti_t                                                          rnti;
   slotted_id_table<lcid_t, mac_sdu_tx_builder*, MAX_NOF_RB_LCIDS> dl_bearers;
   ue_con_res_id_t                                                 msg3_subpdu = {};
 };

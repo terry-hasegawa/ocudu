@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: BSD-3-Clause-Open-MPI
 // Portions of this file may implement 3GPP specifications, which may be subject to additional licensing requirements.
 
+#include "lib/du/du_high/test_mode/du_test_mode_controller.h"
 #include "lib/du/du_high/test_mode/mac_test_mode_adapter.h"
 #include "tests/unittests/mac/mac_test_helpers.h"
 #include "ocudu/mac/mac_cell_timing_context.h"
@@ -11,6 +12,7 @@
 #include "ocudu/scheduler/config/ran_cell_config_helper.h"
 #include "ocudu/scheduler/config/serving_cell_config_factory.h"
 #include "ocudu/support/async/async_no_op_task.h"
+#include "ocudu/support/executors/inline_task_executor.h"
 #include "fmt/std.h"
 #include <gtest/gtest.h>
 
@@ -160,7 +162,8 @@ static mac_uci_pdu make_random_uci_with_csi(rnti_t test_rnti = to_rnti(0x4601))
 class base_mac_test_mode_test
 {
 protected:
-  base_mac_test_mode_test(const test_params& params_) : params(params_), adapter{params.test_ue_cfg, phy, 1}
+  base_mac_test_mode_test(const test_params& params_) :
+    params(params_), ctrl{params.test_ue_cfg, exec, 1}, adapter{params.test_ue_cfg, phy, 1, ctrl}
   {
     adapter.connect(std::make_unique<mac_dummy>(mac_events, adapter.get_phy_notifier()));
 
@@ -189,10 +192,12 @@ protected:
     mac_events.next_ul_sched_res.reset();
   }
 
-  test_params           params;
-  mac_event_interceptor mac_events;
-  phy_dummy             phy;
-  mac_test_mode_adapter adapter;
+  test_params             params;
+  mac_event_interceptor   mac_events;
+  phy_dummy               phy;
+  inline_task_executor    exec;
+  du_test_mode_controller ctrl;
+  mac_test_mode_adapter   adapter;
 
   csi_report_configuration csi_cfg;
 
@@ -202,7 +207,8 @@ protected:
 class mac_test_mode_test : public base_mac_test_mode_test, public ::testing::Test
 {
 protected:
-  mac_test_mode_test() : base_mac_test_mode_test(test_params{1, {to_rnti(0x4444), 1, 10, std::nullopt, true, true, 12}})
+  mac_test_mode_test() :
+    base_mac_test_mode_test(test_params{1, {to_rnti(0x4444), 1, 10, std::nullopt, std::nullopt, true, true, 12}})
   {
   }
 };
@@ -505,13 +511,13 @@ INSTANTIATE_TEST_SUITE_P(test_configs,
                          mac_test_mode_auto_uci_test,
                          // clang-format off
 ::testing::Values(
-//           ports rnti           nof_ues            CQI RI PMI i1_1 i1_3  i2
-  test_params{1, {to_rnti(0x4601), 1, 10, 8, true, true, 12}},
-  test_params{1, {to_rnti(0x4601), 1, 10, 8, true, true, 5}},
-  test_params{2, {to_rnti(0x4601), 1, 10, 8, true, true, 12,  2,  1}},
-  test_params{2, {to_rnti(0x4601), 1, 10, 8, true, true, 3,   1,  3}},
-  test_params{4, {to_rnti(0x4601), 1, 10, 8, true, true, 12,  4,  0,   2,   0,  1}},
-  test_params{4, {to_rnti(0x4601), 1, 10, 8, true, true, 12,  1,  0,   1,   0,  3}},
-  test_params{4, {to_rnti(0x4601), 1, 10, 8, true, true, 12,  2,  0,   7,   1,  0}}
+//           ports rnti nof_ues auto_ack attach_detach CQI RI PMI i1_1 i1_3  i2
+  test_params{1, {to_rnti(0x4601), 1, 10, 8, std::nullopt, true, true, 12}},
+  test_params{1, {to_rnti(0x4601), 1, 10, 8, std::nullopt, true, true, 5}},
+  test_params{2, {to_rnti(0x4601), 1, 10, 8, std::nullopt, true, true, 12,  2,  1}},
+  test_params{2, {to_rnti(0x4601), 1, 10, 8, std::nullopt, true, true, 3,   1,  3}},
+  test_params{4, {to_rnti(0x4601), 1, 10, 8, std::nullopt, true, true, 12,  4,  0,   2,   0,  1}},
+  test_params{4, {to_rnti(0x4601), 1, 10, 8, std::nullopt, true, true, 12,  1,  0,   1,   0,  3}},
+  test_params{4, {to_rnti(0x4601), 1, 10, 8, std::nullopt, true, true, 12,  2,  0,   7,   1,  0}}
 ));
 // clang-format on

@@ -1134,6 +1134,9 @@ struct du_high_unit_test_mode_ue_config {
   /// This feature should be avoided if the OFH/UL PHY are operational, otherwise the auto-generated indications
   /// may interfere with the UL PHY HARQ handling.
   std::optional<unsigned> auto_ack_indication_delay;
+  /// \brief Number of slots of active traffic after all UEs are established before they are released and recreated.
+  /// When set, UEs cycle indefinitely through attach, traffic, and detach. Unset disables cycling.
+  std::optional<unsigned> attach_detach_duration;
   /// Whether PDSCH grants are automatically assigned to the test UE.
   bool pdsch_active = true;
   /// Whether PUSCH grants are automatically assigned to the test UE.
