@@ -77,8 +77,15 @@ protected:
   ocudulog::basic_logger&     test_logger = ocudulog::fetch_basic_logger("TEST", false);
 };
 
-//// GTPU demux tesst
-TEST_F(gtpu_demux_test, when_tunnel_not_registered_pdu_is_dropped)
+/// Fixture class for GTPU demux tests with both values for TEID lingering
+class gtpu_demux_test_teid_linger : public gtpu_demux_test, public ::testing::WithParamInterface<bool>
+{
+public:
+  gtpu_demux_test_teid_linger() { teid_linger_checker.set_teid_lingering(GetParam()); }
+};
+
+/// GTPU demux test
+TEST_P(gtpu_demux_test_teid_linger, when_tunnel_not_registered_pdu_is_dropped)
 {
   sockaddr_storage src_addr = {};
   byte_buffer      pdu      = byte_buffer::create(gtpu_ping_vec_teid_1).value();
@@ -91,13 +98,19 @@ TEST_F(gtpu_demux_test, when_tunnel_not_registered_pdu_is_dropped)
   teid_worker.run_pending_tasks();
 
   ASSERT_EQ(gtpu_tunnel->last_rx.length(), 0);
-  ASSERT_GT(dummy_tx.last_tx.length(), 0);
 
-  // Verify the error indication TEID IE matches the received PDU.
-  dummy_tx.last_tx.trim_head(GTPU_EXTENDED_HEADER_LEN);
-  gtpu_msg_error_indication err_ind = {};
-  ASSERT_TRUE(gtpu_read_msg_error_indication(err_ind, dummy_tx.last_tx, test_logger));
-  ASSERT_EQ(err_ind.teid_i.teid_i, gtpu_teid_t{0x1}.value());
+  // If the TEID is not lingering, an error indication is expected
+  if (not GetParam()) {
+    ASSERT_GT(dummy_tx.last_tx.length(), 0);
+
+    // Verify the error indication TEID IE matches the received PDU.
+    dummy_tx.last_tx.trim_head(GTPU_EXTENDED_HEADER_LEN);
+    gtpu_msg_error_indication err_ind = {};
+    ASSERT_TRUE(gtpu_read_msg_error_indication(err_ind, dummy_tx.last_tx, test_logger));
+    ASSERT_EQ(err_ind.teid_i.teid_i, gtpu_teid_t{0x1}.value());
+  } else {
+    EXPECT_TRUE(dummy_tx.last_tx.empty());
+  }
 }
 
 TEST_F(gtpu_demux_test, when_tunnel_registered_pdu_is_forwarded)
@@ -117,7 +130,7 @@ TEST_F(gtpu_demux_test, when_tunnel_registered_pdu_is_forwarded)
   ASSERT_TRUE(dummy_tx.last_tx.empty());
 }
 
-TEST_F(gtpu_demux_test, when_tunnel_was_removed_pdu_is_dropped)
+TEST_P(gtpu_demux_test_teid_linger, when_tunnel_was_removed_pdu_is_dropped)
 {
   sockaddr_storage src_addr = {};
   byte_buffer      pdu      = byte_buffer::create(gtpu_ping_vec_teid_1).value();
@@ -133,13 +146,19 @@ TEST_F(gtpu_demux_test, when_tunnel_was_removed_pdu_is_dropped)
   teid_worker.run_pending_tasks();
 
   ASSERT_EQ(gtpu_tunnel->last_rx.length(), 0);
-  ASSERT_GT(dummy_tx.last_tx.length(), 0);
 
-  // Verify the error indication TEID IE matches the removed tunnel.
-  dummy_tx.last_tx.trim_head(GTPU_EXTENDED_HEADER_LEN);
-  gtpu_msg_error_indication err_ind = {};
-  ASSERT_TRUE(gtpu_read_msg_error_indication(err_ind, dummy_tx.last_tx, test_logger));
-  ASSERT_EQ(err_ind.teid_i.teid_i, gtpu_teid_t{0x1}.value());
+  // If the TEID is not lingering, an error indication is expected
+  if (not GetParam()) {
+    ASSERT_GT(dummy_tx.last_tx.length(), 0);
+
+    // Verify the error indication TEID IE matches the removed tunnel.
+    dummy_tx.last_tx.trim_head(GTPU_EXTENDED_HEADER_LEN);
+    gtpu_msg_error_indication err_ind = {};
+    ASSERT_TRUE(gtpu_read_msg_error_indication(err_ind, dummy_tx.last_tx, test_logger));
+    ASSERT_EQ(err_ind.teid_i.teid_i, gtpu_teid_t{0x1}.value());
+  } else {
+    EXPECT_TRUE(dummy_tx.last_tx.empty());
+  }
 }
 
 TEST_F(gtpu_demux_test, when_tunnel_is_being_removed_pdu_is_dropped)
@@ -171,6 +190,22 @@ TEST_F(gtpu_demux_test, when_different_tunnel_registered_pdu_is_dropped)
 
   ASSERT_EQ(gtpu_tunnel->last_rx.length(), 0);
 }
+
+///////////////////////////////////////////////////////////////////////////////
+// Finally, instantiate all testcases for each supported SN size
+///////////////////////////////////////////////////////////////////////////////
+
+std::string test_param_info_to_string(const ::testing::TestParamInfo<bool>& info)
+{
+  fmt::memory_buffer buffer;
+  fmt::format_to(std::back_inserter(buffer), "teid_linger_{}", info.param);
+  return fmt::to_string(buffer);
+}
+
+INSTANTIATE_TEST_SUITE_P(gtpu_demux_test_each_teid_linger,
+                         gtpu_demux_test_teid_linger,
+                         ::testing::Values(false, true),
+                         test_param_info_to_string);
 
 int main(int argc, char** argv)
 {
