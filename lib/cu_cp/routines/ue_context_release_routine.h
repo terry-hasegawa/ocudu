@@ -27,7 +27,7 @@ public:
   static const char* name() { return "UE Context Release Routine"; }
 
 private:
-  const cu_cp_ue_context_release_command command;
+  cu_cp_ue_context_release_command command;
 
   e1ap_bearer_context_manager* e1ap_bearer_ctxt_mng = nullptr; // to trigger bearer context setup at CU-UP
   du_processor&                du_proc;            // to get RRC Reject and to trigger UE context modification at DU

@@ -678,6 +678,35 @@ void cu_cp_impl::handle_handover_ue_context_push(ue_index_t source_ue_index, ue_
   }
 }
 
+void cu_cp_impl::trigger_release(pci_t                                         source_pci,
+                                 rnti_t                                        rnti,
+                                 std::optional<cu_cp_release_redirect_nr_info> redirect_info)
+{
+  ue_index_t ue_index = ue_mng.get_ue_index(source_pci, rnti);
+  if (ue_index == ue_index_t::invalid) {
+    logger.warning("Could not trigger release, UE invalid. rnti={} pci={}", rnti, source_pci);
+    return;
+  }
+  cu_cp_ue* u = ue_mng.find_du_ue(ue_index);
+  if (u == nullptr) {
+    logger.error("ue={}: Could not find UE for release", ue_index);
+    return;
+  }
+  if (redirect_info.has_value()) {
+    logger.info("ue={}: Triggering RRC Release with NR redirection, arfcn={}", ue_index, redirect_info->arfcn);
+  } else {
+    logger.info("ue={}: Triggering RRC Release", ue_index);
+  }
+
+  cu_cp_ue_context_release_request request;
+  request.ue_index = ue_index;
+  request.cause =
+      redirect_info.has_value() ? ngap_cause_radio_network_t::redirection : ngap_cause_radio_network_t::unspecified;
+  request.redirect_nr_info = redirect_info;
+
+  u->get_task_sched().schedule_async_task(handle_ue_context_release(request));
+}
+
 async_task<void> cu_cp_impl::handle_ue_context_release(const cu_cp_ue_context_release_request& request)
 {
   auto* ue = ue_mng.find_ue(request.ue_index);
@@ -688,6 +717,10 @@ async_task<void> cu_cp_impl::handle_ue_context_release(const cu_cp_ue_context_re
       CORO_RETURN();
     });
   }
+
+  // Store redirect target in UE context; it will be picked up by ue_context_release_routine after the AMF
+  // responds to the NGAP UE Context Release Request (NGAP has no field for redirectedCarrierInfo).
+  ue->get_ue_context().pending_redirect_nr_info = request.redirect_nr_info;
 
   auto* ngap = ngap_db.find_ngap(ue->get_ue_context().plmn);
 

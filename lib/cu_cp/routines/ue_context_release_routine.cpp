@@ -31,6 +31,13 @@ void ue_context_release_routine::operator()(coro_context<async_task<cu_cp_ue_con
 
   logger.debug("ue={}: \"{}\" started...", command.ue_index, name());
 
+  // Redirect info is stored in the UE context before the NGAP round-trip (NGAP carries no redirectedCarrierInfo).
+  if (cu_cp_ue* ue = ue_mng.find_du_ue(command.ue_index);
+      ue != nullptr && ue->get_ue_context().pending_redirect_nr_info.has_value()) {
+    command.requires_rrc_message = true;
+    command.redirect_nr_info     = ue->get_ue_context().pending_redirect_nr_info;
+  }
+
   // Prepare context release complete
   {
     release_complete.ue_index = command.ue_index;
@@ -41,9 +48,11 @@ void ue_context_release_routine::operator()(coro_context<async_task<cu_cp_ue_con
     if (ue_mng.find_du_ue(command.ue_index)->get_rrc_ue() != nullptr) {
       // Call RRC UE notifier to get the release context of the UE and add the location info to the UE context release
       // complete message
-      release_context = ue_mng.find_du_ue(command.ue_index)
-                            ->get_rrc_ue()
-                            ->get_rrc_ue_release_context(command.requires_rrc_message, command.release_wait_time);
+      release_context =
+          ue_mng.find_du_ue(command.ue_index)
+              ->get_rrc_ue()
+              ->get_rrc_ue_release_context(
+                  command.requires_rrc_message, command.release_wait_time, std::nullopt, command.redirect_nr_info);
       release_complete.user_location_info = release_context.user_location_info;
     } else {
       release_context.rrc_pdu = du_proc.get_rrc_du_handler().get_rrc_reject();

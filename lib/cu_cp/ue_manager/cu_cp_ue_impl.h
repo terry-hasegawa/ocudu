@@ -34,6 +34,9 @@ struct cu_cp_ue_context {
   /// \brief Flag to disable new UE reconfigurations. This can be used, for instance, to reconfigure UE contexts
   /// that are in the process of handover.
   bool reconfiguration_disabled = false;
+  /// \brief Pending NR redirect target set before the NGAP round-trip (NGAP carries no redirectedCarrierInfo).
+  /// Consumed by ue_context_release_routine once the AMF responds with UE Context Release Command.
+  std::optional<cu_cp_release_redirect_nr_info> pending_redirect_nr_info;
 };
 
 struct cu_cp_ue_handover_context {

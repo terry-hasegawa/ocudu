@@ -45,7 +45,8 @@ private:
 class cu_cp_impl final : public cu_cp,
                          public cu_cp_impl_interface,
                          public cu_cp_ng_handler,
-                         public cu_cp_command_handler
+                         public cu_cp_command_handler,
+                         public cu_cp_ue_release_command_handler
 {
 public:
   explicit cu_cp_impl(const cu_cp_configuration& config_);
@@ -167,8 +168,14 @@ public:
   async_task<void> handle_ue_removal_request(ue_index_t ue_index) override;
   void             handle_pending_ue_task_cancellation(ue_index_t ue_index) override;
 
-  cu_cp_mobility_command_handler& get_mobility_command_handler() override { return mobility_mng; }
-  metrics_handler&                get_metrics_handler() override { return *metrics_hdlr; }
+  // cu_cp_ue_release_command_handler.
+  void trigger_release(pci_t                                         source_pci,
+                       rnti_t                                        rnti,
+                       std::optional<cu_cp_release_redirect_nr_info> redirect_info = std::nullopt) override;
+
+  cu_cp_mobility_command_handler&   get_mobility_command_handler() override { return mobility_mng; }
+  cu_cp_ue_release_command_handler& get_ue_release_command_handler() override { return *this; }
+  metrics_handler&                  get_metrics_handler() override { return *metrics_hdlr; }
 
   // cu_cp_amf_reconnection_handler.
   void handle_amf_reconnection(amf_index_t amf_index) override;
