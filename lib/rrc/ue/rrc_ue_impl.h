@@ -66,9 +66,10 @@ public:
   bool             store_ue_capabilities(byte_buffer ue_capabilities) override;
   async_task<bool> handle_rrc_ue_capability_transfer_request(const rrc_ue_capability_transfer_request& msg) override;
   rrc_ue_release_context
-                          get_rrc_ue_release_context(bool                                  requires_rrc_message,
-                                                     std::optional<std::chrono::seconds>   release_wait_time = std::nullopt,
-                                                     std::optional<rrc_inactivity_context> inactivity_context = std::nullopt) override;
+                          get_rrc_ue_release_context(bool                                          requires_rrc_message,
+                                                     std::optional<std::chrono::seconds>           release_wait_time = std::nullopt,
+                                                     std::optional<rrc_inactivity_context>         inactivity_context = std::nullopt,
+                                                     std::optional<cu_cp_release_redirect_nr_info> redirect_nr_info = std::nullopt) override;
   rrc_ue_transfer_context get_transfer_context() override;
   std::optional<rrc_meas_cfg>
                          generate_meas_config(const std::optional<rrc_meas_cfg>& current_meas_config = std::nullopt,

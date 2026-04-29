@@ -768,9 +768,11 @@ async_task<bool> rrc_ue_impl::handle_rrc_ue_capability_transfer_request(const rr
   return launch_async<rrc_ue_capability_transfer_procedure>(context, *this, *event_mng, logger);
 }
 
-rrc_ue_release_context rrc_ue_impl::get_rrc_ue_release_context(bool                                requires_rrc_message,
-                                                               std::optional<std::chrono::seconds> release_wait_time,
-                                                               std::optional<rrc_inactivity_context> inactivity_context)
+rrc_ue_release_context
+rrc_ue_impl::get_rrc_ue_release_context(bool                                          requires_rrc_message,
+                                        std::optional<std::chrono::seconds>           release_wait_time,
+                                        std::optional<rrc_inactivity_context>         inactivity_context,
+                                        std::optional<cu_cp_release_redirect_nr_info> redirect_nr_info)
 {
   // Prepare location info to return.
   rrc_ue_release_context release_context;
@@ -832,6 +834,13 @@ rrc_ue_release_context rrc_ue_impl::get_rrc_ue_release_context(bool             
         // Set t380 timer value.
         release.suspend_cfg.t380_present = true;
         asn1::number_to_enum(release.suspend_cfg.t380, inactivity_context->t380.count());
+      }
+
+      if (redirect_nr_info.has_value()) {
+        release.redirected_carrier_info_present = true;
+        auto& nr_info                           = release.redirected_carrier_info.set_nr();
+        nr_info.carrier_freq                    = redirect_nr_info->arfcn;
+        nr_info.ssb_subcarrier_spacing          = subcarrier_spacing_to_rrc_asn1(redirect_nr_info->ssb_scs);
       }
 
       // Pack DL CCCH msg.

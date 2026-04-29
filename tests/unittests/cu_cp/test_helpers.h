@@ -706,9 +706,10 @@ public:
   }
 
   rrc_ue_release_context
-  get_rrc_ue_release_context(bool                                  requires_rrc_msg,
-                             std::optional<std::chrono::seconds>   release_wait_time,
-                             std::optional<rrc_inactivity_context> inactivity_context = std::nullopt) override
+  get_rrc_ue_release_context(bool                                          requires_rrc_msg,
+                             std::optional<std::chrono::seconds>           release_wait_time,
+                             std::optional<rrc_inactivity_context>         inactivity_context = std::nullopt,
+                             std::optional<cu_cp_release_redirect_nr_info> redirect_nr_info   = std::nullopt) override
   {
     logger.info("Received a new request to get RRC UE release context");
     rrc_ue_release_context release_context;

@@ -272,9 +272,10 @@ public:
   /// release context, see section 5.3.15 in TS 38.331. Otherwise, a RrcRelease message is contained in the release
   /// context.
   virtual rrc_ue_release_context
-  get_rrc_ue_release_context(bool                                  requires_rrc_msg,
-                             std::optional<std::chrono::seconds>   release_wait_time  = std::nullopt,
-                             std::optional<rrc_inactivity_context> inactivity_context = std::nullopt) = 0;
+  get_rrc_ue_release_context(bool                                          requires_rrc_msg,
+                             std::optional<std::chrono::seconds>           release_wait_time  = std::nullopt,
+                             std::optional<rrc_inactivity_context>         inactivity_context = std::nullopt,
+                             std::optional<cu_cp_release_redirect_nr_info> redirect_nr_info   = std::nullopt) = 0;
 
   /// \brief Retrieve RRC context of a UE to perform mobility (handover, reestablishment).
   /// \return Transfer context including UP context, security, SRBs, HO preparation, etc.
