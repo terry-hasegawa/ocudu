@@ -129,8 +129,27 @@ variables:
 
       attest_spdx() {
         local predicate=$1
+        local base_url="${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/${NAME}/${VERSION}"
+
         echo "Attesting ${predicate} ($(wc -c < ${predicate}) bytes)"
         cosign attest --predicate "${predicate}" --type spdx ${IMAGE_DIGEST}
+
+        if [ -n "${COSIGN_PRIVATE_KEY_B64}" ]; then
+          echo "${COSIGN_PRIVATE_KEY_B64}" | base64 -d > /tmp/cosign.key
+
+          echo "Signing ${predicate} as detached blob signature"
+          cosign sign-blob --key /tmp/cosign.key \
+            --output-signature "${predicate}.sig" "${predicate}"
+
+          echo "Publishing ${predicate}, ${predicate}.sig and cosign.pub to package registry (${base_url})"
+          cosign public-key --key /tmp/cosign.key > cosign.pub
+          curl --fail --silent --show-error --header "JOB-TOKEN: ${CI_JOB_TOKEN}" \
+            --upload-file "${predicate}" "${base_url}/${predicate}"
+          curl --fail --silent --show-error --header "JOB-TOKEN: ${CI_JOB_TOKEN}" \
+            --upload-file "${predicate}.sig" "${base_url}/${predicate}.sig"
+          curl --fail --silent --show-error --header "JOB-TOKEN: ${CI_JOB_TOKEN}" \
+            --upload-file cosign.pub "${base_url}/cosign.pub"
+        fi
       }
 
     # Attestation functions
