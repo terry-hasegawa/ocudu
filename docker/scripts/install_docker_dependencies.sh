@@ -4,14 +4,36 @@
 # SPDX-License-Identifier: BSD-3-Clause-Open-MPI
 
 #
-# Utilities used in container/runtime environments (e.g. curl, NTP client).
-# Installs the OS-specific package list; takes no arguments.
+# Utilities used in container/runtime environments.
+# Installs the OS-specific package list for the given mode.
+#
+# Run like this: ./install_docker_dependencies.sh [<mode>]
+# E.g.: ./install_docker_dependencies.sh
+# E.g.: ./install_docker_dependencies.sh build
+# E.g.: ./install_docker_dependencies.sh run
 #
 
 set -e
 
 install_docker_dependencies_debian_ubuntu() {
-    local -a pkgs=(curl ntpdate tini)
+    local mode="${1:?}"
+    local -a pkgs=()
+
+    local -a build_pkgs=(git ca-certificates)
+    local -a run_pkgs=(curl ntpdate tini)
+
+    case "$mode" in
+        build)
+            pkgs+=( "${build_pkgs[@]}" )
+            ;;
+        run)
+            pkgs+=( "${run_pkgs[@]}" )
+            ;;
+        *)
+            echo >&2 "Unsupported mode: $mode"
+            exit 1
+            ;;
+    esac
 
     DEBIAN_FRONTEND=noninteractive apt-get update
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends "${pkgs[@]}"
@@ -19,49 +41,104 @@ install_docker_dependencies_debian_ubuntu() {
 }
 
 install_docker_dependencies_arch() {
-    local -a pkgs=(curl ntp)
+    local mode="${1:?}"
+    local -a pkgs=()
+
+    local -a build_pkgs=(git ca-certificates)
+    local -a run_pkgs=(curl ntp)
+
+    case "$mode" in
+        build)
+            pkgs+=( "${build_pkgs[@]}" )
+            ;;
+        run)
+            pkgs+=( "${run_pkgs[@]}" )
+            ;;
+        *)
+            echo >&2 "Unsupported mode: $mode"
+            exit 1
+            ;;
+    esac
 
     pacman -Syu --noconfirm "${pkgs[@]}"
     pacman -Scc --noconfirm
 }
 
 install_docker_dependencies_fedora() {
-    local -a pkgs=(curl ntp)
+    local mode="${1:?}"
+    local -a pkgs=()
+
+    local -a build_pkgs=(git ca-certificates)
+    local -a run_pkgs=(curl ntp)
+
+    case "$mode" in
+        build)
+            pkgs+=( "${build_pkgs[@]}" )
+            ;;
+        run)
+            pkgs+=( "${run_pkgs[@]}" )
+            ;;
+        *)
+            echo >&2 "Unsupported mode: $mode"
+            exit 1
+            ;;
+    esac
 
     dnf -y install "${pkgs[@]}"
     dnf clean all
 }
 
 install_docker_dependencies_rhel() {
-    local -a pkgs=(curl ntp)
+    local mode="${1:?}"
+    local -a pkgs=()
+
+    local -a build_pkgs=(git ca-certificates)
+    local -a run_pkgs=(curl ntp)
+
+    case "$mode" in
+        build)
+            pkgs+=( "${build_pkgs[@]}" )
+            ;;
+        run)
+            pkgs+=( "${run_pkgs[@]}" )
+            ;;
+        *)
+            echo >&2 "Unsupported mode: $mode"
+            exit 1
+            ;;
+    esac
 
     dnf -y install "${pkgs[@]}"
     dnf clean all
 }
 
 main() {
-    if [ $# != 0 ]; then
-        echo >&2 "Usage: $0"
+    if [ $# != 0 ] && [ $# != 1 ]; then
+        echo >&2 "Illegal number of parameters"
+        echo >&2 "Run like this: \"./install_docker_dependencies.sh [<mode>]\" where mode could be: build, run"
+        echo >&2 "If mode is not specified, run dependencies will be installed"
         exit 1
     fi
+
+    local mode="${1:-run}"
 
     # shellcheck source=/dev/null
     . /etc/os-release
 
-    echo "== Installing Docker/runtime helper packages =="
+    echo "== Installing Docker/runtime helper packages, mode $mode =="
 
     case "$ID" in
         debian|ubuntu)
-            install_docker_dependencies_debian_ubuntu
+            install_docker_dependencies_debian_ubuntu "$mode"
             ;;
         arch)
-            install_docker_dependencies_arch
+            install_docker_dependencies_arch "$mode"
             ;;
         rhel)
-            install_docker_dependencies_rhel
+            install_docker_dependencies_rhel "$mode"
             ;;
         fedora)
-            install_docker_dependencies_fedora
+            install_docker_dependencies_fedora "$mode"
             ;;
         *)
             echo "OS $ID not supported"

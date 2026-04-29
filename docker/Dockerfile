@@ -28,14 +28,12 @@ FROM ${OS}:${OS_VERSION} AS builder-base
 
 # Adding the complete repo to the context, in /src folder
 ADD . /src
-# An alternative could be to download the repo
-# RUN apt update && apt-get install -y --no-install-recommends git ca-certificates
-# RUN git clone https://github.com/ocudu/OCUDU_Project.git /src
 
 # Install OCUDU build dependencies
 RUN /src/docker/scripts/install_dependencies.sh build && \
     /src/docker/scripts/install_uhd_dependencies.sh build && \
-    /src/docker/scripts/install_dpdk_dependencies.sh build
+    /src/docker/scripts/install_dpdk_dependencies.sh build && \
+    /src/docker/scripts/install_docker_dependencies.sh build 
 
 
 
@@ -130,21 +128,21 @@ RUN /usr/local/etc/install_ocudu_dependencies.sh run && \
     /usr/local/etc/install_rohc_dependencies.sh run && \
     /usr/local/etc/install_uhd_dependencies.sh run && \
     /usr/local/etc/install_dpdk_dependencies.sh run && \
-    /usr/local/etc/install_docker_dependencies.sh
+    /usr/local/etc/install_docker_dependencies.sh run
 
 # Register DPDK/UHD/ROHC library paths system-wide.
 # When the gnb binary has file capabilities (see next RUN), ld.so enters
 # secure-execution mode on execve() and STRIPS LD_LIBRARY_PATH. The runtime
 # libs must therefore be findable via /etc/ld.so.cache instead.
 RUN printf '%s\n' \
-      "/opt/rohc/lib" \
-      "/opt/uhd/${UHD_VERSION}/lib" \
-      "/opt/uhd/${UHD_VERSION}/lib/x86_64-linux-gnu" \
-      "/opt/uhd/${UHD_VERSION}/lib/aarch64-linux-gnu" \
-      "/opt/dpdk/${DPDK_VERSION}/lib" \
-      "/opt/dpdk/${DPDK_VERSION}/lib/x86_64-linux-gnu" \
-      "/opt/dpdk/${DPDK_VERSION}/lib/aarch64-linux-gnu" \
-      > /etc/ld.so.conf.d/ocudu.conf && \
+    "/opt/rohc/lib" \
+    "/opt/uhd/${UHD_VERSION}/lib" \
+    "/opt/uhd/${UHD_VERSION}/lib/x86_64-linux-gnu" \
+    "/opt/uhd/${UHD_VERSION}/lib/aarch64-linux-gnu" \
+    "/opt/dpdk/${DPDK_VERSION}/lib" \
+    "/opt/dpdk/${DPDK_VERSION}/lib/x86_64-linux-gnu" \
+    "/opt/dpdk/${DPDK_VERSION}/lib/aarch64-linux-gnu" \
+    > /etc/ld.so.conf.d/ocudu.conf && \
     ldconfig
 
 # Bake minimum-privilege Linux capabilities into the binaries that need to
