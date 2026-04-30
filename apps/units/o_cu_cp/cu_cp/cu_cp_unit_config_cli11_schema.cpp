@@ -178,14 +178,41 @@ static void configure_cli11_amf_args(CLI::App& app, cu_cp_unit_amf_config& confi
   configure_cli11_amf_item_args(app, config.amf);
 }
 
-static void configure_cli11_xnap_item_args(CLI::App& app, cu_cp_unit_xnap_config_item& config)
+static void configure_cli11_xnap_peer_args(CLI::App& app, cu_cp_unit_xnap_peer_config& config)
+{
+  add_option(
+      app,
+      "--peer_addrs",
+      config.peer_addrs,
+      "Peer gNB IP addresses to connect for XnAP interface. Multiple addresses can be specified for SCTP multi-homing");
+}
+
+static void configure_cli11_xnap_gateway_args(CLI::App& app, cu_cp_unit_xnap_gateway_config& config)
 {
   add_option(app,
              "--bind_addrs",
              config.bind_addrs,
-             "Local IP addresses to bind for XNAP interface. Multiple addresses can be specified for SCTP "
+             "Local IP addresses to bind for this XnAP gateway. Multiple addresses can be specified for SCTP "
              "multi-homing. If left empty, implicit bind is performed");
-  add_option(app, "--peer_addrs", config.peer_addrs, "Peer IP addresses to connect for XNAP interface");
+
+  // SCTP socket parameters specific to this gateway, nested under `sctp:`.
+  CLI::App* sctp_subcmd = add_subcommand(app, "sctp", "SCTP socket options");
+  configure_cli11_sctp_socket_args(*sctp_subcmd, config.sctp);
+
+  app.add_option_function<std::vector<std::string>>(
+      "--connections",
+      [&config](const std::vector<std::string>& values) {
+        config.connections.resize(values.size());
+        for (unsigned i = 0, e = values.size(); i != e; ++i) {
+          CLI::App subapp("XNAP peer connection parameters");
+          subapp.config_formatter(create_yaml_config_parser());
+          subapp.allow_config_extras(CLI::config_extras_mode::error);
+          configure_cli11_xnap_peer_args(subapp, config.connections[i]);
+          std::istringstream ss(values[i]);
+          subapp.parse_from_stream(ss);
+        }
+      },
+      "Sets the list of Xn-C peer connections reachable via this gateway");
 }
 
 static void configure_cli11_xnap_args(CLI::App& app, cu_cp_unit_xnap_config& config)
@@ -205,25 +232,20 @@ static void configure_cli11_xnap_args(CLI::App& app, cu_cp_unit_xnap_config& con
       ->capture_default_str()
       ->group(""); // hide this parameter from --help
 
-  // SCTP parameters.
-  configure_cli11_sctp_socket_args(app, config.sctp);
-
-  // XN-C parameters.
   app.add_option_function<std::vector<std::string>>(
-      "--connections",
+      "--gateways",
       [&config](const std::vector<std::string>& values) {
-        config.connections.resize(values.size());
-
+        config.gateways.resize(values.size());
         for (unsigned i = 0, e = values.size(); i != e; ++i) {
-          CLI::App subapp("XNAP parameters list");
+          CLI::App subapp("XnAP gateway parameters");
           subapp.config_formatter(create_yaml_config_parser());
           subapp.allow_config_extras(CLI::config_extras_mode::error);
-          configure_cli11_xnap_item_args(subapp, config.connections[i]);
+          configure_cli11_xnap_gateway_args(subapp, config.gateways[i]);
           std::istringstream ss(values[i]);
           subapp.parse_from_stream(ss);
         }
       },
-      "Sets the list of XN-C peer CU-CPs for the CU-CP to connect to");
+      "Sets the list of XnAP gateways, each with its own bind addresses, SCTP options, and Xn-C peer connections");
 }
 
 static void configure_cli11_report_args(CLI::App& app, cu_cp_unit_report_config& report_params)

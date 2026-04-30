@@ -177,10 +177,20 @@ struct cu_cp_unit_e1ap_config {
   unsigned procedure_timeout = 1000;
 };
 
-/// XNAP-CU-CP configuration parameters.
-struct cu_cp_unit_xnap_config_item {
-  std::vector<std::string> bind_addrs = {"127.0.30.1"};
+/// XnAP peer configuration parameters.
+struct cu_cp_unit_xnap_peer_config {
   std::vector<std::string> peer_addrs;
+};
+
+/// XnAP gateway configuration parameters.
+/// XnAP gateway maps to one SCTP socket with configured:
+///   - list of bind_addrs (with SCTP multi-homing possible),
+///   - list of XnAP connections to peer gNBs (with SCTP multi-homing possible),
+///   - its own sctp_appconfig SCTP socket options.
+struct cu_cp_unit_xnap_gateway_config {
+  std::vector<std::string>                 bind_addrs = {"127.0.30.1"};
+  std::vector<cu_cp_unit_xnap_peer_config> connections;
+  sctp_appconfig                           sctp;
 };
 
 struct cu_cp_unit_xnap_config {
@@ -191,11 +201,9 @@ struct cu_cp_unit_xnap_config {
   /// When true, the CU-CP will not initiate outbound XNAP connections but will accept inbound ones.
   bool no_connection_init = false;
 
-  /// SCTP socket options.
-  sctp_appconfig sctp;
-
-  /// Peer configuration.
-  std::vector<cu_cp_unit_xnap_config_item> connections;
+  /// XnAP gateways list configuration.
+  /// Multiple gateways allow XnAP to operate across different subnets, each with independent SCTP tuning.
+  std::vector<cu_cp_unit_xnap_gateway_config> gateways;
 };
 
 /// RLC UM TX configuration

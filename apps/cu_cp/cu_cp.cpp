@@ -295,16 +295,17 @@ int main(int argc, char** argv)
   // Create XN-C GW (TODO cleanup port and PPID args with factory)
   cu_cp_unit_config                              cp_unit_cfg = o_cu_cp_app_unit->get_o_cu_cp_unit_config().cucp_cfg;
   std::unique_ptr<ocucp::xnc_connection_gateway> xnc_gw;
-  if (!cp_unit_cfg.xnap_config.connections.empty()) {
+  if (!cp_unit_cfg.xnap_config.gateways.empty()) {
     sctp_network_gateway_config xnc_sctp_cfg = {};
     xnc_sctp_cfg.if_name                     = "XN-C";
     xnc_sctp_cfg.non_blocking_mode           = true;
-    for (const auto& xnap_cfg : cp_unit_cfg.xnap_config.connections) {
+    // TO-DO: support multiple XnAP gateways.
+    // All entries are temporarily merged into a single SCTP gateway/socket, using the first gateway's SCTP options.
+    for (const auto& gw_cfg : cp_unit_cfg.xnap_config.gateways) {
       xnc_sctp_cfg.bind_addresses.insert(
-          xnc_sctp_cfg.bind_addresses.end(), xnap_cfg.bind_addrs.begin(), xnap_cfg.bind_addrs.end());
+          xnc_sctp_cfg.bind_addresses.end(), gw_cfg.bind_addrs.begin(), gw_cfg.bind_addrs.end());
     }
-
-    fill_sctp_network_gateway_config_socket_params(xnc_sctp_cfg, cp_unit_cfg.xnap_config.sctp);
+    fill_sctp_network_gateway_config_socket_params(xnc_sctp_cfg, cp_unit_cfg.xnap_config.gateways.front().sctp);
     xnc_sctp_cfg.bind_port = XNAP_PORT;
     xnc_sctp_cfg.ppid      = XNAP_PPID;
     xnc_sctp_gateway_config xnc_server_cfg({xnc_sctp_cfg,

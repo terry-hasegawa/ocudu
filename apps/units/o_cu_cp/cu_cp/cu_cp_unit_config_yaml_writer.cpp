@@ -90,12 +90,24 @@ static YAML::Node build_cu_cp_amf_section(const cu_cp_unit_amf_config& config)
   return node;
 }
 
-static YAML::Node build_cu_cp_xnap_item_section(const cu_cp_unit_xnap_config_item& config)
+static YAML::Node build_cu_cp_xnap_peer_section(const cu_cp_unit_xnap_peer_config& config)
+{
+  YAML::Node node;
+
+  node["peer_addrs"] = config.peer_addrs;
+
+  return node;
+}
+
+static YAML::Node build_cu_cp_xnap_gateway_section(const cu_cp_unit_xnap_gateway_config& config)
 {
   YAML::Node node;
 
   node["bind_addrs"] = config.bind_addrs;
-  node["peer_addrs"] = config.peer_addrs;
+  fill_sctp_config_in_yaml_schema(node["sctp"], config.sctp);
+  for (const auto& peer : config.connections) {
+    node["connections"].push_back(build_cu_cp_xnap_peer_section(peer));
+  }
 
   return node;
 }
@@ -106,10 +118,9 @@ static YAML::Node build_cu_cp_xnap_section(const cu_cp_unit_xnap_config& xnap_co
 
   node["procedure_timeout"]  = xnap_config.procedure_timeout;
   node["no_connection_init"] = xnap_config.no_connection_init;
-  fill_sctp_config_in_yaml_schema(node, xnap_config.sctp);
 
-  for (const auto& xnap : xnap_config.connections) {
-    node["connections"].push_back(build_cu_cp_xnap_item_section(xnap));
+  for (const auto& gateway : xnap_config.gateways) {
+    node["gateways"].push_back(build_cu_cp_xnap_gateway_section(gateway));
   }
 
   return node;
@@ -327,7 +338,7 @@ static void fill_cu_cp_section(YAML::Node node, const cu_cp_unit_config& config)
   if (!config.extra_amfs.empty()) {
     node["extra_amfs"] = build_cu_cp_extra_amfs_section(config.extra_amfs);
   }
-  if (!config.xnap_config.connections.empty()) {
+  if (!config.xnap_config.gateways.empty()) {
     node["xnap"] = build_cu_cp_xnap_section(config.xnap_config);
   }
   node["mobility"] = build_cu_cp_mobility_section(config.mobility_config);
