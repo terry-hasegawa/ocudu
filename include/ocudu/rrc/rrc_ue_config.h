@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "ocudu/pdcp/pdcp_t_reordering.h"
+#include "ocudu/ran/pdcp/pdcp_t_reordering.h"
 #include "ocudu/rrc/meas_types.h"
 
 namespace ocudu::ocucp {

@@ -4,8 +4,8 @@
 
 #include "cu_cp_unit_config_validator.h"
 #include "ocudu/adt/span.h"
-#include "ocudu/pdcp/pdcp_t_reordering.h"
 #include "ocudu/ran/nr_cgi.h"
+#include "ocudu/ran/pdcp/pdcp_t_reordering.h"
 #include "ocudu/rlc/rlc_config.h"
 #include <map>
 #include <set>

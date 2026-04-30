@@ -4,9 +4,9 @@
 
 #pragma once
 
-#include "ocudu/pdcp/pdcp_t_reordering.h"
 #include "ocudu/ran/pdcp/pdcp_discard_timer.h"
 #include "ocudu/ran/pdcp/pdcp_sn_size.h"
+#include "ocudu/ran/pdcp/pdcp_t_reordering.h"
 #include "ocudu/rohc/rohc_config.h"
 #include "ocudu/support/timers.h"
 #include "fmt/std.h"
