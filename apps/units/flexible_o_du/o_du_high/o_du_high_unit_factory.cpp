@@ -248,24 +248,6 @@ o_du_high_unit ocudu::make_o_du_high_unit(const o_du_high_unit_config&  o_du_hig
                                                       o_du_high_unit_cfg,
                                                       dependencies.e2_metric_connectors.get_e2_metric_notifier(0));
 
-  // Configure test mode
-  if (du_high_unit_cfg.test_mode_cfg.test_ue.rnti != rnti_t::INVALID_RNTI) {
-    du_hi_cfg.test_cfg.test_ue =
-        odu::du_test_mode_config::test_mode_ue_config{du_high_unit_cfg.test_mode_cfg.test_ue.rnti,
-                                                      du_high_unit_cfg.test_mode_cfg.test_ue.nof_ues,
-                                                      du_high_unit_cfg.test_mode_cfg.test_ue.ue_creation_stagger_slots,
-                                                      du_high_unit_cfg.test_mode_cfg.test_ue.auto_ack_indication_delay,
-                                                      du_high_unit_cfg.test_mode_cfg.test_ue.attach_detach_duration,
-                                                      du_high_unit_cfg.test_mode_cfg.test_ue.pdsch_active,
-                                                      du_high_unit_cfg.test_mode_cfg.test_ue.pusch_active,
-                                                      du_high_unit_cfg.test_mode_cfg.test_ue.cqi,
-                                                      du_high_unit_cfg.test_mode_cfg.test_ue.ri,
-                                                      du_high_unit_cfg.test_mode_cfg.test_ue.pmi,
-                                                      du_high_unit_cfg.test_mode_cfg.test_ue.i_1_1,
-                                                      du_high_unit_cfg.test_mode_cfg.test_ue.i_1_3,
-                                                      du_high_unit_cfg.test_mode_cfg.test_ue.i_2};
-  }
-
   // Create O-DU high.
   odu_unit.o_du_hi = odu::make_o_du_high(o_du_high_cfg, std::move(dependencies.o_du_hi_dependencies));
   report_error_if_not(odu_unit.o_du_hi, "Invalid O-DU high");

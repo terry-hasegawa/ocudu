@@ -1218,6 +1218,35 @@ static scheduler_expert_config generate_scheduler_expert_config(const du_high_un
   return out_cfg;
 }
 
+static odu::du_test_mode_config generate_test_mode_config(const du_high_unit_config& du_high_unit_cfg)
+{
+  odu::du_test_mode_config test_cfg;
+  if (du_high_unit_cfg.test_mode_cfg.test_ue.rnti == rnti_t::INVALID_RNTI) {
+    return test_cfg;
+  }
+
+  const auto&                              test_ue = du_high_unit_cfg.test_mode_cfg.test_ue;
+  std::optional<std::chrono::milliseconds> attach_detach_duration;
+  if (test_ue.attach_detach_duration_ms.has_value()) {
+    attach_detach_duration = std::chrono::milliseconds{*test_ue.attach_detach_duration_ms};
+  }
+  test_cfg.test_ue = odu::du_test_mode_config::test_mode_ue_config{test_ue.rnti,
+                                                                   test_ue.nof_ues,
+                                                                   test_ue.ue_creation_stagger_slots,
+                                                                   test_ue.auto_ack_indication_delay,
+                                                                   attach_detach_duration,
+                                                                   test_ue.pdsch_active,
+                                                                   test_ue.pusch_active,
+                                                                   test_ue.cqi,
+                                                                   test_ue.ri,
+                                                                   test_ue.pmi,
+                                                                   test_ue.i_1_1,
+                                                                   test_ue.i_1_3,
+                                                                   test_ue.i_2};
+
+  return test_cfg;
+}
+
 void ocudu::generate_du_high_config(odu::du_high_configuration& du_hi_cfg, const du_high_unit_config& du_high_unit_cfg)
 {
   // DU-high configuration.
@@ -1236,6 +1265,9 @@ void ocudu::generate_du_high_config(odu::du_high_configuration& du_hi_cfg, const
   du_hi_cfg.ran.mac_cfg               = generate_mac_expert_config(du_high_unit_cfg);
   du_hi_cfg.ran.mac_cfg.initial_crnti = to_rnti(0x4601);
   du_hi_cfg.ran.sched_cfg             = generate_scheduler_expert_config(du_high_unit_cfg);
+
+  // Configure test mode
+  du_hi_cfg.test_cfg = generate_test_mode_config(du_high_unit_cfg);
 }
 
 void ocudu::fill_du_high_worker_manager_config(worker_manager_config&     config,

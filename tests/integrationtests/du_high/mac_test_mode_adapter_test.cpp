@@ -13,6 +13,7 @@
 #include "ocudu/scheduler/config/serving_cell_config_factory.h"
 #include "ocudu/support/async/async_no_op_task.h"
 #include "ocudu/support/executors/inline_task_executor.h"
+#include "ocudu/support/timers.h"
 #include "fmt/std.h"
 #include <gtest/gtest.h>
 
@@ -163,7 +164,7 @@ class base_mac_test_mode_test
 {
 protected:
   base_mac_test_mode_test(const test_params& params_) :
-    params(params_), ctrl{params.test_ue_cfg, exec, 1}, adapter{params.test_ue_cfg, phy, 1, ctrl}
+    params(params_), ctrl{params.test_ue_cfg, timers, exec, 1}, adapter{params.test_ue_cfg, phy, 1, ctrl}
   {
     adapter.connect(std::make_unique<mac_dummy>(mac_events, adapter.get_phy_notifier()));
 
@@ -196,6 +197,7 @@ protected:
   mac_event_interceptor   mac_events;
   phy_dummy               phy;
   inline_task_executor    exec;
+  timer_manager           timers;
   du_test_mode_controller ctrl;
   mac_test_mode_adapter   adapter;
 

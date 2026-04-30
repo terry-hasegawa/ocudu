@@ -12,6 +12,7 @@
 #include "ocudu/ran/du_types.h"
 #include "ocudu/ran/rnti.h"
 #include "ocudu/ran/slot_point.h"
+#include "ocudu/support/timers.h"
 #include <memory>
 #include <vector>
 
@@ -40,6 +41,7 @@ class du_test_mode_controller
 
 public:
   du_test_mode_controller(const du_test_mode_config::test_mode_ue_config& cfg_,
+                          timer_manager&                                  timers_,
                           task_executor&                                  ctrl_exec_,
                           unsigned                                        nof_cells_);
   ~du_test_mode_controller();
@@ -67,13 +69,19 @@ public:
   void on_ue_removed(rnti_t rnti);
 
 private:
+  struct ue_entry {
+    rnti_t              rnti;
+    gnb_du_ue_f1ap_id_t gnb_du_ue_id;
+  };
+
   void on_msg4_received_on_ctrl(du_cell_index_t cell_index, rnti_t rnti);
   void on_slot_completed_on_ctrl(du_cell_index_t cell_index, slot_point slot);
-  void tick_cell(du_cell_index_t cell_index, slot_point slot);
-  void release_all_ues_in_cell(du_cell_index_t cell_index);
   bool release_ue(rnti_t rnti);
+  void handle_attach_detach_timer(du_cell_index_t cell_index);
   void try_create_ue(du_cell_index_t cell_index, slot_point slot);
-  void reset_cell_for_next_cycle(du_cell_index_t cell_index);
+  void start_guard_period(du_cell_index_t cell_index);
+  void start_release_all_ues_in_cell(du_cell_index_t cell_index);
+  void start_reset_cell_for_next_cycle(du_cell_index_t cell_index);
 
   bool is_test_ue_in_cell(du_cell_index_t cell_index, rnti_t rnti) const
   {
@@ -88,29 +96,22 @@ private:
   f1ap_du*                                        f1ap_handler = nullptr;
   ocudulog::basic_logger&                         logger;
 
-  struct ue_entry {
-    rnti_t              rnti;
-    gnb_du_ue_f1ap_id_t gnb_du_ue_id;
-  };
   std::vector<ue_entry> ue_id_table;
 
   enum class cell_cycle_state { creating, running, releasing, guard };
   struct cell_state {
-    cell_cycle_state  cycle                  = cell_cycle_state::creating;
+    cell_cycle_state  cycle = cell_cycle_state::creating;
+    unique_timer      attach_detach_timer;
     unsigned          nof_ues_estab          = 0;
     unsigned          nof_ues_created        = 0;
     unsigned          nof_ues_pending_remove = 0;
     slot_point        last_slot;
-    slot_point        established_slot;
-    slot_point        guard_start_slot;
     std::vector<bool> msg4_counted;
   };
   std::vector<cell_state> cells;
 
   std::unique_ptr<f1c_wrapper_impl>                f1c_wrapper;
   std::vector<std::unique_ptr<cell_notifier_impl>> cell_notifiers;
-
-  static constexpr unsigned GUARD_PERIOD_SLOTS = 1000;
 };
 
 } // namespace ocudu::odu

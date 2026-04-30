@@ -2454,11 +2454,12 @@ static void configure_cli11_test_ue_mode_args(CLI::App& app, du_high_unit_test_m
              "PHY is not operational")
       ->capture_default_str();
   add_option(app,
-             "--attach_detach_duration",
-             test_params.attach_detach_duration,
-             "Number of slots of active traffic after all UEs are established before they are released and recreated. "
-             "When set, UEs cycle indefinitely through attach, traffic, and detach. Unset disables cycling.")
-      ->capture_default_str();
+             "--attach_detach_duration_ms",
+             test_params.attach_detach_duration_ms,
+             "Duration in milliseconds of active traffic after all UEs are established before they are released and "
+             "recreated. When set, UEs cycle indefinitely through attach, traffic, and detach. Unset disables cycling.")
+      ->capture_default_str()
+      ->check(CLI::Range(100, 10000));
   add_option(app, "--pdsch_active", test_params.pdsch_active, "PDSCH enabled")->capture_default_str();
   add_option(app, "--pusch_active", test_params.pusch_active, "PUSCH enabled")->capture_default_str();
   add_option(app, "--cqi", test_params.cqi, "Channel Quality Information (CQI) to be forwarded to test UE.")

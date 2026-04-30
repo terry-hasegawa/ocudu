@@ -52,7 +52,7 @@ du_high_impl::du_high_impl(const du_high_configuration& config_, const du_high_d
 {
   if (cfg.test_cfg.test_ue.has_value()) {
     test_mode_ctrl = std::make_unique<du_test_mode_controller>(
-        *cfg.test_cfg.test_ue, dependencies.exec_mapper->du_control_executor(), cfg.ran.cells.size());
+        *cfg.test_cfg.test_ue, timers, dependencies.exec_mapper->du_control_executor(), cfg.ran.cells.size());
   }
 
   f1ap = create_du_high_f1ap(*dependencies.f1c_client,
