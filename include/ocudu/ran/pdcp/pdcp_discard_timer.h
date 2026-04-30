@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "fmt/std.h"
+#include "fmt/format.h"
 #include <cstdint>
 
 namespace ocudu {
@@ -66,7 +66,9 @@ constexpr int16_t pdcp_discard_timer_to_int(pdcp_discard_timer discard_timer)
 
 } // namespace ocudu
 
+// Formatters.
 namespace fmt {
+
 template <>
 struct formatter<ocudu::pdcp_discard_timer> {
   template <typename ParseContext>

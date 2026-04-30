@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "fmt/format.h"
 #include <cstdint>
 
 namespace ocudu {
@@ -106,3 +107,25 @@ constexpr int16_t pdcp_t_reordering_to_int(pdcp_t_reordering t_reordering)
 }
 
 } // namespace ocudu
+
+// Formatters.
+namespace fmt {
+
+template <>
+struct formatter<ocudu::pdcp_t_reordering> {
+  template <typename ParseContext>
+  auto parse(ParseContext& ctx)
+  {
+    return ctx.begin();
+  }
+
+  template <typename FormatContext>
+  auto format(ocudu::pdcp_t_reordering t_reordering, FormatContext& ctx) const
+  {
+    if (t_reordering == ocudu::pdcp_t_reordering::infinity) {
+      return format_to(ctx.out(), "infinity");
+    }
+    return format_to(ctx.out(), "{}", ocudu::pdcp_t_reordering_to_int(t_reordering));
+  }
+};
+} // namespace fmt

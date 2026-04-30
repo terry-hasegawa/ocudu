@@ -5,11 +5,12 @@
 #pragma once
 
 #include "ocudu/ran/pdcp/pdcp_discard_timer.h"
+#include "ocudu/ran/pdcp/pdcp_rlc_mode.h"
 #include "ocudu/ran/pdcp/pdcp_sn_size.h"
 #include "ocudu/ran/pdcp/pdcp_t_reordering.h"
 #include "ocudu/rohc/rohc_config.h"
 #include "ocudu/support/timers.h"
-#include "fmt/std.h"
+#include "fmt/format.h"
 #include <cstdint>
 
 namespace ocudu {
@@ -18,9 +19,6 @@ class pdcp_metrics_notifier;
 
 /// PDCP NR SRB or DRB information.
 enum class pdcp_rb_type { srb, drb };
-
-/// PDCP NR RLC mode information.
-enum class pdcp_rlc_mode { um, am };
 
 /// \brief Returns the value range of the sequence numbers.
 /// \param sn_size Length of the sequence number field in bits.
@@ -243,40 +241,6 @@ struct formatter<ocudu::pdcp_rb_type> {
   {
     static constexpr const char* options[] = {"SRB", "DRB"};
     return format_to(ctx.out(), "{}", options[static_cast<unsigned>(type)]);
-  }
-};
-
-template <>
-struct formatter<ocudu::pdcp_rlc_mode> {
-  template <typename ParseContext>
-  auto parse(ParseContext& ctx)
-  {
-    return ctx.begin();
-  }
-
-  template <typename FormatContext>
-  auto format(ocudu::pdcp_rlc_mode mode, FormatContext& ctx) const
-  {
-    static constexpr const char* options[] = {"UM", "AM"};
-    return format_to(ctx.out(), "{}", options[static_cast<unsigned>(mode)]);
-  }
-};
-
-template <>
-struct formatter<ocudu::pdcp_t_reordering> {
-  template <typename ParseContext>
-  auto parse(ParseContext& ctx)
-  {
-    return ctx.begin();
-  }
-
-  template <typename FormatContext>
-  auto format(ocudu::pdcp_t_reordering t_reordering, FormatContext& ctx) const
-  {
-    if (t_reordering == ocudu::pdcp_t_reordering::infinity) {
-      return format_to(ctx.out(), "infinity");
-    }
-    return format_to(ctx.out(), "{}", ocudu::pdcp_t_reordering_to_int(t_reordering));
   }
 };
 
