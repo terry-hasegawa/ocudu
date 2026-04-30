@@ -6,9 +6,12 @@
 
 #include "ocudu/adt/byte_buffer.h"
 #include "ocudu/adt/slotted_vector.h"
-#include "ocudu/pdcp/pdcp_config.h"
 #include "ocudu/ran/cause/e1ap_cause.h"
 #include "ocudu/ran/cu_types.h"
+#include "ocudu/ran/pdcp/pdcp_discard_timer.h"
+#include "ocudu/ran/pdcp/pdcp_rlc_mode.h"
+#include "ocudu/ran/pdcp/pdcp_sn_size.h"
+#include "ocudu/ran/pdcp/pdcp_t_reordering.h"
 #include "ocudu/ran/rb_id.h"
 #include "ocudu/ran/up_transport_layer_info.h"
 #include "ocudu/security/security.h"

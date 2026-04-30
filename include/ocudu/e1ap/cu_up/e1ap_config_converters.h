@@ -5,7 +5,6 @@
 #pragma once
 
 #include "ocudu/e1ap/common/e1ap_types.h"
-#include "ocudu/pdcp/pdcp_config.h"
 #include "ocudu/sdap/sdap_config.h"
 
 namespace ocudu {

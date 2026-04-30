@@ -7,7 +7,6 @@
 #include "ocudu/asn1/asn1_utils.h"
 #include "ocudu/asn1/e1ap/e1ap_ies.h"
 #include "ocudu/e1ap/common/e1ap_types.h"
-#include "ocudu/pdcp/pdcp_config.h"
 #include "ocudu/ran/bcd_helper.h"
 #include "ocudu/ran/cause/e1ap_cause.h"
 #include "ocudu/ran/cu_types.h"
