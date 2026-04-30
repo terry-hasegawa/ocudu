@@ -351,10 +351,11 @@ void pdcp_entity_rx::handle_data_pdu(byte_buffer pdu, std::chrono::system_clock:
     return;
   }
 
-  pdcp_rx_pdu_info pdu_info{.buf             = std::move(pdu),
-                            .count           = rcvd_count,
-                            .time_of_arrival = time_of_arrival,
-                            .token           = pdcp_crypto_token(token_mngr)};
+  pdcp_rx_pdu_info pdu_info{.buf                = std::move(pdu),
+                            .count              = rcvd_count,
+                            .integrity_verified = false,
+                            .time_of_arrival    = time_of_arrival,
+                            .token              = pdcp_crypto_token(token_mngr)};
 
   // apply security in crypto executor
   if (not crypto_executor.execute([this, pdu_info = std::move(pdu_info)]() mutable {
@@ -371,7 +372,7 @@ void pdcp_entity_rx::apply_security(pdcp_rx_pdu_info&& pdu_info)
   uint32_t rcvd_count = pdu_info.count;
 
   // Apply deciphering and integrity check
-  security::security_result result = apply_deciphering_and_integrity_check(std::move(pdu_info.buf), rcvd_count);
+  security::security_result_rx result = apply_deciphering_and_integrity_check(std::move(pdu_info.buf), rcvd_count);
 
   if (!result.buf.has_value()) {
     auto handle_failure =
@@ -403,13 +404,18 @@ void pdcp_entity_rx::apply_security(pdcp_rx_pdu_info&& pdu_info)
     }
     return;
   }
-  logger.log_debug(result.buf.value().begin(), result.buf.value().end(), "Security passed. count={}", rcvd_count);
+  logger.log_debug(result.buf.value().begin(),
+                   result.buf.value().end(),
+                   "Security passed. count={} verified={}",
+                   rcvd_count,
+                   result.integrity_verified);
 
   // After checking the integrity, we can discard the header.
   unsigned hdr_size = cfg.sn_size == pdcp_sn_size::size12bits ? 2 : 3;
   result.buf.value().trim_head(hdr_size);
 
-  pdu_info.buf = std::move(result.buf.value());
+  pdu_info.buf                = std::move(result.buf.value());
+  pdu_info.integrity_verified = result.integrity_verified;
 
   auto post           = std::chrono::high_resolution_clock::now();
   auto sdu_latency_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(post - pre);
@@ -417,7 +423,11 @@ void pdcp_entity_rx::apply_security(pdcp_rx_pdu_info&& pdu_info)
 
   // apply reordering in UE executor
   if (not ue_ul_executor.execute([this, pdu_info = std::move(pdu_info)]() mutable {
-        metrics.add_integrity_verified_pdus(1);
+        if (pdu_info.integrity_verified) {
+          metrics.add_integrity_verified_pdus(1);
+        } else {
+          metrics.add_integrity_unverified_pdus(1);
+        }
         apply_reordering(std::move(pdu_info));
       })) {
     logger.log_warning("Dropped PDU, UE executor queue is full. count={}", rcvd_count);
@@ -451,10 +461,11 @@ void pdcp_entity_rx::apply_reordering(pdcp_rx_pdu_info pdu_info)
   }
 
   // Store PDU in Rx window
-  pdcp_rx_sdu_info& sdu_info = rx_window.add_sn(rcvd_count);
-  sdu_info.buf               = std::move(pdu_info.buf);
-  sdu_info.count             = pdu_info.count;
-  sdu_info.time_of_arrival   = pdu_info.time_of_arrival;
+  pdcp_rx_sdu_info& sdu_info  = rx_window.add_sn(rcvd_count);
+  sdu_info.buf                = std::move(pdu_info.buf);
+  sdu_info.count              = pdu_info.count;
+  sdu_info.integrity_verified = pdu_info.integrity_verified;
+  sdu_info.time_of_arrival    = pdu_info.time_of_arrival;
 
   // Update RX_NEXT
   if (rcvd_count >= st.rx_next) {
@@ -644,7 +655,7 @@ bool pdcp_entity_rx::apply_header_decompression(byte_buffer& buf)
 /*
  * Deciphering and Integrity Protection Helpers
  */
-security::security_result pdcp_entity_rx::apply_deciphering_and_integrity_check(byte_buffer buf, uint32_t count)
+security::security_result_rx pdcp_entity_rx::apply_deciphering_and_integrity_check(byte_buffer buf, uint32_t count)
 {
   // obtain the thread-specific ID of the worker
   uint32_t worker_idx = execution_context::get_current_worker_index();
@@ -670,7 +681,7 @@ security::security_result pdcp_entity_rx::apply_deciphering_and_integrity_check(
       }
       buf.trim_tail(security::sec_mac_len);
     }
-    return {.buf = std::move(buf), .count = count};
+    return {.buf = std::move(buf), .count = count, .integrity_verified = false};
   }
 
   // TS 38.323, section 5.8: Deciphering
@@ -682,8 +693,8 @@ security::security_result pdcp_entity_rx::apply_deciphering_and_integrity_check(
   // The data unit that is integrity protected is the PDU header
   // and the data part of the PDU before ciphering.
 
-  unsigned                  hdr_size = cfg.sn_size == pdcp_sn_size::size12bits ? 2 : 3;
-  security::security_result result   = sec_engine->decrypt_and_verify_integrity(std::move(buf), hdr_size, count);
+  unsigned                     hdr_size = cfg.sn_size == pdcp_sn_size::size12bits ? 2 : 3;
+  security::security_result_rx result   = sec_engine->decrypt_and_verify_integrity(std::move(buf), hdr_size, count);
   return result;
 }
 
@@ -696,8 +707,13 @@ void pdcp_entity_rx::configure_security(security::sec_128_as_config sec_cfg,
 {
   ocudu_assert((is_srb() && sec_cfg.domain == security::sec_domain::rrc) ||
                    (!is_srb() && sec_cfg.domain == security::sec_domain::up),
-               "Invalid sec_domain={} for {} in {}",
+               "Invalid PDCP RX sec_domain={} for {} in {}",
                sec_cfg.domain,
+               rb_type,
+               rb_id);
+  ocudu_assert(is_srb() || integrity_enabled_ != security::integrity_enabled::smc_transition,
+               "Invalid PDCP RX integrity={} for {} in {}",
+               integrity_enabled_,
                rb_type,
                rb_id);
   // The 'NULL' integrity protection algorithm (nia0) is used only for SRBs and for the UE in limited service mode,
@@ -706,7 +722,8 @@ void pdcp_entity_rx::configure_security(security::sec_128_as_config sec_cfg,
   // Ref: TS 38.331 Sec. 5.3.1.2
   //
   // From TS 33.501 Sec. 6.7.3.6: UEs that are in limited service mode (LSM) and that cannot be authenticated (...)
-  // may still be allowed to establish emergency session by sending the emergency registration request message. (...)
+  // may still be allowed to establish emergency session by sending the emergency registration request message.
+  // (...)
   if ((sec_cfg.integ_algo == security::integrity_algorithm::nia0) &&
       (!is_srb() || sec_cfg.cipher_algo != security::ciphering_algorithm::nea0)) {
     logger.log_error("Integrity algorithm NIA0 is only permitted for SRBs configured with NEA0. is_srb={} NIA{} NEA{}",
@@ -716,7 +733,7 @@ void pdcp_entity_rx::configure_security(security::sec_128_as_config sec_cfg,
   }
 
   // Evaluate and store integrity indication
-  if (integrity_enabled_ == security::integrity_enabled::on) {
+  if (integrity_enabled_ != security::integrity_enabled::off) {
     if (!sec_cfg.k_128_int.has_value()) {
       logger.log_error("Cannot enable integrity protection: Integrity key is not configured.");
       return;

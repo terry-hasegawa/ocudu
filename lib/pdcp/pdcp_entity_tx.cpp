@@ -794,8 +794,13 @@ void pdcp_entity_tx::configure_security(security::sec_128_as_config sec_cfg,
 {
   ocudu_assert((is_srb() && sec_cfg.domain == security::sec_domain::rrc) ||
                    (!is_srb() && sec_cfg.domain == security::sec_domain::up),
-               "Invalid sec_domain={} for {} in {}",
+               "Invalid PDCP TX sec_domain={} for {} in {}",
                sec_cfg.domain,
+               rb_type,
+               rb_id);
+  ocudu_assert(integrity_enabled_ != security::integrity_enabled::smc_transition,
+               "Invalid PDCP TX integrity={} for {} in {}",
+               integrity_enabled_,
                rb_type,
                rb_id);
   // The 'NULL' integrity protection algorithm (nia0) is used only for SRBs and for the UE in limited service mode,
@@ -814,7 +819,7 @@ void pdcp_entity_tx::configure_security(security::sec_128_as_config sec_cfg,
   }
 
   // Evaluate and store integrity indication
-  if (integrity_enabled_ == security::integrity_enabled::on) {
+  if (integrity_enabled_ != security::integrity_enabled::off) {
     if (!sec_cfg.k_128_int.has_value()) {
       logger.log_error("Cannot enable integrity protection: Integrity key is not configured.");
       return;

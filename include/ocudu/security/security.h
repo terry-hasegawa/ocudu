@@ -103,7 +103,15 @@ constexpr uint8_t to_number(security_direction direction)
 }
 
 /// integrity/ciphering enabled.
-enum class integrity_enabled { off = 0, on = 1 };
+enum class integrity_enabled {
+  /// Integrity check is disabled.
+  off = 0,
+  /// Integrity check is enabled.
+  on = 1,
+  /// Integrity check is enabled but PDUs with zero-padded MAC-I are also permitted.
+  /// This mode is only applicable for UL SRB between security mode command and security mode complete.
+  smc_transition = 2
+};
 enum class ciphering_enabled { off = 0, on = 1 };
 
 /// Security state.
@@ -360,7 +368,7 @@ struct formatter<ocudu::security::integrity_enabled> {
   template <typename FormatContext>
   auto format(ocudu::security::integrity_enabled integrity_flag, FormatContext& ctx) const
   {
-    static constexpr const char* options[] = {"off", "on"};
+    static constexpr const char* options[] = {"off", "on", "smc_transition"};
     return format_to(ctx.out(), "{}", options[static_cast<unsigned>(integrity_flag)]);
   }
 };

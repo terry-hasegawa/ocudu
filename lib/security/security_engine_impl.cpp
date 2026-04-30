@@ -18,9 +18,10 @@ security_engine_impl::security_engine_impl(security::sec_128_as_config sec_cfg,
                                            security_direction          direction,
                                            security::integrity_enabled integrity_enabled,
                                            security::ciphering_enabled ciphering_enabled) :
-  logger(ocudulog::fetch_basic_logger("SEC"))
+  logger(ocudulog::fetch_basic_logger("SEC")),
+  zero_mac_permitted(integrity_enabled == security::integrity_enabled::smc_transition)
 {
-  if (integrity_enabled == security::integrity_enabled::on) {
+  if (integrity_enabled != security::integrity_enabled::off) {
     ocudu_assert(sec_cfg.integ_algo.has_value(), "Cannot enable integrity protection: No algorithm selected");
     ocudu_assert(sec_cfg.k_128_int.has_value(), "Cannot enable integrity protection: No key");
     switch (sec_cfg.integ_algo.value()) {
@@ -75,13 +76,14 @@ security_result security_engine_impl::encrypt_and_protect_integrity(byte_buffer 
   return result;
 }
 
-security_result security_engine_impl::decrypt_and_verify_integrity(byte_buffer buf, size_t offset, uint32_t count)
+security_result_rx security_engine_impl::decrypt_and_verify_integrity(byte_buffer buf, size_t offset, uint32_t count)
 {
-  security_result result{.buf = std::move(buf), .count = count};
+  security_result_rx result{.buf = std::move(buf), .count = count, .integrity_verified = false};
 
   // apply deciphering if activated
   if (cipher_eng != nullptr) {
-    result = cipher_eng->apply_ciphering(std::move(result.buf.value()), offset, result.count);
+    security_result cipher_result = cipher_eng->apply_ciphering(std::move(result.buf.value()), offset, result.count);
+    result                        = {.buf = std::move(cipher_result.buf), .count = count, .integrity_verified = false};
     if (!result.buf.has_value()) {
       return result;
     }
@@ -89,7 +91,13 @@ security_result security_engine_impl::decrypt_and_verify_integrity(byte_buffer b
 
   // verify integrity if activated
   if (integ_eng != nullptr) {
-    result = integ_eng->verify_integrity(std::move(result.buf.value()), result.count);
+    security_result integ_result = integ_eng->verify_integrity(std::move(result.buf.value()), result.count);
+    result                       = {.buf = std::move(integ_result.buf), .count = count, .integrity_verified = true};
+    // TODO: second chance for PDUs with zero MAC.
+    if (zero_mac_permitted) {
+      // check zero-padding; cut zero-padding
+      return result;
+    }
   }
 
   return result;

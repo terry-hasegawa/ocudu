@@ -72,6 +72,7 @@ void cu_up_pdcp_metrics_consumer_json::handle_metric(const app_services::metrics
   aggr_rx.num_sdus += rx_metric.num_sdus;
   aggr_rx.num_sdu_bytes += rx_metric.num_sdu_bytes;
   aggr_rx.num_integrity_verified_pdus += rx_metric.num_integrity_verified_pdus;
+  aggr_rx.num_integrity_unverified_pdus += rx_metric.num_integrity_unverified_pdus;
   aggr_rx.num_integrity_failed_pdus += rx_metric.num_integrity_failed_pdus;
   aggr_rx.num_t_reordering_timeouts += rx_metric.num_t_reordering_timeouts;
   aggr_rx.reordering_counter += rx_metric.reordering_counter;

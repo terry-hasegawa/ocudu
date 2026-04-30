@@ -70,6 +70,14 @@ public:
     metrics.num_integrity_verified_pdus += num_pdus_;
   }
 
+  void add_integrity_unverified_pdus(uint32_t num_pdus_)
+  {
+    if (not enabled) {
+      return;
+    }
+    metrics.num_integrity_unverified_pdus += num_pdus_;
+  }
+
   void add_integrity_failed_pdus(uint32_t num_pdus_)
   {
     if (not enabled) {

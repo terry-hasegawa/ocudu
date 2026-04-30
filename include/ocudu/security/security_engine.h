@@ -29,8 +29,19 @@ inline const char* to_string(security_error sec_err)
 }
 
 struct security_result {
+  /// Buffer that stores the resulting SDU in case of success. Otherwise it contains information about the failure.
   expected<byte_buffer, security_error> buf;
-  uint32_t                              count;
+  /// The count value that is associated to this SDU.
+  uint32_t count;
+};
+
+struct security_result_rx {
+  /// Buffer that stores the resulting SDU in case of success. Otherwise it contains information about the failure.
+  expected<byte_buffer, security_error> buf;
+  /// The count value that is associated to this SDU.
+  uint32_t count;
+  /// Indicates whether the integrity of \c buf is verified (true) or unverified/unchecked (false).
+  bool integrity_verified;
 };
 
 class security_engine_tx
@@ -46,7 +57,7 @@ class security_engine_rx
 public:
   virtual ~security_engine_rx() = default;
 
-  virtual security_result decrypt_and_verify_integrity(byte_buffer buf, size_t offset, uint32_t count) = 0;
+  virtual security_result_rx decrypt_and_verify_integrity(byte_buffer buf, size_t offset, uint32_t count) = 0;
 };
 
 } // namespace security

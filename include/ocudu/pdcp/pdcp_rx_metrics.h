@@ -29,6 +29,7 @@ struct pdcp_rx_metrics_container {
   uint32_t num_sdus;
   uint32_t num_sdu_bytes;
   uint32_t num_integrity_verified_pdus;
+  uint32_t num_integrity_unverified_pdus;
   uint32_t num_integrity_failed_pdus;
   uint32_t num_t_reordering_timeouts;
   uint32_t reordering_delay_us;
@@ -60,7 +61,8 @@ inline std::string format_pdcp_rx_metrics(timer_duration metrics_period, const p
   fmt::memory_buffer buffer;
   fmt::format_to(std::back_inserter(buffer),
                  "num_sdus={} sdu_rate={}bps num_dropped_pdus={} num_pdus={} pdu_rate={}bps "
-                 "num_integrity_verified_pdus={} num_integrity_failed_pdus={} num_t_reordering_timeouts={} "
+                 "num_integrity_verified_pdus={} num_integrity_unverified_pdus={} num_integrity_failed_pdus={} "
+                 "num_t_reordering_timeouts={} "
                  "avg_reordering_delay={:.2f}ms reordering_counter={} avg_sdu_latency={:.2f}us sdu_latency_hist=[",
                  scaled_fmt_integer(m.num_sdus, false),
                  float_to_eng_string(static_cast<float>(m.num_sdu_bytes) * 8 * 1000 / metrics_period.count(), 1, false),
@@ -68,6 +70,7 @@ inline std::string format_pdcp_rx_metrics(timer_duration metrics_period, const p
                  scaled_fmt_integer(m.num_pdus, false),
                  float_to_eng_string(static_cast<float>(m.num_pdu_bytes) * 8 * 1000 / metrics_period.count(), 1, false),
                  scaled_fmt_integer(m.num_integrity_verified_pdus, false),
+                 scaled_fmt_integer(m.num_integrity_unverified_pdus, false),
                  scaled_fmt_integer(m.num_integrity_failed_pdus, false),
                  scaled_fmt_integer(m.num_t_reordering_timeouts, false),
                  m.reordering_counter > 0 ? static_cast<float>(m.reordering_delay_us) / m.reordering_counter * 1e-3 : 0,
@@ -109,29 +112,31 @@ struct formatter<ocudu::pdcp_rx_metrics_container> {
   template <typename FormatContext>
   auto format(const ocudu::pdcp_rx_metrics_container& m, FormatContext& ctx) const
   {
-    return format_to(
-        ctx.out(),
-        "num_sdus={} num_sdu_bytes={} num_dropped_pdus={} num_pdus={} num_pdu_bytes={} "
-        "num_integrity_verified_pdus={} num_integrity_failed_pdus={} num_t_reordering_timeouts={} "
-        "avg_reordering_delay={:.2f}ms reordering_counter={} avg_sdu_latency={:.2f}us sdu_latency_hist=[{}] "
-        "min_sdu_latency={}{} max_sdu_latency={}{} avg_crypto_latency={:.2f}us",
-        m.num_sdus,
-        m.num_sdu_bytes,
-        m.num_dropped_pdus,
-        m.num_pdus,
-        m.num_pdu_bytes,
-        m.num_integrity_verified_pdus,
-        m.num_integrity_failed_pdus,
-        m.num_t_reordering_timeouts,
-        m.reordering_counter > 0 ? static_cast<float>(m.reordering_delay_us) / m.reordering_counter * 1e-3 : 0,
-        m.reordering_counter,
-        m.num_sdus > 0 ? m.sum_sdu_latency_ns / m.num_sdus * 1e-3 : 0,
-        fmt::join(m.sdu_latency_hist, " "),
-        m.min_sdu_latency_ns,
-        m.min_sdu_latency_ns.has_value() ? "ns" : "",
-        m.max_sdu_latency_ns,
-        m.max_sdu_latency_ns.has_value() ? "ns" : "",
-        m.num_sdus > 0 ? m.sum_crypto_processing_latency_ns / m.num_sdus * 1e-3 : 0);
+    return format_to(ctx.out(),
+                     "num_sdus={} num_sdu_bytes={} num_dropped_pdus={} num_pdus={} num_pdu_bytes={} "
+                     "num_integrity_verified_pdus={} num_integrity_unverified_pdus={} num_integrity_failed_pdus={} "
+                     "num_t_reordering_timeouts={} avg_reordering_delay={:.2f}ms reordering_counter={} "
+                     "avg_sdu_latency={:.2f}us sdu_latency_hist=[{}] "
+                     "min_sdu_latency={}{} max_sdu_latency={}{} avg_crypto_latency={:.2f}us",
+                     m.num_sdus,
+                     m.num_sdu_bytes,
+                     m.num_dropped_pdus,
+                     m.num_pdus,
+                     m.num_pdu_bytes,
+                     m.num_integrity_verified_pdus,
+                     m.num_integrity_unverified_pdus,
+                     m.num_integrity_failed_pdus,
+                     m.num_t_reordering_timeouts,
+                     m.reordering_counter > 0 ? static_cast<float>(m.reordering_delay_us) / m.reordering_counter * 1e-3
+                                              : 0,
+                     m.reordering_counter,
+                     m.num_sdus > 0 ? m.sum_sdu_latency_ns / m.num_sdus * 1e-3 : 0,
+                     fmt::join(m.sdu_latency_hist, " "),
+                     m.min_sdu_latency_ns,
+                     m.min_sdu_latency_ns.has_value() ? "ns" : "",
+                     m.max_sdu_latency_ns,
+                     m.max_sdu_latency_ns.has_value() ? "ns" : "",
+                     m.num_sdus > 0 ? m.sum_crypto_processing_latency_ns / m.num_sdus * 1e-3 : 0);
   }
 };
 } // namespace fmt

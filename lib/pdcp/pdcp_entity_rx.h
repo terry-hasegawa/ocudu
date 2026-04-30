@@ -43,6 +43,8 @@ struct pdcp_rx_pdu_info {
   byte_buffer buf;
   /// The count value of the PDU
   uint32_t count = 0;
+  /// Indicates whether the integrity of \c buf is verified (true) or unverified/unchecked (false).
+  bool integrity_verified;
   /// Time of arrival at the PDCP entity
   std::chrono::system_clock::time_point time_of_arrival;
   /// The PDCP crypto token
@@ -55,6 +57,8 @@ struct pdcp_rx_sdu_info {
   byte_buffer buf;
   /// The count value of the SDU
   uint32_t count = 0;
+  /// Indicates whether the integrity of \c buf is verified (true) or unverified/unchecked (false).
+  bool integrity_verified;
   /// Time of arrival at the PDCP entity
   std::chrono::system_clock::time_point time_of_arrival;
 };
@@ -225,7 +229,7 @@ private:
   void record_reordering_delay(std::chrono::system_clock::time_point time_of_arrival);
 
   /// Apply deciphering and integrity check to the PDU
-  security::security_result apply_deciphering_and_integrity_check(byte_buffer buf, uint32_t count);
+  security::security_result_rx apply_deciphering_and_integrity_check(byte_buffer buf, uint32_t count);
 
   /// \brief Creates (and replaces) a ROHC decompressor according to the ROHC configuration, if needed.
   void init_header_decompression();
