@@ -292,11 +292,11 @@ struct formatter<ocudu::pdcp_tx_config> {
   {
     auto out = ctx.out();
     out      = format_to(out,
-                         "rb_type={} rlc_mode={} sn_size={} discard_timer={}",
-                         cfg.rb_type,
-                         cfg.rlc_mode,
-                         cfg.sn_size,
-                         cfg.discard_timer);
+                    "rb_type={} rlc_mode={} sn_size={} discard_timer={}",
+                    cfg.rb_type,
+                    cfg.rlc_mode,
+                    cfg.sn_size,
+                    cfg.discard_timer);
     if (cfg.header_compression.has_value()) {
       out = format_to(out, " {}", *cfg.header_compression);
     }
@@ -318,11 +318,11 @@ struct formatter<ocudu::pdcp_rx_config> {
   {
     auto out = ctx.out();
     out      = format_to(ctx.out(),
-                         "rb_type={} rlc_mode={} sn_size={} t_reordering={}",
-                         cfg.rb_type,
-                         cfg.rlc_mode,
-                         cfg.sn_size,
-                         cfg.t_reordering);
+                    "rb_type={} rlc_mode={} sn_size={} t_reordering={}",
+                    cfg.rb_type,
+                    cfg.rlc_mode,
+                    cfg.sn_size,
+                    cfg.t_reordering);
     if (cfg.header_compression.has_value()) {
       out = format_to(out, " {}", *cfg.header_compression);
     }

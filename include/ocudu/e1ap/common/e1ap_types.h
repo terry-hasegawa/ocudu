@@ -122,7 +122,7 @@ enum class e1ap_dupl_activation { active = 0, inactive };
 struct e1ap_pdcp_config {
   pdcp_sn_size                        pdcp_sn_size_ul;
   pdcp_sn_size                        pdcp_sn_size_dl;
-  ocudu::pdcp_rlc_mode                rlc_mod;
+  pdcp_rlc_mode                       rlc_mod;
   std::optional<e1ap_rohc_config>     rohc_config;
   std::optional<pdcp_t_reordering>    t_reordering_timer;
   std::optional<pdcp_discard_timer>   discard_timer;
