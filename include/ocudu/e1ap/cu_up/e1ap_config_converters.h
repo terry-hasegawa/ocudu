@@ -5,7 +5,6 @@
 #pragma once
 
 #include "ocudu/e1ap/common/e1ap_types.h"
-#include "ocudu/sdap/sdap_config.h"
 
 namespace ocudu {
 
@@ -37,7 +36,7 @@ inline pdcp_config make_pdcp_drb_config(const e1ap_pdcp_config& e1ap_cfg, const 
     rohc_cfg_out.max_cid = rohc_cfg_in.rohc_params.max_cid;
     rohc_cfg_out.profiles.set_profile_bitmap(rohc_cfg_in.rohc_params.rohc_profiles);
     rohc_cfg_out.continue_rohc =
-        rohc_cfg_in.rohc_params.continue_rohc.has_value() && *rohc_cfg_in.rohc_params.continue_rohc == true;
+        rohc_cfg_in.rohc_params.continue_rohc.has_value() && *rohc_cfg_in.rohc_params.continue_rohc;
     cfg.header_compression = rohc_cfg_out;
   } else {
     cfg.header_compression = std::nullopt;
@@ -83,7 +82,7 @@ inline pdcp_config make_pdcp_drb_config(const e1ap_pdcp_config& e1ap_cfg, const 
   return cfg;
 }
 
-inline sdap_config make_sdap_drb_config(const sdap_config_t& e1ap_cfg)
+inline sdap_ran_config make_sdap_drb_config(const sdap_config_t& e1ap_cfg)
 {
   sdap_config cfg = {};
   cfg.default_drb = e1ap_cfg.default_drb;

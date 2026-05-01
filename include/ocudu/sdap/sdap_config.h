@@ -4,66 +4,19 @@
 
 #pragma once
 
+#include "ocudu/ran/sdap/sdap_config.h"
 #include "fmt/format.h"
-#include <cstdint>
-#include <memory>
-#include <string>
 
 namespace ocudu {
 
-/// SDAP header options for UL
-enum class sdap_hdr_ul_cfg { present = 0, absent };
-
-/// SDAP header options for DL
-enum class sdap_hdr_dl_cfg { present = 0, absent };
-
-/// Configurable parameters for SDAP mapping
-struct sdap_config {
-  bool            default_drb = false;
-  sdap_hdr_ul_cfg header_ul   = sdap_hdr_ul_cfg::absent;
-  sdap_hdr_dl_cfg header_dl   = sdap_hdr_dl_cfg::absent;
-};
+/// Configurable parameters an SDAP entity.
+/// Extra configuration parameters specific to the SDAP can be added here.
+struct sdap_config : sdap_ran_config {};
 
 } // namespace ocudu
 
-//
 // Formatters
-//
 namespace fmt {
-
-// Header config
-template <>
-struct formatter<ocudu::sdap_hdr_ul_cfg> {
-  template <typename ParseContext>
-  auto parse(ParseContext& ctx)
-  {
-    return ctx.begin();
-  }
-
-  template <typename FormatContext>
-  auto format(ocudu::sdap_hdr_ul_cfg hdr_cfg, FormatContext& ctx) const
-  {
-    static constexpr const char* options[] = {"present", "absent"};
-    return format_to(ctx.out(), "{}", options[static_cast<unsigned>(hdr_cfg)]);
-  }
-};
-
-// Header config
-template <>
-struct formatter<ocudu::sdap_hdr_dl_cfg> {
-  template <typename ParseContext>
-  auto parse(ParseContext& ctx)
-  {
-    return ctx.begin();
-  }
-
-  template <typename FormatContext>
-  auto format(ocudu::sdap_hdr_dl_cfg hdr_cfg, FormatContext& ctx) const
-  {
-    static constexpr const char* options[] = {"present", "absent"};
-    return format_to(ctx.out(), "{}", options[static_cast<unsigned>(hdr_cfg)]);
-  }
-};
 
 // SDAP config
 template <>
@@ -77,7 +30,7 @@ struct formatter<ocudu::sdap_config> {
   template <typename FormatContext>
   auto format(ocudu::sdap_config cfg, FormatContext& ctx) const
   {
-    return format_to(ctx.out(), "default_drb={} hdr_ul={} hdr_dl={}", cfg.default_drb, cfg.header_ul, cfg.header_dl);
+    return format_to(ctx.out(), "{}", static_cast<ocudu::sdap_ran_config>(cfg));
   }
 };
 
