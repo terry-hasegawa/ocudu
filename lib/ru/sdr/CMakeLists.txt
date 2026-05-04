@@ -16,7 +16,9 @@ set(SOURCES
         ru_metrics_collector_sdr_impl.cpp
         ru_radio_metrics_collector.cpp
         ru_sdr_executor_mapper.cpp
-        ru_sdr_impl.cpp)
+        ru_sdr_impl.cpp
+        ru_sdr_ntn_doppler_compensation_handler_impl.cpp
+        ru_sdr_ntn_doppler_compensation_handler_factory.cpp)
 
 add_library(ocudu_ru_sdr STATIC ${SOURCES})
 target_link_libraries(ocudu_ru_sdr ocudu_lower_phy ocudu_radio ocudulog)
