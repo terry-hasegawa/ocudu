@@ -24,6 +24,9 @@ public:
 
   /// Called from F1-c client when it detects the removal of a UE.
   virtual void on_ue_removed(rnti_t rnti) = 0;
+
+  /// Called when one of the endpoints of the F1-C connection gets disconnected.
+  virtual void on_f1c_connection_drop() = 0;
 };
 
 /// F1C connection client decorator for DU test mode.

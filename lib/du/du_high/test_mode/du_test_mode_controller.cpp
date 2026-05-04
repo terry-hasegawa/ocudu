@@ -39,6 +39,18 @@ public:
 
   void start() { start_next_ue_creation_cycle(); }
 
+  void stop()
+  {
+    // Stop any pending timer.
+    if (attach_detach_timer.is_valid()) {
+      attach_detach_timer.stop();
+    }
+    if (guard_timer.is_valid()) {
+      guard_timer.stop();
+    }
+    cycle = cell_cycle_state::guard;
+  }
+
   /// Handles the event of a ConRes completion.
   void handle_conres_completed(rnti_t rnti, bool success)
   {
@@ -202,6 +214,7 @@ private:
     nof_ues_estab          = 0;
     nof_ues_pending_remove = 0;
     std::fill(ues.begin(), ues.end(), ue_cell_context{});
+    free_list_rnti.clear();
     for (unsigned i = 0; i != parent.cfg.nof_ues; ++i) {
       free_list_rnti.push_back(get_ue_rnti(parent.cfg.nof_ues - i - 1));
     }
@@ -231,7 +244,7 @@ private:
   // Pre-canned UL-CCCH message.
   byte_buffer ulcch_buf;
 
-  cell_cycle_state             cycle = cell_cycle_state::creating;
+  cell_cycle_state             cycle = cell_cycle_state::guard;
   unique_timer                 attach_detach_timer;
   unique_timer                 guard_timer;
   unsigned                     nof_ues_estab          = 0;
@@ -271,6 +284,8 @@ public:
   f1c_event_notifier(du_test_mode_controller& parent_) : parent(parent_) {}
 
   void on_ue_removed(rnti_t rnti) override { parent.handle_ue_removed(rnti); }
+
+  void on_f1c_connection_drop() override { parent.handle_f1c_connection_drop(); }
 
 private:
   du_test_mode_controller& parent;
@@ -318,5 +333,12 @@ void du_test_mode_controller::handle_ue_removed(rnti_t rnti)
       cells[c]->on_ue_removed();
       return;
     }
+  }
+}
+
+void du_test_mode_controller::handle_f1c_connection_drop()
+{
+  for (auto& cell : cells) {
+    cell->stop();
   }
 }

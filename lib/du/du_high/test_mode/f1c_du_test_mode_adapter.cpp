@@ -200,8 +200,15 @@ void f1c_du_test_mode_adapter::handle_tx_success(const f1ap_message& msg)
 
 void f1c_du_test_mode_adapter::handle_tx_notifier_removed()
 {
+  // Delete F1-C tx/rx notifiers.
   tx_upstream.reset();
   rx_notifier.reset();
+
+  // Notify DU of the F1-C connection shutdown.
+  ev_notifier->on_f1c_connection_drop();
+
+  // Eliminate all UE contexts.
+  du_ue_ids.clear();
 }
 
 bool f1c_du_test_mode_adapter::try_release_ue(rnti_t rnti)

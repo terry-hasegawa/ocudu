@@ -72,6 +72,7 @@ private:
   }
 
   void handle_ue_removed(rnti_t rnti);
+  void handle_f1c_connection_drop();
 
   const du_test_mode_config::test_mode_ue_config& cfg;
   task_executor&                                  ctrl_exec;
