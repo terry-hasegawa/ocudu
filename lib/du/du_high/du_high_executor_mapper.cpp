@@ -82,7 +82,7 @@ public:
 
   task_executor& mac_cell_executor(du_cell_index_t cell_index) override
   {
-    return *cell_execs[cell_index % cell_execs.size()].low_prio_executor;
+    return *cell_execs[cell_index % cell_execs.size()].high_prio_executor;
   }
 
   task_executor& rlc_lower_executor(du_cell_index_t cell_index) override
@@ -126,7 +126,7 @@ public:
           &decorator.decorate(execs[0], is_sync, trace_enabled, std::nullopt, metric_channel_registry, exec_name);
       exec_name = trace_enabled or metric_channel_registry ? fmt::format("mac_cell_exec#{}", i) : "";
       cell_strands[i].mac_cell_exec =
-          &decorator.decorate(execs[1], is_sync, trace_enabled, std::nullopt, metric_channel_registry, exec_name);
+          &decorator.decorate(execs[0], is_sync, trace_enabled, std::nullopt, metric_channel_registry, exec_name);
       exec_name = trace_enabled or metric_channel_registry ? fmt::format("rlc_lower_exec#{}", i) : "";
       cell_strands[i].rlc_lower_exec =
           &decorator.decorate(execs[1], is_sync, trace_enabled, std::nullopt, metric_channel_registry, exec_name);
