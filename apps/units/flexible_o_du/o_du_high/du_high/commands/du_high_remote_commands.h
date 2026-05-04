@@ -47,7 +47,7 @@ public:
 
 /// \brief Remote command that updates SIB content without a cell restart.
 ///
-/// Supported SIBs: SIB2 (RACH/reselection), SIB3 (intra-frequency neighbors),
+/// Supported SIBs: SIB2 (cell reselection), SIB3 (intra-frequency neighbors),
 /// SIB4 (inter-frequency neighbors). Each update swaps the SIB content in the
 /// live cell config, increments that SIB's value_tag, repacks SIB1 and all SI
 /// messages, and notifies MAC and CU-CP. Idle UEs re-read the updated SIB on

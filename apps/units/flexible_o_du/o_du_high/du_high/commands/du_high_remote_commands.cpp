@@ -223,26 +223,26 @@ static expected<nr_cell_global_id_t, std::string> parse_cgi(const nlohmann::json
 {
   auto plmn_key = cell.find("plmn");
   if (plmn_key == cell.end()) {
-    return make_unexpected(std::string{"'plmn' object is missing and it is mandatory"});
+    return make_unexpected("'plmn' object is missing and it is mandatory");
   }
   if (!plmn_key->is_string()) {
-    return make_unexpected(std::string{"'plmn' object value type should be a string"});
+    return make_unexpected("'plmn' object value type should be a string");
   }
   auto plmn = plmn_identity::parse(plmn_key->get_ref<const nlohmann::json::string_t&>());
   if (!plmn) {
-    return make_unexpected(std::string{"invalid PLMN identity value"});
+    return make_unexpected("invalid PLMN identity value");
   }
 
   auto nci_key = cell.find("nci");
   if (nci_key == cell.end()) {
-    return make_unexpected(std::string{"'nci' object is missing and it is mandatory"});
+    return make_unexpected("'nci' object is missing and it is mandatory");
   }
   if (!nci_key->is_number_unsigned()) {
-    return make_unexpected(std::string{"'nci' object value type should be an unsigned integer"});
+    return make_unexpected("'nci' object value type should be an unsigned integer");
   }
   auto nci = nr_cell_identity::create(nci_key->get<uint64_t>());
   if (!nci) {
-    return make_unexpected(std::string{"invalid NR cell identity value"});
+    return make_unexpected("invalid NR cell identity value");
   }
 
   nr_cell_global_id_t cgi;
@@ -257,10 +257,10 @@ static expected<q_hyst_t, std::string> parse_q_hyst_db(const nlohmann::json& obj
 {
   auto key = obj.find("q_hyst_db");
   if (key == obj.end()) {
-    return make_unexpected(std::string{"'q_hyst_db' field is missing and it is mandatory"});
+    return make_unexpected("'q_hyst_db' field is missing and it is mandatory");
   }
   if (!key->is_number_integer()) {
-    return make_unexpected(std::string{"'q_hyst_db' value type should be an integer"});
+    return make_unexpected("'q_hyst_db' value type should be an integer");
   }
   const int v = key->get<int>();
   switch (v) {
@@ -456,12 +456,12 @@ static expected<sib3_info, std::string> parse_sib3(const nlohmann::json& content
   auto neigh_list_it = content.find("intra_freq_neigh_cell_list");
   if (neigh_list_it != content.end()) {
     if (!neigh_list_it->is_array()) {
-      return make_unexpected(std::string{"'intra_freq_neigh_cell_list' value type should be an array"});
+      return make_unexpected("'intra_freq_neigh_cell_list' value type should be an array");
     }
     for (const auto& entry : neigh_list_it->items()) {
       const auto& neigh_obj = entry.value();
       if (!neigh_obj.is_object()) {
-        return make_unexpected(std::string{"'intra_freq_neigh_cell_list' entries should be objects"});
+        return make_unexpected("'intra_freq_neigh_cell_list' entries should be objects");
       }
       auto pci_exp = find_and_parse_pci(neigh_obj, "pci");
       if (!pci_exp) {
@@ -469,7 +469,7 @@ static expected<sib3_info, std::string> parse_sib3(const nlohmann::json& content
       }
       auto q_offset_it = neigh_obj.find("q_offset_cell");
       if (q_offset_it == neigh_obj.end()) {
-        return make_unexpected(std::string{"'q_offset_cell' field is missing in 'intra_freq_neigh_cell_list' entry"});
+        return make_unexpected("'q_offset_cell' field is missing in 'intra_freq_neigh_cell_list' entry");
       }
       auto q_offset_exp = parse_q_offset_range(*q_offset_it, "q_offset_cell");
       if (!q_offset_exp) {
@@ -485,12 +485,12 @@ static expected<sib3_info, std::string> parse_sib3(const nlohmann::json& content
   auto excluded_list_it = content.find("intra_freq_excluded_cell_list");
   if (excluded_list_it != content.end()) {
     if (!excluded_list_it->is_array()) {
-      return make_unexpected(std::string{"'intra_freq_excluded_cell_list' value type should be an array"});
+      return make_unexpected("'intra_freq_excluded_cell_list' value type should be an array");
     }
     for (const auto& entry : excluded_list_it->items()) {
       const auto& excl_obj = entry.value();
       if (!excl_obj.is_object()) {
-        return make_unexpected(std::string{"'intra_freq_excluded_cell_list' entries should be objects"});
+        return make_unexpected("'intra_freq_excluded_cell_list' entries should be objects");
       }
       auto start_exp = find_and_parse_pci(excl_obj, "pci_start");
       if (!start_exp) {
@@ -498,7 +498,7 @@ static expected<sib3_info, std::string> parse_sib3(const nlohmann::json& content
       }
       auto range_it = excl_obj.find("range");
       if (range_it == excl_obj.end() || !range_it->is_number_integer() || range_it->get<int64_t>() < 0) {
-        return make_unexpected(std::string{"'range' missing or not a non-negative integer in excluded list entry"});
+        return make_unexpected("'range' missing or not a non-negative integer in excluded list entry");
       }
       const unsigned range_val = range_it->get<unsigned>();
       // pci_range_t::range_t enum values equal the integer widths (n4 = 4, n1008 = 1008).
@@ -541,25 +541,28 @@ static expected<sib4_info, std::string> parse_sib4(const nlohmann::json& content
 
   auto carrier_list_it = content.find("inter_freq_carrier_freq_list");
   if (carrier_list_it == content.end()) {
-    return make_unexpected(std::string{"'inter_freq_carrier_freq_list' field is missing and it is mandatory"});
+    return make_unexpected("'inter_freq_carrier_freq_list' field is missing and it is mandatory");
   }
   if (!carrier_list_it->is_array()) {
-    return make_unexpected(std::string{"'inter_freq_carrier_freq_list' value type should be an array"});
+    return make_unexpected("'inter_freq_carrier_freq_list' value type should be an array");
+  }
+  if (carrier_list_it->empty()) {
+    return make_unexpected("'inter_freq_carrier_freq_list' must contain at least one entry");
   }
 
   for (const auto& entry : carrier_list_it->items()) {
     const auto& carrier_obj = entry.value();
     if (!carrier_obj.is_object()) {
-      return make_unexpected(std::string{"'inter_freq_carrier_freq_list' entries should be objects"});
+      return make_unexpected("'inter_freq_carrier_freq_list' entries should be objects");
     }
 
     // NR-ARFCN, TS 38.101-1 Table 5.4.2.1-1: max value 3279165.
     auto arfcn_it = carrier_obj.find("arfcn");
     if (arfcn_it == carrier_obj.end()) {
-      return make_unexpected(std::string{"'arfcn' field is missing in carrier list entry"});
+      return make_unexpected("'arfcn' field is missing in carrier list entry");
     }
     if (!arfcn_it->is_number_integer()) {
-      return make_unexpected(std::string{"'arfcn' value type should be an integer"});
+      return make_unexpected("'arfcn' value type should be an integer");
     }
     const int64_t arfcn_val = arfcn_it->get<int64_t>();
     if (arfcn_val < 0 || arfcn_val > 3279165) {
@@ -568,7 +571,7 @@ static expected<sib4_info, std::string> parse_sib4(const nlohmann::json& content
 
     auto scs_it = carrier_obj.find("ssb_scs");
     if (scs_it == carrier_obj.end()) {
-      return make_unexpected(std::string{"'ssb_scs' missing in carrier list entry"});
+      return make_unexpected("'ssb_scs' missing in carrier list entry");
     }
     auto scs_exp = parse_scs_khz(*scs_it, "ssb_scs");
     if (!scs_exp) {
@@ -577,7 +580,7 @@ static expected<sib4_info, std::string> parse_sib4(const nlohmann::json& content
 
     auto derive_it = carrier_obj.find("derive_ssb_index_from_cell");
     if (derive_it == carrier_obj.end() || !derive_it->is_boolean()) {
-      return make_unexpected(std::string{"'derive_ssb_index_from_cell' missing or non-boolean in carrier list entry"});
+      return make_unexpected("'derive_ssb_index_from_cell' missing or non-boolean in carrier list entry");
     }
 
     auto q_rx_lev_min_exp = find_and_parse_bounded<int8_t, -70, -22>(carrier_obj, "q_rx_lev_min");
