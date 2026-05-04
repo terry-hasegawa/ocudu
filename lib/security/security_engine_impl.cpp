@@ -95,9 +95,15 @@ security_status security_engine_impl::decrypt_and_verify_integrity(byte_buffer& 
   // verify integrity if activated
   if (integ_eng != nullptr) {
     integ_status = integ_eng->verify_integrity(buf, count);
+    // Unprotected PDUs are expected to fail the integrity check.
     if (allow_unprotected && integ_status == security_status::integrity_failure) {
-      // Check + trim zero MAC.
-      integ_status = security_status::success_unprotected;
+      // Unprotected PDUs must have zero MAC.
+      byte_buffer_view                   mac{buf, buf.length() - sec_mac_len, sec_mac_len};
+      static constexpr security::sec_mac zero_mac = {};
+      if (std::equal(zero_mac.begin(), zero_mac.end(), mac.begin(), mac.end())) {
+        integ_status = security_status::success_unprotected;
+        buf.trim_tail(sec_mac_len);
+      }
     }
   }
 

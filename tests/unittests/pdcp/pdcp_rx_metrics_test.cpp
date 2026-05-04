@@ -150,7 +150,7 @@ TEST_F(pdcp_rx_metrics_container_test, values)
 TEST_P(pdcp_rx_metrics_test, sdu_pdu_metrics)
 {
   auto test_metrics = [this](uint32_t count) {
-    init(GetParam());
+    init(std::get<pdcp_sn_size>(GetParam()), std::get<unsigned>(GetParam()), std::get<rohc_test_params>(GetParam()));
     ocudu::test_delimit_logger delimiter("RX PDU/SDU metrics tests. SN_SIZE={} COUNT={}", sn_size, count);
 
     pdcp_rx->configure_security(sec_cfg, security::integrity_enabled::on, security::ciphering_enabled::on);
@@ -204,7 +204,7 @@ TEST_P(pdcp_rx_metrics_test, sdu_pdu_metrics)
 /// integrity failures.
 TEST_P(pdcp_rx_metrics_test, integrity_metrics)
 {
-  init(GetParam());
+  init(std::get<pdcp_sn_size>(GetParam()), std::get<unsigned>(GetParam()), std::get<rohc_test_params>(GetParam()));
 
   auto test_metrics = [this](uint32_t count) {
     ocudu::test_delimit_logger delimiter("RX PDU with bad integrity metrics test. SN_SIZE={} COUNT={}", sn_size, count);
@@ -261,7 +261,7 @@ TEST_P(pdcp_rx_metrics_test, integrity_metrics)
 TEST_P(pdcp_rx_metrics_test, rx_reordering_timer)
 {
   auto test_rx_t_reorder = [this](uint32_t count) {
-    init(GetParam());
+    init(std::get<pdcp_sn_size>(GetParam()), std::get<unsigned>(GetParam()), std::get<rohc_test_params>(GetParam()));
     ocudu::test_delimit_logger delimiter(
         "t-Reordering expiration metrics test. SN_SIZE={} COUNT=[{}, {}]", sn_size, count + 1, count);
 
@@ -315,7 +315,7 @@ test_param_info_to_string(const ::testing::TestParamInfo<std::tuple<pdcp_sn_size
 }
 
 INSTANTIATE_TEST_SUITE_P(
-    pdcp_rx_test_all_sn_sizes,
+    pdcp_rx_test_all_variants,
     pdcp_rx_metrics_test,
     ::testing::Combine(::testing::Values(pdcp_sn_size::size12bits, pdcp_sn_size::size18bits),
                        ::testing::Values(1),

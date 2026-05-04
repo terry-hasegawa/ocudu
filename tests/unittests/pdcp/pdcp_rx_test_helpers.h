@@ -113,15 +113,17 @@ protected:
 
   /// \brief Initializes fixture according to size sequence number size
   /// \param sn_size_ size of the sequence number
-  void init(std::tuple<pdcp_sn_size, unsigned, rohc_test_params> cfg_param,
-            pdcp_rb_type                                         rb_type_     = pdcp_rb_type::drb,
-            pdcp_rlc_mode                                        rlc_mode_    = pdcp_rlc_mode::am,
-            pdcp_t_reordering                                    t_reordering = pdcp_t_reordering::ms10,
-            pdcp_max_count max_count = {pdcp_rx_default_max_count_notify, pdcp_rx_default_max_count_hard})
+  void init(pdcp_sn_size      sn_size_     = pdcp_sn_size::size12bits,
+            unsigned          algo_        = 2,
+            rohc_test_params  rohc_params  = cfg_rohc_disabled,
+            pdcp_rb_type      rb_type_     = pdcp_rb_type::drb,
+            pdcp_rlc_mode     rlc_mode_    = pdcp_rlc_mode::am,
+            pdcp_t_reordering t_reordering = pdcp_t_reordering::ms10,
+            pdcp_max_count    max_count    = {pdcp_rx_default_max_count_notify, pdcp_rx_default_max_count_hard})
   {
-    sn_size            = std::get<pdcp_sn_size>(cfg_param);
-    algo               = std::get<unsigned>(cfg_param);
-    header_compression = std::get<rohc_test_params>(cfg_param).config;
+    sn_size            = sn_size_;
+    algo               = algo_;
+    header_compression = rohc_params.config;
     logger.info(
         "Creating PDCP RX ({} bit nia={} nea={}, {})", pdcp_sn_size_to_uint(sn_size), algo, algo, header_compression);
 

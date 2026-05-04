@@ -54,7 +54,10 @@ protected:
 /// Test DRB suspend.
 TEST_P(pdcp_rx_suspend_test, when_suspend_called_state_is_reset)
 {
-  init(GetParam(), pdcp_rb_type::drb);
+  init(std::get<pdcp_sn_size>(GetParam()),
+       std::get<unsigned>(GetParam()),
+       std::get<rohc_test_params>(GetParam()),
+       pdcp_rb_type::drb);
 
   // Set state of PDCP entity.
   pdcp_rx_state st = {0, 0, 0};
@@ -131,7 +134,7 @@ test_param_info_to_string(const ::testing::TestParamInfo<std::tuple<pdcp_sn_size
 }
 
 INSTANTIATE_TEST_SUITE_P(
-    pdcp_rx_test_all_sn_sizes,
+    pdcp_rx_test_all_variants,
     pdcp_rx_suspend_test,
     ::testing::Combine(::testing::Values(pdcp_sn_size::size12bits, pdcp_sn_size::size18bits),
                        ::testing::Values(1),

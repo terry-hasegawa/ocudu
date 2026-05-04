@@ -680,6 +680,13 @@ security::security_status pdcp_entity_rx::apply_deciphering_and_integrity_check(
         logger.log_warning("Failed to trim MAC-I from PDU. count={}", count);
         return security::security_status::buffer_failure;
       }
+      // Unprotected SRB PDUs must have zero MAC.
+      byte_buffer_view                   mac{buf, buf.length() - security::sec_mac_len, ::security::sec_mac_len};
+      static constexpr security::sec_mac zero_mac = {};
+      if (!std::equal(zero_mac.begin(), zero_mac.end(), mac.begin(), mac.end())) {
+        logger.log_info("Non-zero MAC-I in unprotected PDU. count={}", count);
+        return security::security_status::integrity_failure;
+      }
       buf.trim_tail(security::sec_mac_len);
     }
     return security::security_status::success_unprotected;

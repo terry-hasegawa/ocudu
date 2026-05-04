@@ -11,7 +11,7 @@ using namespace ocudu;
 /// Test stopping PDCP RX entities when no PDUs are present.
 TEST_P(pdcp_rx_stop_test, stop_when_there_are_no_pending_pdus)
 {
-  init(GetParam());
+  init(std::get<pdcp_sn_size>(GetParam()), std::get<unsigned>(GetParam()), std::get<rohc_test_params>(GetParam()));
   ocudu::test_delimit_logger delimiter("Normal stop test. SN_SIZE={} ", sn_size);
 
   pdcp_rx->configure_security(sec_cfg, security::integrity_enabled::on, security::ciphering_enabled::on);
@@ -30,7 +30,7 @@ TEST_P(pdcp_rx_stop_test, stop_when_there_are_no_pending_pdus)
 /// Test stopping PDCP RX entities when PDUs are present.
 TEST_P(pdcp_rx_stop_test, stop_when_there_are_pending_pdus)
 {
-  init(GetParam());
+  init(std::get<pdcp_sn_size>(GetParam()), std::get<unsigned>(GetParam()), std::get<rohc_test_params>(GetParam()));
   ocudu::test_delimit_logger delimiter("Normal stop test. SN_SIZE={} ", sn_size);
 
   pdcp_rx->configure_security(sec_cfg, security::integrity_enabled::on, security::ciphering_enabled::on);
@@ -84,7 +84,7 @@ TEST_P(pdcp_rx_stop_test, stop_when_there_are_pending_pdus)
 /// Test stopping PDCP RX entities when PDUs are present.
 TEST_P(pdcp_rx_stop_test, stop_when_integrity_failed)
 {
-  init(GetParam());
+  init(std::get<pdcp_sn_size>(GetParam()), std::get<unsigned>(GetParam()), std::get<rohc_test_params>(GetParam()));
   ocudu::test_delimit_logger delimiter("Normal stop test. SN_SIZE={} ", sn_size);
 
   pdcp_rx->configure_security(sec_cfg, security::integrity_enabled::on, security::ciphering_enabled::on);
@@ -145,7 +145,7 @@ test_param_info_to_string(const ::testing::TestParamInfo<std::tuple<pdcp_sn_size
 }
 
 INSTANTIATE_TEST_SUITE_P(
-    pdcp_rx_stop_test_all_sn_sizes,
+    pdcp_rx_stop_test_all_variants,
     pdcp_rx_stop_test,
     ::testing::Combine(::testing::Values(pdcp_sn_size::size12bits, pdcp_sn_size::size18bits),
                        ::testing::Values(1, 2, 3),

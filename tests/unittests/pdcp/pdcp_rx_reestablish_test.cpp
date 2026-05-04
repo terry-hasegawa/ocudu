@@ -12,7 +12,10 @@ using namespace ocudu;
 /// Test SRB reestablishment
 TEST_P(pdcp_rx_reestablish_test_srb, when_srb_reestablish_then_sdus_dropped)
 {
-  init(GetParam(), pdcp_rb_type::srb);
+  init(std::get<pdcp_sn_size>(GetParam()),
+       std::get<unsigned>(GetParam()),
+       std::get<rohc_test_params>(GetParam()),
+       pdcp_rb_type::srb);
   EXPECT_EQ(pdcp_rohc_factory->get_nof_compressors(), 0);
   EXPECT_EQ(pdcp_rohc_factory->get_nof_decompressors(), 0);
   uint32_t count = 0;
@@ -81,7 +84,11 @@ TEST_P(pdcp_rx_reestablish_test_srb, when_srb_reestablish_then_sdus_dropped)
 /// Test DRB UM reestablishment
 TEST_P(pdcp_rx_reestablish_test, when_drb_um_reestablish_then_pdus_forwared)
 {
-  init(GetParam(), pdcp_rb_type::drb, pdcp_rlc_mode::um);
+  init(std::get<pdcp_sn_size>(GetParam()),
+       std::get<unsigned>(GetParam()),
+       std::get<rohc_test_params>(GetParam()),
+       pdcp_rb_type::drb,
+       pdcp_rlc_mode::um);
   unsigned exp_nof_decompressors = header_compression.has_value() ? 1 : 0;
   EXPECT_EQ(pdcp_rohc_factory->get_nof_compressors(), 0);
   EXPECT_EQ(pdcp_rohc_factory->get_nof_decompressors(), exp_nof_decompressors);
@@ -145,7 +152,11 @@ TEST_P(pdcp_rx_reestablish_test, when_drb_um_reestablish_then_pdus_forwared)
 /// Test DRB AM reestablishment
 TEST_P(pdcp_rx_reestablish_test, when_drb_am_reestablish_then_state_preserved)
 {
-  init(GetParam(), pdcp_rb_type::drb, pdcp_rlc_mode::am);
+  init(std::get<pdcp_sn_size>(GetParam()),
+       std::get<unsigned>(GetParam()),
+       std::get<rohc_test_params>(GetParam()),
+       pdcp_rb_type::drb,
+       pdcp_rlc_mode::am);
   unsigned exp_nof_decompressors = header_compression.has_value() ? 1 : 0;
   EXPECT_EQ(pdcp_rohc_factory->get_nof_compressors(), 0);
   EXPECT_EQ(pdcp_rohc_factory->get_nof_decompressors(), exp_nof_decompressors);
@@ -232,7 +243,7 @@ test_param_info_to_string(const ::testing::TestParamInfo<std::tuple<pdcp_sn_size
   return fmt::to_string(buffer);
 }
 
-INSTANTIATE_TEST_SUITE_P(pdcp_rx_test_all_sn_sizes,
+INSTANTIATE_TEST_SUITE_P(pdcp_rx_test_all_variants,
                          pdcp_rx_reestablish_test_srb,
                          ::testing::Combine(::testing::Values(pdcp_sn_size::size12bits, pdcp_sn_size::size18bits),
                                             ::testing::Values(1),
@@ -240,7 +251,7 @@ INSTANTIATE_TEST_SUITE_P(pdcp_rx_test_all_sn_sizes,
                          test_param_info_to_string);
 
 INSTANTIATE_TEST_SUITE_P(
-    pdcp_rx_test_all_sn_sizes,
+    pdcp_rx_test_all_variants,
     pdcp_rx_reestablish_test,
     ::testing::Combine(::testing::Values(pdcp_sn_size::size12bits, pdcp_sn_size::size18bits),
                        ::testing::Values(1),

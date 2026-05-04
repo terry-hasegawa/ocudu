@@ -12,9 +12,9 @@
 using namespace ocudu;
 
 /// Test creation of PDCP RX entities
-TEST_P(pdcp_rx_test, create_new_entity)
+TEST_P(pdcp_rx_test_drb, create_new_entity)
 {
-  init(GetParam());
+  init(std::get<pdcp_sn_size>(GetParam()), std::get<unsigned>(GetParam()), std::get<rohc_test_params>(GetParam()));
   ocudu::test_delimit_logger delimiter("Entity creation test. SN_SIZE={} ", sn_size);
   unsigned                   exp_nof_deompressors = header_compression.has_value() ? 1 : 0;
   EXPECT_EQ(pdcp_rohc_factory->get_nof_compressors(), 0);
@@ -30,9 +30,9 @@ TEST_P(pdcp_rx_test, create_new_entity)
 }
 
 /// Test extraction of PDCP sequence numbers
-TEST_P(pdcp_rx_test, sn_unpack)
+TEST_P(pdcp_rx_test_drb, sn_unpack)
 {
-  init(GetParam());
+  init(std::get<pdcp_sn_size>(GetParam()), std::get<unsigned>(GetParam()), std::get<rohc_test_params>(GetParam()));
   unsigned exp_nof_decompressors = header_compression.has_value() ? 1 : 0;
   EXPECT_EQ(pdcp_rohc_factory->get_nof_compressors(), 0);
   EXPECT_EQ(pdcp_rohc_factory->get_nof_decompressors(), exp_nof_decompressors);
@@ -70,9 +70,9 @@ TEST_P(pdcp_rx_test, sn_unpack)
 }
 
 /// Test in-order reception of PDCP PDUs
-TEST_P(pdcp_rx_test, rx_in_order)
+TEST_P(pdcp_rx_test_drb, rx_in_order)
 {
-  init(GetParam());
+  init(std::get<pdcp_sn_size>(GetParam()), std::get<unsigned>(GetParam()), std::get<rohc_test_params>(GetParam()));
   unsigned exp_nof_decompressors = header_compression.has_value() ? 1 : 0;
   EXPECT_EQ(pdcp_rohc_factory->get_nof_compressors(), 0);
   EXPECT_EQ(pdcp_rohc_factory->get_nof_decompressors(), exp_nof_decompressors);
@@ -123,9 +123,9 @@ TEST_P(pdcp_rx_test, rx_in_order)
 
 /// Test out of order reception of PDUs.
 /// All PDUs are received before the t-Reordering expires.
-TEST_P(pdcp_rx_test, rx_out_of_order)
+TEST_P(pdcp_rx_test_drb, rx_out_of_order)
 {
-  init(GetParam());
+  init(std::get<pdcp_sn_size>(GetParam()), std::get<unsigned>(GetParam()), std::get<rohc_test_params>(GetParam()));
   unsigned exp_nof_decompressors = header_compression.has_value() ? 1 : 0;
   EXPECT_EQ(pdcp_rohc_factory->get_nof_compressors(), 0);
   EXPECT_EQ(pdcp_rohc_factory->get_nof_decompressors(), exp_nof_decompressors);
@@ -198,9 +198,9 @@ TEST_P(pdcp_rx_test, rx_out_of_order)
 }
 
 /// Test reception of duplicate PDCP PDUs
-TEST_P(pdcp_rx_test, rx_duplicate)
+TEST_P(pdcp_rx_test_drb, rx_duplicate)
 {
-  init(GetParam());
+  init(std::get<pdcp_sn_size>(GetParam()), std::get<unsigned>(GetParam()), std::get<rohc_test_params>(GetParam()));
   unsigned exp_nof_decompressors = header_compression.has_value() ? 1 : 0;
   EXPECT_EQ(pdcp_rohc_factory->get_nof_compressors(), 0);
   EXPECT_EQ(pdcp_rohc_factory->get_nof_decompressors(), exp_nof_decompressors);
@@ -286,9 +286,9 @@ TEST_P(pdcp_rx_test, rx_duplicate)
 
 /// Test out of order reception of PDUs.
 /// The out-of-order PDU is received after the t-Reordering expires.
-TEST_P(pdcp_rx_test, rx_reordering_timer)
+TEST_P(pdcp_rx_test_drb, rx_reordering_timer)
 {
-  init(GetParam());
+  init(std::get<pdcp_sn_size>(GetParam()), std::get<unsigned>(GetParam()), std::get<rohc_test_params>(GetParam()));
   unsigned exp_nof_decompressors = header_compression.has_value() ? 1 : 0;
   EXPECT_EQ(pdcp_rohc_factory->get_nof_compressors(), 0);
   EXPECT_EQ(pdcp_rohc_factory->get_nof_decompressors(), exp_nof_decompressors);
@@ -346,9 +346,14 @@ TEST_P(pdcp_rx_test, rx_reordering_timer)
 
 /// Test out of order reception of PDUs.
 /// t-Reordering is set to 0, so PDUs are immediately delivered.
-TEST_P(pdcp_rx_test, rx_reordering_timer_0ms)
+TEST_P(pdcp_rx_test_drb, rx_reordering_timer_0ms)
 {
-  init(GetParam(), pdcp_rb_type::drb, pdcp_rlc_mode::am, pdcp_t_reordering::ms0);
+  init(std::get<pdcp_sn_size>(GetParam()),
+       std::get<unsigned>(GetParam()),
+       std::get<rohc_test_params>(GetParam()),
+       pdcp_rb_type::drb,
+       pdcp_rlc_mode::am,
+       pdcp_t_reordering::ms0);
   unsigned exp_nof_decompressors = header_compression.has_value() ? 1 : 0;
   EXPECT_EQ(pdcp_rohc_factory->get_nof_compressors(), 0);
   EXPECT_EQ(pdcp_rohc_factory->get_nof_decompressors(), exp_nof_decompressors);
@@ -405,9 +410,14 @@ TEST_P(pdcp_rx_test, rx_reordering_timer_0ms)
 /// Test out of order reception of PDUs.
 /// t-Reordering is set to infinite, so  no PDUs are delivered
 /// until they are received in order.
-TEST_P(pdcp_rx_test, rx_reordering_timer_infinite)
+TEST_P(pdcp_rx_test_drb, rx_reordering_timer_infinite)
 {
-  init(GetParam(), pdcp_rb_type::drb, pdcp_rlc_mode::am, pdcp_t_reordering::infinity);
+  init(std::get<pdcp_sn_size>(GetParam()),
+       std::get<unsigned>(GetParam()),
+       std::get<rohc_test_params>(GetParam()),
+       pdcp_rb_type::drb,
+       pdcp_rlc_mode::am,
+       pdcp_t_reordering::infinity);
   unsigned exp_nof_decompressors = header_compression.has_value() ? 1 : 0;
   EXPECT_EQ(pdcp_rohc_factory->get_nof_compressors(), 0);
   EXPECT_EQ(pdcp_rohc_factory->get_nof_decompressors(), exp_nof_decompressors);
@@ -465,9 +475,9 @@ TEST_P(pdcp_rx_test, rx_reordering_timer_infinite)
 
 /// Test reception of PDUs with bad integrity checks.
 /// The PDCP should notify the RRC of the integrity error.
-TEST_P(pdcp_rx_test, rx_integrity_fail)
+TEST_P(pdcp_rx_test_drb, rx_integrity_fail)
 {
-  init(GetParam());
+  init(std::get<pdcp_sn_size>(GetParam()), std::get<unsigned>(GetParam()), std::get<rohc_test_params>(GetParam()));
   unsigned exp_nof_decompressors = header_compression.has_value() ? 1 : 0;
   EXPECT_EQ(pdcp_rohc_factory->get_nof_compressors(), 0);
   EXPECT_EQ(pdcp_rohc_factory->get_nof_decompressors(), exp_nof_decompressors);
@@ -512,17 +522,133 @@ TEST_P(pdcp_rx_test, rx_integrity_fail)
   EXPECT_EQ(pdcp_rohc_factory->get_nof_decompressors(), exp_nof_decompressors);
 }
 
+/// Test reception of SRB PDUs with zero-padded MAC across all integrity modes (off, on, SMC transition mode).
+/// The PDCP should reject the PDUs only in when integrity is fully enabled.
+TEST_P(pdcp_rx_test_srb, rx_zero_padded_mac)
+{
+  init(pdcp_sn_size::size12bits, 2, cfg_rohc_disabled, pdcp_rb_type::srb);
+  unsigned exp_nof_decompressors = header_compression.has_value() ? 1 : 0;
+  EXPECT_EQ(pdcp_rohc_factory->get_nof_compressors(), 0);
+  EXPECT_EQ(pdcp_rohc_factory->get_nof_decompressors(), exp_nof_decompressors);
+
+  auto test_rx_integrity_mode = [this](uint32_t count) {
+    ocudu::test_delimit_logger delimiter("RX PDU with unverified integrity. SN_SIZE={} COUNT={}", sn_size, count);
+
+    if (std::get<security::integrity_enabled>(GetParam()) != security::integrity_enabled::off) {
+      pdcp_rx->configure_security(
+          sec_cfg, std::get<security::integrity_enabled>(GetParam()), security::ciphering_enabled::off);
+    }
+
+    byte_buffer test_pdu1;
+    get_test_pdu(count, test_pdu1);
+    // overwrite MAC with zero padding
+    byte_buffer_view mac{test_pdu1, test_pdu1.length() - security::sec_mac_len, security::sec_mac_len};
+    std::fill(mac.begin(), mac.end(), 0x0);
+    pdcp_rx_state init_state = {.rx_next = count, .rx_deliv = count, .rx_reord = 0};
+    pdcp_rx->set_state(init_state);
+    uint32_t prev_integrity_fail_counter = test_frame->integrity_fail_counter;
+    pdcp_rx->handle_pdu(byte_buffer_chain::create(std::move(test_pdu1)).value());
+
+    // Wait for crypto and reordering
+    wait_pending_crypto();
+    worker.run_pending_tasks();
+    if (std::get<security::integrity_enabled>(GetParam()) == security::integrity_enabled::on) {
+      // Integrity on: Expect PDU to be dropped.
+      ASSERT_EQ(0, test_frame->sdu_queue.size());
+      ASSERT_EQ(prev_integrity_fail_counter + 1, test_frame->integrity_fail_counter);
+    } else {
+      // Integrity off or in SMC transition: Expect PDU to pass.
+      ASSERT_EQ(1, test_frame->sdu_queue.size());
+      ASSERT_EQ(prev_integrity_fail_counter, test_frame->integrity_fail_counter);
+      while (not test_frame->sdu_queue.empty()) {
+        test_frame->sdu_queue.pop();
+      }
+    }
+  };
+
+  test_rx_integrity_mode(0);
+  test_rx_integrity_mode(2047);
+  test_rx_integrity_mode(4095);
+
+  if (std::get<security::integrity_enabled>(GetParam()) == security::integrity_enabled::on) {
+    // Three warnings but no errors
+    EXPECT_EQ(test_spy.get_warning_counter(), 3);
+    EXPECT_EQ(test_spy.get_error_counter(), 0);
+  } else {
+    // No warnings and no errors
+    EXPECT_EQ(test_spy.get_warning_counter(), 0);
+    EXPECT_EQ(test_spy.get_error_counter(), 0);
+  }
+
+  EXPECT_EQ(pdcp_rohc_factory->get_nof_compressors(), 0);
+  EXPECT_EQ(pdcp_rohc_factory->get_nof_decompressors(), exp_nof_decompressors);
+}
+
+/// Test reception of SRB PDUs with non zero-padded MAC across all integrity modes (off, on, SMC transition mode).
+/// The PDCP should reject all PDUs.
+TEST_P(pdcp_rx_test_srb, rx_non_zero_padded_mac)
+{
+  init(pdcp_sn_size::size12bits, 2, cfg_rohc_disabled, pdcp_rb_type::srb);
+  unsigned exp_nof_decompressors = header_compression.has_value() ? 1 : 0;
+  EXPECT_EQ(pdcp_rohc_factory->get_nof_compressors(), 0);
+  EXPECT_EQ(pdcp_rohc_factory->get_nof_decompressors(), exp_nof_decompressors);
+
+  auto test_rx_integrity_mode = [this](uint32_t count) {
+    ocudu::test_delimit_logger delimiter("RX PDU with unverified integrity. SN_SIZE={} COUNT={}", sn_size, count);
+
+    if (std::get<security::integrity_enabled>(GetParam()) != security::integrity_enabled::off) {
+      pdcp_rx->configure_security(
+          sec_cfg, std::get<security::integrity_enabled>(GetParam()), security::ciphering_enabled::off);
+    }
+
+    byte_buffer test_pdu1;
+    get_test_pdu(count, test_pdu1);
+    // overwrite MAC with non-zero padding
+    byte_buffer_view mac{test_pdu1, test_pdu1.length() - security::sec_mac_len, security::sec_mac_len};
+    std::fill(mac.begin(), mac.end(), 0x1);
+    pdcp_rx_state init_state = {.rx_next = count, .rx_deliv = count, .rx_reord = 0};
+    pdcp_rx->set_state(init_state);
+    uint32_t prev_integrity_fail_counter = test_frame->integrity_fail_counter;
+    pdcp_rx->handle_pdu(byte_buffer_chain::create(std::move(test_pdu1)).value());
+
+    // Wait for crypto and reordering
+    wait_pending_crypto();
+    worker.run_pending_tasks();
+
+    // Expect PDU to be dropped.
+    ASSERT_EQ(0, test_frame->sdu_queue.size());
+    ASSERT_EQ(prev_integrity_fail_counter + 1, test_frame->integrity_fail_counter);
+  };
+
+  test_rx_integrity_mode(0);
+  test_rx_integrity_mode(2047);
+  test_rx_integrity_mode(4095);
+
+  // Three warnings but no errors
+  EXPECT_EQ(test_spy.get_warning_counter(), 3);
+  EXPECT_EQ(test_spy.get_error_counter(), 0);
+
+  EXPECT_EQ(pdcp_rohc_factory->get_nof_compressors(), 0);
+  EXPECT_EQ(pdcp_rohc_factory->get_nof_decompressors(), exp_nof_decompressors);
+}
+
 /// Test count wrap-around protection for PDCP RX
 /// Receive one PDU before notify limit, four after notify
 /// limit and one after the hard limit.
-TEST_P(pdcp_rx_test, count_wraparound)
+TEST_P(pdcp_rx_test_drb, count_wraparound)
 {
   uint32_t       rx_next_notify = 262144;
   uint32_t       rx_next_max    = 262148;
   uint32_t       rx_next_start  = 262143;
   uint32_t       n_sdus         = 6;
   pdcp_max_count max_count{rx_next_notify, rx_next_max};
-  init(GetParam(), pdcp_rb_type::drb, pdcp_rlc_mode::am, pdcp_t_reordering::ms10, max_count);
+  init(std::get<pdcp_sn_size>(GetParam()),
+       std::get<unsigned>(GetParam()),
+       std::get<rohc_test_params>(GetParam()),
+       pdcp_rb_type::drb,
+       pdcp_rlc_mode::am,
+       pdcp_t_reordering::ms10,
+       max_count);
   unsigned exp_nof_decompressors = header_compression.has_value() ? 1 : 0;
   EXPECT_EQ(pdcp_rohc_factory->get_nof_compressors(), 0);
   EXPECT_EQ(pdcp_rohc_factory->get_nof_decompressors(), exp_nof_decompressors);
@@ -562,11 +688,11 @@ TEST_P(pdcp_rx_test, count_wraparound)
 }
 
 /// Test TX SDU buffering.
-TEST_P(pdcp_rx_test, rx_buffer)
+TEST_P(pdcp_rx_test_drb, rx_buffer)
 {
   uint32_t n_no_buffer_pdus = 1;
   uint32_t n_buffer_pdus    = 2;
-  init(GetParam());
+  init(std::get<pdcp_sn_size>(GetParam()), std::get<unsigned>(GetParam()), std::get<rohc_test_params>(GetParam()));
   unsigned exp_nof_decompressors = header_compression.has_value() ? 1 : 0;
   EXPECT_EQ(pdcp_rohc_factory->get_nof_compressors(), 0);
   EXPECT_EQ(pdcp_rohc_factory->get_nof_decompressors(), exp_nof_decompressors);
@@ -611,8 +737,8 @@ TEST_P(pdcp_rx_test, rx_buffer)
 ///////////////////////////////////////////////////////////////////
 // Finally, instantiate all testcases for each supported SN size //
 ///////////////////////////////////////////////////////////////////
-static std::string
-test_param_info_to_string(const ::testing::TestParamInfo<std::tuple<pdcp_sn_size, unsigned, rohc_test_params>>& info)
+static std::string pdcp_rx_test_drb_param_info_to_string(
+    const ::testing::TestParamInfo<std::tuple<pdcp_sn_size, unsigned, rohc_test_params>>& info)
 {
   fmt::memory_buffer buffer;
   fmt::format_to(std::back_inserter(buffer),
@@ -625,12 +751,32 @@ test_param_info_to_string(const ::testing::TestParamInfo<std::tuple<pdcp_sn_size
 }
 
 INSTANTIATE_TEST_SUITE_P(
-    pdcp_rx_test_all_sn_sizes,
-    pdcp_rx_test,
+    pdcp_rx_test_all_variants,
+    pdcp_rx_test_drb,
     ::testing::Combine(::testing::Values(pdcp_sn_size::size12bits, pdcp_sn_size::size18bits),
                        ::testing::Values(1, 2, 3),
                        ::testing::Values(cfg_rohc_disabled, cfg_rohc_uncompressed, cfg_rohc_compressed)),
-    test_param_info_to_string);
+    pdcp_rx_test_drb_param_info_to_string);
+
+static std::string pdcp_rx_test_srb_param_info_to_string(
+    const ::testing::TestParamInfo<std::tuple<unsigned, security::integrity_enabled>>& info)
+{
+  fmt::memory_buffer buffer;
+  fmt::format_to(std::back_inserter(buffer),
+                 "nia{}_{}_nea{}",
+                 std::get<unsigned>(info.param),
+                 std::get<security::integrity_enabled>(info.param),
+                 std::get<unsigned>(info.param));
+  return fmt::to_string(buffer);
+}
+
+INSTANTIATE_TEST_SUITE_P(pdcp_rx_test_all_variants,
+                         pdcp_rx_test_srb,
+                         ::testing::Combine(::testing::Values(1, 2, 3),
+                                            ::testing::Values(security::integrity_enabled::off,
+                                                              security::integrity_enabled::on,
+                                                              security::integrity_enabled::smc_transition)),
+                         pdcp_rx_test_srb_param_info_to_string);
 
 int main(int argc, char** argv)
 {
