@@ -41,3 +41,8 @@ target_link_libraries(nrppa_asn1 asn1_utils)
 add_library(xnap_asn1 STATIC xnap/common.cpp xnap/xnap_ies.cpp xnap/xnap_pdu_contents.cpp xnap/xnap.cpp)
 target_compile_options(xnap_asn1 PRIVATE -Os -fno-exceptions)
 target_link_libraries(xnap_asn1 asn1_utils)
+
+# LPP ASN1
+add_library(lpp_asn1 STATIC lpp/lpp.cpp)
+target_compile_options(lpp_asn1 PRIVATE -Os -fno-exceptions)
+target_link_libraries(lpp_asn1 asn1_utils)
