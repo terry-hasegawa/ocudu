@@ -272,6 +272,9 @@ public:
   ///
   /// \param mac_ce DL MAC CE to be scheduled.
   virtual void handle_dl_mac_ce_indication(const dl_mac_ce_indication& mac_ce) = 0;
+
+  /// \brief Handle indication that C-RNTI CE was received for the provided UE.
+  virtual void handle_crnti_ce_received(du_ue_index_t ue_index) = 0;
 };
 
 } // namespace ocudu

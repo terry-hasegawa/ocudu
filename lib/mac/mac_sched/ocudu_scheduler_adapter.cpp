@@ -267,6 +267,7 @@ void ocudu_scheduler_adapter::handle_ul_phr_indication(const mac_phr_ce_info& ph
 void ocudu_scheduler_adapter::handle_crnti_ce_indication(du_ue_index_t old_ue_index, du_cell_index_t cell_index)
 {
   rlf_handler.handle_crnti_ce(old_ue_index);
+  sched_impl->handle_crnti_ce_received(old_ue_index);
 }
 
 const sched_result& ocudu_scheduler_adapter::slot_indication(slot_point_extended slot_tx, du_cell_index_t cell_idx)

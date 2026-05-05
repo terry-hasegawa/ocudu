@@ -48,9 +48,7 @@ ue_cell::ue_cell(du_ue_index_t                ue_index_,
   logger(logger_)
 {
   if (serv_cell_index_ == SERVING_PCELL_IDX) {
-    // Set ConRes procedure complete by default. Variable only needed for RACHs where MSG3 contains ConRes MAC-CE.
     pcell_state.emplace(ue_pcell_state{});
-    pcell_state->conres_complete = true;
     if (msg3_slot_rx.has_value()) {
       pcell_state->msg3_rx_slot = msg3_slot_rx.value();
     }
@@ -495,16 +493,16 @@ double ue_cell::get_estimated_ul_rate(const pusch_config_params& pusch_cfg, sch_
   return tbs_bytes.value();
 }
 
-void ue_cell::set_conres_state(bool state)
+bool ue_cell::handle_conres_completed()
 {
-  if (pcell_state->conres_complete == state) {
-    return;
+  if (pcell_state->conres_completed) {
+    // No changes.
+    return false;
   }
-  pcell_state->conres_complete = state;
-  if (state) {
-    pcell_state->msg3_rx_slot = slot_point{};
-    logger.debug("ue={} rnti={}: ConRes procedure completed", fmt::underlying(ue_index), rnti());
-  } else {
-    logger.debug("ue={} rnti={}: ConRes procedure started", fmt::underlying(ue_index), rnti());
-  }
+
+  // Update state.
+  pcell_state->conres_completed = true;
+  pcell_state->msg3_rx_slot     = slot_point{};
+  logger.debug("ue={} rnti={}: ConRes procedure completed", ue_index, rnti());
+  return true;
 }

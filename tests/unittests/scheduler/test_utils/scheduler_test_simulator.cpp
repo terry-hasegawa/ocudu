@@ -80,6 +80,9 @@ void scheduler_test_simulator::add_ue(const sched_ue_creation_request_message& u
 {
   static const size_t ADD_TIMEOUT = 100;
   sched->handle_ue_creation_request(ue_request);
+  if (not ue_request.ul_ccch_slot_rx.has_value() and not ue_request.starts_in_fallback) {
+    sched->handle_crnti_ce_received(ue_request.ue_index);
+  }
   rnti_to_ue_index.insert(std::make_pair(ue_request.crnti, ue_request.ue_index));
   if (wait_notification) {
     notif.last_ue_index_cfg.reset();

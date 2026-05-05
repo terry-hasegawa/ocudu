@@ -40,11 +40,11 @@ class ue_cell
 public:
   /// State in case carrier corresponds to UE pcell.
   struct ue_pcell_state {
+    /// Current state of the UE contention resolution procedure.
+    bool conres_completed = false;
     /// Fallback state of the UE. When in "fallback" mode, only the search spaces and the configuration of
     /// cellConfigCommon are used.
     bool in_fallback_mode = true;
-    /// \brief Whether the MAC CE Contention Resolution has been transmitted and acked by the UE.
-    bool conres_complete = false;
     /// Whether a UE reconfiguration is taking place.
     bool reconf_ongoing = false;
     /// Whether the UE has been reestablished.
@@ -181,8 +181,9 @@ public:
 
   bool is_pcell() const { return pcell_state.has_value(); }
 
-  /// Sets the Contention Resolution procedure state as started (if "false") or complete (if "true").
-  void set_conres_state(bool state);
+  /// Sets the Contention Resolution procedure state as completed.
+  /// \return True if the state changed. False otherwise.
+  bool handle_conres_completed();
 
   /// Retrieve the current Pcell state of the UE, if applicable.
   const ue_pcell_state& get_pcell_state() const { return pcell_state.value(); }

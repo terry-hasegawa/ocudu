@@ -104,6 +104,7 @@ public:
   void handle_srs_indication(const srs_indication& srs) override {}
   void handle_ul_phr_indication(const ul_phr_indication_message& phr_ind) override {}
   void handle_dl_mac_ce_indication(const dl_mac_ce_indication& mac_ce) override {}
+  void handle_crnti_ce_received(du_ue_index_t ue_index) override {}
   void handle_paging_information(const sched_paging_information& pi) override {}
   const sched_result& slot_indication(slot_point_extended sl_tx, du_cell_index_t cell_index) override
   {

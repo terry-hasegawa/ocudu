@@ -74,6 +74,7 @@ public:
   void handle_srs_indication(const srs_indication& srs) override;
   void handle_ul_phr_indication(const ul_phr_indication_message& phr_ind) override;
   void handle_dl_mac_ce_indication(const dl_mac_ce_indication& mac_ce) override;
+  void handle_crnti_ce_received(du_ue_index_t ue_index) override;
 
   // scheduler_cell_positioning_handler methods.
   void handle_positioning_measurement_request(const positioning_measurement_request::cell_info& req) override;

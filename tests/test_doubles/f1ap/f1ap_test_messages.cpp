@@ -364,10 +364,14 @@ f1ap_message ocudu::test_helpers::generate_ue_context_setup_request(gnb_cu_ue_f1
     ++count;
   }
 
-  dl_msg->rrc_container_present = true;
-  bool success                  = dl_msg->rrc_container.append(
-      generate_rrc_container(rrc_container_pdcp_sn, test_rng::uniform_int<unsigned>(3, 100)));
-  report_error_if_not(success, "Failed to allocate RRC container");
+  if (du_ue_id.has_value()) {
+    // Note: In case of a new UE being created, an RRC container should not be stored, as it would have to wait for
+    // the C-RNTI CE.
+    dl_msg->rrc_container_present = true;
+    bool success                  = dl_msg->rrc_container.append(
+        generate_rrc_container(rrc_container_pdcp_sn, test_rng::uniform_int<unsigned>(3, 100)));
+    report_error_if_not(success, "Failed to allocate RRC container");
+  }
 
   return msg;
 }

@@ -196,6 +196,16 @@ void scheduler_impl::handle_dl_mac_ce_indication(const dl_mac_ce_indication& mac
   cells[pcell_idx]->get_feedback_handler().handle_dl_mac_ce_indication(mac_ce);
 }
 
+void scheduler_impl::handle_crnti_ce_received(du_ue_index_t ue_index)
+{
+  const du_cell_index_t pcell_idx = cfg_mng.get_pcell_index(ue_index);
+  if (pcell_idx == INVALID_DU_CELL_INDEX) {
+    logger.warning("ue={}: Discarding MAC CE update. Cause: UE not recognized", ue_index);
+    return;
+  }
+  cells[pcell_idx]->get_feedback_handler().handle_crnti_ce_received(ue_index);
+}
+
 const sched_result& scheduler_impl::slot_indication(slot_point_extended sl_tx,
                                                     du_cell_index_t     cell_index) noexcept OCUDU_RTSAN_NONBLOCKING
 {
