@@ -63,11 +63,21 @@ nlohmann::json wrap(nlohmann::json cell)
   return req;
 }
 
+/// Build a SIB2 content object with the three bounded_integer fields the boundary tests vary,
+/// and stable defaults for the rest.
+nlohmann::json sib2_content_with(int q_rx_lev_min, int thresh_low_p, int reselect_prio)
+{
+  return {{"q_hyst_db", 4},
+          {"thresh_serving_low_p", thresh_low_p},
+          {"cell_reselection_priority", reselect_prio},
+          {"q_rx_lev_min", q_rx_lev_min},
+          {"s_intra_search_p", 31},
+          {"t_reselection_nr", 1}};
+}
+
 } // namespace
 
-// ============================================================================
 // Happy path — valid SIB2/SIB3/SIB4 payloads produce the right variant.
-// ============================================================================
 
 TEST(sib_update_remote_command, valid_sib2_request_builds_sib2_variant)
 {
@@ -189,9 +199,7 @@ TEST(sib_update_remote_command, sib4_omitting_optional_q_offset_freq_defaults_to
   EXPECT_EQ(sib4.inter_freq_carrier_freq_list[0].q_offset_freq, q_offset_range_t::db0);
 }
 
-// ============================================================================
 // Top-level validation errors.
-// ============================================================================
 
 TEST(sib_update_remote_command, missing_cells_returns_error)
 {
@@ -229,9 +237,7 @@ TEST(sib_update_remote_command, empty_cells_array_returns_error)
   ASSERT_FALSE(res.has_value());
 }
 
-// ============================================================================
 // Cell-level validation errors.
-// ============================================================================
 
 TEST(sib_update_remote_command, missing_plmn_returns_error)
 {
@@ -275,9 +281,7 @@ TEST(sib_update_remote_command, invalid_plmn_string_returns_error)
   EXPECT_NE(res.error().find("PLMN"), std::string::npos) << "actual: " << res.error();
 }
 
-// ============================================================================
 // SIB-level validation errors.
-// ============================================================================
 
 TEST(sib_update_remote_command, missing_sib_object_returns_error)
 {
@@ -315,9 +319,7 @@ TEST(sib_update_remote_command, sib_type_not_string_returns_error)
   EXPECT_NE(res.error().find("string"), std::string::npos) << "actual: " << res.error();
 }
 
-// ============================================================================
 // Content-level field validation.
-// ============================================================================
 
 TEST(sib_update_remote_command, sib2_invalid_q_hyst_value_returns_error)
 {
@@ -358,6 +360,169 @@ TEST(sib_update_remote_command, sib2_q_rx_lev_min_out_of_range_returns_error)
   ASSERT_FALSE(res.has_value());
   EXPECT_NE(res.error().find("q_rx_lev_min"), std::string::npos) << "actual: " << res.error();
   EXPECT_NE(res.error().find("out of range"), std::string::npos) << "actual: " << res.error();
+}
+
+// q_rx_lev_min is bounded [-70, -22] and stored as int8_t. JSON value 200 must
+// be rejected even though static_cast<int8_t>(200) = -56 falls inside the bound.
+// Guards against narrowing bugs where val.get<int8_t>() would silently wrap.
+TEST(sib_update_remote_command, sib2_q_rx_lev_min_positive_overflow_rejected)
+{
+  capturing_du_configurator mock;
+  sib_update_remote_command cmd{mock};
+
+  auto cell   = make_cell_skeleton();
+  cell["sib"] = {{"type", "sib2"},
+                 {"content",
+                  {{"q_hyst_db", 4},
+                   {"thresh_serving_low_p", 14},
+                   {"cell_reselection_priority", 4},
+                   {"q_rx_lev_min", 200}, // above int8_t bound; static_cast wraps to -56
+                   {"s_intra_search_p", 31},
+                   {"t_reselection_nr", 1}}}};
+
+  auto res = cmd.execute(wrap(cell));
+  ASSERT_FALSE(res.has_value());
+  EXPECT_NE(res.error().find("q_rx_lev_min"), std::string::npos) << "actual: " << res.error();
+  EXPECT_NE(res.error().find("out of range"), std::string::npos) << "actual: " << res.error();
+}
+
+// thresh_serving_low_p is bounded [0, 31] and stored as uint8_t. JSON 256 must
+// be rejected even though static_cast<uint8_t>(256) = 0 falls inside the bound.
+// Guards against narrowing bugs where val.get<uint8_t>() would silently wrap.
+TEST(sib_update_remote_command, sib2_thresh_serving_low_p_overshoot_rejected)
+{
+  capturing_du_configurator mock;
+  sib_update_remote_command cmd{mock};
+
+  auto cell   = make_cell_skeleton();
+  cell["sib"] = {{"type", "sib2"},
+                 {"content",
+                  {{"q_hyst_db", 4},
+                   {"thresh_serving_low_p", 256}, // above uint8_t bound; static_cast wraps to 0
+                   {"cell_reselection_priority", 4},
+                   {"q_rx_lev_min", -70},
+                   {"s_intra_search_p", 31},
+                   {"t_reselection_nr", 1}}}};
+
+  auto res = cmd.execute(wrap(cell));
+  ASSERT_FALSE(res.has_value());
+  EXPECT_NE(res.error().find("thresh_serving_low_p"), std::string::npos) << "actual: " << res.error();
+  EXPECT_NE(res.error().find("out of range"), std::string::npos) << "actual: " << res.error();
+}
+
+// Boundary tests for SIB2 bounded_integer fields: exact MIN, exact MAX, just
+// outside on each side. Make sure the validation is inclusive on both ends.
+
+TEST(sib_update_remote_command, sib2_q_rx_lev_min_at_min_boundary_accepted)
+{
+  capturing_du_configurator mock;
+  sib_update_remote_command cmd{mock};
+
+  auto cell   = make_cell_skeleton();
+  cell["sib"] = {{"type", "sib2"}, {"content", sib2_content_with(-70, 14, 4)}};
+
+  auto res = cmd.execute(wrap(cell));
+  ASSERT_TRUE(res.has_value()) << res.error();
+}
+
+TEST(sib_update_remote_command, sib2_q_rx_lev_min_at_max_boundary_accepted)
+{
+  capturing_du_configurator mock;
+  sib_update_remote_command cmd{mock};
+
+  auto cell   = make_cell_skeleton();
+  cell["sib"] = {{"type", "sib2"}, {"content", sib2_content_with(-22, 14, 4)}};
+
+  auto res = cmd.execute(wrap(cell));
+  ASSERT_TRUE(res.has_value()) << res.error();
+}
+
+TEST(sib_update_remote_command, sib2_q_rx_lev_min_just_below_min_rejected)
+{
+  capturing_du_configurator mock;
+  sib_update_remote_command cmd{mock};
+
+  auto cell   = make_cell_skeleton();
+  cell["sib"] = {{"type", "sib2"}, {"content", sib2_content_with(-71, 14, 4)}};
+
+  auto res = cmd.execute(wrap(cell));
+  ASSERT_FALSE(res.has_value());
+  EXPECT_NE(res.error().find("q_rx_lev_min"), std::string::npos) << "actual: " << res.error();
+}
+
+TEST(sib_update_remote_command, sib2_q_rx_lev_min_just_above_max_rejected)
+{
+  capturing_du_configurator mock;
+  sib_update_remote_command cmd{mock};
+
+  auto cell   = make_cell_skeleton();
+  cell["sib"] = {{"type", "sib2"}, {"content", sib2_content_with(-21, 14, 4)}};
+
+  auto res = cmd.execute(wrap(cell));
+  ASSERT_FALSE(res.has_value());
+  EXPECT_NE(res.error().find("q_rx_lev_min"), std::string::npos) << "actual: " << res.error();
+}
+
+TEST(sib_update_remote_command, sib2_thresh_serving_low_p_at_min_boundary_accepted)
+{
+  capturing_du_configurator mock;
+  sib_update_remote_command cmd{mock};
+
+  auto cell   = make_cell_skeleton();
+  cell["sib"] = {{"type", "sib2"}, {"content", sib2_content_with(-70, 0, 4)}};
+
+  auto res = cmd.execute(wrap(cell));
+  ASSERT_TRUE(res.has_value()) << res.error();
+}
+
+TEST(sib_update_remote_command, sib2_thresh_serving_low_p_at_max_boundary_accepted)
+{
+  capturing_du_configurator mock;
+  sib_update_remote_command cmd{mock};
+
+  auto cell   = make_cell_skeleton();
+  cell["sib"] = {{"type", "sib2"}, {"content", sib2_content_with(-70, 31, 4)}};
+
+  auto res = cmd.execute(wrap(cell));
+  ASSERT_TRUE(res.has_value()) << res.error();
+}
+
+TEST(sib_update_remote_command, sib2_thresh_serving_low_p_just_above_max_rejected)
+{
+  capturing_du_configurator mock;
+  sib_update_remote_command cmd{mock};
+
+  auto cell   = make_cell_skeleton();
+  cell["sib"] = {{"type", "sib2"}, {"content", sib2_content_with(-70, 32, 4)}};
+
+  auto res = cmd.execute(wrap(cell));
+  ASSERT_FALSE(res.has_value());
+  EXPECT_NE(res.error().find("thresh_serving_low_p"), std::string::npos) << "actual: " << res.error();
+}
+
+TEST(sib_update_remote_command, sib2_cell_reselection_priority_at_max_boundary_accepted)
+{
+  capturing_du_configurator mock;
+  sib_update_remote_command cmd{mock};
+
+  auto cell   = make_cell_skeleton();
+  cell["sib"] = {{"type", "sib2"}, {"content", sib2_content_with(-70, 14, 7)}};
+
+  auto res = cmd.execute(wrap(cell));
+  ASSERT_TRUE(res.has_value()) << res.error();
+}
+
+TEST(sib_update_remote_command, sib2_cell_reselection_priority_just_above_max_rejected)
+{
+  capturing_du_configurator mock;
+  sib_update_remote_command cmd{mock};
+
+  auto cell   = make_cell_skeleton();
+  cell["sib"] = {{"type", "sib2"}, {"content", sib2_content_with(-70, 14, 8)}};
+
+  auto res = cmd.execute(wrap(cell));
+  ASSERT_FALSE(res.has_value());
+  EXPECT_NE(res.error().find("cell_reselection_priority"), std::string::npos) << "actual: " << res.error();
 }
 
 TEST(sib_update_remote_command, sib2_missing_mandatory_field_returns_error)
@@ -476,9 +641,7 @@ TEST(sib_update_remote_command, sib3_with_empty_content_is_valid)
   EXPECT_TRUE(sib3.intra_freq_excluded_cell_list.empty());
 }
 
-// ============================================================================
 // Multi-cell.
-// ============================================================================
 
 TEST(sib_update_remote_command, multi_cell_request_produces_multiple_cell_entries)
 {
@@ -509,9 +672,7 @@ TEST(sib_update_remote_command, multi_cell_request_produces_multiple_cell_entrie
   EXPECT_EQ(std::get<sib3_info>(*mock.last_req->cells[1].new_sys_info).intra_freq_neigh_cell_list[0].pci, 48);
 }
 
-// ============================================================================
 // Downstream failure propagation.
-// ============================================================================
 
 TEST(sib_update_remote_command, configurator_failure_is_reported_as_error)
 {

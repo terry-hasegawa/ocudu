@@ -215,10 +215,7 @@ error_type<std::string> rrm_policy_ratio_remote_command::execute(const nlohmann:
   return make_unexpected("RRM policy ratio remote command procedure failed to be applied by the DU");
 }
 
-// =============================================================================
-// sib_update_remote_command helpers
-// =============================================================================
-
+/// Parses a NR cell global identifier (PLMN + NCI) from a JSON cell entry.
 static expected<nr_cell_global_id_t, std::string> parse_cgi(const nlohmann::json& cell)
 {
   auto plmn_key = cell.find("plmn");
@@ -230,7 +227,7 @@ static expected<nr_cell_global_id_t, std::string> parse_cgi(const nlohmann::json
   }
   auto plmn = plmn_identity::parse(plmn_key->get_ref<const nlohmann::json::string_t&>());
   if (!plmn) {
-    return make_unexpected("invalid PLMN identity value");
+    return make_unexpected("Invalid PLMN identity value");
   }
 
   auto nci_key = cell.find("nci");
@@ -242,7 +239,7 @@ static expected<nr_cell_global_id_t, std::string> parse_cgi(const nlohmann::json
   }
   auto nci = nr_cell_identity::create(nci_key->get<uint64_t>());
   if (!nci) {
-    return make_unexpected("invalid NR cell identity value");
+    return make_unexpected("Invalid NR cell identity value");
   }
 
   nr_cell_global_id_t cgi;
@@ -251,8 +248,10 @@ static expected<nr_cell_global_id_t, std::string> parse_cgi(const nlohmann::json
   return cgi;
 }
 
-// q_hyst_t enum values equal the integer dB values (db4 = 4), but the enum skips 7, 9, 11, ...,
-// so the switch validates membership; a cast then performs the mapping.
+/// Parses the 'q_hyst_db' field into a q_hyst_t.
+///
+/// q_hyst_t enum values equal the integer dB values (db4 = 4), but the enum skips 7, 9, 11, ...,
+/// so the switch validates membership; a cast then performs the mapping.
 static expected<q_hyst_t, std::string> parse_q_hyst_db(const nlohmann::json& obj)
 {
   auto key = obj.find("q_hyst_db");
@@ -287,8 +286,10 @@ static expected<q_hyst_t, std::string> parse_q_hyst_db(const nlohmann::json& obj
   }
 }
 
-// q_offset_range_t enum values equal the signed integer dB values (db24 = 24, db_24 = -24),
-// with gaps at odd values above +/-5. Validate then cast.
+/// Parses an integer dB value into a q_offset_range_t.
+///
+/// q_offset_range_t enum values equal the signed integer dB values (db24 = 24, db_24 = -24),
+/// with gaps at odd values above +/-5. Validate then cast.
 static expected<q_offset_range_t, std::string> parse_q_offset_range(const nlohmann::json& val,
                                                                     std::string_view      field_name)
 {
@@ -338,13 +339,18 @@ static expected<q_offset_range_t, std::string> parse_q_offset_range(const nlohma
   }
 }
 
-// subcarrier_spacing is numerology-indexed (kHz30 = 1), so the switch is a genuine mapping.
+/// Parses a kHz subcarrier-spacing value into a subcarrier_spacing.
+///
+/// subcarrier_spacing is numerology-indexed (kHz30 = 1), so the switch is a genuine mapping.
 static expected<subcarrier_spacing, std::string> parse_scs_khz(const nlohmann::json& val, std::string_view field_name)
 {
-  if (!val.is_number_integer() || val.get<int64_t>() < 0) {
+  if (!val.is_number_integer()) {
     return make_unexpected(fmt::format("'{}' value type should be a non-negative integer", field_name));
   }
-  const unsigned v = val.get<unsigned>();
+  const auto v = val.get<int64_t>();
+  if (v < 0) {
+    return make_unexpected(fmt::format("'{}' value type should be a non-negative integer", field_name));
+  }
   switch (v) {
     case 15:
       return subcarrier_spacing::kHz15;
@@ -362,6 +368,7 @@ static expected<subcarrier_spacing, std::string> parse_scs_khz(const nlohmann::j
   }
 }
 
+/// Parses an integer JSON value into a bounded_integer<T, MIN, MAX> after range validation.
 template <typename T, T MIN, T MAX>
 static expected<bounded_integer<T, MIN, MAX>, std::string> parse_bounded_int(const nlohmann::json& val,
                                                                              std::string_view      field_name)
@@ -377,10 +384,10 @@ static expected<bounded_integer<T, MIN, MAX>, std::string> parse_bounded_int(con
   return bounded_integer<T, MIN, MAX>{static_cast<T>(v)};
 }
 
-// Look up a mandatory bounded-integer field in an object and parse it.
+/// Looks up a mandatory bounded-integer field in an object and parses it.
 template <typename T, T MIN, T MAX>
-static expected<bounded_integer<T, MIN, MAX>, std::string> find_and_parse_bounded(const nlohmann::json& obj,
-                                                                                  std::string_view      field)
+static expected<bounded_integer<T, MIN, MAX>, std::string> find_and_parse_bounded_int(const nlohmann::json& obj,
+                                                                                      std::string_view      field)
 {
   auto it = obj.find(field);
   if (it == obj.end()) {
@@ -389,7 +396,7 @@ static expected<bounded_integer<T, MIN, MAX>, std::string> find_and_parse_bounde
   return parse_bounded_int<T, MIN, MAX>(*it, field);
 }
 
-// Look up a mandatory PCI field (range 0..1007) in an object.
+/// Looks up a mandatory PCI field (range 0..1007) in an object.
 static expected<pci_t, std::string> find_and_parse_pci(const nlohmann::json& obj, std::string_view field)
 {
   auto it = obj.find(field);
@@ -406,6 +413,7 @@ static expected<pci_t, std::string> find_and_parse_pci(const nlohmann::json& obj
   return static_cast<pci_t>(v);
 }
 
+/// Parses SIB2 cell-reselection content from a JSON object.
 static expected<sib2_info, std::string> parse_sib2(const nlohmann::json& content)
 {
   sib2_info sib2;
@@ -416,31 +424,31 @@ static expected<sib2_info, std::string> parse_sib2(const nlohmann::json& content
   }
   sib2.q_hyst = q_hyst_exp.value();
 
-  auto thresh_serv_exp = find_and_parse_bounded<uint8_t, 0, 31>(content, "thresh_serving_low_p");
+  auto thresh_serv_exp = find_and_parse_bounded_int<uint8_t, 0, 31>(content, "thresh_serving_low_p");
   if (!thresh_serv_exp) {
     return make_unexpected(thresh_serv_exp.error());
   }
   sib2.thresh_serving_low_p = thresh_serv_exp.value();
 
-  auto reselect_prio_exp = find_and_parse_bounded<uint8_t, 0, 7>(content, "cell_reselection_priority");
+  auto reselect_prio_exp = find_and_parse_bounded_int<uint8_t, 0, 7>(content, "cell_reselection_priority");
   if (!reselect_prio_exp) {
     return make_unexpected(reselect_prio_exp.error());
   }
   sib2.cell_reselection_priority = reselect_prio_exp.value();
 
-  auto q_rx_lev_min_exp = find_and_parse_bounded<int8_t, -70, -22>(content, "q_rx_lev_min");
+  auto q_rx_lev_min_exp = find_and_parse_bounded_int<int8_t, -70, -22>(content, "q_rx_lev_min");
   if (!q_rx_lev_min_exp) {
     return make_unexpected(q_rx_lev_min_exp.error());
   }
   sib2.q_rx_lev_min = q_rx_lev_min_exp.value();
 
-  auto s_intra_search_exp = find_and_parse_bounded<uint8_t, 0, 31>(content, "s_intra_search_p");
+  auto s_intra_search_exp = find_and_parse_bounded_int<uint8_t, 0, 31>(content, "s_intra_search_p");
   if (!s_intra_search_exp) {
     return make_unexpected(s_intra_search_exp.error());
   }
   sib2.s_intra_search_p = s_intra_search_exp.value();
 
-  auto t_reselection_exp = find_and_parse_bounded<uint8_t, 0, 7>(content, "t_reselection_nr");
+  auto t_reselection_exp = find_and_parse_bounded_int<uint8_t, 0, 7>(content, "t_reselection_nr");
   if (!t_reselection_exp) {
     return make_unexpected(t_reselection_exp.error());
   }
@@ -449,6 +457,7 @@ static expected<sib2_info, std::string> parse_sib2(const nlohmann::json& content
   return sib2;
 }
 
+/// Parses SIB3 intra-frequency neighbor list and excluded-cell list from a JSON object.
 static expected<sib3_info, std::string> parse_sib3(const nlohmann::json& content)
 {
   sib3_info sib3;
@@ -535,6 +544,7 @@ static expected<sib3_info, std::string> parse_sib3(const nlohmann::json& content
   return sib3;
 }
 
+/// Parses SIB4 inter-frequency carrier list from a JSON object.
 static expected<sib4_info, std::string> parse_sib4(const nlohmann::json& content)
 {
   sib4_info sib4;
@@ -583,17 +593,17 @@ static expected<sib4_info, std::string> parse_sib4(const nlohmann::json& content
       return make_unexpected("'derive_ssb_index_from_cell' missing or non-boolean in carrier list entry");
     }
 
-    auto q_rx_lev_min_exp = find_and_parse_bounded<int8_t, -70, -22>(carrier_obj, "q_rx_lev_min");
+    auto q_rx_lev_min_exp = find_and_parse_bounded_int<int8_t, -70, -22>(carrier_obj, "q_rx_lev_min");
     if (!q_rx_lev_min_exp) {
       return make_unexpected(q_rx_lev_min_exp.error());
     }
 
-    auto thresh_high_exp = find_and_parse_bounded<uint8_t, 0, 31>(carrier_obj, "thresh_x_high_p");
+    auto thresh_high_exp = find_and_parse_bounded_int<uint8_t, 0, 31>(carrier_obj, "thresh_x_high_p");
     if (!thresh_high_exp) {
       return make_unexpected(thresh_high_exp.error());
     }
 
-    auto thresh_low_exp = find_and_parse_bounded<uint8_t, 0, 31>(carrier_obj, "thresh_x_low_p");
+    auto thresh_low_exp = find_and_parse_bounded_int<uint8_t, 0, 31>(carrier_obj, "thresh_x_low_p");
     if (!thresh_low_exp) {
       return make_unexpected(thresh_low_exp.error());
     }

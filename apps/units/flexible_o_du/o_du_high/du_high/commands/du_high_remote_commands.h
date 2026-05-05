@@ -9,7 +9,7 @@
 
 namespace ocudu {
 
-/// \brief Remote command that modifies the SSB parameters.
+/// Remote command that modifies the SSB parameters.
 class ssb_modify_remote_command : public app_services::remote_command
 {
   odu::du_configurator& configurator;
@@ -27,7 +27,7 @@ public:
   error_type<std::string> execute(const nlohmann::json& json) override;
 };
 
-/// \brief Remote command that modifies the RRM policy ratio.
+/// Remote command that modifies the RRM policy ratio.
 class rrm_policy_ratio_remote_command : public app_services::remote_command
 {
   odu::du_configurator& configurator;
@@ -45,13 +45,11 @@ public:
   error_type<std::string> execute(const nlohmann::json& json) override;
 };
 
-/// \brief Remote command that updates SIB content without a cell restart.
+/// \brief Remote command that updates SIB contents without a cell restart.
 ///
-/// Supported SIBs: SIB2 (cell reselection), SIB3 (intra-frequency neighbors),
-/// SIB4 (inter-frequency neighbors). Each update swaps the SIB content in the
-/// live cell config, increments that SIB's value_tag, repacks SIB1 and all SI
-/// messages, and notifies MAC and CU-CP. Idle UEs re-read the updated SIB on
-/// the next SI period.
+/// Supported SIBs: SIB2 (cell reselection), SIB3 (intra-frequency neighbors), SIB4 (inter-frequency neighbors).
+/// Each update swaps the SIB content in the live cell config, increments that SIB's value_tag, repacks SIB1
+/// and all SI messages, and notifies MAC and CU-CP. Idle UEs re-read the updated SIB on the next SI period.
 class sib_update_remote_command : public app_services::remote_command
 {
   odu::du_configurator& configurator;
