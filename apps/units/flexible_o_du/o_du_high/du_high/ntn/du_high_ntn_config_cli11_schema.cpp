@@ -3,18 +3,204 @@
 // Portions of this file may implement 3GPP specifications, which may be subject to additional licensing requirements.
 
 #include "du_high_ntn_config_cli11_schema.h"
+#include "apps/services/cmdline/cmdline_command_dispatcher_utils.h"
 #include "du_high_unit_cell_ntn_config.h"
+#include "ocudu/ran/ntn.h"
 #include "ocudu/support/cli11_utils.h"
+#include "ocudu/support/config_parsers.h"
+#include <regex>
 
 using namespace ocudu;
 
-#ifndef OCUDU_HAS_ENTERPRISE_NTN
-
-void ocudu::configure_cli11_advanced_ntn_args(CLI::App& app, du_high_unit_cell_ntn_config& config)
+static bool is_number(const std::string& s)
 {
-  // Advanced NTN config parameters are not implemented.
+  return !s.empty() && std::all_of(s.begin(), s.end(), ::isdigit);
 }
-#endif // OCUDU_HAS_ENTERPRISE_NTN
+
+static bool is_valid_timestamp(const std::string& input)
+{
+  static const std::regex timestamp_regex(R"(^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,3})?$)",
+                                          std::regex::ECMAScript);
+
+  return std::regex_match(input, timestamp_regex);
+}
+
+/// Parse ISO 8601 with optional milliseconds: "YYYY-MM-DDTHH:MM:SS[.mmm]" and return UTC timepoint.
+static expected<std::chrono::system_clock::time_point, std::string> parse_timestamp_ms(const std::string& datetime)
+{
+  std::tm tm           = {};
+  int     milliseconds = 0;
+
+  size_t      dot_pos = datetime.find('.');
+  std::string base    = datetime;
+
+  if (dot_pos != std::string::npos) {
+    base = datetime.substr(0, dot_pos);
+  }
+
+  std::istringstream ss(base);
+  ss >> std::get_time(&tm, "%Y-%m-%dT%H:%M:%S");
+  if (ss.fail()) {
+    return make_unexpected("Invalid datetime format (expected YYYY-MM-DDTHH:MM:SS[.mmm])");
+  }
+
+  if (dot_pos != std::string::npos) {
+    std::string ms_str = datetime.substr(dot_pos + 1);
+    if (ms_str.length() > 3) {
+      ms_str = ms_str.substr(0, 3);
+    }
+    while (ms_str.length() < 3) {
+      ms_str += '0';
+    }
+    milliseconds = std::stoi(ms_str);
+  }
+
+  time_t seconds = timegm(&tm);
+  auto   tp      = std::chrono::system_clock::from_time_t(seconds);
+  tp += std::chrono::milliseconds(milliseconds);
+  return tp;
+}
+
+static void configure_cli11_feeder_link(CLI::App& app, feeder_link_info_t& feeder_link_info)
+{
+  add_option(app,
+             "--enable_doppler_compensation",
+             feeder_link_info.enable_doppler_compensation,
+             "Enable/disable Feeder Link Doppler compensation.")
+      ->capture_default_str();
+  add_option(app, "--dl_freq", feeder_link_info.dl_freq, "Downlink feeder link carrier frequency (gnb->sat) [Hz]")
+      ->capture_default_str()
+      ->check(CLI::Range(0.0, 100e9));
+  add_option(app, "--ul_freq", feeder_link_info.ul_freq, "Uplink feeder link carrier frequency (sat->gnb) [Hz]")
+      ->capture_default_str()
+      ->check(CLI::Range(0.0, 100e9));
+}
+
+static void
+configure_cli11_geodetic_coordinates(CLI::App& app, geodetic_coordinates_t& location, bool with_altitude = true)
+{
+  add_option(app, "--latitude", location.latitude, "Latitude [degree]")
+      ->capture_default_str()
+      ->check(CLI::Range(-90.0, 90.0));
+  add_option(app, "--longitude", location.longitude, "Longitude [degree]")
+      ->capture_default_str()
+      ->check(CLI::Range(-180.0, 180.0));
+  if (with_altitude) {
+    add_option(app, "--altitude", location.altitude, "Altitude [m]")
+        ->capture_default_str()
+        ->check(CLI::Range(-1000.0, 20000.0));
+  }
+}
+
+static void configure_cli11_sat_switch_with_resync(CLI::App& app, sat_switch_with_resync_t& sat_switch_config)
+{
+  // epoch_timestamp (reference epoch for assistance info provided in config file).
+  app.add_option_function<std::string>(
+         "--epoch_timestamp",
+         [&sat_switch_config](const std::string& value) {
+           if (is_number(value)) {
+             auto ms_since_epoch = app_services::parse_int<int64_t>(value).value();
+             sat_switch_config.epoch_timestamp =
+                 std::chrono::system_clock::time_point(std::chrono::milliseconds(ms_since_epoch));
+           } else {
+             sat_switch_config.epoch_timestamp = parse_timestamp_ms(value).value();
+           }
+         },
+         "Epoch timestamp for NTN assistance info (Unix time in ms or ISO 8601: YYYY-MM-DDTHH:MM:SS[.mmm])")
+      ->check([](const std::string& input) {
+        if (!is_number(input) && !is_valid_timestamp(input)) {
+          return std::string("Invalid timestamp format. Expected Unix time (ms) or YYYY-MM-DDTHH:MM:SS[.mmm]");
+        }
+        return std::string();
+      });
+
+  // ntn_gateway_location.
+  static geodetic_coordinates_t ntn_gateway_location;
+  CLI::App*                     gateway_location_subcmd =
+      add_subcommand(app, "ntn_gateway_location", "Geodetic coordinates of NTN gateway location");
+  configure_cli11_geodetic_coordinates(*gateway_location_subcmd, ntn_gateway_location);
+  gateway_location_subcmd->parse_complete_callback([&]() {
+    if (app.get_subcommand("ntn_gateway_location")->count() != 0) {
+      sat_switch_config.ntn_gateway_location = ntn_gateway_location;
+    }
+  });
+
+  // t_service_start (time when target satellite starts serving).
+  app.add_option_function<std::string>(
+         "--t_service_start",
+         [&sat_switch_config](const std::string& value) {
+           if (is_number(value)) {
+             auto ms_since_epoch = app_services::parse_int<int64_t>(value).value();
+             sat_switch_config.t_service_start =
+                 std::chrono::system_clock::time_point(std::chrono::milliseconds(ms_since_epoch));
+           } else {
+             sat_switch_config.t_service_start = parse_timestamp_ms(value).value();
+           }
+         },
+         "Time when target satellite starts serving (Unix time in ms or ISO 8601: YYYY-MM-DDTHH:MM:SS[.mmm])")
+      ->check([](const std::string& input) {
+        if (!is_number(input) && !is_valid_timestamp(input)) {
+          return std::string("Invalid timestamp format. Expected Unix time (ms) or YYYY-MM-DDTHH:MM:SS[.mmm]");
+        }
+        return std::string();
+      });
+
+  // ssb_time_offset_sf (0-159 subframes).
+  app.add_option_function<unsigned>(
+         "--ssb_time_offset_sf",
+         [&sat_switch_config](unsigned value) {
+           sat_switch_config.ssb_time_offset_sf =
+               sat_switch_with_resync_t::ssb_time_offset_t{static_cast<uint8_t>(value)};
+         },
+         "SSB time offset in subframes (0-159)")
+      ->check(CLI::Range(0, 159));
+
+  // Nested NTN config for sat-switch.
+  static ntn_config sat_switch_ntn_cfg;
+  CLI::App*         ntn_cfg_subcmd = add_subcommand(app, "ntn_cfg", "NTN config for satellite switch");
+  configure_cli11_ntn_config_args(*ntn_cfg_subcmd, sat_switch_ntn_cfg);
+  ntn_cfg_subcmd->parse_complete_callback([&]() {
+    if (app.get_subcommand("ntn_cfg")->count() != 0) {
+      sat_switch_config.ntn_cfg = sat_switch_ntn_cfg;
+    }
+  });
+}
+
+static void configure_cli11_ncells(CLI::App& app, std::vector<neighbor_ntn_cell>& ncells)
+{
+  add_option_cell(
+      app,
+      "--ncells",
+      [&ncells](const std::vector<std::string>& values) {
+        if (values.size() > MAX_NOF_NTN_NEIGHBORS) {
+          throw CLI::ValidationError(
+              fmt::format("ncells: at most {} neighbor cells are supported", MAX_NOF_NTN_NEIGHBORS));
+        }
+        ncells.resize(values.size());
+        for (unsigned i = 0, e = values.size(); i != e; ++i) {
+          CLI::App subapp("NTN neighbor cell", "NTN neighbor cell, item #" + std::to_string(i));
+          subapp.config_formatter(create_yaml_config_parser());
+          subapp.allow_config_extras(CLI::config_extras_mode::capture);
+          unsigned   pci_val     = 0;
+          unsigned   carrier_val = 0;
+          ntn_config ntn_cfg;
+          subapp.add_option("--pci", pci_val, "Physical Cell ID")->check(CLI::Range(0, static_cast<int>(MAX_PCI)));
+          subapp.add_option("--carrier_freq", carrier_val, "Carrier frequency (NR-ARFCN)")
+              ->check(CLI::Range(0U, 3279165U));
+          configure_cli11_ntn_config_args(subapp, ntn_cfg);
+          std::istringstream ss(values[i]);
+          subapp.parse_from_stream(ss);
+          if (subapp["--pci"]->count() != 0U) {
+            ncells[i].phys_cell_id = static_cast<pci_t>(pci_val);
+          }
+          if (subapp["--carrier_freq"]->count() != 0U) {
+            ncells[i].carrier_freq = arfcn_t{carrier_val};
+          }
+          ncells[i].ntn_cfg = ntn_cfg;
+        }
+      },
+      "List of NTN neighbor cells (pci and carrier_freq)");
+}
 
 static void configure_cli11_epoch_time(CLI::App& app, epoch_time_t& epoch_time)
 {
@@ -240,7 +426,153 @@ static void configure_cli11_ntn_args(CLI::App& app, du_high_unit_cell_ntn_config
     }
   });
 
-  configure_cli11_advanced_ntn_args(app, config);
+  // Distance from the serving cell reference location.
+  app.add_option(
+         "--distance_threshold",
+         config.distance_threshold,
+         "Distance from the serving cell reference location and is used in location-based measurement. Unit is meters.")
+      ->capture_default_str()
+      ->check(CLI::Range(0, 3276250));
+
+  // T-Service.
+  app.add_option_function<std::string>(
+         "--t_service",
+         [&config](const std::string& value) {
+           if (is_number(value)) {
+             // Parse Unix timestamp in milliseconds and convert to timepoint.
+             auto ms_since_epoch = app_services::parse_int<int64_t>(value).value();
+             config.t_service    = std::chrono::system_clock::time_point(std::chrono::milliseconds(ms_since_epoch));
+           } else {
+             // Parse as UTC time string.
+             config.t_service = parse_timestamp_ms(value).value();
+           }
+         },
+         "Indicates end of service for the current cell, in ms unit of Unix time or as UTC time string "
+         "(YYYY-MM-DDTHH:MM:SS[.mmm])")
+      ->capture_default_str()
+      ->check([](const std::string& input) {
+        if (!is_number(input)) {
+          if (!is_valid_timestamp(input)) {
+            return std::string("Invalid timestamp format. Expected YYYY-MM-DDTHH:MM:SS[.mmm]");
+          }
+        }
+        return std::string();
+      });
+
+  // TA-report.
+  app.add_option("--ta_report",
+                 config.ta_report,
+                 " When this field is included in SIB19, it indicates reporting of timing advanced is enabled")
+      ->capture_default_str();
+
+  // Broadcast Ephemeris Info type in SIB19.
+  app.add_option(
+         "--use_state_vector",
+         config.use_state_vector,
+         "Whether to broadcast EphemerisInfo as ECEF state vectors (if true) or ECI Orbital parameters (if false)")
+      ->capture_default_str();
+
+  // Epoch timestamp.
+  app.add_option_function<std::string>(
+         "--epoch_timestamp",
+         [&config](const std::string& value) {
+           if (is_number(value)) {
+             // Parse Unix timestamp in milliseconds and convert to timepoint.
+             auto ms_since_epoch    = app_services::parse_int<int64_t>(value).value();
+             config.epoch_timestamp = std::chrono::system_clock::time_point(std::chrono::milliseconds(ms_since_epoch));
+           } else {
+             // Parse as UTC time string.
+             config.epoch_timestamp = parse_timestamp_ms(value).value();
+           }
+         },
+         "Epoch timestamp for the NTN assistance information in ms unit of Unix time or as UTC time string "
+         "(YYYY-MM-DDTHH:MM:SS[.mmm])")
+      ->capture_default_str()
+      ->check([](const std::string& input) {
+        if (!is_number(input)) {
+          if (!is_valid_timestamp(input)) {
+            return std::string("Invalid timestamp format. Expected YYYY-MM-DDTHH:MM:SS[.mmm]");
+          }
+        }
+        return std::string();
+      });
+
+  // Epoch time offset in nof SFNs.
+  app.add_option("--epoch_sfn_offset",
+                 config.epoch_sfn_offset,
+                 "Optional offset (in SFN) between the SIB19 tx slot and the epoch time of the NTN assistance info")
+      ->capture_default_str();
+
+  // Feeder link info.
+  static feeder_link_info_t feeder_link_info;
+  CLI::App*                 feeder_link_subcmd =
+      add_subcommand(app, "feeder_link", "Feeder link parameters used to compensate Doppler shifts");
+  configure_cli11_feeder_link(*feeder_link_subcmd, feeder_link_info);
+  feeder_link_subcmd->parse_complete_callback([&]() {
+    if (app.get_subcommand("feeder_link")->count() != 0) {
+      config.feeder_link_info = feeder_link_info;
+    }
+  });
+
+  // NTN-Gateway Location info.
+  static geodetic_coordinates_t ntn_gateway_location;
+  CLI::App*                     gateway_location_subcmd =
+      add_subcommand(app, "gateway_location", "Geoderic coordinates of the NTN Gateway location");
+  configure_cli11_geodetic_coordinates(*gateway_location_subcmd, ntn_gateway_location);
+  gateway_location_subcmd->parse_complete_callback([&]() {
+    if (app.get_subcommand("gateway_location")->count() != 0) {
+      config.ntn_gateway_location = ntn_gateway_location;
+    }
+  });
+
+  // Cell reference location info.
+  static geodetic_coordinates_t cell_reference_location;
+  CLI::App*                     cell_reference_location_subcmd = add_subcommand(
+      app, "reference_location", "Reference location of the serving cell provided as geodetic coordinates");
+  configure_cli11_geodetic_coordinates(*cell_reference_location_subcmd, cell_reference_location, false);
+  cell_reference_location_subcmd->parse_complete_callback([&]() {
+    if (app.get_subcommand("reference_location")->count() != 0) {
+      config.reference_location = cell_reference_location;
+    }
+  });
+
+  // NTN antenna polarization.
+  static ntn_polarization_t ntn_polarization;
+  CLI::App*                 ntn_polarization_subcmd = add_subcommand(
+      app,
+      "polarization",
+      "If present, it indicates polarization information for downlink/uplink transmission on service link.");
+  configure_cli11_ntn_polarization(*ntn_polarization_subcmd, ntn_polarization);
+  ntn_polarization_subcmd->parse_complete_callback([&]() {
+    if (app.get_subcommand("polarization")->count() != 0) {
+      config.polarization = ntn_polarization;
+    }
+  });
+
+  // Moving reference location (SIB19, R18 extension).
+  static geodetic_coordinates_t moving_ref_location;
+  CLI::App*                     moving_ref_subcmd =
+      add_subcommand(app, "moving_ref_location", "Moving reference location for NTN Earth-moving cell");
+  configure_cli11_geodetic_coordinates(*moving_ref_subcmd, moving_ref_location, false);
+  moving_ref_subcmd->parse_complete_callback([&]() {
+    if (app.get_subcommand("moving_ref_location")->count() != 0) {
+      config.moving_ref_location = moving_ref_location;
+    }
+  });
+
+  // NTN neighbor cells (carrier_freq and pci only).
+  configure_cli11_ncells(app, config.ncells);
+
+  // Satellite switch with resynchronization (SIB19, R18 extension).
+  static sat_switch_with_resync_t sat_switch_config;
+  CLI::App*                       sat_switch_subcmd =
+      add_subcommand(app, "sat_switch_with_resync", "Satellite switch with resynchronization parameters");
+  configure_cli11_sat_switch_with_resync(*sat_switch_subcmd, sat_switch_config);
+  sat_switch_subcmd->parse_complete_callback([&]() {
+    if (app.get_subcommand("sat_switch_with_resync")->count() != 0) {
+      config.sat_switch_with_resync = sat_switch_config;
+    }
+  });
 }
 
 void ocudu::configure_cli11_cell_ntn_args(CLI::App& app, std::optional<du_high_unit_cell_ntn_config>& cell_ntn_params)
