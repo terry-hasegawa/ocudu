@@ -141,11 +141,12 @@ static void fill_pdsch_vrb_to_prb_configuration(fapi::dl_pdsch_pdu_builder& buil
 
   // Interleaved cases for DCI 1_0, CORESET0 and in Common Search Space.
   ocudu_assert(mac_pdu.coreset_cfg != nullptr, "CORESET configuration cannot be null for interleaved PDSCH mapping");
-  const crb_interval& crbs            = get_crb_interval(mac_pdu);
-  unsigned            N_start_coreset = mac_pdu.coreset_cfg->get_coreset_start_crb() - crbs.start();
-  unsigned            N_bwp_init_size = mac_pdu.coreset_cfg->coreset0_crbs().length();
 
   if (mac_pdu.coreset_cfg->get_id() == to_coreset_id(0) && is_common_search_space(mac_pdu.ss_set_type) && is_dci_1_0) {
+    const crb_interval& crbs            = get_crb_interval(mac_pdu);
+    unsigned            N_start_coreset = mac_pdu.coreset_cfg->get_coreset_start_crb() - crbs.start();
+    unsigned            N_bwp_init_size = mac_pdu.coreset_cfg->coreset0_crbs().length();
+
     if (mac_pdu.ss_set_type == search_space_set_type::type0) {
       builder.set_vrb_to_prb_interleaved_common_type0_coreset0_parameters(N_start_coreset, N_bwp_init_size);
       return;
