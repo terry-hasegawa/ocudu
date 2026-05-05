@@ -253,9 +253,10 @@ static asn1::rrc_nr::serving_cell_cfg_common_sib_s make_asn1_rrc_cell_serving_ce
 
     // We assume the SSB bitmap has been checked in the validator.
     for (size_t i = 0; i != nof_bits_group; ++i) {
-      const bool i_th_ssb_group_has_non_zero_elems =
+      constexpr unsigned nof_groups = 8U;
+      const bool         i_th_ssb_group_has_non_zero_elems =
           du_cfg.ran.ssb_cfg.ssb_bitmap.extract(i * nof_bits_group, nof_bits_group) != 0U;
-      cell.ssb_positions_in_burst.group_presence.set(i, i_th_ssb_group_has_non_zero_elems);
+      cell.ssb_positions_in_burst.group_presence.set(nof_groups - i - 1, i_th_ssb_group_has_non_zero_elems);
     }
 
     cell.ssb_positions_in_burst.in_one_group.from_number(du_cfg.ran.ssb_cfg.ssb_bitmap.extract(0U, 8U));
