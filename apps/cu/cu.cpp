@@ -466,8 +466,8 @@ int main(int argc, char** argv)
 
   // Create O-CU-UP dependencies.
   o_cu_up_unit_dependencies o_cuup_unit_deps;
-  o_cuup_unit_deps.workers                = &workers;
-  o_cuup_unit_deps.e1ap_conn_client       = e1_gw.get();
+  o_cuup_unit_deps.workers = &workers;
+  o_cuup_unit_deps.e1ap_conn_client.push_back(e1_gw.get());
   o_cuup_unit_deps.f1u_teid_allocator     = cu_f1u_teid_allocator.get();
   o_cuup_unit_deps.f1u_gateway            = cu_f1u_conn.get();
   o_cuup_unit_deps.gtpu_pcap              = cu_up_dlt_pcaps.n3.get();

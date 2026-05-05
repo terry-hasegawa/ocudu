@@ -34,12 +34,12 @@ struct o_cu_up_unit_dependencies {
   e2_connection_client*                        e2_gw                  = nullptr;
   app_services::metrics_notifier*              metrics_notifier       = nullptr;
   app_services::remote_server_metrics_gateway* remote_metrics_gateway = nullptr;
-  ocuup::e1_connection_client*                 e1ap_conn_client       = nullptr;
-  gtpu_teid_pool*                              f1u_teid_allocator     = nullptr;
-  f1u_cu_up_gateway*                           f1u_gateway            = nullptr;
-  dlt_pcap*                                    gtpu_pcap              = nullptr;
-  timer_manager*                               timers                 = nullptr;
-  io_broker*                                   io_brk                 = nullptr;
+  std::vector<ocuup::e1_connection_client*>    e1ap_conn_client;
+  gtpu_teid_pool*                              f1u_teid_allocator = nullptr;
+  f1u_cu_up_gateway*                           f1u_gateway        = nullptr;
+  dlt_pcap*                                    gtpu_pcap          = nullptr;
+  timer_manager*                               timers             = nullptr;
+  io_broker*                                   io_brk             = nullptr;
 };
 
 /// O-RAN CU-CP unit.
