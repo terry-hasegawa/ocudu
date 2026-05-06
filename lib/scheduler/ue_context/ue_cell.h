@@ -10,6 +10,7 @@
 #include "../support/pusch_power_controller.h"
 #include "ue_channel_state_manager.h"
 #include "ue_drx_controller.h"
+#include "ue_fsm_states.h"
 #include "ue_link_adaptation_controller.h"
 #include "ocudu/ran/serv_cell_index.h"
 #include "ocudu/scheduler/config/scheduler_expert_config.h"
@@ -27,7 +28,19 @@ struct ue_shared_context {
   ue_drx_controller& drx_ctrl;
 };
 
+/// State of the UE PCell.
+struct ue_pcell_state {
+  /// Current state of the UE configurations in the scheduler.
+  /// \note When in fallback mode (!= normal mode), only the search spaces and the configuration of cellConfigCommon
+  /// are used.
+  ue_fsm_states state;
+  /// MSG3 rx-slot, set for RACH-created UEs (state == pending_conres_ce).
+  slot_point msg3_rx_slot;
+};
+
 struct ue_cell_components {
+  /// State relative to the PCell of the UE, if applicable.
+  ue_pcell_state*                pcell_state          = nullptr;
   ue_channel_state_manager*      channel_state        = nullptr;
   ue_link_adaptation_controller* ue_mcs_calculator    = nullptr;
   pusch_power_controller*        pusch_pwr_controller = nullptr;
@@ -38,34 +51,12 @@ struct ue_cell_components {
 class ue_cell
 {
 public:
-  /// State in case carrier corresponds to UE pcell.
-  struct ue_pcell_state {
-    enum class states {
-      /// RACH-created UE: waiting for ConRes MAC CE to be ACKed by the UE.
-      pending_conres_ce,
-      /// F1AP-created UE: waiting for C-RNTI MAC CE to be received from the UE.
-      pending_crnti_ce,
-      pending_setup,
-      pending_reest_reconf,
-      pending_reconf,
-      normal
-    };
-    /// Current state of the UE configuration in the scheduler.
-    /// \note When in fallback mode (!= normal mode), only the search spaces and the configuration of cellConfigCommon
-    /// are used.
-    states state = states::pending_crnti_ce;
-    /// MSG3 rx-slot, set for RACH-created UEs (state == pending_conres_ce).
-    slot_point msg3_rx_slot;
-  };
-
   ue_cell(du_ue_index_t                ue_index_,
           rnti_t                       crnti_val,
-          serv_cell_index_t            serv_cell_index_,
           const ue_cell_configuration& ue_cell_cfg_,
           cell_harq_manager&           cell_harq_pool,
           ue_shared_context            shared_ctx,
           const ue_cell_components&    components,
-          std::optional<slot_point>    msg3_slot_rx,
           ocudulog::basic_logger&      logger_);
 
   const du_ue_index_t   ue_index;
@@ -84,7 +75,7 @@ public:
   /// Whether the UE is in fallback mode.
   bool is_in_fallback_mode() const
   {
-    return pcell_state.has_value() and pcell_state->state != ue_pcell_state::states::normal;
+    return components.pcell_state != nullptr and is_in_fallback(components.pcell_state->state);
   }
 
   const ue_cell_configuration& cfg() const { return *ue_cfg; }
@@ -184,20 +175,14 @@ public:
   /// \brief Returns an estimated UL rate in bytes per slot based on the given input parameters.
   double get_estimated_ul_rate(const pusch_config_params& pusch_cfg, sch_mcs_index mcs, unsigned nof_prbs) const;
 
-  bool is_pcell() const { return pcell_state.has_value(); }
-
-  enum class config_event {
-    conres_ce_acked,
-    conres_ce_timeout,
-    crnti_ce_received,
-    reest_reconf_initiated,
-    reconf_initiated,
-    config_applied
-  };
-  bool handle_config_event(config_event ev);
+  bool is_pcell() const { return components.pcell_state != nullptr; }
 
   /// Retrieve the current Pcell state of the UE, if applicable.
-  const ue_pcell_state& get_pcell_state() const { return pcell_state.value(); }
+  const ue_pcell_state& get_pcell_state() const
+  {
+    ocudu_assert(components.pcell_state != nullptr, "Invalid access to Pcell state for SCell");
+    return *components.pcell_state;
+  }
 
 private:
   /// \brief Performs link adaptation procedures such as cancelling HARQs etc.
@@ -213,9 +198,6 @@ private:
 
   /// \brief Whether cell is currently active.
   bool active = true;
-
-  /// State relative to the PCell of the UE, if applicable.
-  std::optional<ue_pcell_state> pcell_state;
 };
 
 } // namespace ocudu

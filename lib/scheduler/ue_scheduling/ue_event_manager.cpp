@@ -700,7 +700,7 @@ void ue_cell_event_manager::handle_dl_mac_ce_indication(const dl_mac_ce_indicati
                        u.ue_index);
         return event_result::invalid_ue_cc;
       }
-      if (ue_cc.get_pcell_state().state != ue_cell::ue_pcell_state::states::pending_conres_ce) {
+      if (ue_cc.get_pcell_state().state != ue_fsm_states::pending_conres_ce) {
         logger.warning("cell={} rnti={} ue={}: Discarding ConRes CE indication. Cause: UE already finished the "
                        "contention resolution",
                        cfg.cell_index,
@@ -925,8 +925,7 @@ void ue_cell_event_manager::handle_harq_ind(ue_cell&                            
 
     // NOTE: this is for the first attachment only. In this case, the first ACK is the one that acks the ConRes or the
     // ConRes + MSG4; there is only 1 HARQ process waiting for ACKs, which acks the ConRes.
-    if (h_dl->empty() and ue_cc.is_pcell() and
-        ue_cc.get_pcell_state().state == ue_cell::ue_pcell_state::states::pending_conres_ce) {
+    if (h_dl->empty() and ue_cc.is_pcell() and ue_cc.get_pcell_state().state == ue_fsm_states::pending_conres_ce) {
       ue_db.handle_conres_ce_outcome(ue_cc.ue_index, true);
     }
 

@@ -10,6 +10,7 @@
 #include "ue.h"
 #include "ue_cell_repository.h"
 #include "ue_drx_controller.h"
+#include "ue_fsm_states.h"
 #include "ocudu/adt/ring_buffer.h"
 
 namespace ocudu {
@@ -88,10 +89,16 @@ private:
   /// Force the removal of the UE without waiting for the flushing of pending events.
   void rem_ue(const ue& u);
 
+  /// Update UE config FSM.
+  bool update_ue_fsm(du_ue_index_t ue_index, ue_fsm_config_event ev);
+
   ocudulog::basic_logger& logger;
 
   // List of UEs per cell.
   slotted_id_table<du_cell_index_t, std::unique_ptr<ue_cell_repository>, MAX_NOF_DU_CELLS> cell_ues;
+
+  /// FSM of the UE configuration stages.
+  slotted_id_table<du_ue_index_t, ue_pcell_state, MAX_NOF_DU_UES> ue_fsms;
 
   /// Management of all UE logical channels.
   logical_channel_system lc_ch_sys;

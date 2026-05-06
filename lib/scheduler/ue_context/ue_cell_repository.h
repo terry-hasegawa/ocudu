@@ -63,10 +63,10 @@ private:
   friend class ue_repository;
 
   /// Add a new UE to the UE cell repository.
-  ue_cell& add_ue(const ue_configuration&   ue_cfg,
-                  serv_cell_index_t         serv_cell_index,
-                  ue_drx_controller&        drx,
-                  std::optional<slot_point> msg3_slot_rx);
+  ue_cell& add_ue(const ue_configuration& ue_cfg,
+                  serv_cell_index_t       serv_cell_index,
+                  ue_pcell_state*         ue_pcell_fsm,
+                  ue_drx_controller&      drx);
 
   void rem_ue(du_ue_index_t ue_index);
 

@@ -22,12 +22,10 @@ static constexpr unsigned DEFAULT_NOF_UL_HARQS = 16;
 
 ue_cell::ue_cell(du_ue_index_t                ue_index_,
                  rnti_t                       crnti_val,
-                 serv_cell_index_t            serv_cell_index_,
                  const ue_cell_configuration& ue_cell_cfg_,
                  cell_harq_manager&           cell_harq_pool,
                  ue_shared_context            shared_ctx_,
                  const ue_cell_components&    components_,
-                 std::optional<slot_point>    msg3_slot_rx,
                  ocudulog::basic_logger&      logger_) :
   ue_index(ue_index_),
   cell_index(ue_cell_cfg_.cell_cfg_common.cell_index),
@@ -47,14 +45,6 @@ ue_cell::ue_cell(du_ue_index_t                ue_index_,
   components(components_),
   logger(logger_)
 {
-  if (serv_cell_index_ == SERVING_PCELL_IDX) {
-    pcell_state.emplace(ue_pcell_state{});
-    if (msg3_slot_rx.has_value()) {
-      pcell_state->state        = ue_pcell_state::states::pending_conres_ce;
-      pcell_state->msg3_rx_slot = msg3_slot_rx.value();
-    }
-    // else: default state is pending_crnti_ce (F1AP-created UE)
-  }
 }
 
 void ue_cell::deactivate()
@@ -469,71 +459,4 @@ double ue_cell::get_estimated_ul_rate(const pusch_config_params& pusch_cfg, sch_
 
   // Return the estimated throughput, considering that the number of bytes is for a slot.
   return tbs_bytes.value();
-}
-
-bool ue_cell::handle_config_event(config_event ev)
-{
-  using states = ue_pcell_state::states;
-  ocudu_assert(pcell_state.has_value(), "ue={} rnti={}: Cannot set fallback state on non-Pcell", ue_index, rnti());
-
-  auto fsm_row = [](ue_pcell_state::states state, config_event ev_rx) -> unsigned {
-    return static_cast<unsigned>(state) + static_cast<unsigned>(ev_rx) * (static_cast<unsigned>(states::normal) + 1);
-  };
-
-  switch (fsm_row(pcell_state->state, ev)) {
-    case fsm_row(states::pending_conres_ce, config_event::conres_ce_acked):
-      pcell_state->state        = states::pending_setup;
-      pcell_state->msg3_rx_slot = slot_point{};
-      logger.debug("ue={} rnti={}: ConRes procedure completed", ue_index, rnti());
-      return true;
-    case fsm_row(states::pending_conres_ce, config_event::conres_ce_timeout):
-      pcell_state->state = states::normal;
-      deactivate();
-      return true;
-    case fsm_row(states::pending_crnti_ce, config_event::crnti_ce_received):
-      pcell_state->state = states::normal;
-      harqs.cancel_retxs();
-      logger.debug("ue={} rnti={}: C-RNTI CE received, leaving fallback mode", ue_index, rnti());
-      return true;
-    case fsm_row(states::pending_setup, config_event::config_applied):
-    case fsm_row(states::pending_reest_reconf, config_event::config_applied):
-    case fsm_row(states::pending_reconf, config_event::config_applied):
-      pcell_state->state = states::normal;
-      harqs.cancel_retxs();
-      logger.debug("ue={} rnti={}: Leaving fallback mode", ue_index, rnti());
-      return true;
-    case fsm_row(states::pending_conres_ce, config_event::reest_reconf_initiated):
-      // TODO: Remove this transition.
-    case fsm_row(states::pending_crnti_ce, config_event::reest_reconf_initiated):
-      // TODO: Remove this transition.
-    case fsm_row(states::pending_setup, config_event::reest_reconf_initiated):
-      pcell_state->state = states::pending_reest_reconf;
-      return true;
-    case fsm_row(states::pending_conres_ce, config_event::reconf_initiated):
-      // TODO: Remove this transition.
-    case fsm_row(states::pending_crnti_ce, config_event::reconf_initiated):
-      // TODO: Remove this transition.
-    case fsm_row(states::pending_setup, config_event::reconf_initiated):
-      pcell_state->state = states::pending_reconf;
-      return true;
-    case fsm_row(states::normal, config_event::reconf_initiated):
-    case fsm_row(states::normal, config_event::reest_reconf_initiated):
-      pcell_state->state = ev == config_event::reconf_initiated ? states::pending_reconf : states::pending_reest_reconf;
-      harqs.cancel_retxs();
-      logger.debug("ue={} rnti={}: Entering fallback mode", ue_index, rnti());
-      return true;
-    case fsm_row(states::normal, config_event::config_applied):
-      // Do nothing.
-      return true;
-    default:
-      break;
-  }
-
-  logger.warning("ue={} rnti={}: Invalid UE Pcell state transition: {} {}",
-                 ue_index,
-                 rnti(),
-                 static_cast<unsigned>(pcell_state->state),
-                 static_cast<unsigned>(ev));
-
-  return false;
 }
