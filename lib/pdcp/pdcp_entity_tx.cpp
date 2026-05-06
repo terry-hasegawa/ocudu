@@ -1232,7 +1232,8 @@ bool pdcp_entity_tx::prepend_control_pdu_header(byte_buffer& buf, pdcp_control_p
 
 uint32_t pdcp_entity_tx::get_pdu_size(const byte_buffer& sdu) const
 {
-  return pdcp_data_header_size(sn_size) + sdu.length() + (integrity_enabled == security::integrity_enabled::on ? 4 : 0);
+  return pdcp_data_header_size(sn_size) + sdu.length() +
+         (integrity_enabled == security::integrity_enabled::off ? 0 : 4);
 }
 
 /*

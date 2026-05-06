@@ -69,5 +69,5 @@ uint32_t pdcp_tx_window::get_sdu_bytes() const
 uint32_t pdcp_tx_window::get_pdu_bytes(security::integrity_enabled integrity) const
 {
   return sdu_bytes + nof_sdus * (pdcp_data_header_size(sn_size) +
-                                 pdcp_data_trailer_size(rb_type, integrity == security::integrity_enabled::on));
+                                 pdcp_data_trailer_size(rb_type, integrity != security::integrity_enabled::off));
 }
