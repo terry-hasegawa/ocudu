@@ -41,7 +41,7 @@ public:
     return parent.handle_du_setup_request(msg);
   }
 
-  ue_index_t request_new_ue_creation() override { return parent.ue_mng.add_ue(parent.cfg.du_index); }
+  cu_cp_ue_index_t request_new_ue_creation() override { return parent.ue_mng.add_ue(parent.cfg.du_index); }
 
   ue_rrc_context_creation_outcome
   on_ue_rrc_context_creation_request(const ue_rrc_context_creation_request& req) override
@@ -220,7 +220,7 @@ du_processor_impl::handle_ue_rrc_context_creation_request(const ue_rrc_context_c
   ocudu_assert(req.c_rnti != rnti_t::INVALID_RNTI, "ue={} c-rnti={}: Invalid C-RNTI", req.ue_index, req.c_rnti);
 
   // Lambda to release the UE context in case of any failure during the creation procedure.
-  auto release_ue = [this](ue_index_t ue_index) {
+  auto release_ue = [this](cu_cp_ue_index_t ue_index) {
     cu_cp_ue_context_release_request release_request;
     release_request.ue_index = ue_index;
     release_request.cause    = ngap_cause_radio_network_t::radio_res_not_available;
@@ -256,7 +256,7 @@ du_processor_impl::handle_ue_rrc_context_creation_request(const ue_rrc_context_c
     }
 
     if (resume_context->is_resume && resume_context->rrc_resume_id.has_value()) {
-      ue_index_t resume_ue_index = ue_index_t::invalid;
+      cu_cp_ue_index_t resume_ue_index = cu_cp_ue_index_t::invalid;
       if (std::holds_alternative<short_i_rnti_t>(resume_context->rrc_resume_id.value())) {
         resume_ue_index = ue_mng.get_ue_index(std::get<short_i_rnti_t>(resume_context->rrc_resume_id.value()));
         logger.debug("ue={}: RRC Resume Request with {}",
@@ -269,7 +269,7 @@ du_processor_impl::handle_ue_rrc_context_creation_request(const ue_rrc_context_c
                      std::get<full_i_rnti_t>(resume_context->rrc_resume_id.value()));
       }
 
-      if (resume_ue_index != ue_index_t::invalid) {
+      if (resume_ue_index != cu_cp_ue_index_t::invalid) {
         if (cfg.cu_cp_cfg.rrc.force_resume_fallback) {
           // RRC Resume fallback forced - do not resume. The DU doesn't have a F1AP UE context, so we also remove it
           // here.
@@ -355,7 +355,7 @@ du_processor_impl::handle_ue_rrc_context_creation_request(const ue_rrc_context_c
 
 void du_processor_impl::handle_du_initiated_ue_context_release_request(const f1ap_ue_context_release_request& request)
 {
-  ocudu_assert(request.ue_index != ue_index_t::invalid, "Invalid UE index", request.ue_index);
+  ocudu_assert(request.ue_index != cu_cp_ue_index_t::invalid, "Invalid UE index", request.ue_index);
 
   cu_cp_ue* ue = ue_mng.find_du_ue(request.ue_index);
   if (ue == nullptr) {
@@ -403,7 +403,7 @@ void du_processor_impl::handle_access_success(const f1ap_access_success& msg)
 
   // Resolve source UE via CHO backlink so the caller can schedule the source routine on the source UE's scheduler.
   if (ue->get_cho_context().has_value() && ue->get_cho_context()->role == cu_cp_ue_cho_context::role_t::target &&
-      ue->get_cho_context()->source_ue_index != ue_index_t::invalid) {
+      ue->get_cho_context()->source_ue_index != cu_cp_ue_index_t::invalid) {
     ind.source_ue_index = ue->get_cho_context()->source_ue_index;
   }
 

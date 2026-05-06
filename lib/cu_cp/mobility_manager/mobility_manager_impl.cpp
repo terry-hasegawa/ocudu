@@ -33,8 +33,8 @@ mobility_manager::mobility_manager(const mobility_manager_cfg&      cfg_,
 
 void mobility_manager::trigger_handover(pci_t source_pci, rnti_t rnti, pci_t target_pci)
 {
-  ue_index_t ue_index = ue_mng.get_ue_index(source_pci, rnti);
-  if (ue_index == ue_index_t::invalid) {
+  cu_cp_ue_index_t ue_index = ue_mng.get_ue_index(source_pci, rnti);
+  if (ue_index == cu_cp_ue_index_t::invalid) {
     logger.warning("Could not trigger handover, UE is invalid. rnti={} pci={}", rnti, source_pci);
     return;
   }
@@ -58,7 +58,7 @@ void mobility_manager::trigger_conditional_handover(
   handle_conditional_handover(source_pci, rnti, target_pcis, timeout, t1_thres_override);
 }
 
-void mobility_manager::trigger_auto_conditional_handover(ue_index_t ue_index)
+void mobility_manager::trigger_auto_conditional_handover(cu_cp_ue_index_t ue_index)
 {
   if (!cfg.trigger_cho_on_ue_setup) {
     return;
@@ -117,8 +117,8 @@ void mobility_manager::handle_conditional_handover(
     std::optional<std::chrono::system_clock::time_point> t1_thres_override)
 {
   // Find UE by PCI and RNTI.
-  ue_index_t ue_index = ue_mng.get_ue_index(source_pci, rnti);
-  if (ue_index == ue_index_t::invalid) {
+  cu_cp_ue_index_t ue_index = ue_mng.get_ue_index(source_pci, rnti);
+  if (ue_index == cu_cp_ue_index_t::invalid) {
     logger.warning("Could not prepare CHO, UE is invalid. rnti={} pci={}", rnti, source_pci);
     return;
   }
@@ -230,7 +230,7 @@ void mobility_manager::handle_conditional_handover(
   u->get_task_sched().schedule_async_task(launch_async(std::move(cho_trigger)));
 }
 
-void mobility_manager::handle_neighbor_better_than_spcell(ue_index_t       ue_index,
+void mobility_manager::handle_neighbor_better_than_spcell(cu_cp_ue_index_t ue_index,
                                                           gnb_id_t         neighbor_gnb_id,
                                                           nr_cell_identity neighbor_nci,
                                                           pci_t            neighbor_pci)
@@ -242,7 +242,7 @@ void mobility_manager::handle_neighbor_better_than_spcell(ue_index_t       ue_in
   handle_handover(ue_index, neighbor_gnb_id, neighbor_nci, neighbor_pci);
 }
 
-void mobility_manager::handle_handover(ue_index_t       ue_index,
+void mobility_manager::handle_handover(cu_cp_ue_index_t ue_index,
                                        gnb_id_t         neighbor_gnb_id,
                                        nr_cell_identity neighbor_nci,
                                        pci_t            neighbor_pci)
@@ -290,10 +290,10 @@ void mobility_manager::handle_handover(ue_index_t       ue_index,
   handle_intra_cu_handover(ue_index, neighbor_pci, source_du, target_du);
 }
 
-void mobility_manager::handle_intra_cu_handover(ue_index_t source_ue_index,
-                                                pci_t      neighbor_pci,
-                                                du_index_t source_du_index,
-                                                du_index_t target_du_index)
+void mobility_manager::handle_intra_cu_handover(cu_cp_ue_index_t source_ue_index,
+                                                pci_t            neighbor_pci,
+                                                du_index_t       source_du_index,
+                                                du_index_t       target_du_index)
 {
   // Lookup CGI at target DU.
   std::optional<nr_cell_global_id_t> cgi =
@@ -326,7 +326,7 @@ void mobility_manager::handle_intra_cu_handover(ue_index_t source_ue_index,
   u->get_task_sched().schedule_async_task(launch_async(std::move(ho_trigger)));
 }
 
-void mobility_manager::handle_inter_cu_handover(ue_index_t       source_ue_index,
+void mobility_manager::handle_inter_cu_handover(cu_cp_ue_index_t source_ue_index,
                                                 gnb_id_t         target_gnb_id,
                                                 nr_cell_identity target_nci)
 {

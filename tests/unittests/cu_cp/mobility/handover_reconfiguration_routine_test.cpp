@@ -5,7 +5,7 @@
 #include "lib/cu_cp/routines/mobility/handover_reconfiguration_routine.h"
 #include "mobility_test_helpers.h"
 #include "ocudu/adt/byte_buffer.h"
-#include "ocudu/cu_cp/cu_cp_types.h"
+#include "ocudu/ran/cu_cp_types.h"
 #include "ocudu/rrc/rrc_types.h"
 #include "ocudu/support/async/async_test_utils.h"
 #include "ocudu/support/async/coroutine.h"
@@ -21,8 +21,8 @@ protected:
 
   void create_ues(bool procedure_outcome, unsigned transaction_id_)
   {
-    ue_index_t source_ue_index = get_ue_manager()->add_ue(source_du_index);
-    ASSERT_NE(source_ue_index, ue_index_t::invalid);
+    cu_cp_ue_index_t source_ue_index = get_ue_manager()->add_ue(source_du_index);
+    ASSERT_NE(source_ue_index, cu_cp_ue_index_t::invalid);
     ASSERT_FALSE(get_ue_manager()->ue_admission_limit_reached());
     ASSERT_TRUE(get_ue_manager()->update_ue_context(
         source_ue_index, int_to_gnb_du_id(0), source_pci, source_rnti, ocucp::du_cell_index_t::min));
@@ -32,8 +32,8 @@ protected:
     source_rrc_ue.set_transaction_id(transaction_id_);
     source_ue->set_rrc_ue(source_rrc_ue);
 
-    ue_index_t target_ue_index = get_ue_manager()->add_ue(target_du_index);
-    ASSERT_NE(target_ue_index, ue_index_t::invalid);
+    cu_cp_ue_index_t target_ue_index = get_ue_manager()->add_ue(target_du_index);
+    ASSERT_NE(target_ue_index, cu_cp_ue_index_t::invalid);
     ASSERT_FALSE(get_ue_manager()->ue_admission_limit_reached());
     ASSERT_TRUE(get_ue_manager()->update_ue_context(
         target_ue_index, int_to_gnb_du_id(0), target_pci, target_rnti, ocucp::du_cell_index_t::min));

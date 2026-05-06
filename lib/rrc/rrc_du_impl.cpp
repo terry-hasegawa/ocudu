@@ -267,8 +267,8 @@ rrc_ue_interface* rrc_du_impl::add_ue(const rrc_ue_creation_message& msg)
   }
 
   // Create UE object.
-  ue_index_t   ue_index                 = msg.ue_index;
-  rrc_ue_cfg_t ue_cfg                   = {};
+  cu_cp_ue_index_t ue_index             = msg.ue_index;
+  rrc_ue_cfg_t     ue_cfg               = {};
   ue_cfg.force_reestablishment_fallback = cfg.force_reestablishment_fallback;
   ue_cfg.force_resume_fallback          = cfg.force_resume_fallback;
   ue_cfg.rrc_procedure_guard_time_ms    = cfg.rrc_procedure_guard_time_ms;
@@ -304,7 +304,7 @@ rrc_ue_interface* rrc_du_impl::add_ue(const rrc_ue_creation_message& msg)
   return nullptr;
 }
 
-void rrc_du_impl::remove_ue(ue_index_t ue_index)
+void rrc_du_impl::remove_ue(cu_cp_ue_index_t ue_index)
 {
   auto ue_it = ue_db.find(ue_index);
   if (ue_it == ue_db.end()) {

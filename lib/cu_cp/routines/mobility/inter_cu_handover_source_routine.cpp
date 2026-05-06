@@ -7,7 +7,7 @@
 using namespace ocudu;
 using namespace ocucp;
 
-inter_cu_handover_source_routine::inter_cu_handover_source_routine(ue_index_t                    ue_index_,
+inter_cu_handover_source_routine::inter_cu_handover_source_routine(cu_cp_ue_index_t              ue_index_,
                                                                    byte_buffer                   command_,
                                                                    ue_manager&                   ue_mng_,
                                                                    du_processor_repository&      du_db_,

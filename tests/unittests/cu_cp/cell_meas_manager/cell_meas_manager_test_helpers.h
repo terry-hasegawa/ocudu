@@ -9,13 +9,12 @@
 #include "ocudu/support/executors/manual_task_worker.h"
 #include <gtest/gtest.h>
 
-namespace ocudu {
-namespace ocucp {
+namespace ocudu::ocucp {
 
 class dummy_mobility_manager : public cell_meas_mobility_manager_notifier
 {
 public:
-  void on_neighbor_better_than_spcell(ue_index_t       ue_index,
+  void on_neighbor_better_than_spcell(cu_cp_ue_index_t ue_index,
                                       gnb_id_t         neighbor_gnb_id,
                                       nr_cell_identity neighbor_nci,
                                       pci_t            neighbor_pci) override
@@ -45,7 +44,7 @@ protected:
   void verify_empty_meas_cfg(const std::optional<rrc_meas_cfg>& meas_cfg);
 
   /// Attach the shared dummy RRC UE to the given UE so CHO capability checks pass.
-  void attach_rrc_ue(ue_index_t ue_index)
+  void attach_rrc_ue(cu_cp_ue_index_t ue_index)
   {
     cu_cp_ue* ue = ue_mng.find_ue(ue_index);
     ASSERT_NE(ue, nullptr);
@@ -65,5 +64,4 @@ protected:
   ue_manager ue_mng{cu_cp_cfg};
 };
 
-} // namespace ocucp
-} // namespace ocudu
+} // namespace ocudu::ocucp

@@ -4,20 +4,18 @@
 
 #pragma once
 
-#include "ocudu/cu_cp/cu_cp_types.h"
+#include "ocudu/ran/cu_cp_types.h"
 #include "ocudu/ran/rnti.h"
 #include "ocudu/support/format/fmt_to_c_str.h"
 #include "ocudu/support/format/prefixed_logger.h"
 #include "fmt/format.h"
-#include <string.h>
 
-namespace ocudu {
-namespace ocucp {
+namespace ocudu::ocucp {
 
 class rrc_ue_log_prefix
 {
 public:
-  rrc_ue_log_prefix(ue_index_t ue_index, rnti_t c_rnti)
+  rrc_ue_log_prefix(cu_cp_ue_index_t ue_index, rnti_t c_rnti)
   {
     fmt::memory_buffer buffer;
     fmt::format_to(std::back_inserter(buffer), "ue={} c-rnti={}: ", ue_index, c_rnti);
@@ -31,8 +29,7 @@ private:
 
 using rrc_ue_logger = prefixed_logger<rrc_ue_log_prefix>;
 
-} // namespace ocucp
-} // namespace ocudu
+} // namespace ocudu::ocucp
 
 namespace fmt {
 

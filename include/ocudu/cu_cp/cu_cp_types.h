@@ -13,6 +13,7 @@
 #include "ocudu/ran/cause/f1ap_cause.h"
 #include "ocudu/ran/cause/ngap_cause.h"
 #include "ocudu/ran/crit_diagnostics.h"
+#include "ocudu/ran/cu_cp_types.h"
 #include "ocudu/ran/cu_types.h"
 #include "ocudu/ran/gnb_constants.h"
 #include "ocudu/ran/gnb_id.h"
@@ -45,25 +46,6 @@ const uint16_t MAX_NOF_CU_UPS = 65535;
 const uint16_t MAX_NOF_AMFS = 65535;
 /// Maximum number of XN-C peers supported by CU-CP (implementation-defined).
 const uint16_t MAX_NOF_XNC_PEERS = 65535;
-
-/// \brief ue_index internally used to identify the UE CU-CP-wide.
-enum class ue_index_t : uint64_t {
-  min     = 0,
-  max     = std::numeric_limits<uint64_t>::max() - 1,
-  invalid = std::numeric_limits<uint64_t>::max()
-};
-
-/// Convert ue_index  type to integer.
-inline uint64_t ue_index_to_uint(ue_index_t index)
-{
-  return static_cast<uint64_t>(index);
-}
-
-/// Convert integer to ue_index type.
-inline ue_index_t uint_to_ue_index(std::underlying_type_t<ue_index_t> index)
-{
-  return static_cast<ue_index_t>(index);
-}
 
 /// Maximum number of DUs supported by CU-CP (implementation-defined).
 enum class du_index_t : uint16_t { min = 0, max = MAX_NOF_DUS - 1, invalid = MAX_NOF_DUS };
@@ -136,14 +118,14 @@ constexpr xnc_peer_index_t uint_to_xnc_peer_index(std::underlying_type_t<xnc_pee
 
 /// Notification from the E1AP/F1AP that transaction reference information for some UEs has been lost.
 struct ue_transaction_info_loss_event {
-  std::vector<ue_index_t> ues_lost;
+  std::vector<cu_cp_ue_index_t> ues_lost;
 };
 
 /// Common interface reset message for E1AP (E1 Reset), F1AP (F1 Reset) and NGAP (NG Reset).
 struct cu_cp_reset {
   std::variant<e1ap_cause_t, f1ap_cause_t, ngap_cause_t> cause;
   bool                                                   interface_reset = false;
-  std::vector<ue_index_t>                                ues_to_reset;
+  std::vector<cu_cp_ue_index_t>                          ues_to_reset;
 };
 
 /// QoS Configuration, i.e. 5QI and the associated PDCP
@@ -208,7 +190,7 @@ private:
 };
 
 struct cu_cp_initial_ue_message {
-  ue_index_t                         ue_index = ue_index_t::invalid;
+  cu_cp_ue_index_t                   ue_index = cu_cp_ue_index_t::invalid;
   byte_buffer                        nas_pdu;
   establishment_cause_t              establishment_cause;
   cu_cp_user_location_info_nr        user_location_info;
@@ -217,7 +199,7 @@ struct cu_cp_initial_ue_message {
 };
 
 struct cu_cp_ul_nas_transport {
-  ue_index_t                  ue_index = ue_index_t::invalid;
+  cu_cp_ue_index_t            ue_index = cu_cp_ue_index_t::invalid;
   byte_buffer                 nas_pdu;
   cu_cp_user_location_info_nr user_location_info;
 };
@@ -339,7 +321,7 @@ struct cu_cp_aggregate_maximum_bit_rate {
 };
 
 struct cu_cp_pdu_session_resource_setup_request {
-  ue_index_t                                                            ue_index = ue_index_t::invalid;
+  cu_cp_ue_index_t                                                      ue_index = cu_cp_ue_index_t::invalid;
   slotted_id_vector<pdu_session_id_t, cu_cp_pdu_session_res_setup_item> pdu_session_res_setup_items;
   cu_cp_aggregate_maximum_bit_rate                                      ue_ambr;
   plmn_identity                                                         serving_plmn = plmn_identity::test_value();
@@ -401,7 +383,7 @@ struct cu_cp_pdu_session_res_to_release_item_rel_cmd {
 };
 
 struct cu_cp_pdu_session_resource_release_command {
-  ue_index_t              ue_index = ue_index_t::invalid;
+  cu_cp_ue_index_t        ue_index = cu_cp_ue_index_t::invalid;
   std::optional<uint16_t> ran_paging_prio;
   byte_buffer             nas_pdu;
   slotted_id_vector<pdu_session_id_t, cu_cp_pdu_session_res_to_release_item_rel_cmd>
@@ -470,7 +452,7 @@ struct cu_cp_pdu_session_res_modify_item_mod_req {
 };
 
 struct cu_cp_pdu_session_resource_modify_request {
-  ue_index_t                                                                     ue_index = ue_index_t::invalid;
+  cu_cp_ue_index_t                                                               ue_index = cu_cp_ue_index_t::invalid;
   slotted_id_vector<pdu_session_id_t, cu_cp_pdu_session_res_modify_item_mod_req> pdu_session_res_modify_items;
 };
 
@@ -492,7 +474,7 @@ struct cu_cp_pdu_session_resource_modify_response_item {
 };
 
 struct cu_cp_pdu_session_resource_modify_response {
-  ue_index_t ue_index = ue_index_t::invalid;
+  cu_cp_ue_index_t ue_index = cu_cp_ue_index_t::invalid;
   // id-PDUSessionResourceModifyListModRes
   slotted_id_vector<pdu_session_id_t, cu_cp_pdu_session_resource_modify_response_item> pdu_session_res_modify_list;
   // id-PDUSessionResourceFailedToModifyListModRes
@@ -510,8 +492,8 @@ struct cu_cp_release_redirect_nr_info {
 
 /// Command sent from the CU-CP to the lower layers to release the UE context.
 struct cu_cp_ue_context_release_command {
-  ue_index_t   ue_index = ue_index_t::invalid;
-  ngap_cause_t cause;
+  cu_cp_ue_index_t ue_index = cu_cp_ue_index_t::invalid;
+  ngap_cause_t     cause;
   // If true, the lower layers will send an RRC message e.g. RRCReject or RRCRelease to the UE as part of the context
   // release procedure.
   bool                                          requires_rrc_message = true;
@@ -521,7 +503,7 @@ struct cu_cp_ue_context_release_command {
 
 /// Request sent from the lower layers to the CU-CP to request the release of an UE context.
 struct cu_cp_ue_context_release_request {
-  ue_index_t                                    ue_index = ue_index_t::invalid;
+  cu_cp_ue_index_t                              ue_index = cu_cp_ue_index_t::invalid;
   std::vector<pdu_session_id_t>                 pdu_session_res_list_cxt_rel_req;
   ngap_cause_t                                  cause;
   std::optional<cu_cp_release_redirect_nr_info> redirect_nr_info = std::nullopt;
@@ -529,8 +511,8 @@ struct cu_cp_ue_context_release_request {
 
 /// \brief Indication from a DU that a UE has successfully accessed a target cell (CHO execution).
 struct cu_cp_access_success_indication {
-  ue_index_t          ue_index        = ue_index_t::invalid; ///< Target UE index (sender of Access Success).
-  ue_index_t          source_ue_index = ue_index_t::invalid; ///< Resolved CHO source UE index.
+  cu_cp_ue_index_t    ue_index        = cu_cp_ue_index_t::invalid; ///< Target UE index (sender of Access Success).
+  cu_cp_ue_index_t    source_ue_index = cu_cp_ue_index_t::invalid; ///< Resolved CHO source UE index.
   nr_cell_global_id_t cgi;
 };
 
@@ -569,7 +551,7 @@ struct cu_cp_info_on_recommended_cells_and_ran_nodes_for_paging {
 };
 
 struct cu_cp_ue_context_release_complete {
-  ue_index_t                                 ue_index = ue_index_t::invalid;
+  cu_cp_ue_index_t                           ue_index = cu_cp_ue_index_t::invalid;
   std::optional<cu_cp_user_location_info_nr> user_location_info;
   std::optional<cu_cp_info_on_recommended_cells_and_ran_nodes_for_paging>
                                     info_on_recommended_cells_and_ran_nodes_for_paging;
@@ -619,19 +601,19 @@ struct cu_cp_paging_message {
 };
 
 struct cu_cp_bearer_context_release_request {
-  ue_index_t   ue_index = ue_index_t::invalid;
-  ngap_cause_t cause;
+  cu_cp_ue_index_t ue_index = cu_cp_ue_index_t::invalid;
+  ngap_cause_t     cause;
 };
 
 struct cu_cp_inactivity_notification {
-  ue_index_t                    ue_index    = ue_index_t::invalid;
+  cu_cp_ue_index_t              ue_index    = cu_cp_ue_index_t::invalid;
   bool                          ue_inactive = false;
   std::vector<drb_id_t>         inactive_drbs;
   std::vector<pdu_session_id_t> inactive_pdu_sessions;
 };
 
 struct cu_cp_rrc_resume_request {
-  ue_index_t          ue_index = ue_index_t::invalid;
+  cu_cp_ue_index_t    ue_index = cu_cp_ue_index_t::invalid;
   nr_cell_global_id_t cgi;
   rnti_t              new_c_rnti;
   resume_cause_t      cause;
@@ -640,25 +622,6 @@ struct cu_cp_rrc_resume_request {
 } // namespace ocudu::ocucp
 
 namespace fmt {
-
-// UE index formatter.
-template <>
-struct formatter<ocudu::ocucp::ue_index_t> {
-  template <typename ParseContext>
-  auto parse(ParseContext& ctx)
-  {
-    return ctx.begin();
-  }
-
-  template <typename FormatContext>
-  auto format(const ocudu::ocucp::ue_index_t& idx, FormatContext& ctx) const
-  {
-    if (idx == ocudu::ocucp::ue_index_t::invalid) {
-      return format_to(ctx.out(), "invalid");
-    }
-    return format_to(ctx.out(), "{}", (unsigned)idx);
-  }
-};
 
 // DU index formatter.
 template <>

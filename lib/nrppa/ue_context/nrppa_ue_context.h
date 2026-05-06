@@ -10,11 +10,10 @@
 #include "ocudu/support/timers.h"
 #include <unordered_map>
 
-namespace ocudu {
-namespace ocucp {
+namespace ocudu::ocucp {
 
 struct nrppa_ue_ids {
-  ue_index_t       ue_index;
+  cu_cp_ue_index_t ue_index;
   ran_ue_meas_id_t ran_ue_meas_id;
   lmf_ue_meas_id_t lmf_ue_meas_id;
 };
@@ -29,7 +28,7 @@ struct nrppa_ue_context {
 
   nrppa_ue_logger logger;
 
-  nrppa_ue_context(ue_index_t               ue_index_,
+  nrppa_ue_context(cu_cp_ue_index_t         ue_index_,
                    ran_ue_meas_id_t         ran_ue_meas_id_,
                    lmf_ue_meas_id_t         lmf_ue_meas_id_,
                    nrppa_cu_cp_ue_notifier& ue_notifier_,
@@ -53,24 +52,24 @@ public:
   /// \brief Checks whether a UE with the given UE index exists.
   /// \param[in] ue_index The UE index used to find the UE.
   /// \return True when a UE for the given UE index exists, false otherwise.
-  bool contains(ue_index_t ue_index) const;
+  bool contains(cu_cp_ue_index_t ue_index) const;
 
-  nrppa_ue_context& operator[](ue_index_t ue_index);
+  nrppa_ue_context& operator[](cu_cp_ue_index_t ue_index);
 
-  nrppa_ue_context& add_ue(ue_index_t               ue_index,
+  nrppa_ue_context& add_ue(cu_cp_ue_index_t         ue_index,
                            ran_ue_meas_id_t         ran_ue_meas_id,
                            lmf_ue_meas_id_t         lmf_ue_meas_id,
                            nrppa_cu_cp_ue_notifier& ue_notifier,
                            timer_manager&           timers,
                            task_executor&           task_exec);
 
-  void update_ue_index(ue_index_t               new_ue_index,
-                       ue_index_t               old_ue_index,
+  void update_ue_index(cu_cp_ue_index_t         new_ue_index,
+                       cu_cp_ue_index_t         old_ue_index,
                        nrppa_cu_cp_ue_notifier& new_ue_notifier,
                        timer_manager&           timers,
                        task_executor&           task_exec);
 
-  void remove_ue_context(ue_index_t ue_index);
+  void remove_ue_context(cu_cp_ue_index_t ue_index);
 
   size_t size() const;
 
@@ -85,8 +84,7 @@ private:
 
   ocudulog::basic_logger& logger;
   // Indexed by ue_index.
-  std::unordered_map<ue_index_t, nrppa_ue_context> ues;
+  std::unordered_map<cu_cp_ue_index_t, nrppa_ue_context> ues;
 };
 
-} // namespace ocucp
-} // namespace ocudu
+} // namespace ocudu::ocucp

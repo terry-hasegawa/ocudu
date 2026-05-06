@@ -46,7 +46,7 @@ struct rrc_resume_context_t {
 };
 
 struct rrc_ue_creation_message {
-  ue_index_t                             ue_index;
+  cu_cp_ue_index_t                       ue_index;
   rnti_t                                 c_rnti;
   rrc_cell_context                       cell;
   rrc_pdu_f1ap_notifier*                 f1ap_pdu_notifier;
@@ -94,11 +94,11 @@ class rrc_ue_handler
 public:
   virtual ~rrc_ue_handler() = default;
 
-  virtual rrc_ue_interface* find_ue(ue_index_t ue_index) = 0;
+  virtual rrc_ue_interface* find_ue(cu_cp_ue_index_t ue_index) = 0;
 
   /// Remove a RRC UE object.
   /// \param[in] ue_index The index of the UE object to remove.
-  virtual void remove_ue(ue_index_t ue_index) = 0;
+  virtual void remove_ue(cu_cp_ue_index_t ue_index) = 0;
 };
 
 class rrc_du_connection_event_handler

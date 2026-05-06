@@ -15,7 +15,7 @@ class dummy_nrppa_cu_cp_notifier : public nrppa_cu_cp_notifier
 public:
   dummy_nrppa_cu_cp_notifier(ue_manager& ue_mng_) : ue_mng(ue_mng_), logger(ocudulog::fetch_basic_logger("TEST")) {}
 
-  nrppa_cu_cp_ue_notifier* on_new_nrppa_ue(ue_index_t ue_index) override
+  nrppa_cu_cp_ue_notifier* on_new_nrppa_ue(cu_cp_ue_index_t ue_index) override
   {
     last_ue = ue_index;
 
@@ -29,13 +29,14 @@ public:
     return &ue->get_nrppa_cu_cp_ue_notifier();
   }
 
-  void on_ul_nrppa_pdu(const byte_buffer& nrppa_pdu, std::variant<ue_index_t, amf_index_t> ue_or_amf_index) override
+  void on_ul_nrppa_pdu(const byte_buffer&                          nrppa_pdu,
+                       std::variant<cu_cp_ue_index_t, amf_index_t> ue_or_amf_index) override
   {
     last_ul_nrppa_pdu = nrppa_pdu.copy();
   }
 
-  ue_index_t  last_ue;
-  byte_buffer last_ul_nrppa_pdu;
+  cu_cp_ue_index_t last_ue;
+  byte_buffer      last_ul_nrppa_pdu;
 
 private:
   ue_manager&             ue_mng;
@@ -47,7 +48,7 @@ class dummy_nrppa_cu_cp_ue_notifier : public nrppa_cu_cp_ue_notifier
 public:
   ~dummy_nrppa_cu_cp_ue_notifier() = default;
 
-  void set_ue_index(ue_index_t ue_index_) { ue_index = ue_index_; }
+  void set_ue_index(cu_cp_ue_index_t ue_index_) { ue_index = ue_index_; }
   void set_du_index(du_index_t du_index_) { du_index = du_index_; }
   void set_meas_results(std::optional<cell_measurement_positioning_info>& meas_results_)
   {
@@ -55,7 +56,7 @@ public:
   }
 
   /// \brief Get the UE index of the UE.
-  ue_index_t get_ue_index() const override { return ue_index.value(); }
+  cu_cp_ue_index_t get_ue_index() const override { return ue_index.value(); }
 
   /// \brief Get the DU index of the UE.
   du_index_t get_du_index() const override { return du_index.value(); }
@@ -65,7 +66,7 @@ public:
   /// \brief Schedule an async task for the UE.
   bool schedule_async_task(async_task<void> task) override { return true; }
 
-  std::optional<ue_index_t>                        ue_index;
+  std::optional<cu_cp_ue_index_t>                  ue_index;
   std::optional<du_index_t>                        du_index;
   std::optional<cell_measurement_positioning_info> meas_results;
 };

@@ -4,22 +4,20 @@
 
 #pragma once
 
-#include "ocudu/cu_cp/cu_cp_types.h"
 #include "ocudu/cu_cp/ue_task_scheduler.h"
 #include "ocudu/support/async/fifo_async_task_scheduler.h"
 #include "ocudu/support/executors/task_executor.h"
 #include "ocudu/support/timers.h"
 #include <unordered_map>
 
-namespace ocudu {
-namespace ocucp {
+namespace ocudu::ocucp {
 
 class ue_task_scheduler_manager;
 
 /// \brief Async FIFO task scheduler for a single UE managed by the CU-CP.
 class ue_task_scheduler_impl : public ue_task_scheduler
 {
-  using ue_element = std::pair<const ue_index_t, std::unique_ptr<fifo_async_task_scheduler>>;
+  using ue_element = std::pair<const cu_cp_ue_index_t, std::unique_ptr<fifo_async_task_scheduler>>;
 
 public:
   ue_task_scheduler_impl() = default;
@@ -74,17 +72,17 @@ public:
 
   void stop();
 
-  ue_task_scheduler_impl create_ue_task_sched(ue_index_t ue_idx);
+  ue_task_scheduler_impl create_ue_task_sched(cu_cp_ue_index_t ue_idx);
 
   // UE task scheduler
-  void handle_ue_async_task(ue_index_t ue_index, async_task<void>&& task);
+  void handle_ue_async_task(cu_cp_ue_index_t ue_index, async_task<void>&& task);
 
-  void clear_pending_tasks(ue_index_t ue_index);
+  void clear_pending_tasks(cu_cp_ue_index_t ue_index);
 
-  async_task<bool> dispatch_and_await_task_completion(ue_index_t ue_index, unique_task task);
+  async_task<bool> dispatch_and_await_task_completion(cu_cp_ue_index_t ue_index, unique_task task);
 
   template <typename T>
-  auto dispatch_and_await_task_completion(ue_index_t ue_index, async_task<T> task)
+  auto dispatch_and_await_task_completion(cu_cp_ue_index_t ue_index, async_task<T> task)
   {
     return when_coroutine_completed_on_task_sched(*ue_ctrl_loop.at(ue_index), std::move(task));
   }
@@ -95,17 +93,16 @@ public:
 private:
   friend class ue_task_scheduler_impl;
 
-  void rem_ue_task_loop(ue_index_t ue_idx);
+  void rem_ue_task_loop(cu_cp_ue_index_t ue_idx);
 
   timer_manager&          timers;
   task_executor&          exec;
   ocudulog::basic_logger& logger;
 
   // task event loops indexed by ue_index
-  std::unordered_map<ue_index_t, std::unique_ptr<fifo_async_task_scheduler>> ue_ctrl_loop;
+  std::unordered_map<cu_cp_ue_index_t, std::unique_ptr<fifo_async_task_scheduler>> ue_ctrl_loop;
 
   fifo_async_task_scheduler ues_to_rem;
 };
 
-} // namespace ocucp
-} // namespace ocudu
+} // namespace ocudu::ocucp

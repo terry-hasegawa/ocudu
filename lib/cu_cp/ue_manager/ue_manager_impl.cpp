@@ -31,17 +31,17 @@ void ue_manager::stop()
   ue_task_scheds.stop();
 }
 
-ue_index_t ue_manager::add_ue(du_index_t du_index)
+cu_cp_ue_index_t ue_manager::add_ue(du_index_t du_index)
 {
   if (du_index == du_index_t::invalid) {
     logger.warning("Invalid du_index={}", du_index);
-    return ue_index_t::invalid;
+    return cu_cp_ue_index_t::invalid;
   }
 
-  ue_index_t ue_index = allocate_ue_index();
-  if (ue_index == ue_index_t::invalid) {
+  cu_cp_ue_index_t ue_index = allocate_ue_index();
+  if (ue_index == cu_cp_ue_index_t::invalid) {
     logger.warning("Failed to add UE. Cause: No available UE index");
-    return ue_index_t::invalid;
+    return cu_cp_ue_index_t::invalid;
   }
 
   // Create a dedicated task scheduler for the UE.
@@ -68,13 +68,13 @@ bool ue_manager::ue_admission_limit_reached() const
   return ues.size() > max_nof_ues;
 }
 
-bool ue_manager::update_ue_context(ue_index_t      ue_index,
-                                   gnb_du_id_t     du_id,
-                                   pci_t           pci,
-                                   rnti_t          rnti,
-                                   du_cell_index_t pcell_index)
+bool ue_manager::update_ue_context(cu_cp_ue_index_t ue_index,
+                                   gnb_du_id_t      du_id,
+                                   pci_t            pci,
+                                   rnti_t           rnti,
+                                   du_cell_index_t  pcell_index)
 {
-  if (ue_index == ue_index_t::invalid) {
+  if (ue_index == cu_cp_ue_index_t::invalid) {
     logger.warning("Can't update UE with invalid UE index");
     return false;
   }
@@ -105,7 +105,7 @@ bool ue_manager::update_ue_context(ue_index_t      ue_index,
   }
 
   // Check if the UE is already present.
-  if (get_ue_index(pci, rnti) != ue_index_t::invalid) {
+  if (get_ue_index(pci, rnti) != cu_cp_ue_index_t::invalid) {
     logger.warning("UE with pci={} and rnti={} already exists", pci, rnti);
     return false;
   }
@@ -126,9 +126,9 @@ bool ue_manager::update_ue_context(ue_index_t      ue_index,
   return true;
 }
 
-void ue_manager::remove_ue(ue_index_t ue_index)
+void ue_manager::remove_ue(cu_cp_ue_index_t ue_index)
 {
-  if (ue_index == ue_index_t::invalid) {
+  if (ue_index == cu_cp_ue_index_t::invalid) {
     logger.warning("Can't remove UE with invalid UE index");
     return;
   }
@@ -157,9 +157,9 @@ void ue_manager::remove_ue(ue_index_t ue_index)
   logger.debug("ue={}: Removed", ue_index);
 }
 
-bool ue_manager::set_plmn(ue_index_t ue_index, const plmn_identity& plmn)
+bool ue_manager::set_plmn(cu_cp_ue_index_t ue_index, const plmn_identity& plmn)
 {
-  if (ue_index == ue_index_t::invalid) {
+  if (ue_index == cu_cp_ue_index_t::invalid) {
     logger.warning("Can't set PLMN for UE with invalid UE index");
     return false;
   }
@@ -210,36 +210,36 @@ std::vector<cu_cp_ue*> ue_manager::find_ues(plmn_identity plmn)
   return found_ues;
 }
 
-ue_index_t ue_manager::get_ue_index(pci_t pci, rnti_t rnti)
+cu_cp_ue_index_t ue_manager::get_ue_index(pci_t pci, rnti_t rnti)
 {
   if (pci_rnti_to_ue_index.find(std::make_tuple(pci, rnti)) != pci_rnti_to_ue_index.end()) {
     return pci_rnti_to_ue_index.at(std::make_tuple(pci, rnti));
   }
   logger.debug("UE index for pci={} and rnti={} not found", pci, rnti);
-  return ue_index_t::invalid;
+  return cu_cp_ue_index_t::invalid;
 }
 
-ue_index_t ue_manager::get_ue_index(full_i_rnti_t full_i_rnti)
+cu_cp_ue_index_t ue_manager::get_ue_index(full_i_rnti_t full_i_rnti)
 {
   if (full_i_rnti_to_ue_index.find(full_i_rnti) != full_i_rnti_to_ue_index.end()) {
     return full_i_rnti_to_ue_index.at(full_i_rnti);
   }
   logger.debug("UE index for {} not found", full_i_rnti);
-  return ue_index_t::invalid;
+  return cu_cp_ue_index_t::invalid;
 }
 
-ue_index_t ue_manager::get_ue_index(short_i_rnti_t short_i_rnti)
+cu_cp_ue_index_t ue_manager::get_ue_index(short_i_rnti_t short_i_rnti)
 {
   if (short_i_rnti_to_ue_index.find(short_i_rnti) != short_i_rnti_to_ue_index.end()) {
     return short_i_rnti_to_ue_index.at(short_i_rnti);
   }
   logger.debug("UE index for {} not found", short_i_rnti);
-  return ue_index_t::invalid;
+  return cu_cp_ue_index_t::invalid;
 }
 
-std::optional<i_rntis_t> ue_manager::set_inactive(ue_index_t ue_index)
+std::optional<i_rntis_t> ue_manager::set_inactive(cu_cp_ue_index_t ue_index)
 {
-  if (ue_index == ue_index_t::invalid) {
+  if (ue_index == cu_cp_ue_index_t::invalid) {
     logger.warning("Can't set inactive UE with invalid UE index");
     return std::nullopt;
   }
@@ -266,9 +266,9 @@ std::optional<i_rntis_t> ue_manager::set_inactive(ue_index_t ue_index)
   return i_rntis;
 }
 
-void ue_manager::set_active(ue_index_t ue_index)
+void ue_manager::set_active(cu_cp_ue_index_t ue_index)
 {
-  if (ue_index == ue_index_t::invalid) {
+  if (ue_index == cu_cp_ue_index_t::invalid) {
     logger.warning("Can't set active UE with invalid UE index");
     return;
   }
@@ -296,9 +296,9 @@ void ue_manager::set_active(ue_index_t ue_index)
   }
 }
 
-std::optional<full_i_rnti_t> ue_manager::get_full_i_rnti(ue_index_t ue_index)
+std::optional<full_i_rnti_t> ue_manager::get_full_i_rnti(cu_cp_ue_index_t ue_index)
 {
-  if (ue_index == ue_index_t::invalid) {
+  if (ue_index == cu_cp_ue_index_t::invalid) {
     logger.warning("Can't get I-RNTIs for UE with invalid UE index");
     return std::nullopt;
   }
@@ -324,7 +324,7 @@ std::optional<full_i_rnti_t> ue_manager::get_full_i_rnti(ue_index_t ue_index)
 
 // Common.
 
-cu_cp_ue* ue_manager::find_ue(ue_index_t ue_index)
+cu_cp_ue* ue_manager::find_ue(cu_cp_ue_index_t ue_index)
 {
   if (ues.find(ue_index) != ues.end()) {
     return &ues.at(ue_index);
@@ -332,7 +332,7 @@ cu_cp_ue* ue_manager::find_ue(ue_index_t ue_index)
   return nullptr;
 }
 
-ue_task_scheduler* ue_manager::find_ue_task_scheduler(ue_index_t ue_index)
+ue_task_scheduler* ue_manager::find_ue_task_scheduler(cu_cp_ue_index_t ue_index)
 {
   if (ues.find(ue_index) != ues.end() && ues.at(ue_index).du_ue_created()) {
     return &ues.at(ue_index).get_task_sched();
@@ -341,7 +341,7 @@ ue_task_scheduler* ue_manager::find_ue_task_scheduler(ue_index_t ue_index)
 }
 
 // DU processor.
-cu_cp_ue* ue_manager::find_du_ue(ue_index_t ue_index)
+cu_cp_ue* ue_manager::find_du_ue(cu_cp_ue_index_t ue_index)
 {
   if (ues.find(ue_index) != ues.end() && ues.at(ue_index).du_ue_created()) {
     return &ues.at(ue_index);
@@ -391,16 +391,16 @@ std::vector<cu_cp_metrics_report::ue_info> ue_manager::handle_ue_metrics_report_
 
 // Private functions.
 
-ue_index_t ue_manager::allocate_ue_index()
+cu_cp_ue_index_t ue_manager::allocate_ue_index()
 {
   // Return invalid when no UE index is available.
-  if (ues.size() == ue_index_to_uint(ue_index_t::max)) {
-    return ue_index_t::invalid;
+  if (ues.size() == cu_cp_ue_index_to_uint(cu_cp_ue_index_t::max)) {
+    return cu_cp_ue_index_t::invalid;
   }
 
   // Check if the next_ue_index is available.
   if (ues.find(next_ue_index) == ues.end()) {
-    ue_index_t ret = next_ue_index;
+    cu_cp_ue_index_t ret = next_ue_index;
     // increase the next_ue_index
     increase_next_ue_index();
     return ret;
@@ -414,14 +414,14 @@ ue_index_t ue_manager::allocate_ue_index()
 
     // Return the id if it is not already used.
     if (ues.find(next_ue_index) == ues.end()) {
-      ue_index_t ret = next_ue_index;
+      cu_cp_ue_index_t ret = next_ue_index;
       // Increase the next_ue_index.
       increase_next_ue_index();
       return ret;
     }
   }
 
-  return ue_index_t::invalid;
+  return cu_cp_ue_index_t::invalid;
 }
 
 std::optional<i_rntis_t> ue_manager::allocate_i_rntis()

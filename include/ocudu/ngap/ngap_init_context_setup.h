@@ -5,16 +5,16 @@
 #pragma once
 
 #include "ocudu/cu_cp/cu_cp_location_reporting_types.h"
-#include "ocudu/cu_cp/cu_cp_types.h"
 #include "ocudu/ngap/ngap_types.h"
 #include "ocudu/ran/crit_diagnostics.h"
+#include "ocudu/ran/cu_cp_types.h"
 #include "ocudu/ran/guami.h"
 #include "ocudu/security/security.h"
 
 namespace ocudu::ocucp {
 
 struct ngap_init_context_setup_request {
-  ue_index_t                                                ue_index = ue_index_t::invalid;
+  cu_cp_ue_index_t                                          ue_index = cu_cp_ue_index_t::invalid;
   std::optional<std::string>                                old_amf;
   std::optional<cu_cp_aggregate_maximum_bit_rate>           ue_aggr_max_bit_rate;
   std::optional<ngap_core_network_assist_info_for_inactive> core_network_assist_info_for_inactive;

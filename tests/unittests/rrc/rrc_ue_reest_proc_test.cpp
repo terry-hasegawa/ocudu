@@ -3,7 +3,7 @@
 // Portions of this file may implement 3GPP specifications, which may be subject to additional licensing requirements.
 
 #include "rrc_ue_test_helpers.h"
-#include "ocudu/cu_cp/cu_cp_types.h"
+#include "ocudu/ran/cu_cp_types.h"
 #include <gtest/gtest.h>
 
 using namespace ocudu;
@@ -59,7 +59,7 @@ TEST_F(rrc_ue_reest, when_valid_reestablishment_request_received_but_security_co
 /// Test the RRC Reestablishment
 TEST_F(rrc_ue_reest, when_reestablishment_request_with_cause_recfg_fail_received_then_rrc_setup_sent)
 {
-  ue_index_t old_ue_index = uint_to_ue_index(0);
+  cu_cp_ue_index_t old_ue_index = uint_to_ue_index(0);
   add_ue_reestablishment_context(old_ue_index);
   receive_valid_reestablishment_request_with_cause_recfg_fail(1, to_rnti(0x4601));
 
@@ -78,7 +78,7 @@ TEST_F(rrc_ue_reest, when_reestablishment_request_with_cause_recfg_fail_received
 TEST_F(rrc_ue_reest,
        when_valid_reestablishment_request_for_same_du_received_then_rrc_reestablishment_with_old_ue_index_sent)
 {
-  ue_index_t old_ue_index = uint_to_ue_index(0);
+  cu_cp_ue_index_t old_ue_index = uint_to_ue_index(0);
   add_ue_reestablishment_context(old_ue_index);
   receive_valid_reestablishment_request(1, to_rnti(0x4601));
 

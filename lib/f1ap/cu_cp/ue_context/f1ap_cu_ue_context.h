@@ -24,13 +24,13 @@ struct f1ap_ue_context {
   /// the context locally as part of the F1 removal.
   bool f1_removal_in_progress = false;
   /// Event to notify all pending release callers when release completes. Stores the result.
-  manual_event<ue_index_t> release_complete_event;
+  manual_event<cu_cp_ue_index_t> release_complete_event;
   /// Whether the old gNB-DU UE F1AP UE ID IE needs to be notified back to the DU, due to reestablishment.
   std::optional<gnb_du_ue_f1ap_id_t> pending_old_ue_id;
   f1ap_ue_transaction_manager        ev_mng;
   f1ap_ue_logger                     logger;
 
-  f1ap_ue_context(ue_index_t ue_index_, gnb_cu_ue_f1ap_id_t cu_ue_f1ap_id_, timer_factory timers_) :
+  f1ap_ue_context(cu_cp_ue_index_t ue_index_, gnb_cu_ue_f1ap_id_t cu_ue_f1ap_id_, timer_factory timers_) :
     ue_ids({ue_index_, cu_ue_f1ap_id_}), ev_mng(timers_), logger("CU-CP-F1", {ue_ids}, ": ")
   {
   }
@@ -62,7 +62,7 @@ public:
   /// \brief Checks whether a UE with the given UE index exists.
   /// \param[in] ue_index The UE index used to find the UE.
   /// \return The CU UE ID.
-  bool contains(ue_index_t ue_index) const
+  bool contains(cu_cp_ue_index_t ue_index) const
   {
     if (ue_index_to_ue_f1ap_id.find(ue_index) == ue_index_to_ue_f1ap_id.end()) {
       return false;
@@ -78,7 +78,7 @@ public:
     ocudu_assert(ues.find(cu_ue_id) != ues.end(), "cu_ue={}: F1AP UE context not found", fmt::underlying(cu_ue_id));
     return ues.at(cu_ue_id);
   }
-  f1ap_ue_context& operator[](ue_index_t ue_index)
+  f1ap_ue_context& operator[](cu_cp_ue_index_t ue_index)
   {
     ocudu_assert(ue_index_to_ue_f1ap_id.find(ue_index) != ue_index_to_ue_f1ap_id.end(),
                  "ue={} gNB-CU-UE-F1AP-ID not found",
@@ -109,21 +109,21 @@ public:
     return it != ues.end() ? &it->second : nullptr;
   }
 
-  const f1ap_ue_context* find(ue_index_t ue_idx) const
+  const f1ap_ue_context* find(cu_cp_ue_index_t ue_idx) const
   {
     auto it = ue_index_to_ue_f1ap_id.find(ue_idx);
     return it != ue_index_to_ue_f1ap_id.end() ? &ues.at(it->second) : nullptr;
   }
 
-  f1ap_ue_context* find(ue_index_t ue_idx)
+  f1ap_ue_context* find(cu_cp_ue_index_t ue_idx)
   {
     auto it = ue_index_to_ue_f1ap_id.find(ue_idx);
     return it != ue_index_to_ue_f1ap_id.end() ? &ues.at(it->second) : nullptr;
   }
 
-  f1ap_ue_context& add_ue(ue_index_t ue_index, gnb_cu_ue_f1ap_id_t cu_ue_id)
+  f1ap_ue_context& add_ue(cu_cp_ue_index_t ue_index, gnb_cu_ue_f1ap_id_t cu_ue_id)
   {
-    ocudu_assert(ue_index != ue_index_t::invalid, "Invalid ue_index={}", fmt::underlying(ue_index));
+    ocudu_assert(ue_index != cu_cp_ue_index_t::invalid, "Invalid ue_index={}", fmt::underlying(ue_index));
     ocudu_assert(cu_ue_id != gnb_cu_ue_f1ap_id_t::invalid, "Invalid cu_ue={}", fmt::underlying(cu_ue_id));
 
     logger.debug("ue={} cu_ue={}: Adding F1AP UE context", fmt::underlying(ue_index), fmt::underlying(cu_ue_id));
@@ -146,9 +146,9 @@ public:
     ue.logger.set_prefix({ue.ue_ids.ue_index, ue.ue_ids.cu_ue_f1ap_id, ue.ue_ids.du_ue_f1ap_id}, ": ");
   }
 
-  void remove_ue(ue_index_t ue_index)
+  void remove_ue(cu_cp_ue_index_t ue_index)
   {
-    ocudu_assert(ue_index != ue_index_t::invalid, "Invalid ue_index={}", ue_index);
+    ocudu_assert(ue_index != cu_cp_ue_index_t::invalid, "Invalid ue_index={}", ue_index);
 
     if (ue_index_to_ue_f1ap_id.find(ue_index) == ue_index_to_ue_f1ap_id.end()) {
       logger.warning("ue={}: gNB-CU-UE-F1AP-ID not found", fmt::underlying(ue_index));
@@ -168,9 +168,9 @@ public:
     ues.erase(cu_ue_id);
   }
 
-  void add_srb0_rrc_notifier(ue_index_t ue_index, f1ap_ul_ccch_notifier* srb0_notifier)
+  void add_srb0_rrc_notifier(cu_cp_ue_index_t ue_index, f1ap_ul_ccch_notifier* srb0_notifier)
   {
-    ocudu_assert(ue_index != ue_index_t::invalid, "Invalid ue_index={}", ue_index);
+    ocudu_assert(ue_index != cu_cp_ue_index_t::invalid, "Invalid ue_index={}", ue_index);
     ocudu_assert(ue_index_to_ue_f1ap_id.find(ue_index) != ue_index_to_ue_f1ap_id.end(),
                  "ue={}: gNB-CU-UE-F1AP-ID not found",
                  fmt::underlying(ue_index));
@@ -182,9 +182,9 @@ public:
     ues.at(ue_index_to_ue_f1ap_id.at(ue_index)).get_ul_bearer_manager().activate_srb0(*srb0_notifier);
   }
 
-  void add_srb1_rrc_notifier(ue_index_t ue_index, f1ap_ul_dcch_notifier* srb1_notifier)
+  void add_srb1_rrc_notifier(cu_cp_ue_index_t ue_index, f1ap_ul_dcch_notifier* srb1_notifier)
   {
-    ocudu_assert(ue_index != ue_index_t::invalid, "Invalid ue_index={}", ue_index);
+    ocudu_assert(ue_index != cu_cp_ue_index_t::invalid, "Invalid ue_index={}", ue_index);
     ocudu_assert(ue_index_to_ue_f1ap_id.find(ue_index) != ue_index_to_ue_f1ap_id.end(),
                  "ue={}: gNB-CU-UE-F1AP-ID not found",
                  ue_index);
@@ -196,9 +196,9 @@ public:
     ues.at(ue_index_to_ue_f1ap_id.at(ue_index)).get_ul_bearer_manager().activate_srb1(*srb1_notifier);
   }
 
-  void add_srb2_rrc_notifier(ue_index_t ue_index, f1ap_ul_dcch_notifier* srb2_notifier)
+  void add_srb2_rrc_notifier(cu_cp_ue_index_t ue_index, f1ap_ul_dcch_notifier* srb2_notifier)
   {
-    ocudu_assert(ue_index != ue_index_t::invalid, "Invalid ue_index={}", ue_index);
+    ocudu_assert(ue_index != cu_cp_ue_index_t::invalid, "Invalid ue_index={}", ue_index);
     ocudu_assert(ue_index_to_ue_f1ap_id.find(ue_index) != ue_index_to_ue_f1ap_id.end(),
                  "ue={}: gNB-CU-UE-F1AP-ID not found",
                  ue_index);
@@ -275,8 +275,8 @@ private:
   }
 
   // Note: Given that UEs will self-remove from the map, we don't want to destructor to clear the lookups beforehand.
-  std::unordered_map<ue_index_t, gnb_cu_ue_f1ap_id_t>      ue_index_to_ue_f1ap_id; // indexed by ue_index
-  std::unordered_map<gnb_cu_ue_f1ap_id_t, f1ap_ue_context> ues;                    // indexed by gnb_cu_ue_f1ap_id
+  std::unordered_map<cu_cp_ue_index_t, gnb_cu_ue_f1ap_id_t> ue_index_to_ue_f1ap_id; // indexed by ue_index
+  std::unordered_map<gnb_cu_ue_f1ap_id_t, f1ap_ue_context>  ues;                    // indexed by gnb_cu_ue_f1ap_id
 };
 
 } // namespace ocudu::ocucp

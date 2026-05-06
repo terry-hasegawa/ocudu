@@ -4,15 +4,14 @@
 
 #pragma once
 
-#include "ocudu/cu_cp/cu_cp_types.h"
+#include "ocudu/adt/byte_buffer.h"
+#include "ocudu/ran/cu_cp_types.h"
 
-namespace ocudu {
-namespace ocucp {
+namespace ocudu::ocucp {
 
 struct ngap_ue_radio_capability_info_indication {
-  ue_index_t  ue_index = ue_index_t::invalid;
-  byte_buffer ue_cap_rat_container_list;
+  cu_cp_ue_index_t ue_index = cu_cp_ue_index_t::invalid;
+  byte_buffer      ue_cap_rat_container_list;
 };
 
-} // namespace ocucp
-} // namespace ocudu
+} // namespace ocudu::ocucp

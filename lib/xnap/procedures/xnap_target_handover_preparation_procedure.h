@@ -29,10 +29,10 @@ public:
   static const char* name() { return "Target Handover Preparation Procedure"; }
 
 private:
-  bool create_xnap_ue(ue_index_t ue_index);
+  bool create_xnap_ue(cu_cp_ue_index_t ue_index);
 
   // Result senders.
-  bool send_handover_request_ack(ue_index_t                        ue_index,
+  bool send_handover_request_ack(cu_cp_ue_index_t                  ue_index,
                                  local_xnap_ue_id_t                local_xnap_ue_id,
                                  const cu_cp_handover_request_ack& ho_ack);
   void send_handover_preparation_failure(const cu_cp_handover_request_failure& ho_failure);

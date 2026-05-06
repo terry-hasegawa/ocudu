@@ -4,13 +4,12 @@
 
 #pragma once
 
-#include "ocudu/cu_cp/cu_cp_types.h"
 #include "ocudu/f1ap/cu_cp/du_setup_notifier.h"
 #include "ocudu/f1ap/cu_cp/f1ap_cu.h"
 #include "ocudu/f1ap/f1ap_message.h"
+#include "ocudu/ran/cu_cp_types.h"
 
-namespace ocudu {
-namespace ocucp {
+namespace ocudu::ocucp {
 
 /// \brief Generate a valid dummy F1 Setup Request.
 void generate_valid_f1_setup_request(du_setup_request& setup_request,
@@ -32,9 +31,8 @@ void         generate_f1_setup_request_with_too_many_cells(du_setup_request& set
 /// \param[in] nrcell_id The NR Cell Id to use.
 /// \return The dummy UE Creation Message.
 ue_rrc_context_creation_request generate_ue_rrc_context_creation_request(
-    ue_index_t       ue_index,
+    cu_cp_ue_index_t ue_index,
     rnti_t           c_rnti,
     nr_cell_identity nrcell_id = nr_cell_identity::create(gnb_id_t{411, 22}, 0).value());
 
-} // namespace ocucp
-} // namespace ocudu
+} // namespace ocudu::ocucp

@@ -7,7 +7,7 @@
 using namespace ocudu;
 using namespace ocucp;
 
-cu_cp_ue::cu_cp_ue(ue_index_t                     ue_index_,
+cu_cp_ue::cu_cp_ue(cu_cp_ue_index_t               ue_index_,
                    du_index_t                     du_index_,
                    timer_manager&                 timers_,
                    task_executor&                 task_exec_,

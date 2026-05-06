@@ -37,19 +37,19 @@ public:
     return cu_cp_handler->handle_ngap_handover_request(request);
   }
 
-  ngap_cu_cp_ue_notifier* on_new_ngap_ue(ue_index_t ue_index) override
+  ngap_cu_cp_ue_notifier* on_new_ngap_ue(cu_cp_ue_index_t ue_index) override
   {
     ocudu_assert(cu_cp_handler != nullptr, "CU-CP NGAP handler must not be nullptr");
     return cu_cp_handler->handle_new_ngap_ue(ue_index);
   }
 
-  bool schedule_async_task(ue_index_t ue_index, async_task<void> task) override
+  bool schedule_async_task(cu_cp_ue_index_t ue_index, async_task<void> task) override
   {
     ocudu_assert(cu_cp_handler != nullptr, "CU-CP NGAP handler must not be nullptr");
     return cu_cp_handler->schedule_ue_task(ue_index, std::move(task));
   }
 
-  bool on_handover_request_received(ue_index_t                        ue_index,
+  bool on_handover_request_received(cu_cp_ue_index_t                  ue_index,
                                     const plmn_identity&              selected_plmn,
                                     const security::security_context& sec_ctxt) override
   {
@@ -105,25 +105,25 @@ public:
     cu_cp_handler->handle_transmission_of_handover_required();
   }
 
-  async_task<bool> on_new_rrc_handover_command(ue_index_t ue_index, byte_buffer command) override
+  async_task<bool> on_new_rrc_handover_command(cu_cp_ue_index_t ue_index, byte_buffer command) override
   {
     ocudu_assert(cu_cp_handler != nullptr, "CU-CP NGAP handler must not be nullptr");
     return cu_cp_handler->handle_new_rrc_handover_command(ue_index, std::move(command));
   }
 
-  void on_n2_handover_execution(ue_index_t ue_index) override
+  void on_n2_handover_execution(cu_cp_ue_index_t ue_index) override
   {
     ocudu_assert(cu_cp_handler != nullptr, "CU-CP NGAP handler must not be nullptr");
     cu_cp_handler->handle_inter_cu_target_handover_execution(ue_index);
   }
 
-  ue_index_t request_new_ue_index_allocation(nr_cell_global_id_t cgi, const plmn_identity& plmn) override
+  cu_cp_ue_index_t request_new_ue_index_allocation(nr_cell_global_id_t cgi, const plmn_identity& plmn) override
   {
     ocudu_assert(cu_cp_handler != nullptr, "CU-CP NGAP handler must not be nullptr");
     return cu_cp_handler->handle_ue_index_allocation_request(cgi, plmn);
   }
 
-  void on_dl_ue_associated_nrppa_transport_pdu(ue_index_t ue_index, const byte_buffer& nrppa_pdu) override
+  void on_dl_ue_associated_nrppa_transport_pdu(cu_cp_ue_index_t ue_index, const byte_buffer& nrppa_pdu) override
   {
     ocudu_assert(cu_cp_handler != nullptr, "CU-CP NGAP handler must not be nullptr");
     cu_cp_handler->handle_dl_ue_associated_nrppa_transport_pdu(ue_index, nrppa_pdu);
@@ -135,7 +135,7 @@ public:
     cu_cp_handler->handle_dl_non_ue_associated_nrppa_transport_pdu(amf_index, nrppa_pdu);
   }
 
-  void on_location_reporting_control_message(ue_index_t ue_index, const location_report_request& msg) override
+  void on_location_reporting_control_message(cu_cp_ue_index_t ue_index, const location_report_request& msg) override
   {
     ocudu_assert(cu_cp_handler != nullptr, "CU-CP NGAP handler must not be nullptr");
     cu_cp_handler->handle_location_reporting_control_message(ue_index, msg);
@@ -161,7 +161,7 @@ public:
   void connect_ue(cu_cp_ue_impl_interface& ue_) { ue = &ue_; }
 
   /// \brief Get the UE index of the UE.
-  ue_index_t get_ue_index() override
+  cu_cp_ue_index_t get_ue_index() override
   {
     ocudu_assert(ue != nullptr, "CU-CP UE must not be nullptr");
     return ue->get_ue_index();

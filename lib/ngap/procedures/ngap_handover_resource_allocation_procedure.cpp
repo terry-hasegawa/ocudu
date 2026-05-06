@@ -80,7 +80,7 @@ void ngap_handover_resource_allocation_procedure::operator()(coro_context<async_
   CORO_RETURN();
 }
 
-bool ngap_handover_resource_allocation_procedure::create_ngap_ue(ue_index_t ue_index)
+bool ngap_handover_resource_allocation_procedure::create_ngap_ue(cu_cp_ue_index_t ue_index)
 {
   // Create NGAP UE.
   // Allocate RAN-UE-ID.
@@ -108,7 +108,7 @@ bool ngap_handover_resource_allocation_procedure::create_ngap_ue(ue_index_t ue_i
 }
 
 bool ngap_handover_resource_allocation_procedure::send_handover_request_ack(
-    ue_index_t                        ue_index,
+    cu_cp_ue_index_t                  ue_index,
     ran_ue_id_t                       ran_ue_id,
     const cu_cp_handover_request_ack& ho_request_ack)
 {

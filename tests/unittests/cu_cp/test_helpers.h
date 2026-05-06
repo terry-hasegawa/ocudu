@@ -53,7 +53,7 @@ public:
     return true;
   }
 
-  void on_rrc_ue_created(ue_index_t ue_index, rrc_ue_interface& rrc_ue) override
+  void on_rrc_ue_created(cu_cp_ue_index_t ue_index, rrc_ue_interface& rrc_ue) override
   {
     logger.info("ue={}: Received a RRC UE creation notification", ue_index);
 
@@ -67,7 +67,7 @@ public:
     return make_byte_buffer("deadbeef").value();
   }
 
-  async_task<void> on_ue_removal_required(ue_index_t ue_index) override
+  async_task<void> on_ue_removal_required(cu_cp_ue_index_t ue_index) override
   {
     logger.info("ue={}: Received a UE removal request", ue_index);
 
@@ -154,24 +154,24 @@ public:
                 request.source_ue_index);
   }
 
-  void handle_handover_ue_context_push(ue_index_t source_ue_index, ue_index_t target_ue_index) override
+  void handle_handover_ue_context_push(cu_cp_ue_index_t source_ue_index, cu_cp_ue_index_t target_ue_index) override
   {
     logger.info("source_ue={} target_ue={}: Received handover ue context push", source_ue_index, target_ue_index);
   }
 
-  void initialize_handover_ue_release_timer(ue_index_t                              ue_index,
+  void initialize_handover_ue_release_timer(cu_cp_ue_index_t                        ue_index,
                                             std::chrono::milliseconds               handover_ue_release_timeout,
                                             const cu_cp_ue_context_release_request& ue_context_release_request) override
   {
     logger.info("ue={}: Initializing UE release timer", ue_index);
   }
 
-  void initialize_rna_update_timer(ue_index_t ue_index) override
+  void initialize_rna_update_timer(cu_cp_ue_index_t ue_index) override
   {
     logger.info("ue={}: Initializing RNA update timer", ue_index);
   }
 
-  void initialize_cho_execution_timer(ue_index_t source_ue_index, std::chrono::milliseconds timeout) override
+  void initialize_cho_execution_timer(cu_cp_ue_index_t source_ue_index, std::chrono::milliseconds timeout) override
   {
     logger.info("ue={}: Initializing CHO execution timer (timeout={}ms)", source_ue_index, timeout.count());
   }
@@ -192,7 +192,7 @@ class dummy_cu_cp_ue_removal_handler : public cu_cp_ue_removal_handler
 public:
   explicit dummy_cu_cp_ue_removal_handler(ue_manager* ue_mng_ = nullptr) : ue_mng(ue_mng_) {}
 
-  async_task<void> handle_ue_removal_request(ue_index_t ue_index) override
+  async_task<void> handle_ue_removal_request(cu_cp_ue_index_t ue_index) override
   {
     if (ue_mng != nullptr) {
       ue_mng->remove_ue(ue_index);
@@ -200,7 +200,7 @@ public:
     return launch_no_op_task();
   }
 
-  void handle_pending_ue_task_cancellation(ue_index_t ue_index) override {}
+  void handle_pending_ue_task_cancellation(cu_cp_ue_index_t ue_index) override {}
 
 private:
   ue_manager* ue_mng = nullptr;
@@ -214,7 +214,7 @@ public:
 
 struct dummy_ngap_ue_context_removal_handler : public ngap_ue_context_removal_handler {
 public:
-  void remove_ue_context(ue_index_t ue_index) override { logger.info("ue={}: Removing UE", ue_index); }
+  void remove_ue_context(cu_cp_ue_index_t ue_index) override { logger.info("ue={}: Removing UE", ue_index); }
 
 private:
   ocudulog::basic_logger& logger = ocudulog::fetch_basic_logger("TEST");
@@ -427,7 +427,7 @@ public:
     return launch_no_op_task(ngap_handover_preparation_response{false});
   }
 
-  void handle_inter_cu_ho_rrc_recfg_complete(const ue_index_t           ue_index,
+  void handle_inter_cu_ho_rrc_recfg_complete(const cu_cp_ue_index_t     ue_index,
                                              const nr_cell_global_id_t& cgi,
                                              const tac_t                tac) override
   {
@@ -503,7 +503,7 @@ public:
     });
   }
 
-  async_task<ue_index_t> handle_ue_context_release_command(const f1ap_ue_context_release_command& msg) override
+  async_task<cu_cp_ue_index_t> handle_ue_context_release_command(const f1ap_ue_context_release_command& msg) override
   {
     logger.info("Received a new UE context release command");
 
@@ -514,7 +514,7 @@ public:
     return launch_no_op_task(msg.ue_index);
   }
 
-  bool handle_ue_id_update(ue_index_t ue_index, ue_index_t old_ue_index) override { return true; }
+  bool handle_ue_id_update(cu_cp_ue_index_t ue_index, cu_cp_ue_index_t old_ue_index) override { return true; }
 
   const f1ap_ue_context_modification_request& get_ctxt_mod_request() { return ue_context_modification_request; }
 
@@ -578,13 +578,13 @@ public:
   bool next_ue_setup_response = true;
 
   rrc_ue_reestablishment_context_response
-  handle_rrc_reestablishment_request(pci_t old_pci, rnti_t old_c_rnti, ue_index_t ue_index) override
+  handle_rrc_reestablishment_request(pci_t old_pci, rnti_t old_c_rnti, cu_cp_ue_index_t ue_index) override
   {
     logger.info("ue={} old_pci={} old_c-rnti={}: Received RRC Reestablishment Request", ue_index, old_pci, old_c_rnti);
     return reest_context;
   }
 
-  async_task<bool> handle_rrc_reestablishment_context_modification_required(ue_index_t ue_index) override
+  async_task<bool> handle_rrc_reestablishment_context_modification_required(cu_cp_ue_index_t ue_index) override
   {
     logger.info("ue={}: Received Reestablishment Context Modification Required");
     return launch_no_op_task(true);
@@ -595,12 +595,12 @@ public:
     logger.info("ue={}: Received RRC Reestablishment failure notification", request.ue_index);
   }
 
-  void handle_rrc_reestablishment_complete(ue_index_t old_ue_index) override
+  void handle_rrc_reestablishment_complete(cu_cp_ue_index_t old_ue_index) override
   {
     logger.info("ue={}: Received RRC Reestablishment complete notification", old_ue_index);
   }
 
-  async_task<bool> handle_ue_context_transfer(ue_index_t ue_index, ue_index_t old_ue_index) override
+  async_task<bool> handle_ue_context_transfer(cu_cp_ue_index_t ue_index, cu_cp_ue_index_t old_ue_index) override
   {
     logger.info("ue={}: Requested a UE context transfer from old_ue={}", ue_index, old_ue_index);
     return launch_no_op_task(true);
@@ -614,7 +614,7 @@ public:
     return launch_no_op_task();
   }
 
-  void handle_rrc_reconf_complete_indicator(ue_index_t ue_index) override {}
+  void handle_rrc_reconf_complete_indicator(cu_cp_ue_index_t ue_index) override {}
 
   cu_cp_ue_context_release_request last_cu_cp_ue_context_release_request;
 
@@ -853,7 +853,7 @@ struct dummy_cu_cp_xnap_handler : public cu_cp_xnap_handler {
 public:
   dummy_cu_cp_xnap_handler(ue_manager& ue_mng_) : ue_mng(ue_mng_), logger(ocudulog::fetch_basic_logger("TEST")) {}
 
-  async_task<bool> handle_new_rrc_handover_command(ue_index_t                      ue_index,
+  async_task<bool> handle_new_rrc_handover_command(cu_cp_ue_index_t                ue_index,
                                                    byte_buffer                     command,
                                                    std::optional<xnc_peer_index_t> xnc_index) override
   {
@@ -863,12 +863,13 @@ public:
     return launch_no_op_task(true);
   }
 
-  ue_index_t handle_ue_index_allocation_request(const nr_cell_global_id_t& cgi, const plmn_identity& plmn) override
+  cu_cp_ue_index_t handle_ue_index_allocation_request(const nr_cell_global_id_t& cgi,
+                                                      const plmn_identity&       plmn) override
   {
-    return ue_index_t::invalid;
+    return cu_cp_ue_index_t::invalid;
   }
 
-  bool handle_handover_request(ue_index_t                        ue_index,
+  bool handle_handover_request(cu_cp_ue_index_t                  ue_index,
                                const plmn_identity&              selected_plmn,
                                const security::security_context& sec_ctxt) override
   {
@@ -883,7 +884,7 @@ public:
     return true;
   }
 
-  bool schedule_ue_task(ue_index_t ue_index, async_task<void> task) override
+  bool schedule_ue_task(cu_cp_ue_index_t ue_index, async_task<void> task) override
   {
     ocudu_assert(ue_mng.find_ue_task_scheduler(ue_index) != nullptr, "UE task scheduler must be present");
     return ue_mng.find_ue_task_scheduler(ue_index)->schedule_async_task(std::move(task));
@@ -896,7 +897,7 @@ public:
   }
 
   void handle_inter_cu_target_handover_execution(
-      ue_index_t                                                   ue_index,
+      cu_cp_ue_index_t                                             ue_index,
       const std::optional<xnap_handover_target_execution_context>& xnap_ho_target_execution_ctxt) override
   {
     logger.info("ue={}: Received a new {} request to handle inter-CU target handover execution",
@@ -904,12 +905,12 @@ public:
                 xnap_ho_target_execution_ctxt.has_value() ? "XN-C" : "NG");
   }
 
-  void handle_handover_cancel_received(ue_index_t ue_index) override
+  void handle_handover_cancel_received(cu_cp_ue_index_t ue_index) override
   {
     logger.info("ue={}: Received a handover cancel message", ue_index);
   }
 
-  void handle_xnap_ue_context_release_received(ue_index_t ue_index) override
+  void handle_xnap_ue_context_release_received(cu_cp_ue_index_t ue_index) override
   {
     logger.info("ue={}: Received a XNAP UE context release message", ue_index);
   }

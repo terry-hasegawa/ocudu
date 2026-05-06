@@ -4,20 +4,18 @@
 
 #pragma once
 
-#include "ocudu/cu_cp/cu_cp_types.h"
 #include "ocudu/f1ap/common/f1ap_cho_types.h"
 #include "ocudu/f1ap/f1ap_ue_id_types.h"
 #include "ocudu/f1ap/ue_context_management_configs.h"
 #include "ocudu/ran/cause/f1ap_cause.h"
+#include "ocudu/ran/cu_cp_types.h"
 #include "ocudu/ran/cu_types.h"
 #include "ocudu/ran/nr_cgi.h"
 #include "ocudu/ran/rb_id.h"
 #include "ocudu/ran/rnti.h"
-#include "ocudu/ran/s_nssai.h"
 #include <vector>
 
-namespace ocudu {
-namespace ocucp {
+namespace ocudu::ocucp {
 
 enum class f1ap_cell_ul_cfg { none = 0, ul, sul, ul_and_sul };
 
@@ -78,7 +76,7 @@ struct f1ap_conditional_inter_du_mobility_info {
 
 /// \brief Request from CU to F1AP-CU to start an F1AP "UE Context Setup" procedure, as per TS38.473 8.3.1.
 struct f1ap_ue_context_setup_request {
-  ue_index_t                                             ue_index = ue_index_t::invalid;
+  cu_cp_ue_index_t                                       ue_index = cu_cp_ue_index_t::invalid;
   nr_cell_global_id_t                                    sp_cell_id;
   uint8_t                                                serv_cell_idx;
   std::optional<f1ap_cell_ul_cfg>                        sp_cell_ul_cfg;
@@ -125,8 +123,8 @@ struct f1ap_potential_sp_cell_item {
 
 /// \brief Response from F1AP-CU to CU once "UE Context Setup" procedure is complete.
 struct f1ap_ue_context_setup_response {
-  bool       success  = false;
-  ue_index_t ue_index = ue_index_t::invalid;
+  bool             success  = false;
+  cu_cp_ue_index_t ue_index = cu_cp_ue_index_t::invalid;
 
   // UE Context Setup Response
   f1ap_du_to_cu_rrc_info                           du_to_cu_rrc_info;
@@ -163,7 +161,7 @@ struct f1ap_rlc_fail_ind {
 
 /// \brief Request from CU to F1AP-CU to start an F1AP "UE Context Modification" procedure, as per TS38.473 8.3.4.
 struct f1ap_ue_context_modification_request {
-  ue_index_t                                         ue_index = ue_index_t::invalid;
+  cu_cp_ue_index_t                                   ue_index = cu_cp_ue_index_t::invalid;
   std::optional<nr_cell_global_id_t>                 sp_cell_id;
   std::optional<uint8_t>                             serv_cell_idx;
   std::optional<f1ap_cell_ul_cfg>                    sp_cell_ul_cfg;
@@ -227,16 +225,15 @@ struct f1ap_ue_context_modification_response {
 
 /// \brief Request Command for F1AP UE CONTEXT Release Request.
 struct f1ap_ue_context_release_request {
-  ue_index_t   ue_index;
-  f1ap_cause_t cause;
+  cu_cp_ue_index_t ue_index;
+  f1ap_cause_t     cause;
 };
 
 /// \brief Indication from the DU that a UE has successfully accessed a target cell (TS 38.473 Section 8.3.8).
 struct f1ap_access_success {
-  ue_index_t ue_index;
+  cu_cp_ue_index_t ue_index;
   /// NR-CGI of the cell where the UE successfully performed random access.
   nr_cell_global_id_t cgi;
 };
 
-} // namespace ocucp
-} // namespace ocudu
+} // namespace ocudu::ocucp

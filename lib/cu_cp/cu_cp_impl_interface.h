@@ -40,7 +40,7 @@ public:
   /// \param[in] ue_index The index of the UE.
   /// \param[in] task The task to schedule.
   /// \returns True if the task was successfully scheduled, false otherwise.
-  virtual bool schedule_ue_task(ue_index_t ue_index, async_task<void> task) = 0;
+  virtual bool schedule_ue_task(cu_cp_ue_index_t ue_index, async_task<void> task) = 0;
 };
 
 /// Interface for the inter-CU handover notifier to communicate with the CU-CP.
@@ -55,19 +55,20 @@ public:
   /// \param[in] xnc_index The XN-C index if the handover is a XN-C handover, std::nullopt otherwise.
   /// \returns True if the RRC Handover Command was successfully handled, false otherwise.
   virtual async_task<bool>
-  handle_new_rrc_handover_command(ue_index_t                      ue_index,
+  handle_new_rrc_handover_command(cu_cp_ue_index_t                ue_index,
                                   byte_buffer                     command,
                                   std::optional<xnc_peer_index_t> xnc_index = std::nullopt) = 0;
 
   /// \brief Handles UE index allocation request for N2 handover at target gNB.
-  virtual ue_index_t handle_ue_index_allocation_request(const nr_cell_global_id_t& cgi, const plmn_identity& plmn) = 0;
+  virtual cu_cp_ue_index_t handle_ue_index_allocation_request(const nr_cell_global_id_t& cgi,
+                                                              const plmn_identity&       plmn) = 0;
 
   /// \brief Handle a received handover request.
   /// \param[in] ue_index Index of the UE.
   /// \param[in] selected_plmn The selected PLMN identity of the UE.
   /// \param[in] sec_ctxt The received security context.
   /// \return True if the handover request was successfully handled, false otherwise.
-  virtual bool handle_handover_request(ue_index_t                        ue_index,
+  virtual bool handle_handover_request(cu_cp_ue_index_t                  ue_index,
                                        const plmn_identity&              selected_plmn,
                                        const security::security_context& sec_ctxt) = 0;
 
@@ -76,7 +77,7 @@ public:
   /// \param[in] xnap_ho_target_execution_ctxt If the handover is a XN-C handover, the information required for the
   /// target handover execution is included.
   virtual void handle_inter_cu_target_handover_execution(
-      ue_index_t                                                   ue_index,
+      cu_cp_ue_index_t                                             ue_index,
       const std::optional<xnap_handover_target_execution_context>& xnap_ho_target_execution_ctxt = std::nullopt) = 0;
 };
 
@@ -91,7 +92,7 @@ public:
   /// \brief Handle the creation of a new NGAP UE. This will add the NGAP adapters to the UE manager.
   /// \param[in] ue_index The index of the new NGAP UE.
   /// \returns Pointer to the NGAP UE notifier.
-  virtual ngap_cu_cp_ue_notifier* handle_new_ngap_ue(ue_index_t ue_index) = 0;
+  virtual ngap_cu_cp_ue_notifier* handle_new_ngap_ue(cu_cp_ue_index_t ue_index) = 0;
 
   /// \brief Handle the reception of a new Initial Context Setup Request.
   /// \param[in] request The received Initial Context Setup Request.
@@ -132,7 +133,7 @@ public:
   virtual void handle_transmission_of_handover_required() = 0;
 
   /// \brief Handles a DL UE associated NRPPa transport.
-  virtual void handle_dl_ue_associated_nrppa_transport_pdu(ue_index_t ue_index, const byte_buffer& nrppa_pdu) = 0;
+  virtual void handle_dl_ue_associated_nrppa_transport_pdu(cu_cp_ue_index_t ue_index, const byte_buffer& nrppa_pdu) = 0;
 
   /// \brief Handles a DL non UE associated NRPPa transport.
   /// \param[in] amf_index The index of the AMF that received the NRPPa transport.
@@ -140,7 +141,8 @@ public:
   virtual void handle_dl_non_ue_associated_nrppa_transport_pdu(amf_index_t amf_index, const byte_buffer& nrppa_pdu) = 0;
 
   /// \brief Handles Location Reporting Control message.
-  virtual void handle_location_reporting_control_message(ue_index_t ue_index, const location_report_request& msg) = 0;
+  virtual void handle_location_reporting_control_message(cu_cp_ue_index_t               ue_index,
+                                                         const location_report_request& msg) = 0;
 
   /// \brief Handle N2 AMF connection drop.
   /// \param[in] amf_index The index of the dropped AMF.
@@ -156,13 +158,13 @@ public:
   /// \brief Handle the creation of a new NRPPA UE. This will add the NRPPA adapters to the UE manager.
   /// \param[in] ue_index The index of the new NRPPA UE.
   /// \returns Pointer to the NRPPA UE notifier.
-  virtual nrppa_cu_cp_ue_notifier* handle_new_nrppa_ue(ue_index_t ue_index) = 0;
+  virtual nrppa_cu_cp_ue_notifier* handle_new_nrppa_ue(cu_cp_ue_index_t ue_index) = 0;
 
   /// \brief Handle a UL NRPPa PDU.
   /// \param[in] msg The NRPPa PDU.
   /// \param[in] ue_or_amf_index The UE index for UE associated NRPPa messages or the AMF index for non UE associated
-  virtual void handle_ul_nrppa_pdu(const byte_buffer&                    nrppa_pdu,
-                                   std::variant<ue_index_t, amf_index_t> ue_or_amf_index) = 0;
+  virtual void handle_ul_nrppa_pdu(const byte_buffer&                          nrppa_pdu,
+                                   std::variant<cu_cp_ue_index_t, amf_index_t> ue_or_amf_index) = 0;
 
   /// \brief Handle a TRP information request.
   /// \param[in] request The TRP information request.
@@ -187,7 +189,7 @@ public:
 
   /// \brief Handles the reception of a DL Data Notification message.
   /// \param[in] ue_index The index of the UE.
-  virtual void handle_dl_data_notification(ue_index_t ue_index) = 0;
+  virtual void handle_dl_data_notification(cu_cp_ue_index_t ue_index) = 0;
 
   /// \brief Handle a UE release request.
   /// \param[in] request The release request.
@@ -210,7 +212,7 @@ public:
   /// \brief Handle a RRC UE creation notification from the DU processor.
   /// \param[in] ue_index The index of the UE.
   /// \param[in] rrc_ue The interface of the created RRC UE.
-  virtual void handle_rrc_ue_creation(ue_index_t ue_index, rrc_ue_interface& rrc_ue) = 0;
+  virtual void handle_rrc_ue_creation(cu_cp_ue_index_t ue_index, rrc_ue_interface& rrc_ue) = 0;
 
   /// \brief Handle a SIB1 request for a given cell.
   /// \param[in] du_index The index of the DU the cell is connected to.
@@ -232,7 +234,7 @@ public:
   /// \param[in] ue_index The index of the UE.
   /// \param[in] plmn The selected PLMN of the UE.
   /// \return True if the UE connection is accepted, false otherwise.
-  virtual bool handle_ue_plmn_selected(ue_index_t ue_index, const plmn_identity& plmn) = 0;
+  virtual bool handle_ue_plmn_selected(cu_cp_ue_index_t ue_index, const plmn_identity& plmn) = 0;
 
   /// \brief Handle the reception of an RRC Reestablishment Request by transfering UE Contexts at the RRC.
   /// \param[in] old_pci The old PCI contained in the RRC Reestablishment Request.
@@ -240,11 +242,11 @@ public:
   /// \param[in] ue_index The new UE index of the UE that sent the Reestablishment Request.
   /// \returns The RRC Reestablishment UE context for the old UE.
   virtual rrc_ue_reestablishment_context_response
-  handle_rrc_reestablishment_request(pci_t old_pci, rnti_t old_c_rnti, ue_index_t ue_index) = 0;
+  handle_rrc_reestablishment_request(pci_t old_pci, rnti_t old_c_rnti, cu_cp_ue_index_t ue_index) = 0;
 
   /// \brief Handle a required reestablishment context modification.
   /// \param[in] ue_index The index of the UE that needs the context modification.
-  virtual async_task<bool> handle_rrc_reestablishment_context_modification_required(ue_index_t ue_index) = 0;
+  virtual async_task<bool> handle_rrc_reestablishment_context_modification_required(cu_cp_ue_index_t ue_index) = 0;
 
   /// \brief Handle reestablishment failure by releasing the old UE.
   /// \param[in] request The release request.
@@ -252,17 +254,17 @@ public:
 
   /// \brief Handle an successful reestablishment by removing the old UE.
   /// \param[in] ue_index The index of the old UE to remove.
-  virtual void handle_rrc_reestablishment_complete(ue_index_t old_ue_index) = 0;
+  virtual void handle_rrc_reestablishment_complete(cu_cp_ue_index_t old_ue_index) = 0;
 
   /// \brief Handle a notification of the reception of the RRC Reconfiguration Complete, and notify the DU with the F1AP
   /// UE context modification procedure with the RRC Reconfiguration Complete Indicator IE present.
   /// \param[in] ue_index The index of the UE that received the reconfiguration complete.
-  virtual void handle_rrc_reconf_complete_indicator(ue_index_t ue_index) = 0;
+  virtual void handle_rrc_reconf_complete_indicator(cu_cp_ue_index_t ue_index) = 0;
 
   /// \brief Transfer and remove UE contexts for an ongoing Reestablishment.
   /// \param[in] ue_index The new UE index of the UE that sent the Reestablishment Request.
   /// \param[in] old_ue_index The old UE index of the UE that sent the Reestablishment Request.
-  virtual async_task<bool> handle_ue_context_transfer(ue_index_t ue_index, ue_index_t old_ue_index) = 0;
+  virtual async_task<bool> handle_ue_context_transfer(cu_cp_ue_index_t ue_index, cu_cp_ue_index_t old_ue_index) = 0;
 
   /// \brief Handle a UE release request.
   /// \param[in] request The release request.
@@ -275,13 +277,13 @@ public:
   handle_rrc_resume_request(const cu_cp_rrc_resume_request& request) = 0;
 
   /// \brief Initiate RAN paging for a UE in RRC Inactive state.
-  virtual void handle_ran_paging_required(ue_index_t ue_index) = 0;
+  virtual void handle_ran_paging_required(cu_cp_ue_index_t ue_index) = 0;
 };
 
 // Request with information for the target handler of the intra cu handover.
 struct cu_cp_intra_cu_handover_target_request {
-  ue_index_t                               target_ue_index = ue_index_t::invalid;
-  ue_index_t                               source_ue_index = ue_index_t::invalid;
+  cu_cp_ue_index_t                         target_ue_index = cu_cp_ue_index_t::invalid;
+  cu_cp_ue_index_t                         source_ue_index = cu_cp_ue_index_t::invalid;
   uint8_t                                  transaction_id;
   std::chrono::milliseconds                timeout;
   e1ap_bearer_context_modification_request bearer_context_modification_request;
@@ -289,8 +291,8 @@ struct cu_cp_intra_cu_handover_target_request {
 
 /// Request with information for the target handler of conditional handover.
 struct cu_cp_cho_target_request {
-  ue_index_t                source_ue_index = ue_index_t::invalid;
-  ue_index_t                target_ue_index = ue_index_t::invalid;
+  cu_cp_ue_index_t          source_ue_index = cu_cp_ue_index_t::invalid;
+  cu_cp_ue_index_t          target_ue_index = cu_cp_ue_index_t::invalid;
   cond_recfg_id_t           cond_recfg_id   = cond_recfg_id_t(bounded_integer_invalid_tag{});
   pci_t                     target_pci      = INVALID_PCI;
   unsigned                  transaction_id  = 0;
@@ -331,25 +333,25 @@ public:
   /// \brief Handle a UE context push during handover.
   /// \param[in] source_ue_index The index of the UE that is the source of the handover.
   /// \param[in] target_ue_index The index of the UE that is the target of the handover.
-  virtual void handle_handover_ue_context_push(ue_index_t source_ue_index, ue_index_t target_ue_index) = 0;
+  virtual void handle_handover_ue_context_push(cu_cp_ue_index_t source_ue_index, cu_cp_ue_index_t target_ue_index) = 0;
 
   /// \brief Initialize a handover UE release timer. When the timeout is reached, a release request is sent to the AMF.
   /// \param[in] ue_index The index of the UE.
   /// \param[in] handover_ue_release_timeout The timeout for the release.
   /// \param[in] ue_context_release_request The release request.
   virtual void
-  initialize_handover_ue_release_timer(ue_index_t                              ue_index,
+  initialize_handover_ue_release_timer(cu_cp_ue_index_t                        ue_index,
                                        std::chrono::milliseconds               handover_ue_release_timeout,
                                        const cu_cp_ue_context_release_request& ue_context_release_request) = 0;
 
   /// \brief Initialize a RNA update timer. When the timeout is reached, a release request is sent to the AMF.
   /// \param[in] ue_index The index of the UE.
-  virtual void initialize_rna_update_timer(ue_index_t ue_index) = 0;
+  virtual void initialize_rna_update_timer(cu_cp_ue_index_t ue_index) = 0;
 
   /// \brief Start CHO execution cancellation timer. Fires conditional_handover_cancellation_routine on expiry.
   /// \param[in] source_ue_index Index of the source UE.
   /// \param[in] timeout Duration; 0ms disables the timer (no-op).
-  virtual void initialize_cho_execution_timer(ue_index_t source_ue_index, std::chrono::milliseconds timeout) = 0;
+  virtual void initialize_cho_execution_timer(cu_cp_ue_index_t source_ue_index, std::chrono::milliseconds timeout) = 0;
 };
 
 /// Methods used by CU-CP to transfer the RRC UE context e.g. for RRC Reestablishments.
@@ -375,14 +377,14 @@ public:
   /// \param[in] cond_meas True if this is a conditional measurement config request (e.g. CHO).
   /// \param[in] candidate_pcis List of candidate target PCIs (when cond_meas is true); if empty, use all neighbors.
   virtual std::optional<rrc_meas_cfg>
-  handle_measurement_config_request(ue_index_t                         ue_index,
+  handle_measurement_config_request(cu_cp_ue_index_t                   ue_index,
                                     nr_cell_identity                   nci,
                                     const std::optional<rrc_meas_cfg>& current_meas_config = std::nullopt,
                                     bool                               cond_meas           = false,
                                     span<const pci_t>                  candidate_pcis      = {}) = 0;
 
   /// \brief Handle a measurement report for given UE.
-  virtual void handle_measurement_report(ue_index_t ue_index, const rrc_meas_results& meas_results) = 0;
+  virtual void handle_measurement_report(cu_cp_ue_index_t ue_index, const rrc_meas_results& meas_results) = 0;
 };
 
 /// Interface to handle measurement config update requests.
@@ -416,7 +418,7 @@ public:
 
   /// \brief Handle a intra-cell handover required to refresh KgNB key for the UE
   /// \param[in] ue_index The index of the UE that needs the intra-cell handover
-  virtual void handle_intra_cell_handover_required(ue_index_t ue_index) = 0;
+  virtual void handle_intra_cell_handover_required(cu_cp_ue_index_t ue_index) = 0;
 };
 
 /// Interface to handle location reporting updates for UEs.
@@ -427,7 +429,7 @@ public:
 
   /// \brief Handle a UE location change and send NGAP Location Report if needed.
   /// \param[in] ue_index The index of the UE.
-  virtual void handle_location_update(ue_index_t ue_index) = 0;
+  virtual void handle_location_update(cu_cp_ue_index_t ue_index) = 0;
 };
 
 /// Interface to handle ue removals.
@@ -438,10 +440,10 @@ public:
 
   /// \brief Completly remove a UE from the CU-CP.
   /// \param[in] ue_index The index of the UE to remove.
-  virtual async_task<void> handle_ue_removal_request(ue_index_t ue_index) = 0;
+  virtual async_task<void> handle_ue_removal_request(cu_cp_ue_index_t ue_index) = 0;
 
   /// \brief Cancel pending UE tasks.
-  virtual void handle_pending_ue_task_cancellation(ue_index_t ue_index) = 0;
+  virtual void handle_pending_ue_task_cancellation(cu_cp_ue_index_t ue_index) = 0;
 };
 
 /// Interface to handle AMF reconnections.
@@ -468,11 +470,11 @@ public:
 
   /// \brief Handle the reception of a Handover Cancel message.
   /// \param[in] ue_index The index of the UE that is the target of the handover cancel.
-  virtual void handle_handover_cancel_received(ue_index_t ue_index) = 0;
+  virtual void handle_handover_cancel_received(cu_cp_ue_index_t ue_index) = 0;
 
   /// \brief Handle the reception of an XNAP UE Context Release message.
   /// \param[in] ue_index The index of the UE to be released.
-  virtual void handle_xnap_ue_context_release_received(ue_index_t ue_index) = 0;
+  virtual void handle_xnap_ue_context_release_received(cu_cp_ue_index_t ue_index) = 0;
 };
 
 class cu_cp_impl_interface : public cu_cp_e1ap_event_handler,

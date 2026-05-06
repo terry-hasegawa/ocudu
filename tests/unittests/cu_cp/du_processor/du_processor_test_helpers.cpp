@@ -29,7 +29,7 @@ struct dummy_cu_cp_ue_admission_controller : public cu_cp_ue_admission_controlle
 
 struct dummy_cu_cp_measurement_handler : public cu_cp_measurement_handler {
   std::optional<rrc_meas_cfg>
-  handle_measurement_config_request(ue_index_t                         ue_index,
+  handle_measurement_config_request(cu_cp_ue_index_t                   ue_index,
                                     nr_cell_identity                   nci,
                                     const std::optional<rrc_meas_cfg>& current_meas_config = std::nullopt,
                                     bool                               cond_meas           = false,
@@ -37,28 +37,28 @@ struct dummy_cu_cp_measurement_handler : public cu_cp_measurement_handler {
   {
     return std::nullopt;
   }
-  void handle_measurement_report(const ue_index_t ue_index, const rrc_meas_results& meas_results) override {}
+  void handle_measurement_report(const cu_cp_ue_index_t ue_index, const rrc_meas_results& meas_results) override {}
 };
 
 struct dummy_cu_cp_ue_removal_handler : public cu_cp_ue_removal_handler {
-  async_task<void> handle_ue_removal_request(ue_index_t ue_index) override { return launch_no_op_task(); }
-  void             handle_pending_ue_task_cancellation(ue_index_t ue_index) override {}
+  async_task<void> handle_ue_removal_request(cu_cp_ue_index_t ue_index) override { return launch_no_op_task(); }
+  void             handle_pending_ue_task_cancellation(cu_cp_ue_index_t ue_index) override {}
 };
 
 struct dummy_cu_cp_rrc_ue_interface : public cu_cp_rrc_ue_interface {
-  bool handle_ue_plmn_selected(ue_index_t ue_index, const plmn_identity& plmn) override { return true; }
+  bool handle_ue_plmn_selected(cu_cp_ue_index_t ue_index, const plmn_identity& plmn) override { return true; }
   rrc_ue_reestablishment_context_response
-  handle_rrc_reestablishment_request(pci_t old_pci, rnti_t old_c_rnti, ue_index_t ue_index) override
+  handle_rrc_reestablishment_request(pci_t old_pci, rnti_t old_c_rnti, cu_cp_ue_index_t ue_index) override
   {
     return {};
   }
-  async_task<bool> handle_rrc_reestablishment_context_modification_required(ue_index_t ue_index) override
+  async_task<bool> handle_rrc_reestablishment_context_modification_required(cu_cp_ue_index_t ue_index) override
   {
     return launch_no_op_task(true);
   }
   void             handle_rrc_reestablishment_failure(const cu_cp_ue_context_release_request& request) override {}
-  void             handle_rrc_reestablishment_complete(ue_index_t old_ue_index) override {}
-  async_task<bool> handle_ue_context_transfer(ue_index_t ue_index, ue_index_t old_ue_index) override
+  void             handle_rrc_reestablishment_complete(cu_cp_ue_index_t old_ue_index) override {}
+  async_task<bool> handle_ue_context_transfer(cu_cp_ue_index_t ue_index, cu_cp_ue_index_t old_ue_index) override
   {
     return launch_no_op_task(true);
   }
@@ -70,15 +70,15 @@ struct dummy_cu_cp_rrc_ue_interface : public cu_cp_rrc_ue_interface {
   {
     return launch_no_op_task(rrc_resume_request_response{.success = true});
   }
-  void handle_ran_paging_required(ue_index_t ue_index) override {}
-  void handle_rrc_reconf_complete_indicator(ue_index_t ue_index) override {}
+  void handle_ran_paging_required(cu_cp_ue_index_t ue_index) override {}
+  void handle_rrc_reconf_complete_indicator(cu_cp_ue_index_t ue_index) override {}
 };
 
 struct dummy_cu_cp_du_event_handler : public cu_cp_du_event_handler {
 public:
   dummy_cu_cp_du_event_handler(ue_manager& ue_mng_) : ue_mng(ue_mng_) {}
 
-  void handle_rrc_ue_creation(ue_index_t ue_index, rrc_ue_interface& rrc_ue) override
+  void handle_rrc_ue_creation(cu_cp_ue_index_t ue_index, rrc_ue_interface& rrc_ue) override
   {
     ue_mng.get_rrc_ue_cu_cp_adapter(ue_index).connect_cu_cp(rrc_ue_handler,
                                                             ue_rem_handler,

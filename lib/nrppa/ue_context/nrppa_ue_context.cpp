@@ -9,19 +9,19 @@ using namespace ocucp;
 
 nrppa_ue_context_list::nrppa_ue_context_list(ocudulog::basic_logger& logger_) : logger(logger_) {}
 
-bool nrppa_ue_context_list::contains(ue_index_t ue_index) const
+bool nrppa_ue_context_list::contains(cu_cp_ue_index_t ue_index) const
 {
   return ues.find(ue_index) != ues.end();
 }
 
-nrppa_ue_context& nrppa_ue_context_list::operator[](ue_index_t ue_index)
+nrppa_ue_context& nrppa_ue_context_list::operator[](cu_cp_ue_index_t ue_index)
 {
   ocudu_assert(ues.find(ue_index) != ues.end(), "ue={}: NRPPA UE context not found", ue_index);
 
   return ues.at(ue_index);
 }
 
-nrppa_ue_context& nrppa_ue_context_list::add_ue(ue_index_t               ue_index,
+nrppa_ue_context& nrppa_ue_context_list::add_ue(cu_cp_ue_index_t         ue_index,
                                                 ran_ue_meas_id_t         ran_ue_meas_id,
                                                 lmf_ue_meas_id_t         lmf_ue_meas_id,
                                                 nrppa_cu_cp_ue_notifier& ue_notifier,
@@ -38,14 +38,14 @@ nrppa_ue_context& nrppa_ue_context_list::add_ue(ue_index_t               ue_inde
   return ues.at(ue_index);
 }
 
-void nrppa_ue_context_list::update_ue_index(ue_index_t               new_ue_index,
-                                            ue_index_t               old_ue_index,
+void nrppa_ue_context_list::update_ue_index(cu_cp_ue_index_t         new_ue_index,
+                                            cu_cp_ue_index_t         old_ue_index,
                                             nrppa_cu_cp_ue_notifier& new_ue_notifier,
                                             timer_manager&           timers,
                                             task_executor&           task_exec)
 {
-  ocudu_assert(new_ue_index != ue_index_t::invalid, "Invalid new_ue_index={}", new_ue_index);
-  ocudu_assert(old_ue_index != ue_index_t::invalid, "Invalid old_ue_index={}", old_ue_index);
+  ocudu_assert(new_ue_index != cu_cp_ue_index_t::invalid, "Invalid new_ue_index={}", new_ue_index);
+  ocudu_assert(old_ue_index != cu_cp_ue_index_t::invalid, "Invalid old_ue_index={}", old_ue_index);
   ocudu_assert(ues.find(old_ue_index) != ues.end(), "ue={}: NRPPA UE context not found", old_ue_index);
   ocudu_assert(ues.find(new_ue_index) == ues.end(), "ue={}: NRPPA UE context already exists", new_ue_index);
 
@@ -63,7 +63,7 @@ void nrppa_ue_context_list::update_ue_index(ue_index_t               new_ue_inde
   ues.at(new_ue_index).logger.log_debug("Updated UE index from ue_index={}", old_ue_index);
 }
 
-void nrppa_ue_context_list::remove_ue_context(ue_index_t ue_index)
+void nrppa_ue_context_list::remove_ue_context(cu_cp_ue_index_t ue_index)
 {
   if (ues.find(ue_index) == ues.end()) {
     logger.warning("ue={}: NRPPA UE not found", ue_index);

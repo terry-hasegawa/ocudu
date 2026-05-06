@@ -25,42 +25,42 @@ public:
   ~nrppa_impl();
 
   // See nrppa_message_handler for documentation.
-  void handle_new_nrppa_pdu(const byte_buffer&                    nrppa_pdu,
-                            std::variant<ue_index_t, amf_index_t> ue_or_amf_index) override;
+  void handle_new_nrppa_pdu(const byte_buffer&                          nrppa_pdu,
+                            std::variant<cu_cp_ue_index_t, amf_index_t> ue_or_amf_index) override;
 
   // See nrppa_ue_context_removal_handler for documentation.
-  void remove_ue_context(ue_index_t ue_index) override;
+  void remove_ue_context(cu_cp_ue_index_t ue_index) override;
 
   /// \brief Initialize the measurement report timer for the UE.
   /// \param[in] ue_index The UE index.
   /// \param[in] meas_periodicity_ms The measurement periodicity in milliseconds.
-  void initialize_meas_report_timer(ue_index_t ue_index, std::chrono::milliseconds meas_periodicity_ms);
+  void initialize_meas_report_timer(cu_cp_ue_index_t ue_index, std::chrono::milliseconds meas_periodicity_ms);
 
   nrppa_message_handler&            get_nrppa_message_handler() override { return *this; }
   nrppa_ue_context_removal_handler& get_nrppa_ue_context_removal_handler() override { return *this; }
 
 private:
   /// \brief Send the measurement results to the LMF.
-  void handle_e_cid_meas_result(ue_index_t ue_index, const nrppa_e_cid_meas_result& result);
+  void handle_e_cid_meas_result(cu_cp_ue_index_t ue_index, const nrppa_e_cid_meas_result& result);
 
   /// \brief Callback function for the measurement report timer. This sends a measurement report to the LMF.
-  void on_meas_report_timer_expired(ue_index_t ue_index);
+  void on_meas_report_timer_expired(cu_cp_ue_index_t ue_index);
 
   /// \brief Handle the reception of an initiating message.
   /// \param[in] msg The received initiating message.
   /// \param[in] ue_or_amf_index The UE index for UE associated NRPPa messages or the AMF index for non UE associated
   /// NRPPa messages.
-  void handle_initiating_message(const asn1::nrppa::init_msg_s&        msg,
-                                 std::variant<ue_index_t, amf_index_t> ue_or_amf_index);
+  void handle_initiating_message(const asn1::nrppa::init_msg_s&              msg,
+                                 std::variant<cu_cp_ue_index_t, amf_index_t> ue_or_amf_index);
 
   /// \brief Handle an E-CID measurement initiation request.
   void handle_e_cid_meas_initiation_request(const asn1::nrppa::e_c_id_meas_initiation_request_s& msg,
-                                            ue_index_t                                           ue_index,
+                                            cu_cp_ue_index_t                                     ue_index,
                                             uint16_t                                             transaction_id);
 
   /// \brief Handle an E-CID measurement termination command.
   void handle_e_cid_meas_termination_command(const asn1::nrppa::e_c_id_meas_termination_cmd_s& msg,
-                                             ue_index_t                                        ue_index);
+                                             cu_cp_ue_index_t                                  ue_index);
 
   /// \brief Handle a TRP information request.
   void handle_trp_information_request(const asn1::nrppa::trp_info_request_s& msg,
@@ -69,12 +69,12 @@ private:
 
   /// \brief Handle a positioning information request.
   void handle_positioning_information_request(const asn1::nrppa::positioning_info_request_s& msg,
-                                              ue_index_t                                     ue_index,
+                                              cu_cp_ue_index_t                               ue_index,
                                               uint16_t                                       transaction_id);
 
   /// \brief Handle a positioning activation request.
   void handle_positioning_activation_request(const asn1::nrppa::positioning_activation_request_s& msg,
-                                             ue_index_t                                           ue_index,
+                                             cu_cp_ue_index_t                                     ue_index,
                                              uint16_t                                             transaction_id);
 
   /// \brief Handle a measurement request.

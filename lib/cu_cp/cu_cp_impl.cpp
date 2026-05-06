@@ -320,7 +320,7 @@ void cu_cp_impl::handle_bearer_context_inactivity_notification(const cu_cp_inact
   }
 }
 
-void cu_cp_impl::handle_dl_data_notification(ue_index_t ue_index)
+void cu_cp_impl::handle_dl_data_notification(cu_cp_ue_index_t ue_index)
 {
   std::optional<full_i_rnti_t> full_i_rnti = ue_mng.get_full_i_rnti(ue_index);
   if (!full_i_rnti.has_value()) {
@@ -337,7 +337,7 @@ void cu_cp_impl::handle_e1_release_request(cu_up_index_t cu_up_index)
   // TODO
 }
 
-bool cu_cp_impl::handle_ue_plmn_selected(ue_index_t ue_index, const plmn_identity& plmn)
+bool cu_cp_impl::handle_ue_plmn_selected(cu_cp_ue_index_t ue_index, const plmn_identity& plmn)
 {
   if (!controller.is_supported_plmn(plmn)) {
     logger.warning("ue={}: PLMN {} not supported, rejecting UE", ue_index, plmn);
@@ -357,12 +357,12 @@ bool cu_cp_impl::handle_ue_plmn_selected(ue_index_t ue_index, const plmn_identit
 }
 
 rrc_ue_reestablishment_context_response
-cu_cp_impl::handle_rrc_reestablishment_request(pci_t old_pci, rnti_t old_c_rnti, ue_index_t ue_index)
+cu_cp_impl::handle_rrc_reestablishment_request(pci_t old_pci, rnti_t old_c_rnti, cu_cp_ue_index_t ue_index)
 {
   rrc_ue_reestablishment_context_response reest_context{};
 
-  ue_index_t old_ue_index = ue_mng.get_ue_index(old_pci, old_c_rnti);
-  if (old_ue_index == ue_index_t::invalid || old_ue_index == ue_index) {
+  cu_cp_ue_index_t old_ue_index = ue_mng.get_ue_index(old_pci, old_c_rnti);
+  if (old_ue_index == cu_cp_ue_index_t::invalid || old_ue_index == ue_index) {
     return reest_context;
   }
 
@@ -430,7 +430,7 @@ cu_cp_impl::handle_rrc_reestablishment_request(pci_t old_pci, rnti_t old_c_rnti,
   return reest_context;
 }
 
-async_task<bool> cu_cp_impl::handle_rrc_reestablishment_context_modification_required(ue_index_t ue_index)
+async_task<bool> cu_cp_impl::handle_rrc_reestablishment_context_modification_required(cu_cp_ue_index_t ue_index)
 {
   cu_cp_ue* ue = ue_mng.find_du_ue(ue_index);
   ocudu_assert(ue != nullptr, "ue={}: Could not find DU UE", ue_index);
@@ -457,7 +457,7 @@ void cu_cp_impl::handle_rrc_reestablishment_failure(const cu_cp_ue_context_relea
   };
 }
 
-void cu_cp_impl::handle_rrc_reestablishment_complete(ue_index_t old_ue_index)
+void cu_cp_impl::handle_rrc_reestablishment_complete(cu_cp_ue_index_t old_ue_index)
 {
   auto* ue = ue_mng.find_ue(old_ue_index);
   if (ue != nullptr) {
@@ -465,7 +465,7 @@ void cu_cp_impl::handle_rrc_reestablishment_complete(ue_index_t old_ue_index)
   };
 }
 
-void cu_cp_impl::handle_rrc_reconf_complete_indicator(ue_index_t ue_index)
+void cu_cp_impl::handle_rrc_reconf_complete_indicator(cu_cp_ue_index_t ue_index)
 {
   cu_cp_ue* ue = ue_mng.find_du_ue(ue_index);
   if (ue == nullptr) {
@@ -495,7 +495,7 @@ void cu_cp_impl::handle_rrc_reconf_complete_indicator(ue_index_t ue_index)
   }
 }
 
-async_task<bool> cu_cp_impl::handle_ue_context_transfer(ue_index_t ue_index, ue_index_t old_ue_index)
+async_task<bool> cu_cp_impl::handle_ue_context_transfer(cu_cp_ue_index_t ue_index, cu_cp_ue_index_t old_ue_index)
 {
   if (cu_up_db.get_nof_cu_ups() == 0) {
     logger.warning("No CU-UP connected");
@@ -586,7 +586,7 @@ async_task<bool> cu_cp_impl::handle_ue_context_transfer(ue_index_t ue_index, ue_
 
   // Task that the caller will use to sync with the old UE task scheduler.
   struct transfer_context_task {
-    transfer_context_task(cu_cp_impl& parent_, ue_index_t old_ue_index_, unique_function<bool()> callable) :
+    transfer_context_task(cu_cp_impl& parent_, cu_cp_ue_index_t old_ue_index_, unique_function<bool()> callable) :
       parent(parent_),
       old_ue_index(old_ue_index_),
       task([this, callable = std::move(callable)]() { transfer_successful = callable(); })
@@ -604,9 +604,9 @@ async_task<bool> cu_cp_impl::handle_ue_context_transfer(ue_index_t ue_index, ue_
       CORO_RETURN(task_run and transfer_successful);
     }
 
-    cu_cp_impl& parent;
-    ue_index_t  old_ue_index;
-    unique_task task;
+    cu_cp_impl&      parent;
+    cu_cp_ue_index_t old_ue_index;
+    unique_task      task;
 
     bool transfer_successful = false;
   };
@@ -650,7 +650,7 @@ void cu_cp_impl::handle_cho_reconfiguration_sent(const cu_cp_cho_target_request&
       request, ue_mng, du_db, cu_up_db, *this, *this, mobility_mng, logger));
 }
 
-void cu_cp_impl::handle_handover_ue_context_push(ue_index_t source_ue_index, ue_index_t target_ue_index)
+void cu_cp_impl::handle_handover_ue_context_push(cu_cp_ue_index_t source_ue_index, cu_cp_ue_index_t target_ue_index)
 {
   auto* ue = ue_mng.find_ue(target_ue_index);
   ocudu_assert(ue != nullptr, "ue={} not found", target_ue_index);
@@ -682,8 +682,8 @@ void cu_cp_impl::trigger_release(pci_t                                         s
                                  rnti_t                                        rnti,
                                  std::optional<cu_cp_release_redirect_nr_info> redirect_info)
 {
-  ue_index_t ue_index = ue_mng.get_ue_index(source_pci, rnti);
-  if (ue_index == ue_index_t::invalid) {
+  cu_cp_ue_index_t ue_index = ue_mng.get_ue_index(source_pci, rnti);
+  if (ue_index == cu_cp_ue_index_t::invalid) {
     logger.warning("Could not trigger release, UE invalid. rnti={} pci={}", rnti, source_pci);
     return;
   }
@@ -762,7 +762,7 @@ async_task<rrc_resume_request_response> cu_cp_impl::handle_rrc_resume_request(co
                                          logger);
 }
 
-void cu_cp_impl::handle_ran_paging_required(ue_index_t ue_index)
+void cu_cp_impl::handle_ran_paging_required(cu_cp_ue_index_t ue_index)
 {
   std::optional<full_i_rnti_t> full_i_rnti = ue_mng.get_full_i_rnti(ue_index);
   if (!full_i_rnti.has_value()) {
@@ -774,7 +774,7 @@ void cu_cp_impl::handle_ran_paging_required(ue_index_t ue_index)
   send_ran_paging(ue_index, full_i_rnti.value());
 }
 
-bool cu_cp_impl::handle_handover_request(ue_index_t                        ue_index,
+bool cu_cp_impl::handle_handover_request(cu_cp_ue_index_t                  ue_index,
                                          const plmn_identity&              selected_plmn,
                                          const security::security_context& sec_ctxt)
 {
@@ -1002,7 +1002,7 @@ cu_cp_impl::handle_ngap_handover_request(const ngap_handover_request& request)
 }
 
 void cu_cp_impl::handle_inter_cu_target_handover_execution(
-    ue_index_t                                                   ue_index,
+    cu_cp_ue_index_t                                             ue_index,
     const std::optional<xnap_handover_target_execution_context>& xnap_ho_target_execution_ctxt)
 {
   cu_cp_ue* ue = ue_mng.find_du_ue(ue_index);
@@ -1044,7 +1044,7 @@ void cu_cp_impl::handle_transmission_of_handover_required()
   mobility_mng.get_metrics_handler().aggregate_requested_handover_preparation();
 }
 
-async_task<bool> cu_cp_impl::handle_new_rrc_handover_command(ue_index_t                      ue_index,
+async_task<bool> cu_cp_impl::handle_new_rrc_handover_command(cu_cp_ue_index_t                ue_index,
                                                              byte_buffer                     command,
                                                              std::optional<xnc_peer_index_t> xnc_index)
 {
@@ -1096,7 +1096,7 @@ cu_cp_impl::handle_xnap_handover_request(const xnap_handover_request& request)
   return handle_inter_cu_handover_request(inter_cu_handover_request);
 }
 
-void cu_cp_impl::handle_handover_cancel_received(ue_index_t ue_index)
+void cu_cp_impl::handle_handover_cancel_received(cu_cp_ue_index_t ue_index)
 {
   cu_cp_ue* ue = ue_mng.find_ue(ue_index);
   if (ue == nullptr) {
@@ -1111,7 +1111,7 @@ void cu_cp_impl::handle_handover_cancel_received(ue_index_t ue_index)
   ue->get_task_sched().schedule_async_task(handle_ue_context_release(release_request));
 }
 
-void cu_cp_impl::handle_xnap_ue_context_release_received(ue_index_t ue_index)
+void cu_cp_impl::handle_xnap_ue_context_release_received(cu_cp_ue_index_t ue_index)
 {
   cu_cp_ue* ue = ue_mng.find_ue(ue_index);
   if (ue == nullptr) {
@@ -1132,37 +1132,38 @@ void cu_cp_impl::handle_xnap_ue_context_release_received(ue_index_t ue_index)
   }));
 }
 
-ue_index_t cu_cp_impl::handle_ue_index_allocation_request(const nr_cell_global_id_t& cgi, const plmn_identity& plmn)
+cu_cp_ue_index_t cu_cp_impl::handle_ue_index_allocation_request(const nr_cell_global_id_t& cgi,
+                                                                const plmn_identity&       plmn)
 {
   du_index_t du_index = du_db.find_du(cgi);
   if (du_index == du_index_t::invalid) {
     logger.warning("Could not find DU for CGI={}", cgi.nci);
-    return ue_index_t::invalid;
+    return cu_cp_ue_index_t::invalid;
   }
 
-  ue_index_t ue_index = ue_mng.add_ue(du_index);
-  if (ue_index == ue_index_t::invalid) {
+  cu_cp_ue_index_t ue_index = ue_mng.add_ue(du_index);
+  if (ue_index == cu_cp_ue_index_t::invalid) {
     logger.warning("Could not add new UE context for CGI={}", cgi.nci);
-    return ue_index_t::invalid;
+    return cu_cp_ue_index_t::invalid;
   }
 
   // Check if UE can be served.
   if (ue_mng.ue_admission_limit_reached()) {
     logger.warning("ue={}: Could not add new UE context for CGI={}. UE not servable", ue_index, cgi.nci);
     ue_mng.remove_ue(ue_index);
-    return ue_index_t::invalid;
+    return cu_cp_ue_index_t::invalid;
   }
 
   if (!handle_ue_plmn_selected(ue_index, plmn)) {
     logger.warning("ue={}: PLMN selection failed", ue_index);
     ue_mng.remove_ue(ue_index);
-    return ue_index_t::invalid;
+    return cu_cp_ue_index_t::invalid;
   }
 
   return ue_index;
 }
 
-void cu_cp_impl::handle_dl_ue_associated_nrppa_transport_pdu(ue_index_t ue_index, const byte_buffer& nrppa_pdu)
+void cu_cp_impl::handle_dl_ue_associated_nrppa_transport_pdu(cu_cp_ue_index_t ue_index, const byte_buffer& nrppa_pdu)
 {
   nrppa_entity->get_nrppa_message_handler().handle_new_nrppa_pdu(nrppa_pdu, ue_index);
 }
@@ -1172,7 +1173,8 @@ void cu_cp_impl::handle_dl_non_ue_associated_nrppa_transport_pdu(amf_index_t amf
   nrppa_entity->get_nrppa_message_handler().handle_new_nrppa_pdu(nrppa_pdu, amf_index);
 }
 
-void cu_cp_impl::handle_location_reporting_control_message(ue_index_t ue_index, const location_report_request& msg)
+void cu_cp_impl::handle_location_reporting_control_message(cu_cp_ue_index_t               ue_index,
+                                                           const location_report_request& msg)
 {
   auto* ue = ue_mng.find_du_ue(ue_index);
   if (ue == nullptr) {
@@ -1238,7 +1240,7 @@ void cu_cp_impl::handle_location_reporting_control_message(ue_index_t ue_index, 
   }
 }
 
-void cu_cp_impl::handle_location_update(ue_index_t ue_index)
+void cu_cp_impl::handle_location_update(cu_cp_ue_index_t ue_index)
 {
   auto* ue = ue_mng.find_du_ue(ue_index);
   if (ue == nullptr) {
@@ -1270,7 +1272,7 @@ void cu_cp_impl::handle_location_update(ue_index_t ue_index)
   ngap->handle_location_report_transmission(opt_report.value());
 }
 
-nrppa_cu_cp_ue_notifier* cu_cp_impl::handle_new_nrppa_ue(ue_index_t ue_index)
+nrppa_cu_cp_ue_notifier* cu_cp_impl::handle_new_nrppa_ue(cu_cp_ue_index_t ue_index)
 {
   auto* ue = ue_mng.find_ue(ue_index);
   if (ue == nullptr) {
@@ -1279,11 +1281,11 @@ nrppa_cu_cp_ue_notifier* cu_cp_impl::handle_new_nrppa_ue(ue_index_t ue_index)
   return &ue->get_nrppa_cu_cp_ue_notifier();
 }
 
-void cu_cp_impl::handle_ul_nrppa_pdu(const byte_buffer&                    nrppa_pdu,
-                                     std::variant<ue_index_t, amf_index_t> ue_or_amf_index)
+void cu_cp_impl::handle_ul_nrppa_pdu(const byte_buffer&                          nrppa_pdu,
+                                     std::variant<cu_cp_ue_index_t, amf_index_t> ue_or_amf_index)
 {
-  if (std::holds_alternative<ue_index_t>(ue_or_amf_index)) {
-    ue_index_t ue_index = std::get<ue_index_t>(ue_or_amf_index);
+  if (std::holds_alternative<cu_cp_ue_index_t>(ue_or_amf_index)) {
+    cu_cp_ue_index_t ue_index = std::get<cu_cp_ue_index_t>(ue_or_amf_index);
 
     if (ue_mng.find_du_ue(ue_index) == nullptr) {
       logger.warning("UE index={} got removed", ue_index);
@@ -1336,7 +1338,7 @@ void cu_cp_impl::handle_n2_disconnection(amf_index_t amf_index)
 }
 
 std::optional<rrc_meas_cfg>
-cu_cp_impl::handle_measurement_config_request(ue_index_t                         ue_index,
+cu_cp_impl::handle_measurement_config_request(cu_cp_ue_index_t                   ue_index,
                                               nr_cell_identity                   nci,
                                               const std::optional<rrc_meas_cfg>& current_meas_config,
                                               bool                               cond_meas,
@@ -1345,7 +1347,7 @@ cu_cp_impl::handle_measurement_config_request(ue_index_t                        
   return cell_meas_mng.get_measurement_config(ue_index, nci, current_meas_config, cond_meas, candidate_pcis);
 }
 
-void cu_cp_impl::handle_measurement_report(ue_index_t ue_index, const rrc_meas_results& meas_results)
+void cu_cp_impl::handle_measurement_report(cu_cp_ue_index_t ue_index, const rrc_meas_results& meas_results)
 {
   cell_meas_mng.report_measurement(ue_index, meas_results);
 }
@@ -1388,7 +1390,7 @@ cu_cp_impl::handle_intra_cu_cho_request(const cu_cp_intra_cu_cho_request& reques
   return launch_async<conditional_handover_coordinator_routine>(request, du_db, *this, ue_mng, mobility_mng, logger);
 }
 
-void cu_cp_impl::handle_intra_cell_handover_required(ue_index_t ue_index)
+void cu_cp_impl::handle_intra_cell_handover_required(cu_cp_ue_index_t ue_index)
 {
   cu_cp_ue* ue = ue_mng.find_du_ue(ue_index);
   ocudu_assert(ue != nullptr, "ue={}: Could not find DU UE", ue_index);
@@ -1413,7 +1415,7 @@ void cu_cp_impl::handle_intra_cell_handover_required(ue_index_t ue_index)
   }
 }
 
-async_task<void> cu_cp_impl::handle_ue_removal_request(ue_index_t ue_index)
+async_task<void> cu_cp_impl::handle_ue_removal_request(cu_cp_ue_index_t ue_index)
 {
   if (ue_mng.find_du_ue(ue_index) == nullptr) {
     logger.warning("ue={}: Could not find DU UE", ue_index);
@@ -1478,7 +1480,7 @@ async_task<void> cu_cp_impl::handle_ue_removal_request(ue_index_t ue_index)
                                           logger);
 }
 
-void cu_cp_impl::handle_pending_ue_task_cancellation(ue_index_t ue_index)
+void cu_cp_impl::handle_pending_ue_task_cancellation(cu_cp_ue_index_t ue_index)
 {
   ocudu_assert(ue_mng.find_du_ue(ue_index) != nullptr, "ue={}: Could not find DU UE", ue_index);
 
@@ -1505,7 +1507,7 @@ void cu_cp_impl::handle_amf_reconnection(amf_index_t amf_index)
 }
 
 void cu_cp_impl::initialize_handover_ue_release_timer(
-    ue_index_t                              ue_index,
+    cu_cp_ue_index_t                        ue_index,
     std::chrono::milliseconds               handover_ue_release_timeout,
     const cu_cp_ue_context_release_request& ue_context_release_request)
 {
@@ -1530,7 +1532,7 @@ void cu_cp_impl::initialize_handover_ue_release_timer(
   ue->get_handover_ue_release_timer().run();
 }
 
-void cu_cp_impl::initialize_rna_update_timer(ue_index_t ue_index)
+void cu_cp_impl::initialize_rna_update_timer(cu_cp_ue_index_t ue_index)
 {
   if (ue_mng.find_du_ue(ue_index) == nullptr) {
     logger.warning("ue={}: Could not find UE", ue_index);
@@ -1558,7 +1560,7 @@ void cu_cp_impl::initialize_rna_update_timer(ue_index_t ue_index)
   rna_update_timer.run();
 }
 
-void cu_cp_impl::initialize_cho_execution_timer(ue_index_t ue_index, std::chrono::milliseconds timeout)
+void cu_cp_impl::initialize_cho_execution_timer(cu_cp_ue_index_t ue_index, std::chrono::milliseconds timeout)
 {
   if (timeout.count() == 0) {
     return;
@@ -1589,7 +1591,7 @@ void cu_cp_impl::initialize_cho_execution_timer(ue_index_t ue_index, std::chrono
 
 // private
 
-void cu_cp_impl::handle_rrc_ue_creation(ue_index_t ue_index, rrc_ue_interface& rrc_ue)
+void cu_cp_impl::handle_rrc_ue_creation(cu_cp_ue_index_t ue_index, rrc_ue_interface& rrc_ue)
 {
   // Store the RRC UE in the UE manager.
   auto* ue = ue_mng.find_ue(ue_index);
@@ -1616,7 +1618,7 @@ async_task<void> cu_cp_impl::handle_transaction_info_loss(const ue_transaction_i
   return launch_async<ue_transaction_info_release_routine>(ev, ue_mng, ngap_db, cu_up_db, *this, logger);
 }
 
-ngap_cu_cp_ue_notifier* cu_cp_impl::handle_new_ngap_ue(ue_index_t ue_index)
+ngap_cu_cp_ue_notifier* cu_cp_impl::handle_new_ngap_ue(cu_cp_ue_index_t ue_index)
 {
   auto* ue = ue_mng.find_ue(ue_index);
   if (ue == nullptr) {
@@ -1625,7 +1627,7 @@ ngap_cu_cp_ue_notifier* cu_cp_impl::handle_new_ngap_ue(ue_index_t ue_index)
   return &ue->get_ngap_cu_cp_ue_notifier();
 }
 
-bool cu_cp_impl::schedule_ue_task(ue_index_t ue_index, async_task<void> task)
+bool cu_cp_impl::schedule_ue_task(cu_cp_ue_index_t ue_index, async_task<void> task)
 {
   if (ue_mng.find_ue_task_scheduler(ue_index) == nullptr) {
     logger.debug("UE task scheduler not found for UE index={}", ue_index);
@@ -1656,7 +1658,7 @@ void cu_cp_impl::request_ue_release(cu_cp_ue& ue, const ngap_cause_t& cause)
   }));
 }
 
-void cu_cp_impl::send_ran_paging(ue_index_t ue_index, full_i_rnti_t full_i_rnti)
+void cu_cp_impl::send_ran_paging(cu_cp_ue_index_t ue_index, full_i_rnti_t full_i_rnti)
 {
   cu_cp_ue* ue = ue_mng.find_du_ue(ue_index);
   if (ue == nullptr) {
@@ -1735,7 +1737,7 @@ void cu_cp_impl::send_ran_paging(ue_index_t ue_index, full_i_rnti_t full_i_rnti)
   ran_paging_timer.run();
 }
 
-void cu_cp_impl::request_release_of_inactive_ue(ue_index_t ue_index)
+void cu_cp_impl::request_release_of_inactive_ue(cu_cp_ue_index_t ue_index)
 {
   cu_cp_ue* ue = ue_mng.find_ue(ue_index);
   if (ue == nullptr) {

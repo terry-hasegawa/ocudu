@@ -3,6 +3,7 @@
 // Portions of this file may implement 3GPP specifications, which may be subject to additional licensing requirements.
 
 #include "ue_location_manager.h"
+#include "ocudu/ocudulog/ocudulog.h"
 
 using namespace ocudu;
 using namespace ocudu::ocucp;
@@ -135,7 +136,8 @@ ue_presence ue_location_manager::check_ue_presence(const area_of_interest& aoi, 
 }
 
 std::optional<location_report>
-ue_location_manager::get_location_report(ue_index_t ue_index, const cu_cp_user_location_info_nr& user_location_info)
+ue_location_manager::get_location_report(cu_cp_ue_index_t                   ue_index,
+                                         const cu_cp_user_location_info_nr& user_location_info)
 {
   if (!cfg.report_on_cell_change && !cfg.report_ue_presence_in_aoi) {
     return std::nullopt;
@@ -164,7 +166,7 @@ ue_location_manager::get_location_report(ue_index_t ue_index, const cu_cp_user_l
   return report;
 }
 
-location_report ue_location_manager::get_direct_location_report(ue_index_t                         ue_index,
+location_report ue_location_manager::get_direct_location_report(cu_cp_ue_index_t                   ue_index,
                                                                 const cu_cp_user_location_info_nr& user_location_info,
                                                                 const location_report_request&     request)
 {

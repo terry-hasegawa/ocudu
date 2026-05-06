@@ -9,7 +9,6 @@
 #include "ocudu/support/executors/manual_task_worker.h"
 #include <cstdint>
 #include <gtest/gtest.h>
-#include <memory>
 
 using namespace ocudu;
 using namespace ocucp;
@@ -43,10 +42,10 @@ protected:
     ocudulog::flush();
   }
 
-  ue_index_t generate_random_ue_index()
+  cu_cp_ue_index_t generate_random_ue_index()
   {
-    return uint_to_ue_index(
-        test_rng::uniform_int<uint64_t>(ue_index_to_uint(ue_index_t::min), ue_index_to_uint(ue_index_t::max) - 1));
+    return uint_to_ue_index(test_rng::uniform_int<uint64_t>(cu_cp_ue_index_to_uint(cu_cp_ue_index_t::min),
+                                                            cu_cp_ue_index_to_uint(cu_cp_ue_index_t::max) - 1));
   }
 
   ocudulog::basic_logger&   f1ap_logger = ocudulog::fetch_basic_logger("CU-CP-F1");
@@ -58,7 +57,7 @@ protected:
 
 TEST_F(f1ap_cu_ue_context_test, when_ue_added_then_ue_exists)
 {
-  ue_index_t          ue_index      = generate_random_ue_index();
+  cu_cp_ue_index_t    ue_index      = generate_random_ue_index();
   gnb_cu_ue_f1ap_id_t cu_ue_f1ap_id = generate_random_gnb_cu_ue_f1ap_id();
 
   ue_ctxt_list.add_ue(ue_index, cu_ue_f1ap_id);
@@ -74,7 +73,7 @@ TEST_F(f1ap_cu_ue_context_test, when_ue_added_then_ue_exists)
 
 TEST_F(f1ap_cu_ue_context_test, when_ue_not_added_then_ue_doesnt_exist)
 {
-  ue_index_t          ue_index      = generate_random_ue_index();
+  cu_cp_ue_index_t    ue_index      = generate_random_ue_index();
   gnb_cu_ue_f1ap_id_t cu_ue_f1ap_id = generate_random_gnb_cu_ue_f1ap_id();
 
   ASSERT_FALSE(ue_ctxt_list.contains(cu_ue_f1ap_id));
@@ -83,7 +82,7 @@ TEST_F(f1ap_cu_ue_context_test, when_ue_not_added_then_ue_doesnt_exist)
 
 TEST_F(f1ap_cu_ue_context_test, when_ue_exists_then_removal_succeeds)
 {
-  ue_index_t          ue_index      = generate_random_ue_index();
+  cu_cp_ue_index_t    ue_index      = generate_random_ue_index();
   gnb_cu_ue_f1ap_id_t cu_ue_f1ap_id = generate_random_gnb_cu_ue_f1ap_id();
 
   ue_ctxt_list.add_ue(ue_index, cu_ue_f1ap_id);
@@ -97,7 +96,7 @@ TEST_F(f1ap_cu_ue_context_test, when_ue_exists_then_removal_succeeds)
 
 TEST_F(f1ap_cu_ue_context_test, when_ue_is_added_then_next_ue_id_is_increased)
 {
-  ue_index_t          ue_index      = generate_random_ue_index();
+  cu_cp_ue_index_t    ue_index      = generate_random_ue_index();
   gnb_cu_ue_f1ap_id_t cu_ue_f1ap_id = ue_ctxt_list.allocate_gnb_cu_ue_f1ap_id();
 
   ASSERT_EQ((unsigned)cu_ue_f1ap_id, (unsigned)gnb_cu_ue_f1ap_id_t::min);

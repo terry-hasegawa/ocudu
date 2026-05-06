@@ -5,6 +5,7 @@
 #include "e1ap_cu_cp_test_messages.h"
 #include "ocudu/asn1/e1ap/common.h"
 #include "ocudu/asn1/e1ap/e1ap.h"
+#include "ocudu/ran/cu_cp_types.h"
 
 using namespace ocudu;
 using namespace ocucp;
@@ -106,7 +107,7 @@ e1ap_message ocudu::ocucp::generate_valid_e1_release_request()
   return e1_release_request;
 }
 
-e1ap_bearer_context_setup_request ocudu::ocucp::generate_bearer_context_setup_request(ue_index_t ue_index)
+e1ap_bearer_context_setup_request ocudu::ocucp::generate_bearer_context_setup_request(cu_cp_ue_index_t ue_index)
 {
   e1ap_bearer_context_setup_request request = {};
 
@@ -246,7 +247,8 @@ e1ap_message ocudu::ocucp::generate_bearer_context_setup_failure(gnb_cu_cp_ue_e1
   return bearer_context_setup_failure;
 }
 
-e1ap_bearer_context_modification_request ocudu::ocucp::generate_bearer_context_modification_request(ue_index_t ue_index)
+e1ap_bearer_context_modification_request
+ocudu::ocucp::generate_bearer_context_modification_request(cu_cp_ue_index_t ue_index)
 {
   e1ap_bearer_context_modification_request request;
   request.ue_index = ue_index;
@@ -390,7 +392,7 @@ e1ap_message ocudu::ocucp::generate_bearer_context_modification_failure(gnb_cu_c
   return bearer_context_modification_failure;
 }
 
-e1ap_bearer_context_release_command ocudu::ocucp::generate_bearer_context_release_command(ue_index_t ue_index)
+e1ap_bearer_context_release_command ocudu::ocucp::generate_bearer_context_release_command(cu_cp_ue_index_t ue_index)
 {
   e1ap_bearer_context_release_command command;
   command.ue_index = ue_index;

@@ -35,10 +35,10 @@ protected:
     ocudulog::flush();
   }
 
-  static ue_index_t generate_random_ue_index()
+  static cu_cp_ue_index_t generate_random_ue_index()
   {
-    return uint_to_ue_index(
-        test_rng::uniform_int<uint64_t>(ue_index_to_uint(ue_index_t::min), ue_index_to_uint(ue_index_t::max) - 1));
+    return uint_to_ue_index(test_rng::uniform_int<uint64_t>(cu_cp_ue_index_to_uint(cu_cp_ue_index_t::min),
+                                                            cu_cp_ue_index_to_uint(cu_cp_ue_index_t::max) - 1));
   }
 
   static ran_ue_meas_id_t generate_random_ran_ue_meas_id()
@@ -63,7 +63,7 @@ protected:
 
 TEST_F(nrppa_ue_context_test, when_ue_added_then_ue_exists)
 {
-  ue_index_t       ue_index       = generate_random_ue_index();
+  cu_cp_ue_index_t ue_index       = generate_random_ue_index();
   ran_ue_meas_id_t ran_ue_meas_id = generate_random_ran_ue_meas_id();
   lmf_ue_meas_id_t lmf_ue_meas_id = generate_random_lmf_ue_meas_id();
 
@@ -77,14 +77,14 @@ TEST_F(nrppa_ue_context_test, when_ue_added_then_ue_exists)
 
 TEST_F(nrppa_ue_context_test, when_ue_not_added_then_ue_doesnt_exist)
 {
-  ue_index_t ue_index = generate_random_ue_index();
+  cu_cp_ue_index_t ue_index = generate_random_ue_index();
 
   ASSERT_FALSE(ue_ctxt_list.contains(ue_index));
 }
 
 TEST_F(nrppa_ue_context_test, when_ue_exists_then_removal_succeeds)
 {
-  ue_index_t       ue_index       = generate_random_ue_index();
+  cu_cp_ue_index_t ue_index       = generate_random_ue_index();
   ran_ue_meas_id_t ran_ue_meas_id = generate_random_ran_ue_meas_id();
   lmf_ue_meas_id_t lmf_ue_meas_id = generate_random_lmf_ue_meas_id();
 
@@ -98,7 +98,7 @@ TEST_F(nrppa_ue_context_test, when_ue_exists_then_removal_succeeds)
 
 TEST_F(nrppa_ue_context_test, when_ue_is_added_then_next_ue_id_is_increased)
 {
-  ue_index_t       ue_index       = generate_random_ue_index();
+  cu_cp_ue_index_t ue_index       = generate_random_ue_index();
   ran_ue_meas_id_t ran_ue_meas_id = ue_ctxt_list.allocate_ran_ue_meas_id().value();
   lmf_ue_meas_id_t lmf_ue_meas_id = generate_random_lmf_ue_meas_id();
 

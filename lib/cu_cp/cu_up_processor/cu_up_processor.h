@@ -9,8 +9,7 @@
 #include "ocudu/e1ap/cu_cp/e1ap_cu_cp.h"
 #include "ocudu/support/async/async_task.h"
 
-namespace ocudu {
-namespace ocucp {
+namespace ocudu::ocucp {
 
 /// Interface for an E1AP notifier to communicate with the CU-UP processor.
 class cu_up_processor_e1ap_interface
@@ -19,7 +18,7 @@ public:
   virtual ~cu_up_processor_e1ap_interface() = default;
 
   /// Cancel pending tasks for a given UE, so it can be safely removed.
-  virtual void stop(ue_index_t ue_index) = 0;
+  virtual void stop(cu_cp_ue_index_t ue_index) = 0;
 
   /// \brief Get the CU-UP index.
   /// \return The CU-UP index.
@@ -76,7 +75,7 @@ public:
   virtual ~cu_up_ue_handler() = default;
 
   /// \brief Update the index of an UE.
-  virtual void update_ue_index(ue_index_t ue_index, ue_index_t old_ue_index) = 0;
+  virtual void update_ue_index(cu_cp_ue_index_t ue_index, cu_cp_ue_index_t old_ue_index) = 0;
 };
 
 class cu_up_processor : public cu_up_processor_e1ap_interface, public cu_up_ue_handler
@@ -88,5 +87,4 @@ public:
   virtual e1ap_cu_cp& get_e1ap_handler() = 0;
 };
 
-} // namespace ocucp
-} // namespace ocudu
+} // namespace ocudu::ocucp

@@ -8,18 +8,18 @@
 using namespace ocudu;
 using namespace ocucp;
 
-ue_index_t cu_configurator_impl::get_ue_index(const amf_ue_id_t&         amf_ue_id,
-                                              const guami_t&             guami,
-                                              const gnb_cu_ue_f1ap_id_t& gnb_cu_ue_f1ap_id) const
+cu_cp_ue_index_t cu_configurator_impl::get_ue_index(const amf_ue_id_t&         amf_ue_id,
+                                                    const guami_t&             guami,
+                                                    const gnb_cu_ue_f1ap_id_t& gnb_cu_ue_f1ap_id) const
 {
   auto* ngap = ngap_db.find_ngap(guami.plmn);
   if (ngap == nullptr) {
-    return ue_index_t::invalid;
+    return cu_cp_ue_index_t::invalid;
   }
   return ngap->get_ngap_ue_id_translator().get_ue_index(amf_ue_id);
 }
 
-du_index_t cu_configurator_impl::get_du_index(const ue_index_t& ue_index) const
+du_index_t cu_configurator_impl::get_du_index(const cu_cp_ue_index_t& ue_index) const
 {
   auto* ue = ue_mng.find_du_ue(ue_index);
   return ue->get_du_index();

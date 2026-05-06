@@ -59,8 +59,8 @@ ngap_impl::ngap_impl(const ngap_configuration& ngap_cfg_,
 // Note: For fwd declaration of member types, dtor cannot be trivial.
 ngap_impl::~ngap_impl() {}
 
-bool ngap_impl::update_ue_index(ue_index_t              new_ue_index,
-                                ue_index_t              old_ue_index,
+bool ngap_impl::update_ue_index(cu_cp_ue_index_t        new_ue_index,
+                                cu_cp_ue_index_t        old_ue_index,
                                 ngap_cu_cp_ue_notifier& new_ue_notifier)
 {
   if (!ue_ctxt_list.contains(old_ue_index)) {
@@ -85,7 +85,7 @@ bool ngap_impl::update_ue_index(ue_index_t              new_ue_index,
 }
 
 std::optional<ngap_core_network_assist_info_for_inactive>
-ngap_impl::get_cn_assist_info_for_inactive(ue_index_t ue_index)
+ngap_impl::get_cn_assist_info_for_inactive(cu_cp_ue_index_t ue_index)
 {
   if (!ue_ctxt_list.contains(ue_index)) {
     logger.warning("ue={}: Cannot get core network assist info for inactive. UE context does not exist", ue_index);
@@ -978,7 +978,7 @@ void ngap_impl::handle_handover_request(const asn1::ngap::ho_request_s& msg)
   // Create UE in target cell.
   ho_request.ue_index = cu_cp_notifier.request_new_ue_index_allocation(
       ho_request.source_to_target_transparent_container.target_cell_id, ho_request.guami.plmn);
-  if (ho_request.ue_index == ue_index_t::invalid) {
+  if (ho_request.ue_index == cu_cp_ue_index_t::invalid) {
     logger.debug("Couldn't allocate UE index for handover target cell");
     send_handover_failure(msg->amf_ue_ngap_id);
     return;
@@ -1031,7 +1031,7 @@ void ngap_impl::handle_dl_ran_status_transfer(const asn1::ngap::dl_ran_status_tr
 
 void ngap_impl::handle_ul_ran_status_transfer(const cu_cp_status_transfer& ul_ran_status_transfer)
 {
-  const ue_index_t ue_index = ul_ran_status_transfer.ue_index;
+  const cu_cp_ue_index_t ue_index = ul_ran_status_transfer.ue_index;
   if (!ue_ctxt_list.contains(ue_index)) {
     logger.warning("ue={}: Dropping ULRANStatusTransfer. UE context does not exist", ue_index);
     return;
@@ -1056,7 +1056,7 @@ void ngap_impl::handle_ul_ran_status_transfer(const cu_cp_status_transfer& ul_ra
   }
 }
 
-async_task<expected<cu_cp_status_transfer>> ngap_impl::handle_dl_ran_status_transfer_required(ue_index_t ue_index)
+async_task<expected<cu_cp_status_transfer>> ngap_impl::handle_dl_ran_status_transfer_required(cu_cp_ue_index_t ue_index)
 {
   if (!ue_ctxt_list.contains(ue_index)) {
     logger.warning("ue={}: Cannot await DLRANStatusTransfer. UE context does not exist", ue_index);
@@ -1131,7 +1131,7 @@ void ngap_impl::handle_location_reporting_control_message(const asn1::ngap::loca
     handle_inconsistent_ue_id_pair(uint_to_ran_ue_id(msg->ran_ue_ngap_id), uint_to_amf_ue_id(msg->amf_ue_ngap_id));
     return;
   }
-  ue_index_t              ue_index = ue_ctxt_list[uint_to_ran_ue_id(msg->ran_ue_ngap_id)].ue_ids.ue_index;
+  cu_cp_ue_index_t        ue_index = ue_ctxt_list[uint_to_ran_ue_id(msg->ran_ue_ngap_id)].ue_ids.ue_index;
   location_report_request location_reporting_ctrl;
 
   fill_ngap_location_report_request(location_reporting_ctrl, msg);
@@ -1140,10 +1140,10 @@ void ngap_impl::handle_location_reporting_control_message(const asn1::ngap::loca
 
 void ngap_impl::handle_error_indication(const asn1::ngap::error_ind_s& msg)
 {
-  amf_ue_id_t amf_ue_id = amf_ue_id_t::invalid;
-  ran_ue_id_t ran_ue_id = ran_ue_id_t::invalid;
-  ue_index_t  ue_index  = ue_index_t::invalid;
-  std::string msg_cause;
+  amf_ue_id_t      amf_ue_id = amf_ue_id_t::invalid;
+  ran_ue_id_t      ran_ue_id = ran_ue_id_t::invalid;
+  cu_cp_ue_index_t ue_index  = cu_cp_ue_index_t::invalid;
+  std::string      msg_cause;
 
   if (msg->cause_present) {
     msg_cause = asn1_cause_to_string(msg->cause);
@@ -1402,7 +1402,7 @@ ngap_impl::handle_handover_preparation_request(const ngap_handover_preparation_r
                                                            ue_ctxt.logger);
 }
 
-void ngap_impl::handle_inter_cu_ho_rrc_recfg_complete(const ue_index_t           ue_index,
+void ngap_impl::handle_inter_cu_ho_rrc_recfg_complete(const cu_cp_ue_index_t     ue_index,
                                                       const nr_cell_global_id_t& cgi,
                                                       const tac_t                tac)
 {
@@ -1430,7 +1430,7 @@ void ngap_impl::handle_inter_cu_ho_rrc_recfg_complete(const ue_index_t          
   }
 }
 
-void ngap_impl::handle_ul_ue_associated_nrppa_transport(ue_index_t ue_index, const byte_buffer& nrppa_pdu)
+void ngap_impl::handle_ul_ue_associated_nrppa_transport(cu_cp_ue_index_t ue_index, const byte_buffer& nrppa_pdu)
 {
   // Forward message to AMF.
   if (!ue_ctxt_list.contains(ue_index)) {
@@ -1504,7 +1504,7 @@ async_task<void> ngap_impl::handle_ul_non_ue_associated_nrppa_transport(const by
 async_task<bool>
 ngap_impl::handle_rrc_inactive_transition_report_required(const ngap_rrc_inactive_transition_report& report)
 {
-  const ue_index_t ue_index = report.ue_index;
+  const cu_cp_ue_index_t ue_index = report.ue_index;
   if (!ue_ctxt_list.contains(ue_index)) {
     logger.warning("ue={}: Dropping RRCInactiveTransitionReport. UE context does not exist", ue_index);
     return launch_async([](coro_context<async_task<bool>>& ctx) {
@@ -1611,7 +1611,7 @@ ngap_info ngap_impl::handle_ngap_metrics_report_request() const
   return ngap_info;
 }
 
-void ngap_impl::remove_ue_context(ue_index_t ue_index)
+void ngap_impl::remove_ue_context(cu_cp_ue_index_t ue_index)
 {
   if (!ue_ctxt_list.contains(ue_index)) {
     logger.debug("ue={}: UE context not found", ue_index);
@@ -1621,16 +1621,16 @@ void ngap_impl::remove_ue_context(ue_index_t ue_index)
   ue_ctxt_list.remove_ue_context(ue_index);
 }
 
-ue_index_t ngap_impl::get_ue_index(const amf_ue_id_t& amf_ue_ngap_id)
+cu_cp_ue_index_t ngap_impl::get_ue_index(const amf_ue_id_t& amf_ue_ngap_id)
 {
   if (ue_ctxt_list.contains(amf_ue_ngap_id)) {
     ngap_ue_context& ue_ctxt = ue_ctxt_list[amf_ue_ngap_id];
     return ue_ctxt.ue_ids.ue_index;
   }
-  return ue_index_t::invalid;
+  return cu_cp_ue_index_t::invalid;
 }
 
-amf_ue_id_t ngap_impl::get_amf_ue_id(const ue_index_t& ue_index)
+amf_ue_id_t ngap_impl::get_amf_ue_id(const cu_cp_ue_index_t& ue_index)
 {
   if (ue_ctxt_list.contains(ue_index)) {
     ngap_ue_context& ue_ctxt = ue_ctxt_list[ue_index];
@@ -1639,7 +1639,9 @@ amf_ue_id_t ngap_impl::get_amf_ue_id(const ue_index_t& ue_index)
   return amf_ue_id_t::invalid;
 }
 
-void ngap_impl::schedule_error_indication(ue_index_t ue_index, ngap_cause_t cause, std::optional<amf_ue_id_t> amf_ue_id)
+void ngap_impl::schedule_error_indication(cu_cp_ue_index_t           ue_index,
+                                          ngap_cause_t               cause,
+                                          std::optional<amf_ue_id_t> amf_ue_id)
 {
   ngap_ue_context& ue_ctxt = ue_ctxt_list[ue_index];
   auto*            ue      = ue_ctxt.get_cu_cp_ue();
@@ -1653,7 +1655,7 @@ void ngap_impl::schedule_error_indication(ue_index_t ue_index, ngap_cause_t caus
   }));
 }
 
-void ngap_impl::on_request_pdu_session_timer_expired(ue_index_t ue_index)
+void ngap_impl::on_request_pdu_session_timer_expired(cu_cp_ue_index_t ue_index)
 {
   if (ue_ctxt_list.contains(ue_index)) {
     ngap_ue_context& ue_ctxt = ue_ctxt_list[ue_index];
@@ -1753,8 +1755,8 @@ static auto log_pdu_helper(ocudulog::basic_logger&       logger,
     return;
   }
 
-  std::optional<ran_ue_id_t> ran_ue_id = asn1_utils::get_ran_ue_id(pdu);
-  std::optional<ue_index_t>  ue_idx;
+  std::optional<ran_ue_id_t>      ran_ue_id = asn1_utils::get_ran_ue_id(pdu);
+  std::optional<cu_cp_ue_index_t> ue_idx;
   if (ran_ue_id.has_value()) {
     const auto* ue = ue_ctxt_list.find(ran_ue_id.value());
     if (ue != nullptr) {

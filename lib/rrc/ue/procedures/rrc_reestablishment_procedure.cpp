@@ -144,7 +144,7 @@ async_task<void> rrc_reestablishment_procedure::handle_rrc_reestablishment_fallb
                                                  logger,
                                                  true));
 
-    if (old_ue_reest_context.ue_index != ue_index_t::invalid and !old_ue_reest_context.old_ue_fully_attached) {
+    if (old_ue_reest_context.ue_index != cu_cp_ue_index_t::invalid and !old_ue_reest_context.old_ue_fully_attached) {
       // The UE exists but still has not established an SRB2 and DRB. Request the release of the old UE.
       logger.log_debug("old_ue={} was not fully attached yet. Requesting UE context release",
                        old_ue_reest_context.ue_index);
@@ -177,7 +177,7 @@ bool rrc_reestablishment_procedure::is_reestablishment_accepted()
   }
 
   // Check if an old UE context with matching C-RNTI, PCI exists.
-  if (old_ue_reest_context.ue_index == ue_index_t::invalid) {
+  if (old_ue_reest_context.ue_index == cu_cp_ue_index_t::invalid) {
     log_rejected_reestablishment("Old UE context not found");
     return false;
   }

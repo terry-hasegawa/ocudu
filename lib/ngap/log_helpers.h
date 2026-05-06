@@ -5,17 +5,15 @@
 #pragma once
 
 #include "ocudu/asn1/ngap/ngap.h"
-#include "ocudu/cu_cp/cu_cp_types.h"
+#include "ocudu/ran/cu_cp_types.h"
 
-namespace ocudu {
-namespace ocucp {
+namespace ocudu::ocucp {
 
 /// \brief Log Received/Transmitted NGAP PDU.
-void log_ngap_pdu(ocudulog::basic_logger&          logger,
-                  bool                             json_log,
-                  bool                             is_rx,
-                  const std::optional<ue_index_t>& ue_idx,
-                  const asn1::ngap::ngap_pdu_c&    pdu);
+void log_ngap_pdu(ocudulog::basic_logger&                logger,
+                  bool                                   json_log,
+                  bool                                   is_rx,
+                  const std::optional<cu_cp_ue_index_t>& ue_idx,
+                  const asn1::ngap::ngap_pdu_c&          pdu);
 
-} // namespace ocucp
-} // namespace ocudu
+} // namespace ocudu::ocucp

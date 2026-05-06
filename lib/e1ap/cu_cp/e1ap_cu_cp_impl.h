@@ -10,10 +10,8 @@
 #include "ocudu/e1ap/cu_cp/e1ap_configuration.h"
 #include "ocudu/e1ap/cu_cp/e1ap_cu_cp.h"
 #include "ocudu/support/executors/task_executor.h"
-#include <memory>
 
-namespace ocudu {
-namespace ocucp {
+namespace ocudu::ocucp {
 
 class e1ap_event_manager;
 
@@ -48,11 +46,11 @@ public:
   void handle_connection_loss() override {}
 
   // e1ap_ue_handler functions
-  void cancel_ue_tasks(ue_index_t ue_index) override;
-  void update_ue_context(ue_index_t ue_index, ue_index_t old_ue_index) override;
+  void cancel_ue_tasks(cu_cp_ue_index_t ue_index) override;
+  void update_ue_context(cu_cp_ue_index_t ue_index, cu_cp_ue_index_t old_ue_index) override;
 
   // e1ap_bearer_context_removal_handler functions
-  void remove_bearer_context(ue_index_t ue_index) override;
+  void remove_bearer_context(cu_cp_ue_index_t ue_index) override;
 
   // e1ap_statistics_handler functions
   size_t get_nof_ues() const override { return ue_ctxt_list.size(); }
@@ -134,5 +132,4 @@ private:
   bool e1ap_stopping = false;
 };
 
-} // namespace ocucp
-} // namespace ocudu
+} // namespace ocudu::ocucp

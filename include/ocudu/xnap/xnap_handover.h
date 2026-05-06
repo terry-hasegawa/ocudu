@@ -5,9 +5,9 @@
 #pragma once
 
 #include "ocudu/cu_cp/cu_cp_location_reporting_types.h"
-#include "ocudu/cu_cp/cu_cp_types.h"
 #include "ocudu/cu_cp/inter_cu_handover_messages.h"
 #include "ocudu/ran/cause/xnap_cause.h"
+#include "ocudu/ran/cu_cp_types.h"
 #include "ocudu/ran/cu_types.h"
 #include "ocudu/ran/guami.h"
 #include "ocudu/ran/nr_cgi.h"
@@ -29,7 +29,7 @@ struct xnap_ue_context_info_ho_request {
 
 /// Common type XNAP handover request, defined in TS 38.423 section 9.1.1.1.
 struct xnap_handover_request {
-  ue_index_t                      ue_index;
+  cu_cp_ue_index_t                ue_index;
   xnap_cause_t                    cause;
   nr_cell_global_id_t             nr_cgi;
   guami_t                         guami;
@@ -43,7 +43,7 @@ struct xnap_handover_preparation_response {
 
 struct xnap_handover_target_execution_context {
   xnc_peer_index_t                                    xnc_index;
-  ue_index_t                                          ue_index;
+  cu_cp_ue_index_t                                    ue_index;
   unsigned                                            amf_ue_id;
   std::vector<cu_cp_xn_pdu_session_res_admitted_item> pdu_session_res_admitted_list;
   std::vector<cu_cp_pdu_session_with_cause_item>      pdu_session_failed_to_setup_list;

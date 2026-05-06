@@ -51,7 +51,7 @@ async_task<void> f1_removal_procedure::handle_ue_transaction_info_loss()
   // locally as part of F1 removal).
   // Note: size of ue_list may change during this operation (e.g. if a concurrent UE context release was being
   // processed and got cancelled). Therefore, we leverage the list ev.ues_lost for the iteration.
-  for (ue_index_t ue_idx : ev.ues_lost) {
+  for (cu_cp_ue_index_t ue_idx : ev.ues_lost) {
     auto* u = ue_list.find(ue_idx);
     if (u != nullptr) {
       u->f1_removal_in_progress = true;
@@ -60,7 +60,7 @@ async_task<void> f1_removal_procedure::handle_ue_transaction_info_loss()
   }
   ev.ues_lost.erase(std::remove_if(ev.ues_lost.begin(),
                                    ev.ues_lost.end(),
-                                   [this](ue_index_t ue_idx) { return ue_list.find(ue_idx) == nullptr; }),
+                                   [this](cu_cp_ue_index_t ue_idx) { return ue_list.find(ue_idx) == nullptr; }),
                     ev.ues_lost.end());
 
   logger.info("{}: F1 Removal Request received, but there are still UEs connected to the DU. Resetting {} UEs.",

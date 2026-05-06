@@ -30,7 +30,7 @@ private:
   protocol_transaction_event_source<asn1::xnap::sn_status_transfer_s>& sn_status_transfer_outcome;
   xnap_ue_logger&                                                      logger;
 
-  ue_index_t            ue_index;
+  cu_cp_ue_index_t      ue_index;
   cu_cp_status_transfer sn_status_transfer;
 
   protocol_transaction_outcome_observer<asn1::xnap::sn_status_transfer_s> transaction_sink;

@@ -74,7 +74,7 @@ private:
 
   // (sub-)routine results
   rrc_resume_request_response               response_msg;
-  ue_index_t                                released_ue_index;
+  cu_cp_ue_index_t                          released_ue_index;
   f1ap_ue_context_setup_response            ue_context_setup_response;
   e1ap_bearer_context_modification_response bearer_context_modification_response;
 };

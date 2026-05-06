@@ -15,11 +15,11 @@ using namespace ocucp;
 class ngap_nas_message_routine_test : public ngap_test
 {
 protected:
-  ue_index_t start_procedure(rnti_t rnti = rnti_t::MIN_CRNTI) { return create_ue(rnti); }
+  cu_cp_ue_index_t start_procedure(rnti_t rnti = rnti_t::MIN_CRNTI) { return create_ue(rnti); }
 
-  ue_index_t start_dl_nas_procedure()
+  cu_cp_ue_index_t start_dl_nas_procedure()
   {
-    ue_index_t ue_index = create_ue();
+    cu_cp_ue_index_t ue_index = create_ue();
 
     // Inject DL NAS transport message from AMF.
     run_dl_nas_transport(ue_index);
@@ -92,7 +92,7 @@ TEST_F(ngap_nas_message_routine_test, when_initial_context_setup_request_is_not_
   }
 
   // check that UE release was requested.
-  ASSERT_NE(cu_cp_notifier.last_command.ue_index, ue_index_t::invalid);
+  ASSERT_NE(cu_cp_notifier.last_command.ue_index, cu_cp_ue_index_t::invalid);
   ASSERT_EQ(cu_cp_notifier.last_command.cause, ngap_cause_t{ngap_cause_radio_network_t::unspecified});
 }
 
@@ -100,7 +100,7 @@ TEST_F(ngap_nas_message_routine_test, when_initial_context_setup_request_is_not_
 TEST_F(ngap_nas_message_routine_test, when_ue_present_dl_nas_transport_is_forwarded)
 {
   // Test preamble.
-  ue_index_t ue_index = this->start_procedure();
+  cu_cp_ue_index_t ue_index = this->start_procedure();
 
   auto& ue     = test_ues.at(ue_index);
   ue.amf_ue_id = uint_to_amf_ue_id(
@@ -133,7 +133,7 @@ TEST_F(ngap_nas_message_routine_test,
        when_dl_nas_transport_contains_ue_cap_info_request_then_ue_radio_cap_info_indication_is_sent)
 {
   // Test preamble.
-  ue_index_t ue_index = this->start_procedure();
+  cu_cp_ue_index_t ue_index = this->start_procedure();
 
   auto& ue     = test_ues.at(ue_index);
   ue.amf_ue_id = uint_to_amf_ue_id(
@@ -155,14 +155,14 @@ TEST_F(ngap_nas_message_routine_test,
 TEST_F(ngap_nas_message_routine_test, when_ue_context_is_tranfered_amf_ue_id_is_updated)
 {
   // Test preamble to get UE created.
-  ue_index_t ue_index = this->start_procedure();
+  cu_cp_ue_index_t ue_index = this->start_procedure();
   // Inject DL NAS transport message from AMF.
   run_dl_nas_transport(ue_index);
   // Inject UL NAS transport message from RRC.
   run_ul_nas_transport(ue_index);
 
   auto& ue = test_ues.at(ue_index);
-  ASSERT_NE(ue.ue_index, ue_index_t::invalid);
+  ASSERT_NE(ue.ue_index, cu_cp_ue_index_t::invalid);
 
   // Get AMF UE ID
   amf_ue_id_t amf_id = ue.amf_ue_id.value();
@@ -186,8 +186,8 @@ TEST_F(ngap_nas_message_routine_test, when_ue_context_is_tranfered_amf_ue_id_is_
   ue.rrc_ue_handler.last_nas_pdu.clear();
 
   // Create new UE object (with own RRC UE notifier).
-  ue_index_t target_ue_index = create_ue_without_init_ue_message(rnti_t::MAX_CRNTI);
-  ASSERT_NE(target_ue_index, ue_index_t::invalid);
+  cu_cp_ue_index_t target_ue_index = create_ue_without_init_ue_message(rnti_t::MAX_CRNTI);
+  ASSERT_NE(target_ue_index, cu_cp_ue_index_t::invalid);
   ASSERT_NE(target_ue_index, ue_index);
   auto& target_ue = test_ues.at(target_ue_index);
   ASSERT_TRUE(target_ue.rrc_ue_handler.last_nas_pdu.empty());
@@ -209,7 +209,7 @@ TEST_F(ngap_nas_message_routine_test, when_ue_context_is_tranfered_amf_ue_id_is_
 TEST_F(ngap_nas_message_routine_test, when_ue_present_and_amf_set_ul_nas_transport_is_forwared)
 {
   // Test preamble.
-  ue_index_t ue_index = this->start_dl_nas_procedure();
+  cu_cp_ue_index_t ue_index = this->start_dl_nas_procedure();
 
   cu_cp_ul_nas_transport ul_nas_transport = generate_ul_nas_transport_message(ue_index);
   ngap->handle_ul_nas_transport_message(ul_nas_transport);
@@ -222,7 +222,7 @@ TEST_F(ngap_nas_message_routine_test, when_ue_present_and_amf_set_ul_nas_transpo
 TEST_F(ngap_nas_message_routine_test, when_amf_ue_id_is_max_size_then_its_not_cropped)
 {
   // Test preamble
-  ue_index_t ue_index = this->start_procedure();
+  cu_cp_ue_index_t ue_index = this->start_procedure();
 
   auto& ue     = test_ues.at(ue_index);
   ue.amf_ue_id = amf_ue_id_t::max;
@@ -249,8 +249,8 @@ TEST_F(ngap_nas_message_routine_test,
        when_amf_ue_id_pair_is_incosistent_then_old_ue_is_released_and_error_indication_is_sent)
 {
   // Test preamble.
-  ue_index_t ue_index1 = this->start_procedure();
-  ue_index_t ue_index2 = this->start_procedure(to_rnti(0x2));
+  cu_cp_ue_index_t ue_index1 = this->start_procedure();
+  cu_cp_ue_index_t ue_index2 = this->start_procedure(to_rnti(0x2));
 
   auto&    ue1 = test_ues.at(ue_index1);
   auto&    ue2 = test_ues.at(ue_index2);

@@ -40,12 +40,12 @@ public:
   handle_ue_context_setup_request(const f1ap_ue_context_setup_request&          request,
                                   const std::optional<rrc_ue_transfer_context>& rrc_context) override;
 
-  async_task<ue_index_t> handle_ue_context_release_command(const f1ap_ue_context_release_command& msg) override;
+  async_task<cu_cp_ue_index_t> handle_ue_context_release_command(const f1ap_ue_context_release_command& msg) override;
 
   async_task<f1ap_ue_context_modification_response>
   handle_ue_context_modification_request(const f1ap_ue_context_modification_request& request) override;
 
-  bool handle_ue_id_update(ue_index_t ue_index, ue_index_t old_ue_index) override;
+  bool handle_ue_id_update(cu_cp_ue_index_t ue_index, cu_cp_ue_index_t old_ue_index) override;
 
   // f1ap_paging_handler functions.
   void handle_paging(const cu_cp_paging_message& msg) override;
@@ -57,7 +57,7 @@ public:
   size_t get_nof_ues() const override { return ue_ctxt_list.size(); }
 
   // f1ap_ue_context_removal_handler functions.
-  void remove_ue_context(ue_index_t ue_index) override;
+  void remove_ue_context(cu_cp_ue_index_t ue_index) override;
 
   // f1ap_nrppa_message_handler functions.
   async_task<expected<trp_information_response_t, trp_information_failure_t>>

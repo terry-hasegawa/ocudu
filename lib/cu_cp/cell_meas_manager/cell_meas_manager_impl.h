@@ -7,13 +7,11 @@
 #include "../ue_manager/ue_manager_impl.h"
 #include "ocudu/adt/span.h"
 #include "ocudu/cu_cp/cell_meas_manager_config.h"
-#include "ocudu/cu_cp/cu_cp_types.h"
-#include "ocudu/ran/nr_cgi.h"
+#include "ocudu/ran/cu_cp_types.h"
 #include "ocudu/rrc/meas_types.h"
 #include <unordered_map>
 
-namespace ocudu {
-namespace ocucp {
+namespace ocudu::ocucp {
 
 /// Methods used by cell measurement manager to signal measurement events to the mobility manager.
 class cell_meas_mobility_manager_notifier
@@ -22,7 +20,7 @@ public:
   virtual ~cell_meas_mobility_manager_notifier() = default;
 
   /// \brief Notifies that a neighbor cell became stronger than the current serving cell.
-  virtual void on_neighbor_better_than_spcell(ue_index_t       ue_index,
+  virtual void on_neighbor_better_than_spcell(cu_cp_ue_index_t ue_index,
                                               gnb_id_t         neighbor_gnb_id,
                                               nr_cell_identity neighbor_nci,
                                               pci_t            neighbor_pci) = 0;
@@ -38,7 +36,7 @@ public:
   ~cell_meas_manager() = default;
 
   std::optional<rrc_meas_cfg>
-                                  get_measurement_config(ue_index_t                         ue_index,
+                                  get_measurement_config(cu_cp_ue_index_t                   ue_index,
                                                          nr_cell_identity                   nci,
                                                          const std::optional<rrc_meas_cfg>& current_meas_config = std::nullopt,
                                                          bool                               cond_meas      = false,
@@ -46,7 +44,7 @@ public:
   std::optional<cell_meas_config> get_cell_config(nr_cell_identity nci);
   std::vector<pci_t>              get_neighbor_pcis(nr_cell_identity serving_nci) const;
   bool update_cell_config(nr_cell_identity nci, const serving_cell_meas_config& serv_cell_cfg);
-  void report_measurement(ue_index_t ue_index, const rrc_meas_results& meas_results);
+  void report_measurement(cu_cp_ue_index_t ue_index, const rrc_meas_results& meas_results);
 
   expected<std::pair<unsigned, nr_cell_identity>> find_neighbour_nci(pci_t pci);
 
@@ -56,7 +54,7 @@ private:
 
   void update_measurement_object(nr_cell_identity nci, const serving_cell_meas_config& serving_cell_cfg);
 
-  void store_measurement_results(ue_index_t ue_index, const rrc_meas_results& meas_results);
+  void store_measurement_results(cu_cp_ue_index_t ue_index, const rrc_meas_results& meas_results);
 
   cell_meas_manager_cfg                cfg;
   cell_meas_mobility_manager_notifier& mobility_mng_notifier;
@@ -70,5 +68,4 @@ private:
   ocudulog::basic_logger& logger;
 };
 
-} // namespace ocucp
-} // namespace ocudu
+} // namespace ocudu::ocucp

@@ -70,8 +70,9 @@ void ocudu::ocucp::generate_f1_setup_request_with_too_many_cells(du_setup_reques
   setup_request = create_du_setup_request(f1setup_msg.pdu.init_msg().value.f1_setup_request()).value();
 }
 
-ue_rrc_context_creation_request
-ocudu::ocucp::generate_ue_rrc_context_creation_request(ue_index_t ue_index, rnti_t c_rnti, nr_cell_identity nrcell_id)
+ue_rrc_context_creation_request ocudu::ocucp::generate_ue_rrc_context_creation_request(cu_cp_ue_index_t ue_index,
+                                                                                       rnti_t           c_rnti,
+                                                                                       nr_cell_identity nrcell_id)
 {
   ue_rrc_context_creation_request req = {};
   req.ue_index                        = ue_index;

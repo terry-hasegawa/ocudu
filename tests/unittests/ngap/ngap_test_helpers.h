@@ -21,9 +21,9 @@ protected:
   class test_ue
   {
   public:
-    test_ue(ue_index_t ue_index_) : ue_index(ue_index_), rrc_ue_handler(ue_index_) {}
+    test_ue(cu_cp_ue_index_t ue_index_) : ue_index(ue_index_), rrc_ue_handler(ue_index_) {}
 
-    ue_index_t                 ue_index = ue_index_t::invalid;
+    cu_cp_ue_index_t           ue_index = cu_cp_ue_index_t::invalid;
     std::optional<amf_ue_id_t> amf_ue_id;
     std::optional<ran_ue_id_t> ran_ue_id;
 
@@ -37,28 +37,28 @@ protected:
   bool run_ng_setup();
 
   /// \brief Helper method to successfully create UE instance in NGAP and inject an InitialUEMessage.
-  ue_index_t create_ue(rnti_t rnti = rnti_t::MIN_CRNTI);
+  cu_cp_ue_index_t create_ue(rnti_t rnti = rnti_t::MIN_CRNTI);
 
   /// \brief Helper method to successfully create UE instance in NGAP.
-  ue_index_t create_ue_without_init_ue_message(rnti_t rnti);
+  cu_cp_ue_index_t create_ue_without_init_ue_message(rnti_t rnti);
 
   /// \brief Helper method to successfully run DL NAS transport in NGAP.
-  void run_dl_nas_transport(ue_index_t ue_index);
+  void run_dl_nas_transport(cu_cp_ue_index_t ue_index);
 
   /// \brief Helper method to successfully run UL NAS transport in NGAP.
-  void run_ul_nas_transport(ue_index_t ue_index);
+  void run_ul_nas_transport(cu_cp_ue_index_t ue_index);
 
   /// \brief Helper method to successfully run Initial Context Setup in NGAP.
-  void run_initial_context_setup(ue_index_t ue_index);
+  void run_initial_context_setup(cu_cp_ue_index_t ue_index);
 
   /// \brief Helper method to enable security for a UE in NGAP.
-  bool enable_ue_security(ue_index_t ue_index);
+  bool enable_ue_security(cu_cp_ue_index_t ue_index);
 
   /// \brief Helper method to successfully run PDU Session Resource Setup in NGAP
-  void run_pdu_session_resource_setup(ue_index_t ue_index, pdu_session_id_t pdu_session_id);
+  void run_pdu_session_resource_setup(cu_cp_ue_index_t ue_index, pdu_session_id_t pdu_session_id);
 
   // Manually add existing PDU sessions to UP manager
-  void add_pdu_session_to_up_manager(ue_index_t              ue_index,
+  void add_pdu_session_to_up_manager(cu_cp_ue_index_t        ue_index,
                                      pdu_session_id_t        pdu_session_id,
                                      pdu_session_type_t      pdu_session_type,
                                      up_transport_layer_info ul_ngu_up_tnl_info,
@@ -71,7 +71,7 @@ protected:
   ocudulog::basic_logger& ngap_logger = ocudulog::fetch_basic_logger("NGAP");
   ocudulog::basic_logger& test_logger = ocudulog::fetch_basic_logger("TEST");
 
-  std::unordered_map<ue_index_t, test_ue> test_ues;
+  std::unordered_map<cu_cp_ue_index_t, test_ue> test_ues;
 
   timer_manager       timers;
   manual_task_worker  ctrl_worker{128};

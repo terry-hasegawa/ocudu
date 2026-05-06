@@ -25,7 +25,7 @@ static void fill_asn1_ue_context_setup_request(asn1::f1ap::ue_context_setup_requ
 /// \param[in] ue_index UE index.
 /// \param[in] asn1_failure The ASN.1 struct to convert.
 static void fill_f1ap_ue_context_setup_response(f1ap_ue_context_setup_response&            response,
-                                                ue_index_t                                 ue_index,
+                                                cu_cp_ue_index_t                           ue_index,
                                                 const asn1::f1ap::ue_context_setup_fail_s& asn1_failure);
 
 /// \brief Convert the UE Context Setup Response from ASN.1 to common type.
@@ -33,7 +33,7 @@ static void fill_f1ap_ue_context_setup_response(f1ap_ue_context_setup_response& 
 /// \param[in] ue_index UE index.
 /// \param[in] asn1_response The ASN.1 UE Context Setup Response.
 static void fill_f1ap_ue_context_setup_response(f1ap_ue_context_setup_response&            response,
-                                                ue_index_t                                 ue_index,
+                                                cu_cp_ue_index_t                           ue_index,
                                                 const asn1::f1ap::ue_context_setup_resp_s& asn1_response);
 
 // ---- UE Context Setup Procedure ----
@@ -53,7 +53,8 @@ ue_context_setup_procedure::ue_context_setup_procedure(const f1ap_configuration&
   logger(logger_),
   rrc_context(rrc_context_)
 {
-  ocudu_assert(request.ue_index != ue_index_t::invalid, "UE index of F1AP UeContextSetupRequest must not be invalid");
+  ocudu_assert(request.ue_index != cu_cp_ue_index_t::invalid,
+               "UE index of F1AP UeContextSetupRequest must not be invalid");
 }
 
 void ue_context_setup_procedure::operator()(coro_context<async_task<f1ap_ue_context_setup_response>>& ctx)
@@ -108,7 +109,7 @@ bool ue_context_setup_procedure::find_or_create_f1ap_ue_context()
 
 bool ue_context_setup_procedure::create_ue_rrc_context(const f1ap_ue_context_setup_response& ue_ctxt_setup_resp)
 {
-  if (not ue_ctxt_setup_resp.success or ue_ctxt_setup_resp.ue_index == ue_index_t::invalid) {
+  if (not ue_ctxt_setup_resp.success or ue_ctxt_setup_resp.ue_index == cu_cp_ue_index_t::invalid) {
     logger.warning("Couldn't create UE in target cell");
     return false;
   }
@@ -392,7 +393,7 @@ static void fill_asn1_ue_context_setup_request(asn1::f1ap::ue_context_setup_requ
 }
 
 static void fill_f1ap_ue_context_setup_response(f1ap_ue_context_setup_response&            response,
-                                                ue_index_t                                 ue_index,
+                                                cu_cp_ue_index_t                           ue_index,
                                                 const asn1::f1ap::ue_context_setup_fail_s& asn1_failure)
 {
   response.success  = false;
@@ -423,7 +424,7 @@ static void fill_f1ap_ue_context_setup_response(f1ap_ue_context_setup_response& 
 }
 
 static void fill_f1ap_ue_context_setup_response(f1ap_ue_context_setup_response&            response,
-                                                ue_index_t                                 ue_index,
+                                                cu_cp_ue_index_t                           ue_index,
                                                 const asn1::f1ap::ue_context_setup_resp_s& asn1_response)
 {
   response.success  = true;

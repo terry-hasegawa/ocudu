@@ -81,11 +81,11 @@ void ocudu::log_e1ap_pdu(ocudulog::basic_logger&       logger,
   }
 }
 
-template void ocudu::log_e1ap_pdu<ocucp::ue_index_t>(ocudulog::basic_logger&                 logger,
-                                                     bool                                    is_rx,
-                                                     const std::optional<ocucp::ue_index_t>& ue_id,
-                                                     const e1ap_message&                     e1ap_msg,
-                                                     bool                                    json_enabled);
+template void ocudu::log_e1ap_pdu<cu_cp_ue_index_t>(ocudulog::basic_logger&                logger,
+                                                    bool                                   is_rx,
+                                                    const std::optional<cu_cp_ue_index_t>& ue_id,
+                                                    const e1ap_message&                    e1ap_msg,
+                                                    bool                                   json_enabled);
 template void ocudu::log_e1ap_pdu<cu_up_ue_index_t>(ocudulog::basic_logger&                logger,
                                                     bool                                   is_rx,
                                                     const std::optional<cu_up_ue_index_t>& ue_id,

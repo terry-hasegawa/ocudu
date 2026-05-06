@@ -41,7 +41,7 @@ private:
   e1ap_bearer_context_release_command bearer_context_release_command;
 
   // (Sub-)routine results.
-  ue_index_t                        f1ap_ue_context_release_result;
+  cu_cp_ue_index_t                  f1ap_ue_context_release_result;
   cu_cp_ue_context_release_complete release_complete;
 };
 

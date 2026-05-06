@@ -34,12 +34,12 @@ public:
   virtual ~cu_configurator() = default;
 
   /// Get UE index for a given GNB-CU-UE-F1AP-ID.
-  virtual ocucp::ue_index_t get_ue_index(const ocucp::amf_ue_id_t&  amf_ue_id,
-                                         const guami_t&             guami,
-                                         const gnb_cu_ue_f1ap_id_t& gnb_cu_ue_f1ap_id) const = 0;
+  virtual cu_cp_ue_index_t get_ue_index(const ocucp::amf_ue_id_t&  amf_ue_id,
+                                        const guami_t&             guami,
+                                        const gnb_cu_ue_f1ap_id_t& gnb_cu_ue_f1ap_id) const = 0;
 
   /// Get index of the DU that serves the given UE.
-  virtual ocucp::du_index_t get_du_index(const ocucp::ue_index_t& ue_index) const = 0;
+  virtual ocucp::du_index_t get_du_index(const cu_cp_ue_index_t& ue_index) const = 0;
 
   /// Get DU index for a given NR Cell Global ID.
   virtual ocucp::du_index_t get_du_index(const nr_cell_global_id_t& nr_cgi) const = 0;

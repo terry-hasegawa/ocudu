@@ -32,7 +32,7 @@ struct cu_cp_inter_cu_handover_request {
   // TODO: Add optional fields.
 
   // Common fields.
-  ue_index_t                                                            ue_index;
+  cu_cp_ue_index_t                                                      ue_index;
   std::variant<ngap_cause_t, xnap_cause_t>                              cause;
   nr_cell_global_id_t                                                   target_cell_id;
   security::security_context                                            security_context;

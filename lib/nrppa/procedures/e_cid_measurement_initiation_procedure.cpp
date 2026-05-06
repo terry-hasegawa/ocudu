@@ -16,7 +16,7 @@ using namespace ocudu;
 using namespace ocucp;
 
 e_cid_measurement_initiation_procedure::e_cid_measurement_initiation_procedure(
-    ue_index_t                                 ue_index_,
+    cu_cp_ue_index_t                           ue_index_,
     const nrppa_e_cid_meas_initiation_request& request_,
     uint16_t                                   transaction_id_,
     nrppa_ue_context_list&                     ue_ctxt_list_,

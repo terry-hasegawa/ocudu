@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "ocudu/cu_cp/cu_cp_types.h"
+#include "ocudu/ran/cu_cp_types.h"
 #include "ocudu/support/format/fmt_to_c_str.h"
 #include "ocudu/support/format/prefixed_logger.h"
 #include "ocudu/xnap/xnap_types.h"
@@ -15,7 +15,7 @@ namespace ocudu::ocucp {
 class xnap_ue_log_prefix
 {
 public:
-  xnap_ue_log_prefix(ue_index_t         ue_index,
+  xnap_ue_log_prefix(cu_cp_ue_index_t   ue_index,
                      local_xnap_ue_id_t local_xnap_ue_id = local_xnap_ue_id_t::invalid,
                      peer_xnap_ue_id_t  peer_xnap_ue_id  = peer_xnap_ue_id_t::invalid)
   {

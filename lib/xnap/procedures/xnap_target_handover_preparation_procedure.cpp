@@ -81,7 +81,7 @@ void xnap_target_handover_preparation_procedure::operator()(coro_context<async_t
   CORO_RETURN();
 }
 
-bool xnap_target_handover_preparation_procedure::create_xnap_ue(ue_index_t ue_index)
+bool xnap_target_handover_preparation_procedure::create_xnap_ue(cu_cp_ue_index_t ue_index)
 {
   // Create XNAP UE.
   // Allocate local XNAP UE ID.
@@ -99,7 +99,7 @@ bool xnap_target_handover_preparation_procedure::create_xnap_ue(ue_index_t ue_in
   return true;
 }
 
-bool xnap_target_handover_preparation_procedure::send_handover_request_ack(ue_index_t         ue_index,
+bool xnap_target_handover_preparation_procedure::send_handover_request_ack(cu_cp_ue_index_t   ue_index,
                                                                            local_xnap_ue_id_t local_xnap_ue_id,
                                                                            const cu_cp_handover_request_ack& ho_ack)
 {

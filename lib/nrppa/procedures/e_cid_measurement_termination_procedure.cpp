@@ -8,7 +8,7 @@
 using namespace ocudu;
 using namespace ocucp;
 
-e_cid_measurement_termination_procedure::e_cid_measurement_termination_procedure(ue_index_t              ue_index_,
+e_cid_measurement_termination_procedure::e_cid_measurement_termination_procedure(cu_cp_ue_index_t        ue_index_,
                                                                                  nrppa_ue_context_list&  ue_ctxt_list_,
                                                                                  ocudulog::basic_logger& logger_) :
   ue_index(ue_index_), ue_ctxt_list(ue_ctxt_list_), logger(logger_)

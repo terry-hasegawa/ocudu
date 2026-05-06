@@ -17,17 +17,17 @@ using namespace ocucp;
 class ngap_path_switch_procedure_test : public ngap_test
 {
 protected:
-  ue_index_t create_ue()
+  cu_cp_ue_index_t create_ue()
   {
-    ue_index_t ue_index = ue_mng.add_ue(du_index_t::min);
-    if (ue_index == ue_index_t::invalid) {
+    cu_cp_ue_index_t ue_index = ue_mng.add_ue(du_index_t::min);
+    if (ue_index == cu_cp_ue_index_t::invalid) {
       test_logger.error("Failed to create UE");
-      return ue_index_t::invalid;
+      return cu_cp_ue_index_t::invalid;
     }
     if (ue_mng.ue_admission_limit_reached()) {
       test_logger.error("Failed to create UE. UE not servable");
       ue_mng.remove_ue(ue_index);
-      return ue_index_t::invalid;
+      return cu_cp_ue_index_t::invalid;
     }
     if (not ue_mng.update_ue_context(
             ue_index, int_to_gnb_du_id(0), MIN_PCI, rnti_t::MIN_CRNTI, ocudu::ocucp::du_cell_index_t::min)) {
@@ -35,13 +35,13 @@ protected:
                         MIN_PCI,
                         rnti_t::MIN_CRNTI,
                         ocucp::du_cell_index_t::min);
-      return ue_index_t::invalid;
+      return cu_cp_ue_index_t::invalid;
     }
 
     return ue_index;
   }
 
-  static cu_cp_path_switch_request generate_path_switch_request(ue_index_t ue_index)
+  static cu_cp_path_switch_request generate_path_switch_request(cu_cp_ue_index_t ue_index)
   {
     cu_cp_path_switch_request request;
     request.ue_index                          = ue_index;
@@ -69,7 +69,7 @@ TEST_F(ngap_path_switch_procedure_test,
        when_path_switch_request_ack_not_received_within_timeout_then_path_switch_procedure_fails)
 {
   // Test preparation: Create UE.
-  ue_index_t ue_index = create_ue();
+  cu_cp_ue_index_t ue_index = create_ue();
 
   // Action 1: Launch Path Switch Procedure.
   test_logger.info("Launch path switch procedure...");
@@ -92,7 +92,7 @@ TEST_F(ngap_path_switch_procedure_test,
 TEST_F(ngap_path_switch_procedure_test, when_path_switch_request_failure_received_then_path_switch_procedure_fails)
 {
   // Test preparation: Create UE.
-  ue_index_t ue_index = create_ue();
+  cu_cp_ue_index_t ue_index = create_ue();
 
   // Action 1: Launch Path Switch Procedure.
   test_logger.info("Launch path switch procedure...");
@@ -115,7 +115,7 @@ TEST_F(ngap_path_switch_procedure_test, when_path_switch_request_failure_receive
 TEST_F(ngap_path_switch_procedure_test, when_path_switch_request_ack_received_then_path_switch_procedure_succeeds)
 {
   // Test preparation: Create UE.
-  ue_index_t ue_index = create_ue();
+  cu_cp_ue_index_t ue_index = create_ue();
 
   // Action 1: Launch Path Switch Procedure.
   test_logger.info("Launch path switch procedure...");

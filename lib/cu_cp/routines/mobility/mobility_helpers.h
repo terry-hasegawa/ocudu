@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include "../../cu_cp_impl_interface.h"
 #include "../../ue_manager/ue_manager_impl.h"
 #include "../../up_resource_manager/up_resource_manager_impl.h"
 #include "ocudu/cu_cp/cu_cp_intra_cu_ho_types.h"
@@ -35,11 +34,12 @@ bool handle_bearer_context_modification_response(
 /// winner are skipped.
 /// \param[in] source_ue Source UE holding the CHO context with candidates.
 /// \param[in] ue_mng UE manager for candidate lookups.
-/// \param[in] winner_ue_index UE index of the CHO winner to exclude. Pass ue_index_t::invalid to cancel all
+/// \param[in] winner_ue_index UE index of the CHO winner to exclude. Pass cu_cp_ue_index_t::invalid to cancel all
 /// non-source candidates (e.g. CHO cancellation on execution timeout).
 /// \return Number of transactions cancelled.
-unsigned
-cancel_cho_candidates(cu_cp_ue& source_ue, ue_manager& ue_mng, ue_index_t winner_ue_index = ue_index_t::invalid);
+unsigned cancel_cho_candidates(cu_cp_ue&        source_ue,
+                               ue_manager&      ue_mng,
+                               cu_cp_ue_index_t winner_ue_index = cu_cp_ue_index_t::invalid);
 
 } // namespace ocucp
 } // namespace ocudu

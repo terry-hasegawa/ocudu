@@ -29,10 +29,11 @@ public:
             task_executor&            ctrl_exec_);
   ~ngap_impl();
 
-  bool
-  update_ue_index(ue_index_t new_ue_index, ue_index_t old_ue_index, ngap_cu_cp_ue_notifier& new_ue_notifier) override;
+  bool update_ue_index(cu_cp_ue_index_t        new_ue_index,
+                       cu_cp_ue_index_t        old_ue_index,
+                       ngap_cu_cp_ue_notifier& new_ue_notifier) override;
   std::optional<ngap_core_network_assist_info_for_inactive>
-  get_cn_assist_info_for_inactive(ue_index_t ue_index) override;
+  get_cn_assist_info_for_inactive(cu_cp_ue_index_t ue_index) override;
 
   // NGAP connection manager functions.
   bool                             handle_amf_tnl_connection_request() override;
@@ -62,12 +63,13 @@ public:
   async_task<ngap_handover_preparation_response>
        handle_handover_preparation_request(const ngap_handover_preparation_request& msg) override;
   void handle_ul_ran_status_transfer(const cu_cp_status_transfer& ul_ran_status_transfer) override;
-  async_task<expected<cu_cp_status_transfer>> handle_dl_ran_status_transfer_required(ue_index_t ue_index) override;
-  void                                        handle_inter_cu_ho_rrc_recfg_complete(const ue_index_t           ue_index,
-                                                                                    const nr_cell_global_id_t& cgi,
-                                                                                    const unsigned             tac) override;
-  const ngap_context_t&                       get_ngap_context() const override { return context; }
-  void             handle_ul_ue_associated_nrppa_transport(ue_index_t ue_index, const byte_buffer& nrppa_pdu) override;
+  async_task<expected<cu_cp_status_transfer>>
+                        handle_dl_ran_status_transfer_required(cu_cp_ue_index_t ue_index) override;
+  void                  handle_inter_cu_ho_rrc_recfg_complete(const cu_cp_ue_index_t     ue_index,
+                                                              const nr_cell_global_id_t& cgi,
+                                                              const unsigned             tac) override;
+  const ngap_context_t& get_ngap_context() const override { return context; }
+  void handle_ul_ue_associated_nrppa_transport(cu_cp_ue_index_t ue_index, const byte_buffer& nrppa_pdu) override;
   async_task<void> handle_ul_non_ue_associated_nrppa_transport(const byte_buffer& nrppa_pdu) override;
   async_task<bool>
   handle_rrc_inactive_transition_report_required(const ngap_rrc_inactive_transition_report& report) override;
@@ -81,11 +83,11 @@ public:
   size_t get_nof_ues() const override { return ue_ctxt_list.size(); }
 
   // ngap_ue_context_removal_handler.
-  void remove_ue_context(ue_index_t ue_index) override;
+  void remove_ue_context(cu_cp_ue_index_t ue_index) override;
 
   // ngap_ue_id_translator.
-  ue_index_t  get_ue_index(const amf_ue_id_t& amf_ue_ngap_id) override;
-  amf_ue_id_t get_amf_ue_id(const ue_index_t& ue_index) override;
+  cu_cp_ue_index_t get_ue_index(const amf_ue_id_t& amf_ue_ngap_id) override;
+  amf_ue_id_t      get_amf_ue_id(const cu_cp_ue_index_t& ue_index) override;
 
   ngap_message_handler&                        get_ngap_message_handler() override { return *this; }
   ngap_event_handler&                          get_ngap_event_handler() override { return *this; }
@@ -203,10 +205,11 @@ private:
   /// \param[in] ue_index The index of the related UE.
   /// \param[in] cause The cause of the Error Indication.
   /// \param[in] amf_ue_id The AMF UE ID.
-  void schedule_error_indication(ue_index_t ue_index, ngap_cause_t cause, std::optional<amf_ue_id_t> amf_ue_id = {});
+  void
+  schedule_error_indication(cu_cp_ue_index_t ue_index, ngap_cause_t cause, std::optional<amf_ue_id_t> amf_ue_id = {});
 
   /// \brief Callback for the PDU Session Request Timer expiration. Triggers the release of the UE.
-  void on_request_pdu_session_timer_expired(ue_index_t ue_index);
+  void on_request_pdu_session_timer_expired(cu_cp_ue_index_t ue_index);
 
   /// \brief Validates consistent UE id pair. It checks if an existing context already exists
   /// for the received AMF-UE-NGAP-ID and checks if it matches the received RAN-UE-NGAP-ID.
@@ -231,7 +234,7 @@ private:
   /// Repository of UE Contexts.
   ngap_ue_context_list ue_ctxt_list;
 
-  std::unordered_map<ue_index_t, error_indication_request_t> stored_error_indications;
+  std::unordered_map<cu_cp_ue_index_t, error_indication_request_t> stored_error_indications;
 
   ngap_cu_cp_notifier& cu_cp_notifier;
   timer_manager&       timers;

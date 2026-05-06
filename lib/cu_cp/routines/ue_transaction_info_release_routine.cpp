@@ -63,7 +63,7 @@ void ue_transaction_info_release_routine::operator()(coro_context<async_task<voi
 
   // Launch removal procedure for the provided UEs.
   ues_remaining_count = loss_event.ues_lost.size();
-  for (ue_index_t ue_idx : loss_event.ues_lost) {
+  for (cu_cp_ue_index_t ue_idx : loss_event.ues_lost) {
     launch_ue_removal(ue_idx);
   }
 
@@ -122,7 +122,7 @@ void ue_transaction_info_release_routine::prepare_e1_reset_messages()
   }
 }
 
-void ue_transaction_info_release_routine::launch_ue_removal(ue_index_t ue_idx)
+void ue_transaction_info_release_routine::launch_ue_removal(cu_cp_ue_index_t ue_idx)
 {
   // Create task to be called after a UE removal.
   auto on_ue_removal = make_scope_exit([this]() {

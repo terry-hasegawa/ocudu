@@ -5,7 +5,6 @@
 #pragma once
 
 #include "ocudu/cu_cp/cu_cp_location_reporting_types.h"
-#include "ocudu/ocudulog/ocudulog.h"
 #include <map>
 
 namespace ocudu::ocucp {
@@ -39,11 +38,11 @@ public:
   std::optional<location_report_request> get_location_reporting_request() const;
 
   /// \brief Build and return a location report, if location reporting is configured.
-  std::optional<location_report> get_location_report(ue_index_t                         ue_index,
+  std::optional<location_report> get_location_report(cu_cp_ue_index_t                   ue_index,
                                                      const cu_cp_user_location_info_nr& user_location_info);
 
   /// \brief Build and return a direct location report, using the provided request.
-  location_report get_direct_location_report(ue_index_t                         ue_index,
+  location_report get_direct_location_report(cu_cp_ue_index_t                   ue_index,
                                              const cu_cp_user_location_info_nr& user_location_info,
                                              const location_report_request&     request);
 

@@ -5,7 +5,6 @@
 #pragma once
 
 #include "ocudu/cu_cp/cu_cp.h"
-#include "ocudu/cu_cp/cu_cp_types.h"
 #include "ocudu/cu_up/cu_up.h"
 #include "ocudu/cu_up/cu_up_types.h"
 #include "ocudu/e1ap/common/e1ap_common.h"
@@ -14,6 +13,7 @@
 #include "ocudu/e1ap/cu_up/e1ap_cu_up.h"
 #include "ocudu/e1ap/cu_up/e1ap_cu_up_bearer_context_update.h"
 #include "ocudu/gateways/network_gateway.h"
+#include "ocudu/ran/cu_cp_types.h"
 #include "ocudu/support/async/fifo_async_task_scheduler.h"
 
 namespace ocudu {
@@ -43,7 +43,7 @@ public:
 
 private:
   ocudulog::basic_logger&   logger;
-  uint16_t                  ue_index = ocucp::ue_index_to_uint(ocucp::ue_index_t::min);
+  uint16_t                  ue_index = cu_cp_ue_index_to_uint(cu_cp_ue_index_t::min);
   fifo_async_task_scheduler task_sched{16};
 };
 

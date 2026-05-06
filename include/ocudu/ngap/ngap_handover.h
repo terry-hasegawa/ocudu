@@ -7,6 +7,7 @@
 #include "ocudu/cu_cp/cu_cp_location_reporting_types.h"
 #include "ocudu/cu_cp/cu_cp_types.h"
 #include "ocudu/ngap/ngap_types.h"
+#include "ocudu/ran/cu_cp_types.h"
 #include "ocudu/ran/guami.h"
 #include "ocudu/security/security.h"
 #include <map>
@@ -20,7 +21,7 @@ struct ngap_ue_source_handover_context {
 };
 
 struct ngap_handover_preparation_request {
-  ue_index_t                                             ue_index = ue_index_t::invalid;
+  cu_cp_ue_index_t                                       ue_index = cu_cp_ue_index_t::invalid;
   gnb_id_t                                               gnb_id;
   nr_cell_identity                                       nci;
   std::map<pdu_session_id_t, std::vector<qos_flow_id_t>> pdu_sessions;
@@ -82,7 +83,7 @@ struct ngap_source_ngran_node_to_target_ngran_node_transparent_container {
 };
 
 struct ngap_handover_request {
-  ue_index_t                                                            ue_index = ue_index_t::invalid;
+  cu_cp_ue_index_t                                                      ue_index = cu_cp_ue_index_t::invalid;
   ngap_handov_type                                                      handov_type;
   ngap_cause_t                                                          cause;
   cu_cp_aggregate_maximum_bit_rate                                      ue_aggr_max_bit_rate;

@@ -30,7 +30,7 @@ struct trp_information_failure_t {
 };
 
 struct positioning_information_request_t {
-  ue_index_t ue_index;
+  cu_cp_ue_index_t ue_index;
 
   std::optional<requested_srs_tx_characteristics_t> requested_srs_tx_characteristics;
   std::optional<ue_report_info_t>                   ue_report_info;
@@ -50,7 +50,7 @@ struct positioning_information_failure_t {
 };
 
 struct positioning_activation_request_t {
-  ue_index_t ue_index;
+  cu_cp_ue_index_t ue_index;
 
   srs_type_t                          srs_type;
   std::optional<relative_time_1900_t> activation_time;

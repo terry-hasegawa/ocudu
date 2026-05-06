@@ -11,8 +11,7 @@
 #include "ocudu/e1ap/cu_cp/e1ap_cu_cp.h"
 #include <string>
 
-namespace ocudu {
-namespace ocucp {
+namespace ocudu::ocucp {
 
 class cu_up_processor_impl : public cu_up_processor
 {
@@ -22,7 +21,7 @@ public:
                        e1ap_cu_cp_notifier&           cu_cp_notifier_,
                        common_task_scheduler&         common_task_sched_);
 
-  void stop(ue_index_t ue_index) override;
+  void stop(cu_cp_ue_index_t ue_index) override;
 
   // Message handlers.
   void             handle_cu_up_e1_setup_request(const cu_up_e1_setup_request& msg) override;
@@ -37,7 +36,7 @@ public:
   e1ap_bearer_context_removal_handler& get_e1ap_bearer_context_removal_handler() override { return *e1ap; }
   e1ap_statistics_handler&             get_e1ap_statistics_handler() override { return *e1ap; }
 
-  void update_ue_index(ue_index_t ue_index, ue_index_t old_ue_index) override;
+  void update_ue_index(cu_cp_ue_index_t ue_index, cu_cp_ue_index_t old_ue_index) override;
 
 private:
   class e1ap_cu_up_processor_adapter;
@@ -67,5 +66,4 @@ private:
   std::unique_ptr<e1ap_cu_cp> e1ap;
 };
 
-} // namespace ocucp
-} // namespace ocudu
+} // namespace ocudu::ocucp

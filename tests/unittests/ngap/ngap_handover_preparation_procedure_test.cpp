@@ -16,7 +16,7 @@ using namespace ocucp;
 TEST_F(ngap_test, when_source_gnb_handover_preparation_triggered_then_ho_command_received)
 {
   // Setup UE context
-  ue_index_t ue_index = create_ue();
+  cu_cp_ue_index_t ue_index = create_ue();
   run_dl_nas_transport(ue_index); // needed to allocate AMF UE id.
 
   // Manually add existing PDU sessions to UP manager.

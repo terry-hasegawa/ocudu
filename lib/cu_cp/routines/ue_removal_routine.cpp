@@ -7,7 +7,7 @@
 using namespace ocudu;
 using namespace ocudu::ocucp;
 
-ue_removal_routine::ue_removal_routine(ue_index_t                           ue_index_,
+ue_removal_routine::ue_removal_routine(cu_cp_ue_index_t                     ue_index_,
                                        rrc_ue_handler*                      rrc_du_notifier_,
                                        e1ap_bearer_context_removal_handler* e1ap_removal_handler_,
                                        f1ap_ue_context_removal_handler*     f1ap_removal_handler_,

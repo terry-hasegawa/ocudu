@@ -204,7 +204,7 @@ fill_meas_results(const nrppa_meas_quantities_item&                             
 }
 
 inline expected<nrppa_e_cid_meas_result, std::string>
-fill_e_cid_measurement_result(ue_index_t                                     ue_index,
+fill_e_cid_measurement_result(cu_cp_ue_index_t                               ue_index,
                               const cell_measurement_positioning_info&       meas_results,
                               const std::vector<nrppa_meas_quantities_item>& meas_quantities,
                               tac_t                                          serving_cell_tac)

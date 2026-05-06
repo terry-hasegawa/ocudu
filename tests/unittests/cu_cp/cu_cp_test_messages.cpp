@@ -12,8 +12,8 @@
 using namespace ocudu;
 using namespace ocucp;
 
-cu_cp_ue_context_release_command ocudu::ocucp::generate_ue_context_release_command(ue_index_t   ue_index,
-                                                                                   ngap_cause_t cause)
+cu_cp_ue_context_release_command ocudu::ocucp::generate_ue_context_release_command(cu_cp_ue_index_t ue_index,
+                                                                                   ngap_cause_t     cause)
 {
   cu_cp_ue_context_release_command ue_context_release_command = {};
   ue_context_release_command.ue_index                         = ue_index;
@@ -21,9 +21,9 @@ cu_cp_ue_context_release_command ocudu::ocucp::generate_ue_context_release_comma
   return ue_context_release_command;
 }
 
-cu_cp_pdu_session_resource_setup_request ocudu::ocucp::generate_pdu_session_resource_setup(ue_index_t ue_index,
-                                                                                           unsigned   num_pdu_sessions,
-                                                                                           unsigned   num_qos_flows)
+cu_cp_pdu_session_resource_setup_request ocudu::ocucp::generate_pdu_session_resource_setup(cu_cp_ue_index_t ue_index,
+                                                                                           unsigned num_pdu_sessions,
+                                                                                           unsigned num_qos_flows)
 {
   cu_cp_pdu_session_resource_setup_request req;
   req.ue_index = ue_index;
@@ -67,7 +67,7 @@ cu_cp_pdu_session_resource_setup_request ocudu::ocucp::generate_pdu_session_reso
 }
 
 cu_cp_pdu_session_resource_setup_request
-ocudu::ocucp::generate_pdu_session_resource_setup(ue_index_t ue_index, pdu_session_id_t psi, qos_flow_id_t qfi)
+ocudu::ocucp::generate_pdu_session_resource_setup(cu_cp_ue_index_t ue_index, pdu_session_id_t psi, qos_flow_id_t qfi)
 {
   cu_cp_pdu_session_resource_setup_request req;
   req.ue_index = ue_index;
@@ -104,8 +104,8 @@ ocudu::ocucp::generate_pdu_session_resource_setup(ue_index_t ue_index, pdu_sessi
   return req;
 }
 
-cu_cp_pdu_session_resource_release_command ocudu::ocucp::generate_pdu_session_resource_release(ue_index_t ue_index,
-                                                                                               pdu_session_id_t psi)
+cu_cp_pdu_session_resource_release_command
+ocudu::ocucp::generate_pdu_session_resource_release(cu_cp_ue_index_t ue_index, pdu_session_id_t psi)
 {
   cu_cp_pdu_session_resource_release_command cmd;
 
@@ -122,7 +122,7 @@ cu_cp_pdu_session_resource_release_command ocudu::ocucp::generate_pdu_session_re
 }
 
 cu_cp_pdu_session_resource_modify_request
-ocudu::ocucp::generate_pdu_session_resource_modification(ue_index_t ue_index, unsigned psi, unsigned qfi)
+ocudu::ocucp::generate_pdu_session_resource_modification(cu_cp_ue_index_t ue_index, unsigned psi, unsigned qfi)
 {
   cu_cp_pdu_session_resource_modify_request request;
   request.ue_index = ue_index;

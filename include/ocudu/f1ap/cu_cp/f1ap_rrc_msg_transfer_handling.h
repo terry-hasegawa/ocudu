@@ -5,17 +5,16 @@
 #pragma once
 
 #include "ocudu/adt/byte_buffer.h"
-#include "ocudu/cu_cp/cu_cp_types.h"
+#include "ocudu/ran/cu_cp_types.h"
 #include "ocudu/ran/rb_id.h"
 #include "ocudu/ran/rnti.h"
 
-namespace ocudu {
-namespace ocucp {
+namespace ocudu::ocucp {
 
 struct f1ap_dl_rrc_message {
-  ue_index_t  ue_index = ue_index_t::invalid;
-  srb_id_t    srb_id   = srb_id_t::nulltype;
-  byte_buffer rrc_container;
+  cu_cp_ue_index_t ue_index = cu_cp_ue_index_t::invalid;
+  srb_id_t         srb_id   = srb_id_t::nulltype;
+  byte_buffer      rrc_container;
 };
 
 /// Handles incoming DL RRC messages to be transmitted over the F1 interface.
@@ -48,5 +47,4 @@ public:
   virtual void on_ul_dcch_pdu(byte_buffer pdu) = 0;
 };
 
-} // namespace ocucp
-} // namespace ocudu
+} // namespace ocudu::ocucp

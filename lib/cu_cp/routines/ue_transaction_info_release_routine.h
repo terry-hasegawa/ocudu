@@ -9,8 +9,7 @@
 #include "ocudu/cu_cp/cu_cp_types.h"
 #include "ocudu/ran/plmn_identity.h"
 
-namespace ocudu {
-namespace ocucp {
+namespace ocudu::ocucp {
 
 class ue_transaction_info_release_routine
 {
@@ -29,7 +28,7 @@ public:
 private:
   void prepare_ng_reset_messages();
   void prepare_e1_reset_messages();
-  void launch_ue_removal(ue_index_t ue_idx);
+  void launch_ue_removal(cu_cp_ue_index_t ue_idx);
 
   const ue_transaction_info_loss_event loss_event;
   ue_manager&                          ue_mng;
@@ -52,5 +51,4 @@ private:
   manual_event_flag all_ues_reset;
 };
 
-} // namespace ocucp
-} // namespace ocudu
+} // namespace ocudu::ocucp

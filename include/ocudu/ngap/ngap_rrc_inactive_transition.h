@@ -5,17 +5,16 @@
 #pragma once
 
 #include "ocudu/cu_cp/cu_cp_types.h"
+#include "ocudu/ran/cu_cp_types.h"
 
-namespace ocudu {
-namespace ocucp {
+namespace ocudu::ocucp {
 
 struct ngap_rrc_inactive_transition_report {
   enum class ngap_rrc_state { inactive = 0, connected };
 
-  ue_index_t                  ue_index = ue_index_t::invalid;
+  cu_cp_ue_index_t            ue_index = cu_cp_ue_index_t::invalid;
   ngap_rrc_state              rrc_state;
   cu_cp_user_location_info_nr user_location_info;
 };
 
-} // namespace ocucp
-} // namespace ocudu
+} // namespace ocudu::ocucp

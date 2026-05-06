@@ -17,7 +17,7 @@ bool ocudu::ocucp::handle_context_setup_response(
     bool                                      reestablish_pdcp)
 {
   // Sanity checks.
-  if (target_ue_context_setup_response.ue_index == ue_index_t::invalid) {
+  if (target_ue_context_setup_response.ue_index == cu_cp_ue_index_t::invalid) {
     logger.warning("Failed to create UE at the target DU");
     return false;
   }
@@ -98,7 +98,7 @@ bool ocudu::ocucp::handle_bearer_context_modification_response(
   return bearer_context_modification_response.success;
 }
 
-unsigned ocudu::ocucp::cancel_cho_candidates(cu_cp_ue& source_ue, ue_manager& ue_mng, ue_index_t winner_ue_index)
+unsigned ocudu::ocucp::cancel_cho_candidates(cu_cp_ue& source_ue, ue_manager& ue_mng, cu_cp_ue_index_t winner_ue_index)
 {
   unsigned cancelled = 0;
   auto&    cho_ctx   = source_ue.get_cho_context();
@@ -106,8 +106,8 @@ unsigned ocudu::ocucp::cancel_cho_candidates(cu_cp_ue& source_ue, ue_manager& ue
     return 0;
   }
   for (const auto& candidate : cho_ctx->candidates) {
-    if (candidate.target_ue_index == ue_index_t::invalid || candidate.target_ue_index == source_ue.get_ue_index() ||
-        candidate.target_ue_index == winner_ue_index) {
+    if (candidate.target_ue_index == cu_cp_ue_index_t::invalid ||
+        candidate.target_ue_index == source_ue.get_ue_index() || candidate.target_ue_index == winner_ue_index) {
       continue;
     }
     auto* cand_ue = ue_mng.find_du_ue(candidate.target_ue_index);

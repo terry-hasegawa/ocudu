@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include "ocudu/cu_cp/cu_cp_types.h"
 #include "ocudu/nrppa/nrppa_ue_ids.h"
+#include "ocudu/ran/cu_cp_types.h"
 #include "ocudu/support/format/fmt_to_c_str.h"
 #include "ocudu/support/format/prefixed_logger.h"
 #include "fmt/format.h"
@@ -15,7 +15,7 @@ namespace ocudu::ocucp {
 class nrppa_ue_log_prefix
 {
 public:
-  nrppa_ue_log_prefix(ue_index_t ue_index, ran_ue_meas_id_t ran_ue_meas_id, lmf_ue_meas_id_t lmf_ue_meas_id)
+  nrppa_ue_log_prefix(cu_cp_ue_index_t ue_index, ran_ue_meas_id_t ran_ue_meas_id, lmf_ue_meas_id_t lmf_ue_meas_id)
   {
     fmt::memory_buffer buffer;
     fmt::format_to(std::back_inserter(buffer),

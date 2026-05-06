@@ -76,18 +76,18 @@ bool ngap_test::run_ng_setup()
   return true;
 }
 
-ue_index_t ngap_test::create_ue(rnti_t rnti)
+cu_cp_ue_index_t ngap_test::create_ue(rnti_t rnti)
 {
   // Create UE in UE manager.
-  ue_index_t ue_index = ue_mng.add_ue(du_index_t::min);
-  if (ue_index == ue_index_t::invalid) {
+  cu_cp_ue_index_t ue_index = ue_mng.add_ue(du_index_t::min);
+  if (ue_index == cu_cp_ue_index_t::invalid) {
     test_logger.error("Failed to create UE");
-    return ue_index_t::invalid;
+    return cu_cp_ue_index_t::invalid;
   }
   if (ue_mng.ue_admission_limit_reached()) {
     test_logger.error("Failed to create UE. UE not servable");
     ue_mng.remove_ue(ue_index);
-    return ue_index_t::invalid;
+    return cu_cp_ue_index_t::invalid;
   }
 
   if (not ue_mng.update_ue_context(ue_index, int_to_gnb_du_id(0), MIN_PCI, rnti, du_cell_index_t::min)) {
@@ -96,13 +96,13 @@ ue_index_t ngap_test::create_ue(rnti_t rnti)
                       MIN_PCI,
                       rnti_t::MIN_CRNTI,
                       du_cell_index_t::min);
-    return ue_index_t::invalid;
+    return cu_cp_ue_index_t::invalid;
   }
 
   if (!ue_mng.set_plmn(ue_index, plmn_identity::test_value())) {
     test_logger.error("ue={}: Failed to set PLMN", ue_index);
     ue_mng.remove_ue(ue_index);
-    return ue_index_t::invalid;
+    return cu_cp_ue_index_t::invalid;
   }
 
   // Inject UE creation at NGAP.
@@ -121,18 +121,18 @@ ue_index_t ngap_test::create_ue(rnti_t rnti)
   return ue_index;
 }
 
-ue_index_t ngap_test::create_ue_without_init_ue_message(rnti_t rnti)
+cu_cp_ue_index_t ngap_test::create_ue_without_init_ue_message(rnti_t rnti)
 {
   // Create UE in UE manager.
-  ue_index_t ue_index = ue_mng.add_ue(du_index_t::min);
-  if (ue_index == ue_index_t::invalid) {
+  cu_cp_ue_index_t ue_index = ue_mng.add_ue(du_index_t::min);
+  if (ue_index == cu_cp_ue_index_t::invalid) {
     test_logger.error("Failed to create UE");
-    return ue_index_t::invalid;
+    return cu_cp_ue_index_t::invalid;
   }
   if (ue_mng.ue_admission_limit_reached()) {
     test_logger.error("Failed to create UE. UE not servable");
     ue_mng.remove_ue(ue_index);
-    return ue_index_t::invalid;
+    return cu_cp_ue_index_t::invalid;
   }
 
   if (not ue_mng.update_ue_context(ue_index, int_to_gnb_du_id(0), MIN_PCI, rnti, du_cell_index_t::min)) {
@@ -141,12 +141,12 @@ ue_index_t ngap_test::create_ue_without_init_ue_message(rnti_t rnti)
                       MIN_PCI,
                       rnti_t::MIN_CRNTI,
                       du_cell_index_t::min);
-    return ue_index_t::invalid;
+    return cu_cp_ue_index_t::invalid;
   }
   if (!ue_mng.set_plmn(ue_index, plmn_identity::test_value())) {
     test_logger.error("ue={}: Failed to set PLMN", ue_index);
     ue_mng.remove_ue(ue_index);
-    return ue_index_t::invalid;
+    return cu_cp_ue_index_t::invalid;
   }
 
   // Inject UE creation at NGAP
@@ -158,7 +158,7 @@ ue_index_t ngap_test::create_ue_without_init_ue_message(rnti_t rnti)
   return ue_index;
 }
 
-void ngap_test::run_dl_nas_transport(ue_index_t ue_index)
+void ngap_test::run_dl_nas_transport(cu_cp_ue_index_t ue_index)
 {
   auto& ue     = test_ues.at(ue_index);
   ue.amf_ue_id = uint_to_amf_ue_id(test_rng::uniform_int<uint64_t>(16, 128));
@@ -169,13 +169,13 @@ void ngap_test::run_dl_nas_transport(ue_index_t ue_index)
   ngap->handle_message(dl_nas_transport);
 }
 
-void ngap_test::run_ul_nas_transport(ue_index_t ue_index)
+void ngap_test::run_ul_nas_transport(cu_cp_ue_index_t ue_index)
 {
   cu_cp_ul_nas_transport ul_nas_transport = generate_ul_nas_transport_message(ue_index);
   ngap->handle_ul_nas_transport_message(ul_nas_transport);
 }
 
-void ngap_test::run_initial_context_setup(ue_index_t ue_index)
+void ngap_test::run_initial_context_setup(cu_cp_ue_index_t ue_index)
 {
   auto& ue = test_ues.at(ue_index);
 
@@ -184,7 +184,7 @@ void ngap_test::run_initial_context_setup(ue_index_t ue_index)
   ngap->handle_message(init_context_setup_request);
 }
 
-bool ngap_test::enable_ue_security(ue_index_t ue_index)
+bool ngap_test::enable_ue_security(cu_cp_ue_index_t ue_index)
 {
   // Setup security.
   byte_buffer key_buf = make_byte_buffer("45cbc3f8a81193fd5c5229300d59edf812e998a115ec4e0ce903ba89367e2628").value();
@@ -209,7 +209,7 @@ bool ngap_test::enable_ue_security(ue_index_t ue_index)
   return true;
 }
 
-void ngap_test::run_pdu_session_resource_setup(ue_index_t ue_index, pdu_session_id_t pdu_session_id)
+void ngap_test::run_pdu_session_resource_setup(cu_cp_ue_index_t ue_index, pdu_session_id_t pdu_session_id)
 {
   auto& ue = test_ues.at(ue_index);
 
@@ -220,7 +220,7 @@ void ngap_test::run_pdu_session_resource_setup(ue_index_t ue_index, pdu_session_
   ngap->handle_message(pdu_session_resource_setup_request);
 }
 
-void ngap_test::add_pdu_session_to_up_manager(ue_index_t              ue_index,
+void ngap_test::add_pdu_session_to_up_manager(cu_cp_ue_index_t        ue_index,
                                               pdu_session_id_t        pdu_session_id,
                                               pdu_session_type_t      pdu_session_type,
                                               up_transport_layer_info ul_ngu_up_tnl_info,

@@ -15,9 +15,9 @@ using namespace ocucp;
 class ngap_pdu_session_resource_modify_procedure_test : public ngap_test
 {
 protected:
-  ue_index_t start_procedure(pdu_session_id_t pdu_session_id)
+  cu_cp_ue_index_t start_procedure(pdu_session_id_t pdu_session_id)
   {
-    ue_index_t ue_index = create_ue();
+    cu_cp_ue_index_t ue_index = create_ue();
 
     // Inject DL NAS transport message from AMF
     run_dl_nas_transport(ue_index);
@@ -109,7 +109,7 @@ TEST_F(ngap_pdu_session_resource_modify_procedure_test,
   // Test preamble
   pdu_session_id_t pdu_session_id = uint_to_pdu_session_id(test_rng::uniform_int<uint16_t>(
       pdu_session_id_to_uint(pdu_session_id_t::min), pdu_session_id_to_uint(pdu_session_id_t::max)));
-  ue_index_t       ue_index       = this->start_procedure(pdu_session_id);
+  cu_cp_ue_index_t ue_index       = this->start_procedure(pdu_session_id);
   auto&            ue             = test_ues.at(ue_index);
 
   // Inject PDU Session Resource Modify Request
@@ -131,7 +131,7 @@ TEST_F(ngap_pdu_session_resource_modify_procedure_test,
   // Test preamble
   pdu_session_id_t pdu_session_id = uint_to_pdu_session_id(test_rng::uniform_int<uint16_t>(
       pdu_session_id_to_uint(pdu_session_id_t::min), pdu_session_id_to_uint(pdu_session_id_t::max)));
-  ue_index_t       ue_index       = this->start_procedure(pdu_session_id);
+  cu_cp_ue_index_t ue_index       = this->start_procedure(pdu_session_id);
   auto&            ue             = test_ues.at(ue_index);
 
   // Inject invalid PDU Session Resource Modify Request
@@ -150,7 +150,7 @@ TEST_F(ngap_pdu_session_resource_modify_procedure_test,
   // Test preamble
   pdu_session_id_t pdu_session_id = uint_to_pdu_session_id(test_rng::uniform_int<uint16_t>(
       pdu_session_id_to_uint(pdu_session_id_t::min), pdu_session_id_to_uint(pdu_session_id_t::max)));
-  ue_index_t       ue_index       = this->start_procedure(pdu_session_id);
+  cu_cp_ue_index_t ue_index       = this->start_procedure(pdu_session_id);
   auto&            ue             = test_ues.at(ue_index);
 
   // Inject PDU Session Resource Modify Request

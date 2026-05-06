@@ -112,14 +112,14 @@ public:
   size_t                              get_nof_ues() const override { return ue_db.size(); }
 
   // rrc_ue_handler.
-  rrc_ue_interface* find_ue(ue_index_t ue_index) override
+  rrc_ue_interface* find_ue(cu_cp_ue_index_t ue_index) override
   {
     if (ue_db.find(ue_index) == ue_db.end()) {
       return nullptr;
     }
     return ue_db.at(ue_index).get();
   }
-  void remove_ue(ue_index_t ue_index) override;
+  void remove_ue(cu_cp_ue_index_t ue_index) override;
 
   // rrc_du_connection_event_handler.
   void handle_successful_rrc_setup(std::optional<establishment_cause_t> cause) override;
@@ -150,10 +150,10 @@ private:
   ocudulog::basic_logger& logger;
 
   // RRC UE to RRC DU adapters.
-  std::unordered_map<ue_index_t, rrc_ue_rrc_du_adapter> rrc_ue_rrc_du_adapters;
+  std::unordered_map<cu_cp_ue_index_t, rrc_ue_rrc_du_adapter> rrc_ue_rrc_du_adapters;
 
   // RRC-internal user database indexed by ue_index.
-  std::unordered_map<ue_index_t, std::unique_ptr<rrc_ue_impl>> ue_db;
+  std::unordered_map<cu_cp_ue_index_t, std::unique_ptr<rrc_ue_impl>> ue_db;
   // Cell database to store cell information from the DU.
   std::map<nr_cell_identity, rrc_cell_info> cell_info_db;
 

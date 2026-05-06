@@ -75,14 +75,14 @@ f1ap_cu_impl::handle_ue_context_setup_request(const f1ap_ue_context_setup_reques
       cfg, request, ue_ctxt_list, du_processor_notifier, tx_pdu_notifier, logger, rrc_context);
 }
 
-async_task<ue_index_t> f1ap_cu_impl::handle_ue_context_release_command(const f1ap_ue_context_release_command& msg)
+async_task<cu_cp_ue_index_t> f1ap_cu_impl::handle_ue_context_release_command(const f1ap_ue_context_release_command& msg)
 {
   if (!ue_ctxt_list.contains(msg.ue_index)) {
     logger.warning("ue={}: Dropping \"UEContextReleaseCommand\". Cause: UE context does not exist", msg.ue_index);
 
-    return launch_async([](coro_context<async_task<ue_index_t>>& ctx) mutable {
+    return launch_async([](coro_context<async_task<cu_cp_ue_index_t>>& ctx) mutable {
       CORO_BEGIN(ctx);
-      CORO_RETURN(ue_index_t::invalid);
+      CORO_RETURN(cu_cp_ue_index_t::invalid);
     });
   }
 
@@ -104,7 +104,7 @@ f1ap_cu_impl::handle_ue_context_modification_request(const f1ap_ue_context_modif
   return launch_async<ue_context_modification_procedure>(cfg, request, ue_ctxt_list[request.ue_index], tx_pdu_notifier);
 }
 
-bool f1ap_cu_impl::handle_ue_id_update(ue_index_t ue_index, ue_index_t old_ue_index)
+bool f1ap_cu_impl::handle_ue_id_update(cu_cp_ue_index_t ue_index, cu_cp_ue_index_t old_ue_index)
 {
   if (!ue_ctxt_list.contains(ue_index) or !ue_ctxt_list.contains(old_ue_index)) {
     return false;
@@ -159,7 +159,7 @@ void f1ap_cu_impl::handle_message(const f1ap_message& msg)
   }
 }
 
-void f1ap_cu_impl::remove_ue_context(ue_index_t ue_index)
+void f1ap_cu_impl::remove_ue_context(cu_cp_ue_index_t ue_index)
 {
   if (!ue_ctxt_list.contains(ue_index)) {
     logger.debug("ue={}: UE context not found", ue_index);
@@ -341,8 +341,8 @@ void f1ap_cu_impl::handle_initial_ul_rrc_message(const asn1::f1ap::init_ul_rrc_m
   }
 
   // Request UE index allocation from DU processor.
-  ue_index_t ue_index = du_processor_notifier.request_new_ue_creation();
-  if (ue_index == ue_index_t::invalid) {
+  cu_cp_ue_index_t ue_index = du_processor_notifier.request_new_ue_creation();
+  if (ue_index == cu_cp_ue_index_t::invalid) {
     logger.warning("du_ue={}: Dropping \"InitialULRRCMessageTransfer\". Cause: Failed to create UE context",
                    fmt::underlying(du_ue_id));
     return;
@@ -650,11 +650,11 @@ void f1ap_cu_impl::log_pdu(bool is_rx, const f1ap_message& pdu)
   }
 
   // Fetch UE index.
-  auto                      cu_ue_id = get_gnb_cu_ue_f1ap_id(pdu.pdu);
-  std::optional<ue_index_t> ue_idx;
+  auto                            cu_ue_id = get_gnb_cu_ue_f1ap_id(pdu.pdu);
+  std::optional<cu_cp_ue_index_t> ue_idx;
   if (cu_ue_id.has_value()) {
     const auto* ue_ptr = ue_ctxt_list.find(cu_ue_id.value());
-    if (ue_ptr != nullptr and ue_ptr->ue_ids.ue_index != ue_index_t::invalid) {
+    if (ue_ptr != nullptr and ue_ptr->ue_ids.ue_index != cu_cp_ue_index_t::invalid) {
       ue_idx = ue_ptr->ue_ids.ue_index;
     }
   }

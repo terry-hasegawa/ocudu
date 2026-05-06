@@ -28,7 +28,7 @@ cell_meas_manager::cell_meas_manager(const cell_meas_manager_cfg&         cfg_,
 }
 
 std::optional<rrc_meas_cfg>
-cell_meas_manager::get_measurement_config(ue_index_t                         ue_index,
+cell_meas_manager::get_measurement_config(cu_cp_ue_index_t                   ue_index,
                                           nr_cell_identity                   serving_nci,
                                           const std::optional<rrc_meas_cfg>& current_meas_config,
                                           bool                               cond_meas,
@@ -262,7 +262,7 @@ static std::optional<uint8_t> get_ssb_rsrp(const rrc_meas_result_nr& meas_result
   return rsrp;
 }
 
-static std::optional<pci_t> find_strongest_neighbor(ue_index_t              ue_index,
+static std::optional<pci_t> find_strongest_neighbor(cu_cp_ue_index_t        ue_index,
                                                     const rrc_meas_results& meas_results,
                                                     ocudulog::basic_logger& logger,
                                                     std::optional<uint8_t>  periodic_ho_rsrp_offset = std::nullopt)
@@ -304,7 +304,7 @@ static std::optional<pci_t> find_strongest_neighbor(ue_index_t              ue_i
   return strongest_neighbor;
 }
 
-void cell_meas_manager::report_measurement(ue_index_t ue_index, const rrc_meas_results& meas_results)
+void cell_meas_manager::report_measurement(cu_cp_ue_index_t ue_index, const rrc_meas_results& meas_results)
 {
   logger.debug("ue={}: Received measurement result with meas_id={}", ue_index, fmt::underlying(meas_results.meas_id));
 
@@ -439,7 +439,7 @@ static expected<nr_cell_identity, std::string> find_nci(const cell_meas_manager_
 }
 
 static expected<cell_measurement_positioning_info, std::string> generate_measurement_objects_for_positioning(
-    ue_index_t                                                  ue_index,
+    cu_cp_ue_index_t                                            ue_index,
     ue_manager&                                                 ue_mng,
     const cell_meas_manager_cfg&                                cfg,
     const std::map<nr_cell_identity, serving_cell_meas_config>& nci_to_serving_cell_meas_config,
@@ -550,7 +550,7 @@ static expected<cell_measurement_positioning_info, std::string> generate_measure
   return pos_info;
 }
 
-void cell_meas_manager::store_measurement_results(ue_index_t ue_index, const rrc_meas_results& meas_results)
+void cell_meas_manager::store_measurement_results(cu_cp_ue_index_t ue_index, const rrc_meas_results& meas_results)
 {
   if (ue_mng.find_ue(ue_index) == nullptr) {
     logger.info("ue={}: Not storing positioning measurement. Cause: UE not found", ue_index);

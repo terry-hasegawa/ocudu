@@ -36,10 +36,10 @@ protected:
     ocudulog::flush();
   }
 
-  ue_index_t generate_random_ue_index()
+  cu_cp_ue_index_t generate_random_ue_index()
   {
-    return uint_to_ue_index(
-        test_rng::uniform_int<uint64_t>(ue_index_to_uint(ue_index_t::min), ue_index_to_uint(ue_index_t::max) - 1));
+    return uint_to_ue_index(test_rng::uniform_int<uint64_t>(cu_cp_ue_index_to_uint(cu_cp_ue_index_t::min),
+                                                            cu_cp_ue_index_to_uint(cu_cp_ue_index_t::max) - 1));
   }
 
   ran_ue_id_t generate_random_ran_ue_id()
@@ -58,8 +58,8 @@ protected:
 
 TEST_F(ngap_ue_context_test, when_ue_added_then_ue_exists)
 {
-  ue_index_t  ue_index  = generate_random_ue_index();
-  ran_ue_id_t ran_ue_id = generate_random_ran_ue_id();
+  cu_cp_ue_index_t ue_index  = generate_random_ue_index();
+  ran_ue_id_t      ran_ue_id = generate_random_ran_ue_id();
 
   ue_ctxt_list.add_ue(ue_index, ran_ue_id, ue_notifier);
 
@@ -74,8 +74,8 @@ TEST_F(ngap_ue_context_test, when_ue_added_then_ue_exists)
 
 TEST_F(ngap_ue_context_test, when_ue_not_added_then_ue_doesnt_exist)
 {
-  ue_index_t  ue_index  = generate_random_ue_index();
-  ran_ue_id_t ran_ue_id = generate_random_ran_ue_id();
+  cu_cp_ue_index_t ue_index  = generate_random_ue_index();
+  ran_ue_id_t      ran_ue_id = generate_random_ran_ue_id();
 
   ASSERT_FALSE(ue_ctxt_list.contains(ran_ue_id));
   ASSERT_FALSE(ue_ctxt_list.contains(ue_index));
@@ -83,8 +83,8 @@ TEST_F(ngap_ue_context_test, when_ue_not_added_then_ue_doesnt_exist)
 
 TEST_F(ngap_ue_context_test, when_ue_exists_then_removal_succeeds)
 {
-  ue_index_t  ue_index  = generate_random_ue_index();
-  ran_ue_id_t ran_ue_id = generate_random_ran_ue_id();
+  cu_cp_ue_index_t ue_index  = generate_random_ue_index();
+  ran_ue_id_t      ran_ue_id = generate_random_ran_ue_id();
 
   ue_ctxt_list.add_ue(ue_index, ran_ue_id, ue_notifier);
 
@@ -97,8 +97,8 @@ TEST_F(ngap_ue_context_test, when_ue_exists_then_removal_succeeds)
 
 TEST_F(ngap_ue_context_test, when_ue_is_added_then_next_ue_id_is_increased)
 {
-  ue_index_t  ue_index  = generate_random_ue_index();
-  ran_ue_id_t ran_ue_id = ue_ctxt_list.allocate_ran_ue_id();
+  cu_cp_ue_index_t ue_index  = generate_random_ue_index();
+  ran_ue_id_t      ran_ue_id = ue_ctxt_list.allocate_ran_ue_id();
 
   ASSERT_EQ((unsigned)ran_ue_id, (unsigned)ran_ue_id_t::min);
 

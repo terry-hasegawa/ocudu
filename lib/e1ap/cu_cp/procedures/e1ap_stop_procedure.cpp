@@ -43,7 +43,7 @@ async_task<void> e1ap_stop_procedure::handle_transaction_info_loss()
   // After receiving an E1 Release Request, no more E1AP Rx PDUs are expected. Cancel running UE E1AP transactions.
   // Note: size of ue_list may change during this operation (e.g. if a concurrent UE context release was being
   // processed and got cancelled). Therefore, we leverage the list ev.ues_lost for the iteration.
-  for (ue_index_t ue_idx : ev.ues_lost) {
+  for (cu_cp_ue_index_t ue_idx : ev.ues_lost) {
     auto* u = ue_ctxt_list.find_ue(ue_idx);
     if (u != nullptr) {
       u->bearer_ev_mng.cancel_all();
@@ -51,7 +51,7 @@ async_task<void> e1ap_stop_procedure::handle_transaction_info_loss()
   }
   ev.ues_lost.erase(std::remove_if(ev.ues_lost.begin(),
                                    ev.ues_lost.end(),
-                                   [this](ue_index_t ue_idx) { return ue_ctxt_list.find_ue(ue_idx) == nullptr; }),
+                                   [this](cu_cp_ue_index_t ue_idx) { return ue_ctxt_list.find_ue(ue_idx) == nullptr; }),
                     ev.ues_lost.end());
 
   return cu_cp_notifier.on_transaction_info_loss(std::move(ev));

@@ -9,8 +9,7 @@
 #include "../du_processor/du_processor.h"
 #include "ocudu/support/ocudu_assert.h"
 
-namespace ocudu {
-namespace ocucp {
+namespace ocudu::ocucp {
 
 /// Adapter between DU processor and CU-CP
 class du_processor_cu_cp_adapter : public du_processor_cu_cp_notifier
@@ -33,7 +32,7 @@ public:
     return meas_config_handler->handle_cell_config_update_request(nci, serv_cell_cfg);
   }
 
-  void on_rrc_ue_created(ue_index_t ue_index, rrc_ue_interface& rrc_ue) override
+  void on_rrc_ue_created(cu_cp_ue_index_t ue_index, rrc_ue_interface& rrc_ue) override
   {
     ocudu_assert(cu_cp_handler != nullptr, "CU-CP handler must not be nullptr");
     cu_cp_handler->handle_rrc_ue_creation(ue_index, rrc_ue);
@@ -45,7 +44,7 @@ public:
     return cu_cp_handler->handle_target_cell_sib1_required(du_index, cgi);
   }
 
-  async_task<void> on_ue_removal_required(ue_index_t ue_index) override
+  async_task<void> on_ue_removal_required(cu_cp_ue_index_t ue_index) override
   {
     ocudu_assert(ue_removal_handler != nullptr, "CU-CP UE Removal handler must not be nullptr");
     return ue_removal_handler->handle_ue_removal_request(ue_index);
@@ -90,5 +89,4 @@ private:
   cu_cp_controller* cu_ctrl = nullptr;
 };
 
-} // namespace ocucp
-} // namespace ocudu
+} // namespace ocudu::ocucp

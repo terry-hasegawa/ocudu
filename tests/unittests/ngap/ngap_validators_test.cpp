@@ -175,9 +175,9 @@ public:
 // Test handling of valid PDU session resource modification request.
 TEST_F(ngap_validator_test, when_valid_request_received_then_pdu_session_setup_succeeds)
 {
-  ue_index_t  ue_index  = uint_to_ue_index(0);
-  amf_ue_id_t amf_ue_id = uint_to_amf_ue_id(0);
-  ran_ue_id_t ran_ue_id = uint_to_ran_ue_id(0);
+  cu_cp_ue_index_t ue_index  = uint_to_ue_index(0);
+  amf_ue_id_t      amf_ue_id = uint_to_amf_ue_id(0);
+  ran_ue_id_t      ran_ue_id = uint_to_ran_ue_id(0);
 
   ngap_message ngap_msg = generate_valid_pdu_session_resource_setup_request_message(
       amf_ue_id, ran_ue_id, {{uint_to_pdu_session_id(1), {pdu_session_type_t::ipv4, {{uint_to_qos_flow_id(1), 9}}}}});
@@ -199,9 +199,9 @@ TEST_F(ngap_validator_test, when_valid_request_received_then_pdu_session_setup_s
 // Test handling of duplicate PDU session ids in PDU session resource setup request.
 TEST_F(ngap_validator_test, when_duplicate_pdu_session_id_then_pdu_session_setup_fails)
 {
-  ue_index_t  ue_index  = uint_to_ue_index(0);
-  amf_ue_id_t amf_ue_id = uint_to_amf_ue_id(0);
-  ran_ue_id_t ran_ue_id = uint_to_ran_ue_id(0);
+  cu_cp_ue_index_t ue_index  = uint_to_ue_index(0);
+  amf_ue_id_t      amf_ue_id = uint_to_amf_ue_id(0);
+  ran_ue_id_t      ran_ue_id = uint_to_ran_ue_id(0);
 
   ngap_message ngap_msg = generate_invalid_pdu_session_resource_setup_request_message(amf_ue_id, ran_ue_id);
 
@@ -220,9 +220,9 @@ TEST_F(ngap_validator_test, when_duplicate_pdu_session_id_then_pdu_session_setup
 
 TEST_F(ngap_validator_test, when_unique_and_duplicate_pdu_session_id_then_pdu_session_setup_partly_fails)
 {
-  ue_index_t  ue_index  = uint_to_ue_index(0);
-  amf_ue_id_t amf_ue_id = uint_to_amf_ue_id(0);
-  ran_ue_id_t ran_ue_id = uint_to_ran_ue_id(0);
+  cu_cp_ue_index_t ue_index  = uint_to_ue_index(0);
+  amf_ue_id_t      amf_ue_id = uint_to_amf_ue_id(0);
+  ran_ue_id_t      ran_ue_id = uint_to_ran_ue_id(0);
 
   ngap_message ngap_msg =
       generate_pdu_session_resource_setup_request_with_one_unique_and_two_duplicate_pdu_sessions(amf_ue_id, ran_ue_id);
@@ -247,7 +247,7 @@ TEST_F(
     when_request_pdu_session_contains_non_gbr_qos_flows_but_no_aggregate_maximum_bitrate_then_pdu_session_setup_fails)
 {
   pdu_session_id_t psi       = uint_to_pdu_session_id(1);
-  ue_index_t       ue_index  = uint_to_ue_index(0);
+  cu_cp_ue_index_t ue_index  = uint_to_ue_index(0);
   amf_ue_id_t      amf_ue_id = uint_to_amf_ue_id(0);
   ran_ue_id_t      ran_ue_id = uint_to_ran_ue_id(0);
 
@@ -272,7 +272,7 @@ TEST_F(
 TEST_F(ngap_validator_test, when_valid_request_received_then_pdu_session_modify_succeeds)
 {
   pdu_session_id_t psi       = uint_to_pdu_session_id(1);
-  ue_index_t       ue_index  = uint_to_ue_index(0);
+  cu_cp_ue_index_t ue_index  = uint_to_ue_index(0);
   amf_ue_id_t      amf_ue_id = uint_to_amf_ue_id(0);
   ran_ue_id_t      ran_ue_id = uint_to_ran_ue_id(0);
 
@@ -295,9 +295,9 @@ TEST_F(ngap_validator_test, when_valid_request_received_then_pdu_session_modify_
 // Test handling of duplicate PDU session ids in PDU session resource modification request.
 TEST_F(ngap_validator_test, when_duplicate_pdu_session_id_then_pdu_session_modification_fails)
 {
-  ue_index_t  ue_index  = uint_to_ue_index(0);
-  amf_ue_id_t amf_ue_id = uint_to_amf_ue_id(0);
-  ran_ue_id_t ran_ue_id = uint_to_ran_ue_id(0);
+  cu_cp_ue_index_t ue_index  = uint_to_ue_index(0);
+  amf_ue_id_t      amf_ue_id = uint_to_amf_ue_id(0);
+  ran_ue_id_t      ran_ue_id = uint_to_ran_ue_id(0);
 
   ngap_message ngap_msg =
       generate_invalid_pdu_session_resource_modify_request_message(amf_ue_id, ran_ue_id, uint_to_pdu_session_id(1));
@@ -319,7 +319,7 @@ TEST_F(ngap_validator_test, when_unique_and_duplicate_pdu_session_id_then_pdu_se
 {
   pdu_session_id_t psi           = uint_to_pdu_session_id(1);
   pdu_session_id_t duplicate_psi = uint_to_pdu_session_id(2);
-  ue_index_t       ue_index      = uint_to_ue_index(0);
+  cu_cp_ue_index_t ue_index      = uint_to_ue_index(0);
   amf_ue_id_t      amf_ue_id     = uint_to_amf_ue_id(0);
   ran_ue_id_t      ran_ue_id     = uint_to_ran_ue_id(0);
 

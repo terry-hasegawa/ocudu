@@ -4,14 +4,13 @@
 
 #pragma once
 
-#include "ocudu/cu_cp/cu_cp_types.h"
 #include "ocudu/e1ap/common/e1ap_types.h"
+#include "ocudu/ran/cu_cp_types.h"
 
-namespace ocudu {
-namespace ocucp {
+namespace ocudu::ocucp {
 
 struct e1ap_bearer_context_setup_request {
-  ue_index_t                                                              ue_index = ue_index_t::invalid;
+  cu_cp_ue_index_t                                                        ue_index = cu_cp_ue_index_t::invalid;
   e1ap_security_info                                                      security_info;
   uint64_t                                                                ue_dl_aggregate_maximum_bit_rate;
   plmn_identity                                                           serving_plmn = plmn_identity::test_value();
@@ -39,7 +38,7 @@ struct e1ap_bearer_context_setup_response {
 };
 
 struct e1ap_bearer_context_modification_request {
-  ue_index_t                                            ue_index = ue_index_t::invalid;
+  cu_cp_ue_index_t                                      ue_index = cu_cp_ue_index_t::invalid;
   std::optional<e1ap_security_info>                     security_info;
   std::optional<uint64_t>                               ue_dl_aggr_max_bit_rate;
   std::optional<uint64_t>                               ue_dl_max_integrity_protected_data_rate;
@@ -70,9 +69,8 @@ struct e1ap_bearer_context_modification_response {
 };
 
 struct e1ap_bearer_context_release_command {
-  ue_index_t   ue_index = ue_index_t::invalid;
-  e1ap_cause_t cause;
+  cu_cp_ue_index_t ue_index = cu_cp_ue_index_t::invalid;
+  e1ap_cause_t     cause;
 };
 
-} // namespace ocucp
-} // namespace ocudu
+} // namespace ocudu::ocucp

@@ -3,8 +3,6 @@
 // Portions of this file may implement 3GPP specifications, which may be subject to additional licensing requirements.
 
 #include "bearer_context_release_procedure.h"
-#include "cu_cp/e1ap_cu_cp_impl.h"
-#include "cu_cp/ue_context/e1ap_bearer_transaction_manager.h"
 #include "cu_cp/ue_context/e1ap_cu_cp_ue_context.h"
 #include "ocudu/support/ocudu_assert.h"
 
@@ -14,7 +12,7 @@ using namespace asn1::e1ap;
 
 bearer_context_release_procedure::bearer_context_release_procedure(const e1ap_configuration& e1ap_cfg_,
                                                                    const e1ap_message&       command_,
-                                                                   ue_index_t                ue_index_,
+                                                                   cu_cp_ue_index_t          ue_index_,
                                                                    e1ap_ue_context_list&     ue_ctxt_list_,
                                                                    e1ap_message_notifier&    e1ap_notif_) :
   e1ap_cfg(e1ap_cfg_), command(command_), ue_index(ue_index_), ue_ctxt_list(ue_ctxt_list_), e1ap_notifier(e1ap_notif_)

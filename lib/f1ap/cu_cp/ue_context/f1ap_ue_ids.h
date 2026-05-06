@@ -4,18 +4,17 @@
 
 #pragma once
 
-#include "ocudu/cu_cp/cu_cp_types.h"
 #include "ocudu/f1ap/f1ap_ue_id_types.h"
+#include "ocudu/ran/cu_cp_types.h"
+#include <optional>
 
-namespace ocudu {
-namespace ocucp {
+namespace ocudu::ocucp {
 
 /// Identifiers that associate a UE in the F1AP-CU.
 struct f1ap_ue_ids {
-  ue_index_t                         ue_index      = ue_index_t::invalid;
+  cu_cp_ue_index_t                   ue_index      = cu_cp_ue_index_t::invalid;
   gnb_cu_ue_f1ap_id_t                cu_ue_f1ap_id = gnb_cu_ue_f1ap_id_t::invalid;
   std::optional<gnb_du_ue_f1ap_id_t> du_ue_f1ap_id;
 };
 
-} // namespace ocucp
-} // namespace ocudu
+} // namespace ocudu::ocucp

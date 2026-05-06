@@ -25,7 +25,7 @@ struct cu_cp_cho_target_candidate {
 
 /// \brief Request for intra-CU CHO orchestration.
 struct cu_cp_intra_cu_cho_request {
-  ue_index_t                              source_ue_index = ue_index_t::invalid;
+  cu_cp_ue_index_t                        source_ue_index = cu_cp_ue_index_t::invalid;
   du_index_t                              source_du_index = du_index_t::invalid;
   std::vector<cu_cp_cho_target_candidate> targets;
   std::chrono::milliseconds               timeout = std::chrono::milliseconds{10000};
@@ -46,9 +46,9 @@ struct cu_cp_cho_preparation_request {
 /// \brief Result of a single CHO candidate preparation.
 /// Only populated when cu_cp_intra_cu_handover_request::cho_preparation is set.
 struct cu_cp_cho_preparation_result {
-  ue_index_t  target_ue_index = ue_index_t::invalid; ///< Target UE allocated/prepared for this candidate.
-  byte_buffer packed_rrc_recfg;                      ///< Packed RRCReconfiguration for deferred CHO execution.
-  unsigned    transaction_id = 0;                    ///< RRC transaction ID of packed_rrc_recfg.
+  cu_cp_ue_index_t target_ue_index = cu_cp_ue_index_t::invalid; ///< Target UE allocated/prepared for this candidate.
+  byte_buffer      packed_rrc_recfg;   ///< Packed RRCReconfiguration for deferred CHO execution.
+  unsigned         transaction_id = 0; ///< RRC transaction ID of packed_rrc_recfg.
   /// CU-UP bearer update payload collected during target preparation.
   std::optional<e1ap_ng_ran_bearer_context_mod_request> ng_ran_bearer_context_mod_request;
 };

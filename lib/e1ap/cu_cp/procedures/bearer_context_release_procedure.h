@@ -4,22 +4,20 @@
 
 #pragma once
 
-#include "../e1ap_cu_cp_impl.h"
 #include "../ue_context/e1ap_cu_cp_ue_context.h"
-#include "common/e1ap_asn1_utils.h"
+#include "ocudu/e1ap/common/e1ap_common.h"
 #include "ocudu/e1ap/common/e1ap_message.h"
-#include "ocudu/e1ap/cu_cp/e1ap_cu_cp.h"
+#include "ocudu/e1ap/cu_cp/e1ap_configuration.h"
 #include "ocudu/support/async/async_task.h"
 
-namespace ocudu {
-namespace ocucp {
+namespace ocudu::ocucp {
 
 class bearer_context_release_procedure
 {
 public:
   bearer_context_release_procedure(const e1ap_configuration& e1ap_cfg_,
                                    const e1ap_message&       command_,
-                                   ue_index_t                ue_index_,
+                                   cu_cp_ue_index_t          ue_index_,
                                    e1ap_ue_context_list&     ue_ctxt_list_,
                                    e1ap_message_notifier&    e1ap_notif_);
 
@@ -36,12 +34,11 @@ private:
 
   const e1ap_configuration e1ap_cfg;
   const e1ap_message       command;
-  ue_index_t               ue_index;
+  cu_cp_ue_index_t         ue_index;
   e1ap_ue_context_list&    ue_ctxt_list;
   e1ap_message_notifier&   e1ap_notifier;
 
   protocol_transaction_outcome_observer<asn1::e1ap::bearer_context_release_complete_s> transaction_sink;
 };
 
-} // namespace ocucp
-} // namespace ocudu
+} // namespace ocudu::ocucp

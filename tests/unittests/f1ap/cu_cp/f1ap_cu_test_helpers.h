@@ -6,10 +6,10 @@
 
 #include "../common/test_helpers.h"
 #include "tests/test_doubles/f1ap/f1c_test_local_gateway.h"
-#include "ocudu/cu_cp/cu_cp_types.h"
 #include "ocudu/f1ap/cu_cp/f1ap_configuration.h"
 #include "ocudu/f1ap/cu_cp/f1ap_cu.h"
 #include "ocudu/f1ap/f1ap_message_notifier.h"
+#include "ocudu/ran/cu_cp_types.h"
 #include "ocudu/support/async/fifo_async_task_scheduler.h"
 #include "ocudu/support/executors/manual_task_worker.h"
 #include <gtest/gtest.h>
@@ -125,7 +125,7 @@ public:
     return next_du_setup_resp;
   }
 
-  ue_index_t request_new_ue_creation() override
+  cu_cp_ue_index_t request_new_ue_creation() override
   {
     logger.info("Received request to create new UE");
     return on_new_cu_cp_ue_required();
@@ -140,7 +140,7 @@ public:
                                                    .rrc_pdu  = byte_buffer::create({0x0, 0x0}).value(),
                                                    .srb_id   = srb_id_t::srb0};
 
-    if (ue_index_to_uint(msg.ue_index) >= max_nof_supported_ues) {
+    if (cu_cp_ue_index_to_uint(msg.ue_index) >= max_nof_supported_ues) {
       logger.warning("UE creation failed. Maximum number of supported UEs ({}) exceeded", max_nof_supported_ues);
 
       if (f1ap != nullptr) {
@@ -161,12 +161,12 @@ public:
 
     ocucp::ue_rrc_context_creation_response response{
         msg.ue_index, f1ap_srb0_notifier.get(), f1ap_srb1_notifier.get(), f1ap_srb2_notifier.get()};
-    if (msg.ue_index == ue_index_t::invalid) {
+    if (msg.ue_index == cu_cp_ue_index_t::invalid) {
       response.ue_index = on_new_cu_cp_ue_required();
     }
 
     // Return failure if no UE index is available.
-    if (response.ue_index == ue_index_t::invalid) {
+    if (response.ue_index == cu_cp_ue_index_t::invalid) {
       if (f1ap != nullptr) {
         task_sched.schedule(launch_async([this, release_cmd](coro_context<async_task<void>>& ctx) {
           CORO_BEGIN(ctx);
@@ -181,11 +181,11 @@ public:
     return response;
   }
 
-  ue_index_t on_new_cu_cp_ue_required()
+  cu_cp_ue_index_t on_new_cu_cp_ue_required()
   {
-    ue_index_t ue_index = ocucp::ue_index_t::invalid;
-    if (ue_id < static_cast<unsigned>(ocucp::ue_index_t::invalid)) {
-      ue_index              = ocucp::uint_to_ue_index(ue_id);
+    cu_cp_ue_index_t ue_index = cu_cp_ue_index_t::invalid;
+    if (ue_id < static_cast<unsigned>(cu_cp_ue_index_t::invalid)) {
+      ue_index              = uint_to_ue_index(ue_id);
       last_created_ue_index = ue_index;
       ue_id++;
     }
@@ -222,7 +222,7 @@ public:
 
   std::optional<ocucp::f1ap_access_success>            last_access_success_msg;
   ocucp::ue_rrc_context_creation_request               last_ue_creation_msg;
-  std::optional<ocucp::ue_index_t>                     last_created_ue_index;
+  std::optional<cu_cp_ue_index_t>                      last_created_ue_index;
   std::unique_ptr<dummy_f1ap_ul_ccch_message_notifier> f1ap_srb0_notifier =
       std::make_unique<dummy_f1ap_ul_ccch_message_notifier>();
   std::unique_ptr<dummy_f1ap_ul_dcch_message_notifier> f1ap_srb1_notifier =
@@ -234,7 +234,7 @@ private:
   const unsigned            max_nof_supported_ues;
   f1ap_cu*                  f1ap = nullptr;
   ocudulog::basic_logger&   logger;
-  unsigned                  ue_id = ue_index_to_uint(ocucp::ue_index_t::min);
+  unsigned                  ue_id = cu_cp_ue_index_to_uint(cu_cp_ue_index_t::min);
   fifo_async_task_scheduler task_sched{16};
 };
 
@@ -249,7 +249,7 @@ class f1ap_cu_test : public ::testing::Test
 {
 protected:
   struct test_ue {
-    ue_index_t                         ue_index;
+    cu_cp_ue_index_t                   ue_index;
     std::optional<gnb_cu_ue_f1ap_id_t> cu_ue_id;
     std::optional<gnb_du_ue_f1ap_id_t> du_ue_id;
   };
@@ -270,7 +270,7 @@ protected:
   ocudulog::basic_logger& f1ap_logger = ocudulog::fetch_basic_logger("CU-CP-F1");
   ocudulog::basic_logger& test_logger = ocudulog::fetch_basic_logger("TEST");
 
-  std::unordered_map<ue_index_t, test_ue> test_ues;
+  std::unordered_map<cu_cp_ue_index_t, test_ue> test_ues;
 
   const unsigned max_nof_ues = 8192;
 

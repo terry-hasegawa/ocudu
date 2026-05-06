@@ -3,7 +3,7 @@
 // Portions of this file may implement 3GPP specifications, which may be subject to additional licensing requirements.
 
 #include "ue_task_scheduler_impl.h"
-#include "ocudu/cu_cp/cu_cp_types.h"
+#include "ocudu/ran/cu_cp_types.h"
 
 using namespace ocudu;
 using namespace ocucp;
@@ -52,7 +52,7 @@ void ue_task_scheduler_manager::stop()
   ues_to_rem.request_stop();
 }
 
-ue_task_scheduler_impl ue_task_scheduler_manager::create_ue_task_sched(ue_index_t ue_idx)
+ue_task_scheduler_impl ue_task_scheduler_manager::create_ue_task_sched(cu_cp_ue_index_t ue_idx)
 {
   if (ue_ctrl_loop.find(ue_idx) != ue_ctrl_loop.end()) {
     logger.error("ue={}: UE task scheduler already exists", ue_idx);
@@ -62,14 +62,14 @@ ue_task_scheduler_impl ue_task_scheduler_manager::create_ue_task_sched(ue_index_
   return ue_task_scheduler_impl{*this, *ret.first};
 }
 
-void ue_task_scheduler_manager::clear_pending_tasks(ue_index_t ue_index)
+void ue_task_scheduler_manager::clear_pending_tasks(cu_cp_ue_index_t ue_index)
 {
   logger.debug("ue={}: Clearing pending tasks", ue_index);
   ue_ctrl_loop.at(ue_index)->clear_pending_tasks();
 }
 
 // UE task scheduler
-void ue_task_scheduler_manager::handle_ue_async_task(ue_index_t ue_index, async_task<void>&& task)
+void ue_task_scheduler_manager::handle_ue_async_task(cu_cp_ue_index_t ue_index, async_task<void>&& task)
 {
   if (ue_ctrl_loop.find(ue_index) == ue_ctrl_loop.end()) {
     logger.debug("ue={}: UE task scheduler not found. UE was already removed", ue_index);
@@ -79,7 +79,8 @@ void ue_task_scheduler_manager::handle_ue_async_task(ue_index_t ue_index, async_
   ue_ctrl_loop.at(ue_index)->schedule(std::move(task));
 }
 
-async_task<bool> ue_task_scheduler_manager::dispatch_and_await_task_completion(ue_index_t ue_index, unique_task task)
+async_task<bool> ue_task_scheduler_manager::dispatch_and_await_task_completion(cu_cp_ue_index_t ue_index,
+                                                                               unique_task      task)
 {
   return when_completed_on_task_sched(*ue_ctrl_loop.at(ue_index), std::move(task));
 }
@@ -93,7 +94,7 @@ timer_manager& ue_task_scheduler_manager::get_timer_manager()
   return timers;
 }
 
-void ue_task_scheduler_manager::rem_ue_task_loop(ue_index_t ue_idx)
+void ue_task_scheduler_manager::rem_ue_task_loop(cu_cp_ue_index_t ue_idx)
 {
   auto it = ue_ctrl_loop.find(ue_idx);
   if (it == ue_ctrl_loop.end()) {

@@ -4,14 +4,13 @@
 
 #pragma once
 
-#include "ocudu/cu_cp/cu_cp_types.h"
 #include "ocudu/cu_cp/positioning_messages.h"
+#include "ocudu/ran/cu_cp_types.h"
 #include "ocudu/rrc/meas_types.h"
 #include "ocudu/support/async/async_task.h"
 #include <map>
 
-namespace ocudu {
-namespace ocucp {
+namespace ocudu::ocucp {
 
 struct cell_measurement_positioning_info {
   struct cell_measurement_item_t {
@@ -31,7 +30,7 @@ public:
   virtual ~nrppa_cu_cp_ue_notifier() = default;
 
   /// \brief Get the UE index of the UE.
-  virtual ue_index_t get_ue_index() const = 0;
+  virtual cu_cp_ue_index_t get_ue_index() const = 0;
 
   /// \brief Get the index of the DU where the UE is connected.
   virtual du_index_t get_du_index() const = 0;
@@ -80,12 +79,13 @@ public:
   /// \brief Notifies the CU-CP about a new NRPPA UE.
   /// \param[in] ue_index The index of the new NRPPA UE.
   /// \returns Pointer to the NRPPA UE notifier.
-  virtual nrppa_cu_cp_ue_notifier* on_new_nrppa_ue(ue_index_t ue_index) = 0;
+  virtual nrppa_cu_cp_ue_notifier* on_new_nrppa_ue(cu_cp_ue_index_t ue_index) = 0;
 
   /// \brief Notifies about a NRPPa PDU.
   /// \param[in] nrppa_pdu The NRPPa PDU.
   /// \param[in] ue_or_amf_index The UE index for UE associated NRPPa messages or the AMF index for non UE associated
-  virtual void on_ul_nrppa_pdu(const byte_buffer& nrppa_pdu, std::variant<ue_index_t, amf_index_t> ue_or_amf_index) = 0;
+  virtual void on_ul_nrppa_pdu(const byte_buffer&                          nrppa_pdu,
+                               std::variant<cu_cp_ue_index_t, amf_index_t> ue_or_amf_index) = 0;
 
   /// \brief Notifies the CU-CP about a TRP information request.
   /// \param[in] request The TRP information request.
@@ -104,8 +104,8 @@ public:
   /// \param[in] nrppa_pdu The NRPPA message.
   /// \param[in] ue_or_amf_index The UE index for UE associated NRPPa messages or the AMF index for non UE associated
   /// NRPPa messages.
-  virtual void handle_new_nrppa_pdu(const byte_buffer&                    nrppa_pdu,
-                                    std::variant<ue_index_t, amf_index_t> ue_or_amf_index) = 0;
+  virtual void handle_new_nrppa_pdu(const byte_buffer&                          nrppa_pdu,
+                                    std::variant<cu_cp_ue_index_t, amf_index_t> ue_or_amf_index) = 0;
 };
 
 /// Handle ue context removal.
@@ -116,7 +116,7 @@ public:
 
   /// \brief Remove the context of an UE.
   /// \param[in] ue_index The index of the UE to remove.
-  virtual void remove_ue_context(ue_index_t ue_index) = 0;
+  virtual void remove_ue_context(cu_cp_ue_index_t ue_index) = 0;
 };
 
 /// Combined entry point for the NRPPA object.
@@ -129,5 +129,4 @@ public:
   virtual nrppa_ue_context_removal_handler& get_nrppa_ue_context_removal_handler() = 0;
 };
 
-} // namespace ocucp
-} // namespace ocudu
+} // namespace ocudu::ocucp

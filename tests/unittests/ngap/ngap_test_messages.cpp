@@ -132,7 +132,7 @@ ngap_message ocudu::ocucp::generate_ng_setup_failure_with_time_to_wait(time_to_w
   return ng_setup_failure;
 }
 
-cu_cp_initial_ue_message ocudu::ocucp::generate_initial_ue_message(ue_index_t ue_index)
+cu_cp_initial_ue_message ocudu::ocucp::generate_initial_ue_message(cu_cp_ue_index_t ue_index)
 {
   cu_cp_initial_ue_message msg = {};
   msg.ue_index                 = ue_index;
@@ -178,7 +178,7 @@ ngap_message ocudu::ocucp::generate_downlink_nas_transport_message_with_ue_cap_i
   return dl_nas_transport;
 }
 
-cu_cp_ul_nas_transport ocudu::ocucp::generate_ul_nas_transport_message(ue_index_t ue_index)
+cu_cp_ul_nas_transport ocudu::ocucp::generate_ul_nas_transport_message(cu_cp_ue_index_t ue_index)
 {
   cu_cp_ul_nas_transport ul_nas_transport = {};
   ul_nas_transport.ue_index               = ue_index;
@@ -1112,7 +1112,7 @@ ngap_message ocudu::ocucp::generate_valid_handover_command(amf_ue_id_t amf_ue_id
 }
 
 ngap_handover_preparation_request ocudu::ocucp::generate_handover_preparation_request(
-    ue_index_t                                                ue_index,
+    cu_cp_ue_index_t                                          ue_index,
     const std::map<pdu_session_id_t, up_pdu_session_context>& pdu_sessions,
     nr_cell_identity                                          nci,
     uint32_t                                                  gnb_id_bit_length)

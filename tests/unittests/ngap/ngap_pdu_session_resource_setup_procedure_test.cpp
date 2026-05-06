@@ -15,13 +15,13 @@ using namespace ocucp;
 class ngap_pdu_session_resource_setup_procedure_test : public ngap_test
 {
 protected:
-  ue_index_t start_procedure(bool enable_security = true)
+  cu_cp_ue_index_t start_procedure(bool enable_security = true)
   {
     if (!run_ng_setup()) {
-      return ue_index_t::invalid;
+      return cu_cp_ue_index_t::invalid;
     }
 
-    ue_index_t ue_index = create_ue();
+    cu_cp_ue_index_t ue_index = create_ue();
 
     // Inject DL NAS transport message from AMF.
     run_dl_nas_transport(ue_index);
@@ -34,7 +34,7 @@ protected:
 
     if (enable_security) {
       if (!enable_ue_security(ue_index)) {
-        return ue_index_t::invalid;
+        return cu_cp_ue_index_t::invalid;
       }
     }
 
@@ -226,7 +226,7 @@ TEST_F(ngap_pdu_session_resource_setup_procedure_test,
        when_valid_pdu_session_resource_setup_request_received_then_pdu_session_setup_succeeds)
 {
   // Test preamble.
-  ue_index_t ue_index = this->start_procedure();
+  cu_cp_ue_index_t ue_index = this->start_procedure();
 
   // Inject PDU Session Resource Setup Request.
   pdu_session_id_t pdu_session_id = uint_to_pdu_session_id(test_rng::uniform_int<uint16_t>(
@@ -260,7 +260,7 @@ TEST_F(ngap_pdu_session_resource_setup_procedure_test,
        when_valid_pdu_session_resource_setup_request_with_ipv4_session_type_received_then_pdu_session_setup_succeeds)
 {
   // Test preamble.
-  ue_index_t ue_index = this->start_procedure();
+  cu_cp_ue_index_t ue_index = this->start_procedure();
 
   // Inject PDU Session Resource Setup Request.
   pdu_session_id_t pdu_session_id = uint_to_pdu_session_id(test_rng::uniform_int<uint16_t>(
@@ -294,7 +294,7 @@ TEST_F(ngap_pdu_session_resource_setup_procedure_test,
        when_valid_pdu_session_resource_setup_request_with_ipv6_session_type_received_then_pdu_session_setup_succeeds)
 {
   // Test preamble.
-  ue_index_t ue_index = this->start_procedure();
+  cu_cp_ue_index_t ue_index = this->start_procedure();
 
   // Inject PDU Session Resource Setup Request.
   pdu_session_id_t pdu_session_id = uint_to_pdu_session_id(test_rng::uniform_int<uint16_t>(
@@ -329,7 +329,7 @@ TEST_F(
     when_valid_pdu_session_resource_setup_request_with_ethernet_session_type_received_then_pdu_session_setup_succeeds)
 {
   // Test preamble.
-  ue_index_t ue_index = this->start_procedure();
+  cu_cp_ue_index_t ue_index = this->start_procedure();
 
   // Inject PDU Session Resource Setup Request.
   pdu_session_id_t pdu_session_id = uint_to_pdu_session_id(test_rng::uniform_int<uint16_t>(
@@ -363,7 +363,7 @@ TEST_F(ngap_pdu_session_resource_setup_procedure_test,
        when_valid_pdu_session_resource_setup_request_with_ipv4v6_session_type_received_then_pdu_session_setup_fails)
 {
   // Test preamble.
-  ue_index_t ue_index = this->start_procedure();
+  cu_cp_ue_index_t ue_index = this->start_procedure();
 
   // Inject PDU Session Resource Setup Request.
   pdu_session_id_t pdu_session_id = uint_to_pdu_session_id(test_rng::uniform_int<uint16_t>(
@@ -394,7 +394,7 @@ TEST_F(ngap_pdu_session_resource_setup_procedure_test,
        when_invalid_pdu_session_resource_setup_request_received_then_pdu_session_setup_failed)
 {
   // Test preamble.
-  ue_index_t ue_index = this->start_procedure();
+  cu_cp_ue_index_t ue_index = this->start_procedure();
 
   auto& ue = test_ues.at(ue_index);
 
@@ -421,7 +421,7 @@ TEST_F(ngap_pdu_session_resource_setup_procedure_test,
        when_pdu_session_resource_setup_request_with_invalid_tpl_received_then_pdu_session_setup_failed)
 {
   // Test preamble.
-  ue_index_t ue_index = this->start_procedure();
+  cu_cp_ue_index_t ue_index = this->start_procedure();
 
   auto& ue = test_ues.at(ue_index);
 
@@ -444,8 +444,8 @@ TEST_F(ngap_pdu_session_resource_setup_procedure_test,
 TEST_F(ngap_pdu_session_resource_setup_procedure_test, when_security_not_enabled_then_pdu_session_setup_failed)
 {
   // Test preamble.
-  ue_index_t ue_index = this->start_procedure(false);
-  auto&      ue       = test_ues.at(ue_index);
+  cu_cp_ue_index_t ue_index = this->start_procedure(false);
+  auto&            ue       = test_ues.at(ue_index);
 
   // Inject PDU Session Resource Setup Request.
   pdu_session_id_t pdu_session_id = uint_to_pdu_session_id(test_rng::uniform_int<uint16_t>(

@@ -11,7 +11,7 @@ using namespace ocudu;
 using namespace ocucp;
 using namespace asn1::rrc_nr;
 
-ue_suspend_routine::ue_suspend_routine(ue_index_t                             ue_index_,
+ue_suspend_routine::ue_suspend_routine(cu_cp_ue_index_t                       ue_index_,
                                        const rrc_ue_release_context&          release_context_,
                                        e1ap_bearer_context_manager&           e1ap_bearer_ctxt_mng_,
                                        f1ap_ue_context_manager&               f1ap_ue_ctxt_mng_,

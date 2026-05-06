@@ -14,7 +14,7 @@ namespace ocudu::ocucp {
 class e_cid_measurement_termination_procedure
 {
 public:
-  e_cid_measurement_termination_procedure(ue_index_t              ue_index_,
+  e_cid_measurement_termination_procedure(cu_cp_ue_index_t        ue_index_,
                                           nrppa_ue_context_list&  ue_ctxt_list_,
                                           ocudulog::basic_logger& logger_);
 
@@ -25,7 +25,7 @@ public:
 private:
   void terminate_periodic_measurements();
 
-  ue_index_t              ue_index;
+  cu_cp_ue_index_t        ue_index;
   nrppa_ue_context_list&  ue_ctxt_list;
   ocudulog::basic_logger& logger;
 

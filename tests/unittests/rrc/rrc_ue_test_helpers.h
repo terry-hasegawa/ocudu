@@ -73,7 +73,7 @@ protected:
   {
     // Add UE to UE manager.
     allocated_ue_index = ue_mng.add_ue(du_index_t::min);
-    ASSERT_NE(allocated_ue_index, ue_index_t::invalid);
+    ASSERT_NE(allocated_ue_index, cu_cp_ue_index_t::invalid);
     ASSERT_FALSE(ue_mng.ue_admission_limit_reached());
 
     ue_mng.set_plmn(allocated_ue_index, plmn_identity::test_value());
@@ -346,7 +346,7 @@ protected:
                                                     byte_buffer::create(rrc_reconfig_complete_pdu).value());
   }
 
-  void add_ue_reestablishment_context(ue_index_t ue_index)
+  void add_ue_reestablishment_context(cu_cp_ue_index_t ue_index)
   {
     rrc_ue_reestablishment_context_response reest_context = {};
     reest_context.ue_index                                = ue_index;
@@ -430,7 +430,7 @@ protected:
               92);
   }
 
-  ue_index_t allocated_ue_index;
+  cu_cp_ue_index_t allocated_ue_index;
 
   timer_manager               timers;
   manual_task_worker          ctrl_worker{64};

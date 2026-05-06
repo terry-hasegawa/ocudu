@@ -31,7 +31,7 @@ public:
   async_task<void> stop() override;
 
   // XNAP ue context removal handler functions.
-  void remove_ue_context(ue_index_t ue_index) override;
+  void remove_ue_context(cu_cp_ue_index_t ue_index) override;
 
   // XNAP connection manager functions.
   async_task<bool> handle_xn_setup_request_required() override;
@@ -42,8 +42,8 @@ public:
   async_task<xnap_handover_preparation_response>
        handle_handover_request_required(const xnap_handover_request& request) override;
   void handle_sn_status_transfer_required(const cu_cp_status_transfer& sn_status_transfer) override;
-  async_task<expected<cu_cp_status_transfer>> handle_sn_status_transfer_expected(ue_index_t ue_index) override;
-  bool                                        handle_ue_context_release_required(ue_index_t ue_index) override;
+  async_task<expected<cu_cp_status_transfer>> handle_sn_status_transfer_expected(cu_cp_ue_index_t ue_index) override;
+  bool                                        handle_ue_context_release_required(cu_cp_ue_index_t ue_index) override;
 
   xnap_ue_context_removal_handler& get_xnap_ue_context_removal_handler() override { return *this; }
 

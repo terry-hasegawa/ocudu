@@ -4,12 +4,13 @@
 
 #pragma once
 
-#include "../../ue_manager/ue_manager_impl.h"
+#include "../../ue_manager/cu_cp_ue_impl.h"
+#include "ocudu/e1ap/cu_cp/e1ap_cu_cp_bearer_context_update.h"
+#include "ocudu/rrc/rrc_types.h"
 #include "ocudu/support/async/async_task.h"
 #include <chrono>
 
-namespace ocudu {
-namespace ocucp {
+namespace ocudu::ocucp {
 
 /// \brief Handles the handover of a UE between two different DUs.
 /// TODO Add seqdiag
@@ -19,7 +20,7 @@ public:
   handover_reconfiguration_routine(
       const rrc_reconfiguration_procedure_request&    request_,
       const e1ap_bearer_context_modification_request& target_bearer_context_modification_request_,
-      const ue_index_t&                               target_ue_index_,
+      const cu_cp_ue_index_t&                         target_ue_index_,
       cu_cp_ue&                                       source_ue_,
       f1ap_ue_context_manager&                        source_f1ap_ue_ctxt_mng_,
       cu_cp_ue_context_manipulation_handler&          cu_cp_handler_,
@@ -31,14 +32,14 @@ public:
 
 private:
   void generate_ue_context_modification_request();
-  void initialize_handover_ue_release_timer(ue_index_t ue_index);
+  void initialize_handover_ue_release_timer(cu_cp_ue_index_t ue_index);
 
   // (sub-)routine requests
   const rrc_reconfiguration_procedure_request     request;
   const e1ap_bearer_context_modification_request& target_bearer_context_modification_request;
   f1ap_ue_context_modification_request            ue_context_mod_request;
 
-  const ue_index_t                       target_ue_index;         // Index of the target UE
+  const cu_cp_ue_index_t                 target_ue_index;         // Index of the target UE
   cu_cp_ue&                              source_ue;               // UE in the source DU
   f1ap_ue_context_manager&               source_f1ap_ue_ctxt_mng; // to send UE context modification to source UE
   cu_cp_ue_context_manipulation_handler& cu_cp_handler; // To receive the reconfigurationComplete from target UE
@@ -52,5 +53,4 @@ private:
   f1ap_ue_context_modification_response   ue_context_mod_response;
 };
 
-} // namespace ocucp
-} // namespace ocudu
+} // namespace ocudu::ocucp

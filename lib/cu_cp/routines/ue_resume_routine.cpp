@@ -14,7 +14,7 @@ static bool verify_rrc_resume_request(const cu_cp_rrc_resume_request& request,
                                       ue_manager&                     ue_mng,
                                       const ocudulog::basic_logger&   logger)
 {
-  if (request.ue_index == ue_index_t::invalid) {
+  if (request.ue_index == cu_cp_ue_index_t::invalid) {
     logger.warning("UE index must not be invalid");
     return false;
   }
@@ -266,7 +266,7 @@ bool ue_resume_routine::generate_ue_context_setup_request(f1ap_ue_context_setup_
 bool ue_resume_routine::handle_ue_context_setup_response()
 {
   // Sanity checks.
-  if (ue_context_setup_response.ue_index == ue_index_t::invalid) {
+  if (ue_context_setup_response.ue_index == cu_cp_ue_index_t::invalid) {
     logger.warning("Failed to create UE at the DU");
     return false;
   }

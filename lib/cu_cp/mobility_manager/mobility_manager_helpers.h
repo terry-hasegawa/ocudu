@@ -17,7 +17,7 @@ namespace ocudu::ocucp {
 /// \param[in] pdu_sessions The PDU sessions of the UE, including their QoS flows and UP context information.
 /// \returns The generated NGAP Handover Preparation Request message.
 ngap_handover_preparation_request
-generate_ngap_handover_preparation_request(ue_index_t                                                source_ue_index,
+generate_ngap_handover_preparation_request(cu_cp_ue_index_t                                          source_ue_index,
                                            gnb_id_t                                                  target_gnb_id,
                                            nr_cell_identity                                          target_nci,
                                            const std::map<pdu_session_id_t, up_pdu_session_context>& pdu_sessions);
@@ -34,7 +34,7 @@ generate_ngap_handover_preparation_request(ue_index_t                           
 /// \param[in] location_report_cfg The NGAP Location Reporting configuration.
 /// \returns The generated XNAP Handover Request message.
 xnap_handover_request
-generate_xnap_handover_request(ue_index_t                                                source_ue_index,
+generate_xnap_handover_request(cu_cp_ue_index_t                                          source_ue_index,
                                nr_cell_global_id_t                                       target_nr_cgi,
                                guami_t                                                   guami,
                                amf_ue_id_t                                               source_amf_ue_id,

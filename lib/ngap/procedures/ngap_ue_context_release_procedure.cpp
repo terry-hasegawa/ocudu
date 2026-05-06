@@ -12,12 +12,12 @@ using namespace ocudu::ocucp;
 using namespace asn1::ngap;
 
 ngap_ue_context_release_procedure::ngap_ue_context_release_procedure(
-    const cu_cp_ue_context_release_command&                     command_,
-    const ngap_ue_ids&                                          ue_ids_,
-    std::unordered_map<ue_index_t, error_indication_request_t>& stored_error_indications_,
-    ngap_cu_cp_notifier&                                        cu_cp_notifier_,
-    ngap_message_notifier&                                      amf_notifier_,
-    ngap_ue_logger&                                             logger_) :
+    const cu_cp_ue_context_release_command&                           command_,
+    const ngap_ue_ids&                                                ue_ids_,
+    std::unordered_map<cu_cp_ue_index_t, error_indication_request_t>& stored_error_indications_,
+    ngap_cu_cp_notifier&                                              cu_cp_notifier_,
+    ngap_message_notifier&                                            amf_notifier_,
+    ngap_ue_logger&                                                   logger_) :
   command(command_),
   ue_ids(ue_ids_),
   stored_error_indications(stored_error_indications_),

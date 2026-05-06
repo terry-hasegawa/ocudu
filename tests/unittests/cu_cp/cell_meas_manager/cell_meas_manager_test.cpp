@@ -41,8 +41,8 @@ TEST_F(cell_meas_manager_test, when_empty_config_is_used_then_no_neighbor_cells_
 {
   create_empty_manager();
 
-  ue_index_t ue_index = ue_mng.add_ue(uint_to_du_index(0));
-  ASSERT_NE(ue_index, ue_index_t::invalid);
+  cu_cp_ue_index_t ue_index = ue_mng.add_ue(uint_to_du_index(0));
+  ASSERT_NE(ue_index, cu_cp_ue_index_t::invalid);
   ASSERT_FALSE(ue_mng.ue_admission_limit_reached());
   ASSERT_TRUE(ue_mng.set_plmn(ue_index, plmn_identity::test_value()));
   nr_cell_identity            nci      = nr_cell_identity::create(0x19b0).value();
@@ -56,8 +56,8 @@ TEST_F(cell_meas_manager_test, when_serving_cell_not_found_no_neighbor_cells_are
 {
   create_default_manager();
 
-  ue_index_t ue_index = ue_mng.add_ue(uint_to_du_index(0));
-  ASSERT_NE(ue_index, ue_index_t::invalid);
+  cu_cp_ue_index_t ue_index = ue_mng.add_ue(uint_to_du_index(0));
+  ASSERT_NE(ue_index, cu_cp_ue_index_t::invalid);
   ASSERT_FALSE(ue_mng.ue_admission_limit_reached());
   ASSERT_TRUE(ue_mng.set_plmn(ue_index, plmn_identity::test_value()));
   nr_cell_identity            nci      = nr_cell_identity::create(0x19b5).value();
@@ -71,8 +71,8 @@ TEST_F(cell_meas_manager_test, when_serving_cell_found_then_neighbor_cells_are_a
 {
   create_default_manager();
 
-  ue_index_t ue_index = ue_mng.add_ue(uint_to_du_index(0));
-  ASSERT_NE(ue_index, ue_index_t::invalid);
+  cu_cp_ue_index_t ue_index = ue_mng.add_ue(uint_to_du_index(0));
+  ASSERT_NE(ue_index, cu_cp_ue_index_t::invalid);
   ASSERT_FALSE(ue_mng.ue_admission_limit_reached());
   ASSERT_TRUE(ue_mng.set_plmn(ue_index, plmn_identity::test_value()));
 
@@ -88,8 +88,8 @@ TEST_F(cell_meas_manager_test, when_inexisting_cell_config_is_updated_then_confi
 {
   create_default_manager();
 
-  ue_index_t ue_index = ue_mng.add_ue(uint_to_du_index(0));
-  ASSERT_NE(ue_index, ue_index_t::invalid);
+  cu_cp_ue_index_t ue_index = ue_mng.add_ue(uint_to_du_index(0));
+  ASSERT_NE(ue_index, cu_cp_ue_index_t::invalid);
   ASSERT_FALSE(ue_mng.ue_admission_limit_reached());
   ASSERT_TRUE(ue_mng.set_plmn(ue_index, plmn_identity::test_value()));
   const nr_cell_identity nci = nr_cell_identity::create(0x19b1).value();
@@ -116,8 +116,8 @@ TEST_F(cell_meas_manager_test, when_incomplete_cell_config_is_updated_then_valid
 {
   create_default_manager();
 
-  ue_index_t ue_index = ue_mng.add_ue(uint_to_du_index(0));
-  ASSERT_NE(ue_index, ue_index_t::invalid);
+  cu_cp_ue_index_t ue_index = ue_mng.add_ue(uint_to_du_index(0));
+  ASSERT_NE(ue_index, cu_cp_ue_index_t::invalid);
   ASSERT_FALSE(ue_mng.ue_admission_limit_reached());
   ASSERT_TRUE(ue_mng.set_plmn(ue_index, plmn_identity::test_value()));
   const nr_cell_identity nci = nr_cell_identity::create(0x19b1).value();
@@ -143,8 +143,8 @@ TEST_F(cell_meas_manager_test, when_empty_cell_config_is_used_then_meas_cfg_is_n
   // Create a manager without ncells and without report config.
   create_manager_without_ncells_and_periodic_report();
 
-  ue_index_t ue_index = ue_mng.add_ue(uint_to_du_index(0));
-  ASSERT_NE(ue_index, ue_index_t::invalid);
+  cu_cp_ue_index_t ue_index = ue_mng.add_ue(uint_to_du_index(0));
+  ASSERT_NE(ue_index, cu_cp_ue_index_t::invalid);
   ASSERT_FALSE(ue_mng.ue_admission_limit_reached());
   ASSERT_TRUE(ue_mng.set_plmn(ue_index, plmn_identity::test_value()));
   nr_cell_identity            nci      = nr_cell_identity::create(0x19b0).value();
@@ -158,8 +158,8 @@ TEST_F(cell_meas_manager_test, when_old_meas_config_is_provided_old_ids_are_remo
 {
   create_default_manager();
 
-  ue_index_t ue_index = ue_mng.add_ue(uint_to_du_index(0));
-  ASSERT_NE(ue_index, ue_index_t::invalid);
+  cu_cp_ue_index_t ue_index = ue_mng.add_ue(uint_to_du_index(0));
+  ASSERT_NE(ue_index, cu_cp_ue_index_t::invalid);
   ASSERT_FALSE(ue_mng.ue_admission_limit_reached());
   ASSERT_TRUE(ue_mng.set_plmn(ue_index, plmn_identity::test_value()));
   const nr_cell_identity initial_nci = nr_cell_identity::create(0x19b0).value();
@@ -191,8 +191,8 @@ TEST_F(cell_meas_manager_test, when_only_event_based_reports_configured_then_mea
 {
   create_manager_with_incomplete_cells_and_periodic_report_at_target_cell();
 
-  ue_index_t ue_index = ue_mng.add_ue(uint_to_du_index(0));
-  ASSERT_NE(ue_index, ue_index_t::invalid);
+  cu_cp_ue_index_t ue_index = ue_mng.add_ue(uint_to_du_index(0));
+  ASSERT_NE(ue_index, cu_cp_ue_index_t::invalid);
   ASSERT_FALSE(ue_mng.ue_admission_limit_reached());
   ASSERT_TRUE(ue_mng.set_plmn(ue_index, plmn_identity::test_value()));
   const nr_cell_identity initial_nci = nr_cell_identity::create(0x19b0).value();
@@ -246,8 +246,8 @@ TEST_F(cell_meas_manager_test, when_invalid_cell_config_update_received_then_con
 {
   create_manager_with_incomplete_cells_and_periodic_report_at_target_cell();
 
-  ue_index_t ue_index = ue_mng.add_ue(uint_to_du_index(0));
-  ASSERT_NE(ue_index, ue_index_t::invalid);
+  cu_cp_ue_index_t ue_index = ue_mng.add_ue(uint_to_du_index(0));
+  ASSERT_NE(ue_index, cu_cp_ue_index_t::invalid);
   ASSERT_FALSE(ue_mng.ue_admission_limit_reached());
   ASSERT_TRUE(ue_mng.set_plmn(ue_index, plmn_identity::test_value()));
   const nr_cell_identity initial_nci = nr_cell_identity::create(0x19b0).value();
@@ -295,8 +295,8 @@ TEST_F(cell_meas_manager_test, when_t312_is_configured_then_meas_obj_has_t312_an
 {
   create_default_manager(100);
 
-  ue_index_t ue_index = ue_mng.add_ue(uint_to_du_index(0));
-  ASSERT_NE(ue_index, ue_index_t::invalid);
+  cu_cp_ue_index_t ue_index = ue_mng.add_ue(uint_to_du_index(0));
+  ASSERT_NE(ue_index, cu_cp_ue_index_t::invalid);
   ASSERT_FALSE(ue_mng.ue_admission_limit_reached());
   ASSERT_TRUE(ue_mng.set_plmn(ue_index, plmn_identity::test_value()));
   nr_cell_identity nci = nr_cell_identity::create(0x19b0).value();
@@ -342,8 +342,8 @@ TEST_F(cell_meas_manager_test, cho_single_frequency_generates_correct_nci_to_mea
 {
   create_cho_manager_single_frequency();
 
-  ue_index_t ue_index = ue_mng.add_ue(uint_to_du_index(0));
-  ASSERT_NE(ue_index, ue_index_t::invalid);
+  cu_cp_ue_index_t ue_index = ue_mng.add_ue(uint_to_du_index(0));
+  ASSERT_NE(ue_index, cu_cp_ue_index_t::invalid);
   ASSERT_FALSE(ue_mng.ue_admission_limit_reached());
   ASSERT_TRUE(ue_mng.set_plmn(ue_index, plmn_identity::test_value()));
   attach_rrc_ue(ue_index);
@@ -374,8 +374,8 @@ TEST_F(cell_meas_manager_test, cho_multi_frequency_generates_separate_meas_ids_p
 {
   create_cho_manager_multi_frequency();
 
-  ue_index_t ue_index = ue_mng.add_ue(uint_to_du_index(0));
-  ASSERT_NE(ue_index, ue_index_t::invalid);
+  cu_cp_ue_index_t ue_index = ue_mng.add_ue(uint_to_du_index(0));
+  ASSERT_NE(ue_index, cu_cp_ue_index_t::invalid);
   ASSERT_FALSE(ue_mng.ue_admission_limit_reached());
   ASSERT_TRUE(ue_mng.set_plmn(ue_index, plmn_identity::test_value()));
   attach_rrc_ue(ue_index);
@@ -413,8 +413,8 @@ TEST_F(cell_meas_manager_test, cho_multi_trigger_creates_cross_product_meas_ids)
 {
   create_cho_manager_multi_trigger();
 
-  ue_index_t ue_index = ue_mng.add_ue(uint_to_du_index(0));
-  ASSERT_NE(ue_index, ue_index_t::invalid);
+  cu_cp_ue_index_t ue_index = ue_mng.add_ue(uint_to_du_index(0));
+  ASSERT_NE(ue_index, cu_cp_ue_index_t::invalid);
   ASSERT_FALSE(ue_mng.ue_admission_limit_reached());
   ASSERT_TRUE(ue_mng.set_plmn(ue_index, plmn_identity::test_value()));
   attach_rrc_ue(ue_index);
@@ -447,8 +447,8 @@ TEST_F(cell_meas_manager_test, cho_empty_candidate_list_includes_all_neighbors)
 {
   create_cho_manager_single_frequency();
 
-  ue_index_t ue_index = ue_mng.add_ue(uint_to_du_index(0));
-  ASSERT_NE(ue_index, ue_index_t::invalid);
+  cu_cp_ue_index_t ue_index = ue_mng.add_ue(uint_to_du_index(0));
+  ASSERT_NE(ue_index, cu_cp_ue_index_t::invalid);
   ASSERT_FALSE(ue_mng.ue_admission_limit_reached());
   ASSERT_TRUE(ue_mng.set_plmn(ue_index, plmn_identity::test_value()));
   attach_rrc_ue(ue_index);
@@ -467,8 +467,8 @@ TEST_F(cell_meas_manager_test, cho_invalid_candidate_pci_filters_correctly)
 {
   create_cho_manager_single_frequency();
 
-  ue_index_t ue_index = ue_mng.add_ue(uint_to_du_index(0));
-  ASSERT_NE(ue_index, ue_index_t::invalid);
+  cu_cp_ue_index_t ue_index = ue_mng.add_ue(uint_to_du_index(0));
+  ASSERT_NE(ue_index, cu_cp_ue_index_t::invalid);
   ASSERT_FALSE(ue_mng.ue_admission_limit_reached());
   ASSERT_TRUE(ue_mng.set_plmn(ue_index, plmn_identity::test_value()));
 
@@ -487,8 +487,8 @@ TEST_F(cell_meas_manager_test, cho_a5_inter_frequency_includes_serving_cell_meas
 {
   create_cho_manager_a5_inter_frequency();
 
-  ue_index_t ue_index = ue_mng.add_ue(uint_to_du_index(0));
-  ASSERT_NE(ue_index, ue_index_t::invalid);
+  cu_cp_ue_index_t ue_index = ue_mng.add_ue(uint_to_du_index(0));
+  ASSERT_NE(ue_index, cu_cp_ue_index_t::invalid);
   ASSERT_FALSE(ue_mng.ue_admission_limit_reached());
   ASSERT_TRUE(ue_mng.set_plmn(ue_index, plmn_identity::test_value()));
   attach_rrc_ue(ue_index);

@@ -11,9 +11,9 @@ using namespace ocucp;
 class ngap_error_indication_test : public ngap_test
 {
 protected:
-  ue_index_t start_procedure()
+  cu_cp_ue_index_t start_procedure()
   {
-    ue_index_t ue_index = create_ue();
+    cu_cp_ue_index_t ue_index = create_ue();
 
     // Inject DL NAS transport message from AMF.
     run_dl_nas_transport(ue_index);
@@ -56,7 +56,7 @@ TEST_F(ngap_error_indication_test,
 TEST_F(ngap_error_indication_test, when_error_indication_message_for_existing_ue_received_message_is_logged)
 {
   // Test preamble.
-  ue_index_t ue_index = this->start_procedure();
+  cu_cp_ue_index_t ue_index = this->start_procedure();
 
   auto& ue = test_ues.at(ue_index);
 
@@ -73,7 +73,7 @@ TEST_F(
     when_error_indication_message_with_cause_unknown_local_ue_ngap_id_for_existing_ue_is_received_then_ue_is_released_locally)
 {
   // Test preamble.
-  ue_index_t ue_index = this->start_procedure();
+  cu_cp_ue_index_t ue_index = this->start_procedure();
 
   auto& ue = test_ues.at(ue_index);
 

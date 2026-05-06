@@ -82,12 +82,12 @@ public:
     logger.info("ue={}: Received RRC Reestablishment failure notification", request.ue_index);
   }
 
-  void on_rrc_reestablishment_complete(ue_index_t old_ue_index) override
+  void on_rrc_reestablishment_complete(cu_cp_ue_index_t old_ue_index) override
   {
     logger.info("ue={}: Received RRC Reestablishment complete notification", old_ue_index);
   }
 
-  async_task<bool> on_ue_transfer_required(ue_index_t old_ue_index) override
+  async_task<bool> on_ue_transfer_required(cu_cp_ue_index_t old_ue_index) override
   {
     logger.info("Requested a UE context transfer from old_ue={}.", old_ue_index);
     return launch_async([](coro_context<async_task<bool>>& ctx) mutable {

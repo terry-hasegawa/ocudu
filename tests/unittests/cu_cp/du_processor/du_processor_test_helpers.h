@@ -11,7 +11,7 @@
 #include "lib/cu_cp/ue_manager/ue_manager_impl.h"
 #include "tests/unittests/f1ap/common/test_helpers.h"
 #include "tests/unittests/rrc/test_helpers.h"
-#include "ocudu/cu_cp/cu_cp_types.h"
+#include "ocudu/ran/cu_cp_types.h"
 #include "ocudu/support/async/async_test_utils.h"
 #include "ocudu/support/executors/manual_task_worker.h"
 #include <gtest/gtest.h>
@@ -42,8 +42,8 @@ protected:
   du_configuration_manager                du_cfg_mgr;
   std::unique_ptr<du_processor>           du_processor_obj;
 
-  async_task<ue_index_t>                        t;
-  std::optional<lazy_task_launcher<ue_index_t>> t_launcher;
+  async_task<cu_cp_ue_index_t>                        t;
+  std::optional<lazy_task_launcher<cu_cp_ue_index_t>> t_launcher;
 };
 
 } // namespace ocudu::ocucp

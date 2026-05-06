@@ -4,9 +4,8 @@
 
 #pragma once
 
-#include "ocudu/cu_cp/cu_cp_types.h"
 #include "ocudu/f1ap/f1ap_message.h"
-#include "ocudu/ocudulog/ocudulog.h"
+#include "ocudu/ran/cu_cp_types.h"
 #include "ocudu/ran/du_types.h"
 #include "ocudu/ran/gnb_du_id.h"
 
@@ -21,12 +20,12 @@ void log_f1ap_pdu(ocudulog::basic_logger&       logger,
                   const f1ap_message&           msg,
                   bool                          json_enabled);
 
-extern template void log_f1ap_pdu<ocucp::ue_index_t>(ocudulog::basic_logger&                 logger,
-                                                     bool                                    is_rx,
-                                                     gnb_du_id_t                             du_id,
-                                                     const std::optional<ocucp::ue_index_t>& ue_id,
-                                                     const f1ap_message&                     msg,
-                                                     bool                                    json_enabled);
+extern template void log_f1ap_pdu<cu_cp_ue_index_t>(ocudulog::basic_logger&                logger,
+                                                    bool                                   is_rx,
+                                                    gnb_du_id_t                            du_id,
+                                                    const std::optional<cu_cp_ue_index_t>& ue_id,
+                                                    const f1ap_message&                    msg,
+                                                    bool                                   json_enabled);
 extern template void log_f1ap_pdu<du_ue_index_t>(ocudulog::basic_logger&             logger,
                                                  bool                                is_rx,
                                                  gnb_du_id_t                         du_id,

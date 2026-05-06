@@ -92,7 +92,7 @@ ngap_message generate_ng_setup_failure_with_time_to_wait(asn1::ngap::time_to_wai
 
 const uint32_t nas_pdu_len = 4; // Dummy length used for testing (content is not important)
 /// \brief Generate a dummy Initial UE Message.
-cu_cp_initial_ue_message generate_initial_ue_message(ue_index_t ue_index);
+cu_cp_initial_ue_message generate_initial_ue_message(cu_cp_ue_index_t ue_index);
 
 /// \brief Generate a dummy DL NAS Transport Message.
 ngap_message
@@ -104,7 +104,7 @@ ngap_message generate_downlink_nas_transport_message_with_ue_cap_info_request(am
                                                                               byte_buffer nas_pdu = {});
 
 /// \brief Generate a dummy UL NAS Transport Message.
-cu_cp_ul_nas_transport generate_ul_nas_transport_message(ue_index_t ue_index);
+cu_cp_ul_nas_transport generate_ul_nas_transport_message(cu_cp_ue_index_t ue_index);
 
 /// \brief Generate a dummy UL NAS Transport Message.
 ngap_message generate_uplink_nas_transport_message(amf_ue_id_t amf_ue_id, ran_ue_id_t ran_ue_id);
@@ -248,7 +248,7 @@ ngap_message generate_valid_dl_ran_status_transfer(amf_ue_id_t amf_ue_id, ran_ue
 
 /// \brief Generate a handover preparation request.
 ngap_handover_preparation_request
-generate_handover_preparation_request(ue_index_t                                                ue_index,
+generate_handover_preparation_request(cu_cp_ue_index_t                                          ue_index,
                                       const std::map<pdu_session_id_t, up_pdu_session_context>& pdu_sessions,
                                       nr_cell_identity nci               = nr_cell_identity::create({1, 22}, 1).value(),
                                       uint32_t         gnb_id_bit_length = 22);

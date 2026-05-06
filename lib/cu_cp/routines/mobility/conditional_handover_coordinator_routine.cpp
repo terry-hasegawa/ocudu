@@ -66,7 +66,7 @@ void conditional_handover_coordinator_routine::operator()(coro_context<async_tas
 
   logger.debug("ue={}: \"{}\" started...", request.source_ue_index, name());
 
-  if (request.source_ue_index == ue_index_t::invalid || request.source_du_index == du_index_t::invalid ||
+  if (request.source_ue_index == cu_cp_ue_index_t::invalid || request.source_du_index == du_index_t::invalid ||
       request.targets.empty()) {
     logger.warning("CHO coordinator request is invalid");
     CORO_EARLY_RETURN(response);
@@ -124,7 +124,7 @@ void conditional_handover_coordinator_routine::operator()(coro_context<async_tas
         std::move(prep_response.cho_preparation_result->ng_ran_bearer_context_mod_request);
 
     if (source_ue->get_cho_context().has_value()) {
-      const ue_index_t target_ue_idx = candidate.target_ue_index;
+      const cu_cp_ue_index_t target_ue_idx = candidate.target_ue_index;
       source_ue->get_cho_context()->candidates.push_back(std::move(candidate));
 
       // Set source_ue_idx on target UE so the source UE can be fetched directly.

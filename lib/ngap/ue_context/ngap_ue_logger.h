@@ -4,22 +4,21 @@
 
 #pragma once
 
-#include "ocudu/cu_cp/cu_cp_types.h"
 #include "ocudu/ngap/ngap_types.h"
+#include "ocudu/ran/cu_cp_types.h"
 #include "ocudu/ran/cu_types.h"
 #include "ocudu/support/format/fmt_to_c_str.h"
 #include "ocudu/support/format/prefixed_logger.h"
 #include "fmt/format.h"
 
-namespace ocudu {
-namespace ocucp {
+namespace ocudu::ocucp {
 
 class ngap_ue_log_prefix
 {
 public:
-  ngap_ue_log_prefix(ue_index_t  ue_index,
-                     ran_ue_id_t ran_ue_id = ran_ue_id_t::invalid,
-                     amf_ue_id_t amf_ue_id = amf_ue_id_t::invalid)
+  ngap_ue_log_prefix(cu_cp_ue_index_t ue_index,
+                     ran_ue_id_t      ran_ue_id = ran_ue_id_t::invalid,
+                     amf_ue_id_t      amf_ue_id = amf_ue_id_t::invalid)
   {
     fmt::memory_buffer buffer;
     fmt::format_to(std::back_inserter(buffer),
@@ -37,8 +36,7 @@ private:
 
 using ngap_ue_logger = prefixed_logger<ngap_ue_log_prefix>;
 
-} // namespace ocucp
-} // namespace ocudu
+} // namespace ocudu::ocucp
 
 namespace fmt {
 

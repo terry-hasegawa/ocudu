@@ -937,17 +937,14 @@ class dummy_cu_configurator : public cu_configurator
 public:
   dummy_cu_configurator() {}
 
-  ocucp::ue_index_t get_ue_index(const ocucp::amf_ue_id_t&  amf_ue_id,
-                                 const guami_t&             guami,
-                                 const gnb_cu_ue_f1ap_id_t& gnb_cu_ue_f1ap_id) const override
+  cu_cp_ue_index_t get_ue_index(const ocucp::amf_ue_id_t&  amf_ue_id,
+                                const guami_t&             guami,
+                                const gnb_cu_ue_f1ap_id_t& gnb_cu_ue_f1ap_id) const override
   {
-    return ocucp::uint_to_ue_index(1);
+    return uint_to_ue_index(1);
   }
 
-  ocucp::du_index_t get_du_index(const ocucp::ue_index_t& ue_index) const override
-  {
-    return ocucp::uint_to_du_index(1);
-  }
+  ocucp::du_index_t get_du_index(const cu_cp_ue_index_t& ue_index) const override { return ocucp::uint_to_du_index(1); }
 
   ocucp::du_index_t get_du_index(const nr_cell_global_id_t& nr_cgi) const override
   {

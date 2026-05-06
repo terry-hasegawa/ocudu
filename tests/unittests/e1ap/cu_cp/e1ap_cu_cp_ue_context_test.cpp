@@ -29,10 +29,10 @@ protected:
     ocudulog::flush();
   }
 
-  ue_index_t generate_random_ue_index()
+  cu_cp_ue_index_t generate_random_ue_index()
   {
-    return uint_to_ue_index(
-        test_rng::uniform_int<uint64_t>(ue_index_to_uint(ue_index_t::min), ue_index_to_uint(ue_index_t::max) - 1));
+    return uint_to_ue_index(test_rng::uniform_int<uint64_t>(cu_cp_ue_index_to_uint(cu_cp_ue_index_t::min),
+                                                            cu_cp_ue_index_to_uint(cu_cp_ue_index_t::max) - 1));
   }
 
   timer_manager           timer_mng;
@@ -45,7 +45,7 @@ protected:
 
 TEST_F(e1ap_cu_cp_ue_context_test, when_ue_added_then_ue_exists)
 {
-  ue_index_t             ue_index         = generate_random_ue_index();
+  cu_cp_ue_index_t       ue_index         = generate_random_ue_index();
   gnb_cu_cp_ue_e1ap_id_t cu_cp_ue_e1ap_id = generate_random_gnb_cu_cp_ue_e1ap_id();
 
   ASSERT_NE(ue_ctxt_list.add_ue(ue_index, cu_cp_ue_e1ap_id), nullptr);
@@ -61,7 +61,7 @@ TEST_F(e1ap_cu_cp_ue_context_test, when_ue_added_then_ue_exists)
 
 TEST_F(e1ap_cu_cp_ue_context_test, when_ue_not_added_then_ue_doesnt_exist)
 {
-  ue_index_t             ue_index         = generate_random_ue_index();
+  cu_cp_ue_index_t       ue_index         = generate_random_ue_index();
   gnb_cu_cp_ue_e1ap_id_t cu_cp_ue_e1ap_id = generate_random_gnb_cu_cp_ue_e1ap_id();
 
   ASSERT_FALSE(ue_ctxt_list.contains(cu_cp_ue_e1ap_id));
@@ -71,7 +71,7 @@ TEST_F(e1ap_cu_cp_ue_context_test, when_ue_not_added_then_ue_doesnt_exist)
 
 TEST_F(e1ap_cu_cp_ue_context_test, when_ue_exists_then_ue_not_added)
 {
-  ue_index_t             ue_index         = generate_random_ue_index();
+  cu_cp_ue_index_t       ue_index         = generate_random_ue_index();
   gnb_cu_cp_ue_e1ap_id_t cu_cp_ue_e1ap_id = generate_random_gnb_cu_cp_ue_e1ap_id();
 
   ASSERT_NE(ue_ctxt_list.add_ue(ue_index, cu_cp_ue_e1ap_id), nullptr);
@@ -98,7 +98,7 @@ TEST_F(e1ap_cu_cp_ue_context_test, when_unsupported_number_of_ues_added_then_ue_
   for (unsigned it = 0; it < max_nof_supported_ues; ++it) {
     gnb_cu_cp_ue_e1ap_id_t cu_cp_ue_e1ap_id = ue_ctxt_list.allocate_gnb_cu_cp_ue_e1ap_id();
     ASSERT_NE(cu_cp_ue_e1ap_id, gnb_cu_cp_ue_e1ap_id_t::invalid);
-    ue_index_t ue_index = uint_to_ue_index(it);
+    cu_cp_ue_index_t ue_index = uint_to_ue_index(it);
 
     ASSERT_NE(ue_ctxt_list.add_ue(ue_index, cu_cp_ue_e1ap_id), nullptr);
     ASSERT_TRUE(ue_ctxt_list.contains(cu_cp_ue_e1ap_id));
@@ -112,7 +112,7 @@ TEST_F(e1ap_cu_cp_ue_context_test, when_unsupported_number_of_ues_added_then_ue_
 
 TEST_F(e1ap_cu_cp_ue_context_test, when_ue_exists_then_removal_succeeds)
 {
-  ue_index_t             ue_index         = generate_random_ue_index();
+  cu_cp_ue_index_t       ue_index         = generate_random_ue_index();
   gnb_cu_cp_ue_e1ap_id_t cu_cp_ue_e1ap_id = generate_random_gnb_cu_cp_ue_e1ap_id();
 
   ASSERT_NE(ue_ctxt_list.add_ue(ue_index, cu_cp_ue_e1ap_id), nullptr);
@@ -125,13 +125,13 @@ TEST_F(e1ap_cu_cp_ue_context_test, when_ue_exists_then_removal_succeeds)
 
 TEST_F(e1ap_cu_cp_ue_context_test, when_ue_index_is_old_ue_index_then_ue_index_not_updated)
 {
-  ue_index_t             old_ue_index     = generate_random_ue_index();
+  cu_cp_ue_index_t       old_ue_index     = generate_random_ue_index();
   gnb_cu_cp_ue_e1ap_id_t cu_cp_ue_e1ap_id = generate_random_gnb_cu_cp_ue_e1ap_id();
 
   ASSERT_NE(ue_ctxt_list.add_ue(old_ue_index, cu_cp_ue_e1ap_id), nullptr);
 
   // new ue index to update
-  ue_index_t ue_index = old_ue_index;
+  cu_cp_ue_index_t ue_index = old_ue_index;
 
   // test ue index update
   ue_ctxt_list.update_ue_index(ue_index, old_ue_index);
@@ -143,13 +143,13 @@ TEST_F(e1ap_cu_cp_ue_context_test, when_ue_index_is_old_ue_index_then_ue_index_n
 
 TEST_F(e1ap_cu_cp_ue_context_test, when_ue_exists_then_ue_index_update_succeeds)
 {
-  ue_index_t             old_ue_index     = generate_random_ue_index();
+  cu_cp_ue_index_t       old_ue_index     = generate_random_ue_index();
   gnb_cu_cp_ue_e1ap_id_t cu_cp_ue_e1ap_id = generate_random_gnb_cu_cp_ue_e1ap_id();
 
   ASSERT_NE(ue_ctxt_list.add_ue(old_ue_index, cu_cp_ue_e1ap_id), nullptr);
 
   // new ue index to update
-  ue_index_t ue_index = generate_random_ue_index();
+  cu_cp_ue_index_t ue_index = generate_random_ue_index();
 
   // make sure ue index is not old ue index
   while (ue_index == old_ue_index) {

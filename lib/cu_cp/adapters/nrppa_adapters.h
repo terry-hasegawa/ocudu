@@ -9,8 +9,7 @@
 #include "ocudu/cu_cp/ue_task_scheduler.h"
 #include "ocudu/nrppa/nrppa.h"
 
-namespace ocudu {
-namespace ocucp {
+namespace ocudu::ocucp {
 
 /// Adapter between NRPPa and CU-CP.
 class nrppa_cu_cp_adapter : public nrppa_cu_cp_notifier
@@ -20,13 +19,14 @@ public:
 
   void connect_cu_cp(cu_cp_nrppa_handler& cu_cp_handler_) { cu_cp_handler = &cu_cp_handler_; }
 
-  nrppa_cu_cp_ue_notifier* on_new_nrppa_ue(ue_index_t ue_index) override
+  nrppa_cu_cp_ue_notifier* on_new_nrppa_ue(cu_cp_ue_index_t ue_index) override
   {
     ocudu_assert(cu_cp_handler != nullptr, "CU-CP NRPPA handler must not be nullptr");
     return cu_cp_handler->handle_new_nrppa_ue(ue_index);
   }
 
-  void on_ul_nrppa_pdu(const byte_buffer& nrppa_pdu, std::variant<ue_index_t, amf_index_t> ue_or_amf_index) override
+  void on_ul_nrppa_pdu(const byte_buffer&                          nrppa_pdu,
+                       std::variant<cu_cp_ue_index_t, amf_index_t> ue_or_amf_index) override
   {
     ocudu_assert(cu_cp_handler != nullptr, "CU-CP NRPPA handler must not be nullptr");
     cu_cp_handler->handle_ul_nrppa_pdu(nrppa_pdu, ue_or_amf_index);
@@ -52,7 +52,7 @@ public:
   void connect_ue(cu_cp_ue_impl_interface& ue_) { ue = &ue_; }
 
   /// \brief Get the UE index of the UE.
-  ue_index_t get_ue_index() const override
+  cu_cp_ue_index_t get_ue_index() const override
   {
     ocudu_assert(ue != nullptr, "CU-CP UE must not be nullptr");
     return ue->get_ue_index();
@@ -115,5 +115,4 @@ private:
   f1ap_nrppa_message_handler* f1ap_handler = nullptr;
 };
 
-} // namespace ocucp
-} // namespace ocudu
+} // namespace ocudu::ocucp

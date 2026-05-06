@@ -9,7 +9,7 @@
 using namespace ocudu;
 using namespace ocucp;
 
-rrc_ue_context_t::rrc_ue_context_t(const ue_index_t                       ue_index_,
+rrc_ue_context_t::rrc_ue_context_t(const cu_cp_ue_index_t                 ue_index_,
                                    const rnti_t                           c_rnti_,
                                    const rrc_cell_context&                cell_,
                                    const rrc_ue_cfg_t&                    cfg_,

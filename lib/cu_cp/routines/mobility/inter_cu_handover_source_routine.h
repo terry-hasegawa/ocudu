@@ -7,8 +7,8 @@
 #include "../../cu_up_processor/cu_up_processor_repository.h"
 #include "../../du_processor/du_processor_repository.h"
 #include "../../ue_manager/ue_manager_impl.h"
-#include "ocudu/cu_cp/cu_cp_types.h"
 #include "ocudu/ocudulog/logger.h"
+#include "ocudu/ran/cu_cp_types.h"
 #include "ocudu/support/async/async_task.h"
 
 namespace ocudu::ocucp {
@@ -16,7 +16,7 @@ namespace ocudu::ocucp {
 class inter_cu_handover_source_routine
 {
 public:
-  inter_cu_handover_source_routine(ue_index_t                    ue_index_,
+  inter_cu_handover_source_routine(cu_cp_ue_index_t              ue_index_,
                                    byte_buffer                   command,
                                    ue_manager&                   ue_mng_,
                                    du_processor_repository&      du_db_,
@@ -33,7 +33,7 @@ private:
   void fill_e1ap_bearer_modification_request_pdcp_sn_query();
   bool fill_status_transfer();
 
-  ue_index_t                    ue_index;
+  cu_cp_ue_index_t              ue_index;
   byte_buffer                   command;
   ue_manager&                   ue_mng;
   du_processor_repository&      du_db;

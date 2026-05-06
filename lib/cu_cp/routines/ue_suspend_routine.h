@@ -17,7 +17,7 @@ namespace ocudu::ocucp {
 class ue_suspend_routine
 {
 public:
-  ue_suspend_routine(ue_index_t                             ue_index_,
+  ue_suspend_routine(cu_cp_ue_index_t                       ue_index_,
                      const rrc_ue_release_context&          release_context_,
                      e1ap_bearer_context_manager&           e1ap_bearer_ctxt_mng_,
                      f1ap_ue_context_manager&               f1ap_ue_ctxt_mng_,
@@ -32,7 +32,7 @@ public:
   static const char* name() { return "RRC Inactive Routine"; }
 
 private:
-  const ue_index_t             ue_index;
+  const cu_cp_ue_index_t       ue_index;
   const rrc_ue_release_context release_context;
 
   e1ap_bearer_context_manager&           e1ap_bearer_ctxt_mng;       // to trigger bearer context modification at CU-UP
@@ -51,7 +51,7 @@ private:
 
   // (sub-)routine results.
   e1ap_bearer_context_modification_response bearer_context_modification_response;
-  ue_index_t                                released_ue_index;
+  cu_cp_ue_index_t                          released_ue_index;
   bool                                      ngap_rrc_inactive_report_sent = false;
 };
 

@@ -9,10 +9,9 @@
 #include "rrc_ue_logger.h"
 #include "ocudu/asn1/rrc_nr/ul_dcch_msg.h"
 #include "ocudu/asn1/rrc_nr/ul_dcch_msg_ies.h"
-#include "ocudu/cu_cp/cu_cp_types.h"
+#include "ocudu/ran/cu_cp_types.h"
 #include "ocudu/rrc/rrc_cell_context.h"
 #include "ocudu/rrc/rrc_ue.h"
-#include "ocudu/support/ocudu_assert.h"
 
 namespace ocudu::ocucp {
 
@@ -26,7 +25,7 @@ public:
               rrc_ue_measurement_notifier&           measurement_notifier_,
               rrc_ue_cu_cp_ue_notifier&              cu_cp_ue_notifier_,
               rrc_ue_event_notifier&                 metrics_notifier_,
-              ue_index_t                             ue_index_,
+              cu_cp_ue_index_t                       ue_index_,
               rnti_t                                 c_rnti_,
               const rrc_cell_context&                cell_,
               const rrc_ue_cfg_t&                    cfg_,

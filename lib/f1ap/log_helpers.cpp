@@ -64,12 +64,12 @@ void ocudu::log_f1ap_pdu(ocudulog::basic_logger&       logger,
   }
 }
 
-template void ocudu::log_f1ap_pdu<ocucp::ue_index_t>(ocudulog::basic_logger&                 logger,
-                                                     bool                                    is_rx,
-                                                     gnb_du_id_t                             du_id,
-                                                     const std::optional<ocucp::ue_index_t>& ue_id,
-                                                     const f1ap_message&                     msg,
-                                                     bool                                    json_enabled);
+template void ocudu::log_f1ap_pdu<cu_cp_ue_index_t>(ocudulog::basic_logger&                logger,
+                                                    bool                                   is_rx,
+                                                    gnb_du_id_t                            du_id,
+                                                    const std::optional<cu_cp_ue_index_t>& ue_id,
+                                                    const f1ap_message&                    msg,
+                                                    bool                                   json_enabled);
 template void ocudu::log_f1ap_pdu<du_ue_index_t>(ocudulog::basic_logger&             logger,
                                                  bool                                is_rx,
                                                  gnb_du_id_t                         du_id,

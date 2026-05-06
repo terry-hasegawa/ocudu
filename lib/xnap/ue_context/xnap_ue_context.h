@@ -12,7 +12,7 @@
 namespace ocudu::ocucp {
 
 struct xnap_ue_ids {
-  ue_index_t               ue_index         = ue_index_t::invalid;
+  cu_cp_ue_index_t         ue_index         = cu_cp_ue_index_t::invalid;
   const local_xnap_ue_id_t local_xnap_ue_id = local_xnap_ue_id_t::invalid;
   peer_xnap_ue_id_t        peer_xnap_ue_id  = peer_xnap_ue_id_t::invalid;
 };
@@ -27,7 +27,7 @@ struct xnap_ue_context {
   /// XN Status Transfer Event Source.
   protocol_transaction_event_source<asn1::xnap::sn_status_transfer_s> sn_status_transfer_outcome;
 
-  xnap_ue_context(ue_index_t              ue_index_,
+  xnap_ue_context(cu_cp_ue_index_t        ue_index_,
                   local_xnap_ue_id_t      local_xnap_ue_id_,
                   timer_factory           timer_db,
                   ocudulog::basic_logger& logger_) :
@@ -55,7 +55,7 @@ public:
   /// \brief Checks whether a UE with the given UE index exists.
   /// \param[in] ue_index The UE index used to find the UE.
   /// \return True when a UE for the given UE index exists, false otherwise.
-  bool contains(ue_index_t ue_index) const
+  bool contains(cu_cp_ue_index_t ue_index) const
   {
     if (ue_index_to_local_xnap_ue_id.find(ue_index) == ue_index_to_local_xnap_ue_id.end()) {
       return false;
@@ -88,7 +88,7 @@ public:
     return ues.at(local_xnap_ue_id);
   }
 
-  xnap_ue_context& operator[](ue_index_t ue_index)
+  xnap_ue_context& operator[](cu_cp_ue_index_t ue_index)
   {
     ocudu_assert(ue_index_to_local_xnap_ue_id.find(ue_index) != ue_index_to_local_xnap_ue_id.end(),
                  "ue={}: XNAP UE ID not found",
@@ -144,7 +144,7 @@ public:
     return find(peer_xnap_ue_id_to_local_xnap_ue_id.at(peer_xnap_ue_id));
   }
 
-  xnap_ue_context* find(ue_index_t ue_index)
+  xnap_ue_context* find(cu_cp_ue_index_t ue_index)
   {
     if (ue_index_to_local_xnap_ue_id.find(ue_index) == ue_index_to_local_xnap_ue_id.end()) {
       return nullptr;
@@ -152,7 +152,7 @@ public:
     return find(ue_index_to_local_xnap_ue_id.at(ue_index));
   }
 
-  const xnap_ue_context* find(ue_index_t ue_index) const
+  const xnap_ue_context* find(cu_cp_ue_index_t ue_index) const
   {
     if (ue_index_to_local_xnap_ue_id.find(ue_index) == ue_index_to_local_xnap_ue_id.end()) {
       return nullptr;
@@ -160,9 +160,9 @@ public:
     return find(ue_index_to_local_xnap_ue_id.at(ue_index));
   }
 
-  xnap_ue_context& add_ue(ue_index_t ue_index, local_xnap_ue_id_t xnap_ue_id)
+  xnap_ue_context& add_ue(cu_cp_ue_index_t ue_index, local_xnap_ue_id_t xnap_ue_id)
   {
-    ocudu_assert(ue_index != ue_index_t::invalid, "Invalid ue_index={}", fmt::underlying(ue_index));
+    ocudu_assert(ue_index != cu_cp_ue_index_t::invalid, "Invalid ue_index={}", fmt::underlying(ue_index));
     ocudu_assert(xnap_ue_id != local_xnap_ue_id_t::invalid, "Invalid xnap_ue_id={}", fmt::underlying(xnap_ue_id));
 
     logger.debug("ue={} xnap_ue={}: XNAP UE context created", fmt::underlying(ue_index), fmt::underlying(xnap_ue_id));
@@ -208,10 +208,10 @@ public:
     ue.logger.set_prefix({ue.ue_ids.ue_index, local_xnap_ue_id, peer_xnap_ue_id});
   }
 
-  void update_ue_index(ue_index_t new_ue_index, ue_index_t old_ue_index)
+  void update_ue_index(cu_cp_ue_index_t new_ue_index, cu_cp_ue_index_t old_ue_index)
   {
-    ocudu_assert(new_ue_index != ue_index_t::invalid, "Invalid new_ue_index={}", new_ue_index);
-    ocudu_assert(old_ue_index != ue_index_t::invalid, "Invalid old_ue_index={}", old_ue_index);
+    ocudu_assert(new_ue_index != cu_cp_ue_index_t::invalid, "Invalid new_ue_index={}", new_ue_index);
+    ocudu_assert(old_ue_index != cu_cp_ue_index_t::invalid, "Invalid old_ue_index={}", old_ue_index);
     ocudu_assert(ue_index_to_local_xnap_ue_id.find(old_ue_index) != ue_index_to_local_xnap_ue_id.end(),
                  "ue={}: XNAP-UE-ID not found",
                  old_ue_index);
@@ -234,9 +234,9 @@ public:
     ues.at(local_xnap_ue_id).logger.log_debug("Updated UE index from ue_index={}", old_ue_index);
   }
 
-  void remove_ue_context(ue_index_t ue_index)
+  void remove_ue_context(cu_cp_ue_index_t ue_index)
   {
-    ocudu_assert(ue_index != ue_index_t::invalid, "Invalid ue_index={}", ue_index);
+    ocudu_assert(ue_index != cu_cp_ue_index_t::invalid, "Invalid ue_index={}", ue_index);
 
     if (ue_index_to_local_xnap_ue_id.find(ue_index) == ue_index_to_local_xnap_ue_id.end()) {
       logger.warning("ue={}: XNAP-UE-ID not found", ue_index);
@@ -321,7 +321,7 @@ private:
   }
 
   // Note: Given that UEs will self-remove from the map, we don't want to destructor to clear the lookups beforehand.
-  std::unordered_map<ue_index_t, local_xnap_ue_id_t> ue_index_to_local_xnap_ue_id; // indexed by ue_index
+  std::unordered_map<cu_cp_ue_index_t, local_xnap_ue_id_t> ue_index_to_local_xnap_ue_id; // indexed by ue_index
   std::unordered_map<peer_xnap_ue_id_t, local_xnap_ue_id_t>
       peer_xnap_ue_id_to_local_xnap_ue_id;                     // indexed by peer_xnap_ue_id_t
   std::unordered_map<local_xnap_ue_id_t, xnap_ue_context> ues; // indexed by local_xnap_ue_id_t

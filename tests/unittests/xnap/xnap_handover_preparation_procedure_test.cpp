@@ -21,7 +21,8 @@ public:
   xnap_handover_preparation_procedure_test()           = default;
   ~xnap_handover_preparation_procedure_test() override = default;
 
-  static xnap_handover_request generate_handover_request(ue_index_t ue_index, security::security_context& sec_ctxt)
+  static xnap_handover_request generate_handover_request(cu_cp_ue_index_t            ue_index,
+                                                         security::security_context& sec_ctxt)
   {
     xnap_handover_request request;
 
@@ -71,7 +72,7 @@ TEST_F(xnap_handover_preparation_procedure_test, when_handover_preparation_failu
   run_xn_setup(xnap_peer_cfg);
 
   // Create UE context.
-  ue_index_t ue_index = create_ue();
+  cu_cp_ue_index_t ue_index = create_ue();
 
   // Generate Security context for the UE.
   security::security_context sec_ctxt = generate_security_context(ue_mng.find_ue(ue_index)->get_security_manager());
@@ -105,7 +106,7 @@ TEST_F(xnap_handover_preparation_procedure_test, when_handover_preparation_times
   run_xn_setup(xnap_peer_cfg);
 
   // Create UE context.
-  ue_index_t ue_index = create_ue();
+  cu_cp_ue_index_t ue_index = create_ue();
 
   // Generate Security context for the UE.
   security::security_context sec_ctxt = generate_security_context(ue_mng.find_ue(ue_index)->get_security_manager());
@@ -143,7 +144,7 @@ TEST_F(xnap_handover_preparation_procedure_test, when_handover_request_ack_recei
   run_xn_setup(xnap_peer_cfg);
 
   // Create UE context.
-  ue_index_t ue_index = create_ue();
+  cu_cp_ue_index_t ue_index = create_ue();
 
   // Generate Security context for the UE.
   security::security_context sec_ctxt = generate_security_context(ue_mng.find_ue(ue_index)->get_security_manager());

@@ -56,7 +56,7 @@ struct location_report_request {
 };
 
 struct location_report {
-  ue_index_t                                                       ue_index = ue_index_t::invalid;
+  cu_cp_ue_index_t                                                 ue_index = cu_cp_ue_index_t::invalid;
   cu_cp_user_location_info_nr                                      user_location_info;
   std::optional<std::vector<ue_presence_in_area_of_interest_item>> ue_presence_in_area_of_interest_list;
   // Location Reporting Request Type to which the Location Report refers to (build from multiple combined requests).
@@ -64,8 +64,8 @@ struct location_report {
 };
 
 struct location_report_failure_indication {
-  ue_index_t   ue_index = ue_index_t::invalid;
-  ngap_cause_t cause;
+  cu_cp_ue_index_t ue_index = cu_cp_ue_index_t::invalid;
+  ngap_cause_t     cause;
 };
 
 } // namespace ocudu::ocucp

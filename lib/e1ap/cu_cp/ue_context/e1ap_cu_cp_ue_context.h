@@ -7,11 +7,10 @@
 #include "e1ap_bearer_transaction_manager.h"
 #include "e1ap_ue_ids.h"
 #include "e1ap_ue_logger.h"
-#include "ocudu/cu_cp/cu_cp_types.h"
+#include "ocudu/ran/cu_cp_types.h"
 #include <unordered_map>
 
-namespace ocudu {
-namespace ocucp {
+namespace ocudu::ocucp {
 
 /// \brief E1AP UE context.
 class e1ap_ue_context
@@ -23,7 +22,7 @@ public:
 
   e1ap_ue_logger logger;
 
-  e1ap_ue_context(ue_index_t ue_index_, gnb_cu_cp_ue_e1ap_id_t cu_cp_ue_e1ap_id_, timer_factory timers_) :
+  e1ap_ue_context(cu_cp_ue_index_t ue_index_, gnb_cu_cp_ue_e1ap_id_t cu_cp_ue_e1ap_id_, timer_factory timers_) :
     ue_ids({ue_index_, cu_cp_ue_e1ap_id_}), bearer_ev_mng(timers_), logger("CU-CP-E1", {ue_index_, cu_cp_ue_e1ap_id_})
   {
   }
@@ -56,7 +55,7 @@ public:
   /// \brief Checks whether a UE with the given UE Index exists.
   /// \param[in] ue_index The UE Index used to find the UE.
   /// \return The UE Index.
-  bool contains(ue_index_t ue_index) const
+  bool contains(cu_cp_ue_index_t ue_index) const
   {
     if (ue_index_to_ue_e1ap_id.find(ue_index) == ue_index_to_ue_e1ap_id.end()) {
       return false;
@@ -87,7 +86,7 @@ public:
     return &it->second;
   }
 
-  e1ap_ue_context* find_ue(ue_index_t ue_idx)
+  e1ap_ue_context* find_ue(cu_cp_ue_index_t ue_idx)
   {
     auto it = ue_index_to_ue_e1ap_id.find(ue_idx);
     return it != ue_index_to_ue_e1ap_id.end() ? &ues.at(it->second) : nullptr;
@@ -100,7 +99,7 @@ public:
                  fmt::underlying(cu_cp_ue_e1ap_id));
     return ues.at(cu_cp_ue_e1ap_id);
   }
-  e1ap_ue_context& operator[](ue_index_t ue_index)
+  e1ap_ue_context& operator[](cu_cp_ue_index_t ue_index)
   {
     ocudu_assert(ue_index_to_ue_e1ap_id.find(ue_index) != ue_index_to_ue_e1ap_id.end(),
                  "ue={} gNB-CU-CP-UE-E1AP-ID not found",
@@ -112,10 +111,10 @@ public:
   }
 
   /// \brief Create new UE E1AP Context.
-  e1ap_ue_context* add_ue(ue_index_t ue_index, gnb_cu_cp_ue_e1ap_id_t cu_cp_ue_e1ap_id);
+  e1ap_ue_context* add_ue(cu_cp_ue_index_t ue_index, gnb_cu_cp_ue_e1ap_id_t cu_cp_ue_e1ap_id);
 
   /// Remove existing E1AP UE Context.
-  void remove_ue(ue_index_t ue_index);
+  void remove_ue(cu_cp_ue_index_t ue_index);
 
   size_t size() const { return ues.size(); }
 
@@ -123,7 +122,7 @@ public:
   gnb_cu_cp_ue_e1ap_id_t allocate_gnb_cu_cp_ue_e1ap_id();
 
   /// \brief Transfer E1AP UE context to new CU-CP specific UE index.
-  void update_ue_index(ue_index_t new_ue_index, ue_index_t old_ue_index);
+  void update_ue_index(cu_cp_ue_index_t new_ue_index, cu_cp_ue_index_t old_ue_index);
 
   std::unordered_map<gnb_cu_cp_ue_e1ap_id_t, e1ap_ue_context>::iterator       begin() { return ues.begin(); }
   std::unordered_map<gnb_cu_cp_ue_e1ap_id_t, e1ap_ue_context>::const_iterator begin() const { return ues.begin(); }
@@ -139,9 +138,8 @@ private:
 
   void increase_next_cu_cp_ue_e1ap_id();
 
-  std::unordered_map<gnb_cu_cp_ue_e1ap_id_t, e1ap_ue_context> ues;                    // indexed by gnb_cu_cp_ue_e1ap_id
-  std::unordered_map<ue_index_t, gnb_cu_cp_ue_e1ap_id_t>      ue_index_to_ue_e1ap_id; // indexed by ue_index
+  std::unordered_map<gnb_cu_cp_ue_e1ap_id_t, e1ap_ue_context>  ues; // indexed by gnb_cu_cp_ue_e1ap_id
+  std::unordered_map<cu_cp_ue_index_t, gnb_cu_cp_ue_e1ap_id_t> ue_index_to_ue_e1ap_id; // indexed by ue_index
 };
 
-} // namespace ocucp
-} // namespace ocudu
+} // namespace ocudu::ocucp

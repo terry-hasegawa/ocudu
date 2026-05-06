@@ -72,7 +72,7 @@ void xnap_impl::handle_message(const xnap_message& msg)
   }
 }
 
-void xnap_impl::remove_ue_context(ue_index_t ue_index)
+void xnap_impl::remove_ue_context(cu_cp_ue_index_t ue_index)
 {
   if (!ue_ctxt_list.contains(ue_index)) {
     logger.debug("ue={}: UE context not found", ue_index);
@@ -200,7 +200,7 @@ void xnap_impl::handle_handover_request(const asn1::xnap::ho_request_s& msg)
 
   // Create UE in target cell.
   ho_request.ue_index = cu_cp_notifier.request_new_ue_index_allocation(ho_request.nr_cgi, ho_request.guami.plmn);
-  if (ho_request.ue_index == ue_index_t::invalid) {
+  if (ho_request.ue_index == cu_cp_ue_index_t::invalid) {
     logger.debug("Couldn't allocate UE index for handover target cell");
     send_handover_failure(msg->source_ng_ra_nnode_ue_xn_ap_id, xnap_cause_misc_t::not_enough_user_plane_processing_res);
     return;
@@ -239,7 +239,7 @@ void xnap_impl::handle_handover_cancel(const asn1::xnap::ho_cancel_s& msg)
     return;
   }
 
-  ue_index_t ue_index = ue_ctxt_list[peer_xnap_ue_id].ue_ids.ue_index;
+  cu_cp_ue_index_t ue_index = ue_ctxt_list[peer_xnap_ue_id].ue_ids.ue_index;
 
   // Request CU-CP to release the UE context.
   cu_cp_notifier.on_handover_cancel_received(ue_index);
@@ -307,7 +307,7 @@ xnap_impl::handle_handover_request_required(const xnap_handover_request& request
 
 void xnap_impl::handle_sn_status_transfer_required(const cu_cp_status_transfer& sn_status_transfer)
 {
-  const ue_index_t ue_index = sn_status_transfer.ue_index;
+  const cu_cp_ue_index_t ue_index = sn_status_transfer.ue_index;
   if (!ue_ctxt_list.contains(ue_index)) {
     logger.warning("ue={}: Cannot transmit SNStatusTransfer. UE context does not exist", ue_index);
     return;
@@ -334,7 +334,7 @@ void xnap_impl::handle_sn_status_transfer_required(const cu_cp_status_transfer& 
   }
 }
 
-async_task<expected<cu_cp_status_transfer>> xnap_impl::handle_sn_status_transfer_expected(ue_index_t ue_index)
+async_task<expected<cu_cp_status_transfer>> xnap_impl::handle_sn_status_transfer_expected(cu_cp_ue_index_t ue_index)
 {
   if (!ue_ctxt_list.contains(ue_index)) {
     logger.warning("ue={}: Cannot await SNStatusTransfer. UE context does not exist", ue_index);
@@ -347,7 +347,7 @@ async_task<expected<cu_cp_status_transfer>> xnap_impl::handle_sn_status_transfer
       xnap_cfg.procedure_timeout, ue_ctxt.sn_status_transfer_outcome, ue_ctxt.logger);
 }
 
-bool xnap_impl::handle_ue_context_release_required(ue_index_t ue_index)
+bool xnap_impl::handle_ue_context_release_required(cu_cp_ue_index_t ue_index)
 {
   if (!ue_ctxt_list.contains(ue_index)) {
     logger.warning("ue={}: Cannot transmit UEContextReleaseRequest. UE context does not exist", ue_index);

@@ -4,10 +4,8 @@
 
 #pragma once
 
-#include "ocudu/cu_cp/cu_cp_types.h"
 #include "ocudu/e1ap/common/e1ap_message.h"
-#include "ocudu/e1ap/common/e1ap_types.h"
-#include "ocudu/ocudulog/ocudulog.h"
+#include "ocudu/ran/cu_cp_types.h"
 #include "ocudu/ran/cu_up_types.h"
 
 namespace ocudu {
@@ -20,11 +18,11 @@ void log_e1ap_pdu(ocudulog::basic_logger&       logger,
                   const e1ap_message&           e1ap_msg,
                   bool                          json_enabled);
 
-extern template void log_e1ap_pdu<ocucp::ue_index_t>(ocudulog::basic_logger&                 logger,
-                                                     bool                                    is_rx,
-                                                     const std::optional<ocucp::ue_index_t>& ue_id,
-                                                     const e1ap_message&                     e1ap_msg,
-                                                     bool                                    json_enabled);
+extern template void log_e1ap_pdu<cu_cp_ue_index_t>(ocudulog::basic_logger&                logger,
+                                                    bool                                   is_rx,
+                                                    const std::optional<cu_cp_ue_index_t>& ue_id,
+                                                    const e1ap_message&                    e1ap_msg,
+                                                    bool                                   json_enabled);
 extern template void log_e1ap_pdu<cu_up_ue_index_t>(ocudulog::basic_logger&                logger,
                                                     bool                                   is_rx,
                                                     const std::optional<cu_up_ue_index_t>& ue_id,

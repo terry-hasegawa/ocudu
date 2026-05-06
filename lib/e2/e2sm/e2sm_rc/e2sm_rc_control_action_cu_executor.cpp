@@ -3,12 +3,9 @@
 // Portions of this file may implement 3GPP specifications, which may be subject to additional licensing requirements.
 
 #include "e2sm_rc_control_action_cu_executor.h"
-#include "ocudu/cu_up/cu_up_types.h"
-#include "ocudu/du/du_cell_config.h"
 #include "ocudu/f1ap/f1ap_ue_id_types.h"
 #include "ocudu/ran/guami.h"
 #include "ocudu/ran/nr_cgi.h"
-#include <future>
 
 using namespace asn1::e2ap;
 using namespace asn1::e2sm;
@@ -102,9 +99,9 @@ e2sm_rc_control_action_3_1_cu_executor::execute_ric_control_action(const e2sm_ri
   guami.amf_region_id                        = static_cast<uint8_t>(gnb_ue_id.guami.amf_region_id.to_number());
   uint64_t            gnb_cu_ue_f1ap_id_uint = gnb_ue_id.gnb_cu_ue_f1ap_id_list[0].gnb_cu_ue_f1ap_id;
   gnb_cu_ue_f1ap_id_t gnb_cu_ue_f1ap_id      = int_to_gnb_cu_ue_f1ap_id(gnb_cu_ue_f1ap_id_uint);
-  ocucp::ue_index_t   ue_index               = cu_param_configurator.get_ue_index(amf_ue_id, guami, gnb_cu_ue_f1ap_id);
+  cu_cp_ue_index_t    ue_index               = cu_param_configurator.get_ue_index(amf_ue_id, guami, gnb_cu_ue_f1ap_id);
 
-  if (ue_index == ocucp::ue_index_t::invalid) {
+  if (ue_index == cu_cp_ue_index_t::invalid) {
     logger.error("Ignoring Handover Request. Cause: Couldn't find UE index for given UE-IDs.");
     return return_ctrl_failure(req);
   }
@@ -127,7 +124,7 @@ e2sm_rc_control_action_3_1_cu_executor::execute_ric_control_action(const e2sm_ri
     if (action_params.find(ran_p.ran_param_id) != action_params.end()) {
       parse_ran_parameter_value(ran_p.ran_param_value_type,
                                 ran_p.ran_param_id,
-                                ocucp::ue_index_to_uint(ue_index),
+                                cu_cp_ue_index_to_uint(ue_index),
                                 ho_ctrl_cfg,
                                 parse_action_ran_parameter_value_lambda);
     }

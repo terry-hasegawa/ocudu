@@ -26,7 +26,7 @@ private:
   ngap_ue_transaction_manager& ev_mng;
   ngap_ue_logger&              logger;
 
-  ue_index_t            ue_index;
+  cu_cp_ue_index_t      ue_index;
   cu_cp_status_transfer dl_ran_status_transfer;
 
   protocol_transaction_outcome_observer<asn1::ngap::dl_ran_status_transfer_s> transaction_sink;

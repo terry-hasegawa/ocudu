@@ -33,7 +33,7 @@ ue_context_release_procedure::ue_context_release_procedure(const f1ap_configurat
   }
 }
 
-void ue_context_release_procedure::operator()(coro_context<async_task<ue_index_t>>& ctx)
+void ue_context_release_procedure::operator()(coro_context<async_task<cu_cp_ue_index_t>>& ctx)
 {
   CORO_BEGIN(ctx);
 
@@ -93,14 +93,14 @@ void ue_context_release_procedure::send_ue_context_release_command()
   f1ap_notifier.on_new_message(f1ap_ue_ctxt_rel_msg);
 }
 
-ue_index_t ue_context_release_procedure::create_ue_context_release_complete()
+cu_cp_ue_index_t ue_context_release_procedure::create_ue_context_release_complete()
 {
   if (transaction_sink.successful()) {
     gnb_du_ue_f1ap_id_t du_ue_id = int_to_gnb_du_ue_f1ap_id(transaction_sink.response()->gnb_du_ue_f1ap_id);
     if (!ue_ctxt.ue_ids.du_ue_f1ap_id || du_ue_id != *ue_ctxt.ue_ids.du_ue_f1ap_id) {
       logger.error("{}: Procedure failed. Cause: gNB-DU-UE-F1AP-ID mismatch.",
                    f1ap_ue_log_prefix{ue_ctxt.ue_ids, name()});
-      return ue_index_t::invalid;
+      return cu_cp_ue_index_t::invalid;
     }
     return ue_ctxt.ue_ids.ue_index;
   }
@@ -109,5 +109,5 @@ ue_index_t ue_context_release_procedure::create_ue_context_release_complete()
                  f1ap_ue_log_prefix{ue_ctxt.ue_ids, name()},
                  transaction_sink.timeout_expired() ? "Timeout" : "Transaction failed");
 
-  return ue_index_t::invalid;
+  return cu_cp_ue_index_t::invalid;
 }

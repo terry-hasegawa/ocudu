@@ -8,8 +8,8 @@
 #include "ocudu/adt/span.h"
 #include "ocudu/adt/static_vector.h"
 #include "ocudu/asn1/rrc_nr/ul_dcch_msg_ies.h"
-#include "ocudu/cu_cp/cu_cp_types.h"
 #include "ocudu/cu_cp/cu_cp_ue_messages.h"
+#include "ocudu/ran/cu_cp_types.h"
 #include "ocudu/ran/i_rnti.h"
 #include "ocudu/ran/plmn_identity.h"
 #include "ocudu/ran/rnti.h"
@@ -110,11 +110,11 @@ public:
 };
 
 struct srb_creation_message {
-  ue_index_t      ue_index        = ue_index_t::invalid;
-  ue_index_t      old_ue_index    = ue_index_t::invalid;
-  srb_id_t        srb_id          = srb_id_t::nulltype;
-  bool            enable_security = false; // Activate security upon SRB creation.
-  srb_pdcp_config pdcp_cfg;
+  cu_cp_ue_index_t ue_index        = cu_cp_ue_index_t::invalid;
+  cu_cp_ue_index_t old_ue_index    = cu_cp_ue_index_t::invalid;
+  srb_id_t         srb_id          = srb_id_t::nulltype;
+  bool             enable_security = false; // Activate security upon SRB creation.
+  srb_pdcp_config  pdcp_cfg;
 };
 
 /// Interface used by the RRC reconfiguration procedure to
@@ -180,8 +180,8 @@ public:
 };
 
 struct rrc_reconfiguration_response_message {
-  ue_index_t ue_index = ue_index_t::invalid;
-  bool       success  = false;
+  cu_cp_ue_index_t ue_index = cu_cp_ue_index_t::invalid;
+  bool             success  = false;
 };
 
 struct rrc_ue_security_mode_command_context {
@@ -375,7 +375,7 @@ public:
 
 /// Struct containing all information needed from the old RRC UE for Reestablishment.
 struct rrc_ue_reestablishment_context_response {
-  ue_index_t                                               ue_index = ue_index_t::invalid;
+  cu_cp_ue_index_t                                         ue_index = cu_cp_ue_index_t::invalid;
   security::security_context                               sec_context;
   std::optional<asn1::rrc_nr::ue_cap_rat_container_list_l> capabilities_list;
   up_context                                               up_ctx;
@@ -414,7 +414,7 @@ public:
 
   /// \brief Notify the CU-CP to remove the old UE from the CU-CP after an successful reestablishment.
   /// \param[in] old_ue_index The index of the old UE to remove.
-  virtual void on_rrc_reestablishment_complete(ue_index_t old_ue_index) = 0;
+  virtual void on_rrc_reestablishment_complete(cu_cp_ue_index_t old_ue_index) = 0;
 
   /// \brief Notify the CU-CP that RRC Reconfiguration has been received, so that the CU-CP can notify the DU if
   /// required.
@@ -423,7 +423,7 @@ public:
 
   /// \brief Notify the CU-CP to transfer and remove ue contexts.
   /// \param[in] old_ue_index The old UE index of the UE that sent the Reestablishment Request.
-  virtual async_task<bool> on_ue_transfer_required(ue_index_t old_ue_index) = 0;
+  virtual async_task<bool> on_ue_transfer_required(cu_cp_ue_index_t old_ue_index) = 0;
 
   /// \brief Notify the CU-CP to release a UE.
   /// \param[in] request The release request.

@@ -9,8 +9,7 @@
 #include "../../ue_manager/ue_manager_impl.h"
 #include "ocudu/support/async/async_task.h"
 
-namespace ocudu {
-namespace ocucp {
+namespace ocudu::ocucp {
 
 /// \brief Handles the handover of a UE between two different cells managed by the same CU.
 class intra_cu_handover_target_routine
@@ -38,7 +37,7 @@ private:
 
   /// Schedule the source UE release onto the source UE's own task scheduler. Kept out of the coroutine body because
   /// CORO_BEGIN cannot be nested (macro-local name collision).
-  void schedule_source_release_on_source_task_sched(ue_index_t source_ue_index);
+  void schedule_source_release_on_source_task_sched(cu_cp_ue_index_t source_ue_index);
 
   const cu_cp_intra_cu_handover_target_request request;
 
@@ -69,5 +68,4 @@ private:
   e1ap_bearer_context_modification_response bearer_context_modification_response;
 };
 
-} // namespace ocucp
-} // namespace ocudu
+} // namespace ocudu::ocucp

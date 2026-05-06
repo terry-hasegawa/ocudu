@@ -9,7 +9,7 @@ using namespace ocudu;
 using namespace ocucp;
 
 ngap_handover_preparation_request ocudu::ocucp::generate_ngap_handover_preparation_request(
-    ue_index_t                                                source_ue_index,
+    cu_cp_ue_index_t                                          source_ue_index,
     gnb_id_t                                                  target_gnb_id,
     nr_cell_identity                                          target_nci,
     const std::map<pdu_session_id_t, up_pdu_session_context>& pdu_sessions)
@@ -33,7 +33,7 @@ ngap_handover_preparation_request ocudu::ocucp::generate_ngap_handover_preparati
 }
 
 xnap_handover_request
-ocudu::ocucp::generate_xnap_handover_request(ue_index_t                                                source_ue_index,
+ocudu::ocucp::generate_xnap_handover_request(cu_cp_ue_index_t                                          source_ue_index,
                                              nr_cell_global_id_t                                       target_nr_cgi,
                                              guami_t                                                   guami,
                                              amf_ue_id_t                                               source_amf_ue_id,

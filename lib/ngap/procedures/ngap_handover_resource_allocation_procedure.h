@@ -26,10 +26,10 @@ public:
   static const char* name() { return "Handover Resource Allocation Procedure"; }
 
 private:
-  bool create_ngap_ue(ue_index_t ue_index);
+  bool create_ngap_ue(cu_cp_ue_index_t ue_index);
 
   // Result senders.
-  bool send_handover_request_ack(ue_index_t                        ue_index,
+  bool send_handover_request_ack(cu_cp_ue_index_t                  ue_index,
                                  ran_ue_id_t                       ran_ue_id,
                                  const cu_cp_handover_request_ack& ho_request_ack);
   void send_handover_failure(const cu_cp_handover_request_failure& ho_request_failure);

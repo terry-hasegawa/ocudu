@@ -15,6 +15,7 @@
 #include "ocudu/ngap/ngap_setup.h"
 #include "ocudu/ngap/ngap_ue_context_mod.h"
 #include "ocudu/ngap/ngap_ue_radio_capability_management.h"
+#include "ocudu/ran/cu_cp_types.h"
 #include "ocudu/ran/plmn_identity.h"
 #include "ocudu/support/async/async_task.h"
 
@@ -85,7 +86,7 @@ public:
 
   /// \brief Remove the context of an UE.
   /// \param[in] ue_index The index of the UE to remove.
-  virtual void remove_ue_context(ue_index_t ue_index) = 0;
+  virtual void remove_ue_context(cu_cp_ue_index_t ue_index) = 0;
 };
 
 /// Notifier to the RRC UE.
@@ -112,7 +113,7 @@ public:
   virtual ~ngap_cu_cp_ue_notifier() = default;
 
   /// \brief Get the UE index of the UE.
-  virtual ue_index_t get_ue_index() = 0;
+  virtual cu_cp_ue_index_t get_ue_index() = 0;
 
   /// \brief Schedule an async task for the UE.
   virtual bool schedule_async_task(async_task<void> task) = 0;
@@ -147,20 +148,20 @@ public:
   /// \brief Notifies the CU-CP about a new NGAP UE.
   /// \param[in] ue_index The index of the new NGAP UE.
   /// \returns Pointer to the NGAP UE notifier.
-  virtual ngap_cu_cp_ue_notifier* on_new_ngap_ue(ue_index_t ue_index) = 0;
+  virtual ngap_cu_cp_ue_notifier* on_new_ngap_ue(cu_cp_ue_index_t ue_index) = 0;
 
   /// \brief Request scheduling a task for a UE.
   /// \param[in] ue_index The index of the UE.
   /// \param[in] task The task to schedule.
   /// \returns True if the task was successfully scheduled, false otherwise.
-  virtual bool schedule_async_task(ue_index_t ue_index, async_task<void> task) = 0;
+  virtual bool schedule_async_task(cu_cp_ue_index_t ue_index, async_task<void> task) = 0;
 
   /// \brief Notify the CU-CP about a handover request received.
   /// \param[in] ue_index Index of the UE.
   /// \param[in] selected_plmn The selected PLMN identity of the UE.
   /// \param[in] sec_ctxt The received security context.
   /// \return True if the handover request handling is successful, false otherwise.
-  virtual bool on_handover_request_received(ue_index_t                        ue_index,
+  virtual bool on_handover_request_received(cu_cp_ue_index_t                  ue_index,
                                             const plmn_identity&              selected_plmn,
                                             const security::security_context& sec_ctxt) = 0;
 
@@ -207,11 +208,11 @@ public:
   /// \param[in] ue_index The index of the UE.
   /// \param[in] command The RRC container containing the Handover Command.
   /// \returns True if the Handover command is valid and was successfully handled by the DU.
-  virtual async_task<bool> on_new_rrc_handover_command(ue_index_t ue_index, byte_buffer command) = 0;
+  virtual async_task<bool> on_new_rrc_handover_command(cu_cp_ue_index_t ue_index, byte_buffer command) = 0;
 
   /// \brief Notify the CU-CP to await the RRC Reconfiguration Complete and the DL Status Transfer.
   /// \param[in] ue_index The index of the UE.
-  virtual void on_n2_handover_execution(ue_index_t ue_index) = 0;
+  virtual void on_n2_handover_execution(cu_cp_ue_index_t ue_index) = 0;
 
   /// \brief Notify that the TNL connection to the AMF was lost.
   /// \param[in] amf_index The index of the lost AMF.
@@ -221,14 +222,14 @@ public:
   virtual void on_paging_message(cu_cp_paging_message& msg) = 0;
 
   /// \brief Request UE index allocation on the CU-CP on N2 handover request.
-  virtual ue_index_t request_new_ue_index_allocation(nr_cell_global_id_t cgi, const plmn_identity& plmn) = 0;
+  virtual cu_cp_ue_index_t request_new_ue_index_allocation(nr_cell_global_id_t cgi, const plmn_identity& plmn) = 0;
 
   /// \brief Notifies the CU-CP about a Handover Request.
   virtual async_task<cu_cp_handover_resource_allocation_response>
   on_ngap_handover_request(const ngap_handover_request& request) = 0;
 
   /// \brief Notifies the CU-CP about a DL UE associated NRPPa transport.
-  virtual void on_dl_ue_associated_nrppa_transport_pdu(ue_index_t ue_index, const byte_buffer& nrppa_pdu) = 0;
+  virtual void on_dl_ue_associated_nrppa_transport_pdu(cu_cp_ue_index_t ue_index, const byte_buffer& nrppa_pdu) = 0;
 
   /// \brief Notifies the CU-CP about a DL non UE associated NRPPa transport.
   /// \param[in] amf_index The index of the AMF that received the NRPPa transport.
@@ -236,7 +237,7 @@ public:
   virtual void on_dl_non_ue_associated_nrppa_transport_pdu(amf_index_t amf_index, const byte_buffer& nrppa_pdu) = 0;
 
   /// \brief Notifies the CU-CP about a Location Reporting Control message.
-  virtual void on_location_reporting_control_message(ue_index_t ue_index, const location_report_request& msg) = 0;
+  virtual void on_location_reporting_control_message(cu_cp_ue_index_t ue_index, const location_report_request& msg) = 0;
 };
 
 /// Handle NGAP NAS Message procedures as defined in TS 38.413 section 8.6.
@@ -297,17 +298,18 @@ public:
   virtual void handle_ul_ran_status_transfer(const cu_cp_status_transfer& ul_status_transfer) = 0;
 
   /// \brief Prepares the reception of a DL RAN status transfer message.
-  virtual async_task<expected<cu_cp_status_transfer>> handle_dl_ran_status_transfer_required(ue_index_t ue_index) = 0;
+  virtual async_task<expected<cu_cp_status_transfer>>
+  handle_dl_ran_status_transfer_required(cu_cp_ue_index_t ue_index) = 0;
 
   /// \brief Handle the reception of an inter CU handover related RRC Reconfiguration Complete.
   virtual void
-  handle_inter_cu_ho_rrc_recfg_complete(ue_index_t ue_index, const nr_cell_global_id_t& cgi, tac_t tac) = 0;
+  handle_inter_cu_ho_rrc_recfg_complete(cu_cp_ue_index_t ue_index, const nr_cell_global_id_t& cgi, tac_t tac) = 0;
 
   /// \brief Get the supported PLMNs.
   virtual const ngap_context_t& get_ngap_context() const = 0;
 
   /// \brief Handle the reception of a UL UE associated NRPPa message.
-  virtual void handle_ul_ue_associated_nrppa_transport(ue_index_t ue_index, const byte_buffer& nrppa_pdu) = 0;
+  virtual void handle_ul_ue_associated_nrppa_transport(cu_cp_ue_index_t ue_index, const byte_buffer& nrppa_pdu) = 0;
 
   /// \brief Handle the reception of a UL non UE associated NRPPa message.
   virtual async_task<void> handle_ul_non_ue_associated_nrppa_transport(const byte_buffer& nrppa_pdu) = 0;
@@ -334,14 +336,15 @@ public:
   /// \param[in] old_ue_index The old index of the UE.
   /// \param[in] new_ue_notifier The notifier to the new UE.
   /// \returns True if the update was successful, false otherwise.
-  virtual bool
-  update_ue_index(ue_index_t new_ue_index, ue_index_t old_ue_index, ngap_cu_cp_ue_notifier& new_ue_notifier) = 0;
+  virtual bool update_ue_index(cu_cp_ue_index_t        new_ue_index,
+                               cu_cp_ue_index_t        old_ue_index,
+                               ngap_cu_cp_ue_notifier& new_ue_notifier) = 0;
 
   /// \brief Get the core network assist info for inactive.
   /// \param[in] ue_index The index of the UE.
   /// \returns The core network assist info for inactive if available.
   virtual std::optional<ngap_core_network_assist_info_for_inactive>
-  get_cn_assist_info_for_inactive(ue_index_t ue_index) = 0;
+  get_cn_assist_info_for_inactive(cu_cp_ue_index_t ue_index) = 0;
 };
 
 /// Interface to map between ue_index and amf_ue_id.
@@ -353,12 +356,12 @@ public:
   /// \brief Map amf_ue_id to ue_index.
   /// \param[in] amf_ue_id of a given UE.
   /// \param[out] ue_index of the given UE.
-  virtual ue_index_t get_ue_index(const amf_ue_id_t& amf_ue_id) = 0;
+  virtual cu_cp_ue_index_t get_ue_index(const amf_ue_id_t& amf_ue_id) = 0;
 
   /// \brief Map ue_index to amf_ue_id.
   /// \param[in] ue_index of a given UE.
   /// \param[out] amf_ue_id of the given UE.
-  virtual amf_ue_id_t get_amf_ue_id(const ue_index_t& ue_index) = 0;
+  virtual amf_ue_id_t get_amf_ue_id(const cu_cp_ue_index_t& ue_index) = 0;
 };
 
 /// Interface used to capture the NGAP metrics from a single CU-CP NGAP.

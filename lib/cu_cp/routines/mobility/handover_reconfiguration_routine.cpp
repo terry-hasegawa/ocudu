@@ -3,9 +3,9 @@
 // Portions of this file may implement 3GPP specifications, which may be subject to additional licensing requirements.
 
 #include "handover_reconfiguration_routine.h"
-#include "../../du_processor/du_processor.h"
 #include "../../up_resource_manager/up_resource_manager_impl.h"
 #include "ocudu/asn1/rrc_nr/cell_group_config.h"
+#include "ocudu/e1ap/cu_cp/e1ap_cu_cp_bearer_context_update.h"
 
 using namespace ocudu;
 using namespace ocudu::ocucp;
@@ -14,7 +14,7 @@ using namespace asn1::rrc_nr;
 handover_reconfiguration_routine::handover_reconfiguration_routine(
     const rrc_reconfiguration_procedure_request&    request_,
     const e1ap_bearer_context_modification_request& target_bearer_context_modification_request_,
-    const ue_index_t&                               target_ue_index_,
+    const cu_cp_ue_index_t&                         target_ue_index_,
     cu_cp_ue&                                       source_ue_,
     f1ap_ue_context_manager&                        source_f1ap_ue_ctxt_mng_,
     cu_cp_ue_context_manipulation_handler&          cu_cp_handler_,
@@ -27,7 +27,8 @@ handover_reconfiguration_routine::handover_reconfiguration_routine(
   cu_cp_handler(cu_cp_handler_),
   logger(logger_)
 {
-  ocudu_assert(source_ue.get_ue_index() != ue_index_t::invalid, "Invalid source UE index {}", source_ue.get_ue_index());
+  ocudu_assert(
+      source_ue.get_ue_index() != cu_cp_ue_index_t::invalid, "Invalid source UE index {}", source_ue.get_ue_index());
 
   // Unpack MasterCellGroup to extract T304.
   asn1::rrc_nr::cell_group_cfg_s cell_group_cfg;
@@ -108,7 +109,7 @@ void handover_reconfiguration_routine::generate_ue_context_modification_request(
   ue_context_mod_request.tx_action_ind = f1ap_tx_action_ind::stop;
 }
 
-void handover_reconfiguration_routine::initialize_handover_ue_release_timer(ue_index_t ue_index)
+void handover_reconfiguration_routine::initialize_handover_ue_release_timer(cu_cp_ue_index_t ue_index)
 {
   cu_cp_handler.initialize_handover_ue_release_timer(
       ue_index,

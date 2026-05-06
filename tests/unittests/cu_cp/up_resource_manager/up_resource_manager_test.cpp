@@ -138,7 +138,7 @@ TEST_F(up_resource_manager_test, when_drb_is_added_pdcp_config_is_valid)
 
 TEST_F(up_resource_manager_test, when_pdu_session_setup_with_two_qos_flows_both_are_mapped_on_own_drb)
 {
-  cu_cp_pdu_session_resource_setup_request msg = generate_pdu_session_resource_setup(ue_index_t::min, 1, 2);
+  cu_cp_pdu_session_resource_setup_request msg = generate_pdu_session_resource_setup(cu_cp_ue_index_t::min, 1, 2);
   ASSERT_TRUE(manager.validate_request(msg.pdu_session_res_setup_items));
   up_config_update update = manager.calculate_update(msg.pdu_session_res_setup_items);
 
@@ -273,7 +273,7 @@ TEST_F(up_resource_manager_test, when_all_drb_ids_are_used_allocation_fails_unti
     // Attempt to create new session with PSI=2.
     pdu_session_id_t                         psi{2};
     cu_cp_pdu_session_resource_setup_request setup_msg =
-        generate_pdu_session_resource_setup(ue_index_t::min, psi, qos_flow_id_t::min);
+        generate_pdu_session_resource_setup(cu_cp_ue_index_t::min, psi, qos_flow_id_t::min);
     ASSERT_TRUE(manager.validate_request(setup_msg.pdu_session_res_setup_items));
 
     // Calculate update
@@ -297,7 +297,7 @@ TEST_F(up_resource_manager_test, when_all_drb_ids_are_used_allocation_fails_unti
 
     // Remove PDU session, DRB ID is stale and still marked as used.
     cu_cp_pdu_session_resource_release_command release_msg =
-        generate_pdu_session_resource_release(ue_index_t::min, psi);
+        generate_pdu_session_resource_release(cu_cp_ue_index_t::min, psi);
     ASSERT_TRUE(manager.validate_request(release_msg));
 
     up_config_update rel_update = manager.calculate_update(release_msg);
@@ -330,7 +330,7 @@ TEST_F(up_resource_manager_test, when_all_drb_ids_are_used_allocation_fails_unti
   {
     pdu_session_id_t                         psi{2};
     cu_cp_pdu_session_resource_setup_request setup_msg =
-        generate_pdu_session_resource_setup(ue_index_t::min, psi, qos_flow_id_t::min);
+        generate_pdu_session_resource_setup(cu_cp_ue_index_t::min, psi, qos_flow_id_t::min);
     ASSERT_TRUE(manager.validate_request(setup_msg.pdu_session_res_setup_items));
 
     // Calculate update
@@ -348,7 +348,7 @@ TEST_F(up_resource_manager_test, when_all_drb_ids_are_used_allocation_fails_unti
   {
     pdu_session_id_t                         psi{2};
     cu_cp_pdu_session_resource_setup_request setup_msg =
-        generate_pdu_session_resource_setup(ue_index_t::min, psi, qos_flow_id_t::min);
+        generate_pdu_session_resource_setup(cu_cp_ue_index_t::min, psi, qos_flow_id_t::min);
     ASSERT_TRUE(manager.validate_request(setup_msg.pdu_session_res_setup_items));
 
     // Calculate update
@@ -381,7 +381,7 @@ TEST_P(up_resource_manager_used_drb_ids_test, when_there_are_no_stale_drb_ids_th
     // Attempt to create new PDU Session.
     pdu_session_id_t                         psi{i};
     cu_cp_pdu_session_resource_setup_request setup_msg =
-        generate_pdu_session_resource_setup(ue_index_t::min, psi, qos_flow_id_t::min);
+        generate_pdu_session_resource_setup(cu_cp_ue_index_t::min, psi, qos_flow_id_t::min);
     ASSERT_TRUE(manager.validate_request(setup_msg.pdu_session_res_setup_items));
 
     // Calculate update
@@ -431,7 +431,7 @@ TEST_P(up_resource_manager_key_refresh_useful_test,
     // Attempt to create new PDU Session.
     pdu_session_id_t                         psi{i};
     cu_cp_pdu_session_resource_setup_request setup_msg =
-        generate_pdu_session_resource_setup(ue_index_t::min, psi, qos_flow_id_t::min);
+        generate_pdu_session_resource_setup(cu_cp_ue_index_t::min, psi, qos_flow_id_t::min);
     ASSERT_TRUE(manager.validate_request(setup_msg.pdu_session_res_setup_items));
 
     // Calculate update
@@ -456,7 +456,7 @@ TEST_P(up_resource_manager_key_refresh_useful_test,
 
     // Remove existing session.
     cu_cp_pdu_session_resource_release_command release_msg =
-        generate_pdu_session_resource_release(ue_index_t::min, psi);
+        generate_pdu_session_resource_release(cu_cp_ue_index_t::min, psi);
     ASSERT_TRUE(manager.validate_request(release_msg));
 
     // Calculate update
@@ -507,7 +507,7 @@ TEST_P(up_resource_manager_max_nof_drbs_per_ue_test, max_nof_drbs_per_ue_is_chec
     // Attempt to create new PDU Session.
     pdu_session_id_t                         psi{i};
     cu_cp_pdu_session_resource_setup_request setup_msg =
-        generate_pdu_session_resource_setup(ue_index_t::min, psi, qos_flow_id_t::min);
+        generate_pdu_session_resource_setup(cu_cp_ue_index_t::min, psi, qos_flow_id_t::min);
     ASSERT_TRUE(manager.validate_request(setup_msg.pdu_session_res_setup_items));
 
     // Calculate update
@@ -534,7 +534,7 @@ TEST_P(up_resource_manager_max_nof_drbs_per_ue_test, max_nof_drbs_per_ue_is_chec
   // Try to add one more PDU Session with one DRB
   uint16_t                                 psi = GetParam() + 1;
   cu_cp_pdu_session_resource_setup_request setup_msg =
-      generate_pdu_session_resource_setup(ue_index_t::min, pdu_session_id_t{psi}, qos_flow_id_t::min);
+      generate_pdu_session_resource_setup(cu_cp_ue_index_t::min, pdu_session_id_t{psi}, qos_flow_id_t::min);
   ASSERT_TRUE(manager.validate_request(setup_msg.pdu_session_res_setup_items));
 
   // Calculate update

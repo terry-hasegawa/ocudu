@@ -6,19 +6,17 @@
 
 #include "../../cu_cp_impl_interface.h"
 #include "../../ue_manager/ue_manager_impl.h"
-#include "ocudu/cu_cp/cu_cp_types.h"
-#include "ocudu/rrc/rrc_types.h"
+#include "ocudu/ran/cu_cp_types.h"
 #include "ocudu/support/async/async_task.h"
 #include <chrono>
 #include <optional>
 #include <vector>
 
-namespace ocudu {
-namespace ocucp {
+namespace ocudu::ocucp {
 
 /// \brief Request for CHO reconfiguration routine.
 struct cu_cp_cho_reconfiguration_request {
-  ue_index_t                source_ue_index = ue_index_t::invalid;
+  cu_cp_ue_index_t          source_ue_index = cu_cp_ue_index_t::invalid;
   std::chrono::milliseconds timeout         = std::chrono::milliseconds{10000};
   /// Runtime override for the T1 conditional event threshold. Replaces the configured value when set.
   std::optional<std::chrono::system_clock::time_point> t1_thres_override;
@@ -84,5 +82,4 @@ private:
   bool                                  reconfig_result = false;
 };
 
-} // namespace ocucp
-} // namespace ocudu
+} // namespace ocudu::ocucp

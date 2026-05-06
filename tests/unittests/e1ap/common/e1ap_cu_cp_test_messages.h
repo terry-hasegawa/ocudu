@@ -43,7 +43,7 @@ e1ap_message generate_valid_e1_release_request();
 /// \brief Generate a dummy Bearer Context Setup Request.
 /// \param[in] ue_index The UE Index.
 /// \return The Bearer Context Setup Request.
-e1ap_bearer_context_setup_request generate_bearer_context_setup_request(ue_index_t ue_index);
+e1ap_bearer_context_setup_request generate_bearer_context_setup_request(cu_cp_ue_index_t ue_index);
 
 struct drb_test_params {
   drb_id_t      drb_id;
@@ -68,7 +68,7 @@ e1ap_message generate_bearer_context_setup_failure(gnb_cu_cp_ue_e1ap_id_t cu_cp_
 
 /// \brief Generate a dummy Bearer Context Modification Request.
 /// \param[in] cu_cp_ue_e1ap_id The CU-CP UE E1AP ID.
-e1ap_bearer_context_modification_request generate_bearer_context_modification_request(ue_index_t ue_index);
+e1ap_bearer_context_modification_request generate_bearer_context_modification_request(cu_cp_ue_index_t ue_index);
 
 /// \brief Generate a dummy Bearer Context Modification Response.
 /// \param[in] cu_cp_ue_e1ap_id The CU-CP UE E1AP ID.
@@ -99,7 +99,7 @@ e1ap_message generate_bearer_context_modification_failure(gnb_cu_cp_ue_e1ap_id_t
 
 /// \brief Generate a dummy Bearer Context Release Command.
 /// \param[in] ue_index The UE Index.
-e1ap_bearer_context_release_command generate_bearer_context_release_command(ue_index_t ue_index);
+e1ap_bearer_context_release_command generate_bearer_context_release_command(cu_cp_ue_index_t ue_index);
 
 /// \brief Generate a dummy Bearer Context Release Complete.
 /// \param[in] cu_cp_ue_e1ap_id The CU-CP UE E1AP ID.

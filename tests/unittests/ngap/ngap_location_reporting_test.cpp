@@ -18,7 +18,7 @@ using namespace ocucp;
 class ngap_location_reporting_test : public ngap_test
 {
 protected:
-  ue_index_t start_procedure(rnti_t rnti = rnti_t::MIN_CRNTI) { return create_ue(rnti); }
+  cu_cp_ue_index_t start_procedure(rnti_t rnti = rnti_t::MIN_CRNTI) { return create_ue(rnti); }
 
   bool was_location_report_forwarded() const
   {
@@ -47,7 +47,7 @@ TEST_F(ngap_location_reporting_test,
   ASSERT_EQ(ngap->get_nof_ues(), 0);
 
   // Test preamble.
-  ue_index_t ue_index = this->start_procedure();
+  cu_cp_ue_index_t ue_index = this->start_procedure();
 
   auto& ue     = test_ues.at(ue_index);
   ue.amf_ue_id = uint_to_amf_ue_id(
@@ -79,7 +79,7 @@ TEST_F(ngap_location_reporting_test,
   ASSERT_EQ(ngap->get_nof_ues(), 0);
 
   // Test preamble.
-  ue_index_t ue_index = this->start_procedure();
+  cu_cp_ue_index_t ue_index = this->start_procedure();
 
   auto& ue = test_ues.at(ue_index);
 
@@ -115,7 +115,7 @@ TEST_F(ngap_location_reporting_test, when_ngap_receives_location_report_message_
   ASSERT_EQ(ngap->get_nof_ues(), 0);
 
   // Test preamble.
-  ue_index_t ue_index = this->start_procedure();
+  cu_cp_ue_index_t ue_index = this->start_procedure();
 
   auto& ue = test_ues.at(ue_index);
 
@@ -166,8 +166,8 @@ TEST_F(ngap_location_reporting_test,
        when_amf_ue_id_pair_is_incosistent_then_old_ue_is_released_and_error_indication_is_sent)
 {
   // Test preamble - create two UEs.
-  ue_index_t ue_index1 = this->start_procedure();
-  ue_index_t ue_index2 = this->start_procedure(to_rnti(0x2));
+  cu_cp_ue_index_t ue_index1 = this->start_procedure();
+  cu_cp_ue_index_t ue_index2 = this->start_procedure(to_rnti(0x2));
 
   auto&    ue1 = test_ues.at(ue_index1);
   auto&    ue2 = test_ues.at(ue_index2);
@@ -200,7 +200,7 @@ TEST_F(ngap_location_reporting_test, when_location_report_ue_index_is_invalid_me
 
   // Send location report with invalid UE index.
   location_report location_report                   = {};
-  location_report.ue_index                          = ue_index_t::invalid;
+  location_report.ue_index                          = cu_cp_ue_index_t::invalid;
   location_report.user_location_info.nr_cgi.plmn_id = plmn_identity::test_value();
   location_report.user_location_info.nr_cgi.nci     = nr_cell_identity::create(gnb_id_t{411, 22}, 0).value();
   location_report.user_location_info.tai.plmn_id    = plmn_identity::test_value();

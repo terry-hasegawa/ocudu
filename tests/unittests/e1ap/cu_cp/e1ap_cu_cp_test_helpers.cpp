@@ -46,7 +46,7 @@ e1ap_cu_cp_test::~e1ap_cu_cp_test()
   ocudulog::flush();
 }
 
-void e1ap_cu_cp_test::run_bearer_context_setup(ue_index_t ue_index, gnb_cu_up_ue_e1ap_id_t cu_up_ue_e1ap_id)
+void e1ap_cu_cp_test::run_bearer_context_setup(cu_cp_ue_index_t ue_index, gnb_cu_up_ue_e1ap_id_t cu_up_ue_e1ap_id)
 {
   e1ap_bearer_context_setup_request req = generate_bearer_context_setup_request(ue_index);
 
@@ -74,8 +74,8 @@ void e1ap_cu_cp_test::run_bearer_context_setup(ue_index_t ue_index, gnb_cu_up_ue
 
 e1ap_cu_cp_test::test_ue& e1ap_cu_cp_test::create_ue()
 {
-  ue_index_t ue_index = ue_mng.add_ue(du_index_t::min);
-  report_fatal_error_if_not(ue_index != ue_index_t::invalid, "Failed to create UE");
+  cu_cp_ue_index_t ue_index = ue_mng.add_ue(du_index_t::min);
+  report_fatal_error_if_not(ue_index != cu_cp_ue_index_t::invalid, "Failed to create UE");
   if (ue_mng.ue_admission_limit_reached()) {
     ue_mng.remove_ue(ue_index);
     report_fatal_error("Failed to create UE. UE not servable");

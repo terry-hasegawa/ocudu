@@ -9,8 +9,7 @@
 #include "../../ue_manager/ue_manager_impl.h"
 #include "ocudu/support/async/async_task.h"
 
-namespace ocudu {
-namespace ocucp {
+namespace ocudu::ocucp {
 
 class du_processor_repository;
 class cu_up_processor_repository;
@@ -42,7 +41,7 @@ private:
 
   /// Schedule the source UE release onto the source UE's own task scheduler. Kept out of the coroutine body because
   /// CORO_BEGIN cannot be nested (macro-local name collision).
-  void schedule_source_release_on_source_task_sched(ue_index_t source_ue_index);
+  void schedule_source_release_on_source_task_sched(cu_cp_ue_index_t source_ue_index);
 
   const cu_cp_cho_target_request         request;
   cu_cp_ue*                              target_ue = nullptr;
@@ -64,5 +63,4 @@ private:
   cu_cp_ue_context_release_complete         release_complete;
 };
 
-} // namespace ocucp
-} // namespace ocudu
+} // namespace ocudu::ocucp

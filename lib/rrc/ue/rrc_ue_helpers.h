@@ -6,6 +6,7 @@
 
 #include "rrc_ue_logger.h"
 #include "ocudu/asn1/rrc_nr/ul_dcch_msg_ies.h"
+#include "ocudu/ran/rb_id.h"
 #include "ocudu/rrc/rrc_ue_capabilities.h"
 
 namespace ocudu::ocucp {

@@ -79,7 +79,7 @@ inline void fill_asn1_ng_setup_request(asn1::ngap::ng_setup_request_s& asn1_requ
 /// \param[in] ue_index The index of the UE.
 /// \param[in] asn1_msg The ASN.1 type DLNASTransport.
 inline void fill_ngap_dl_nas_transport_message(ngap_dl_nas_transport_message&        msg,
-                                               ue_index_t                            ue_index,
+                                               cu_cp_ue_index_t                      ue_index,
                                                const asn1::ngap::dl_nas_transport_s& asn1_msg)
 {
   msg.ue_index = ue_index;

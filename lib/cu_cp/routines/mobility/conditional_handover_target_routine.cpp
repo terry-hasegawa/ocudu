@@ -148,7 +148,7 @@ bool conditional_handover_target_routine::fill_bearer_context_security_info(
   return true;
 }
 
-void conditional_handover_target_routine::schedule_source_release_on_source_task_sched(ue_index_t source_ue_index)
+void conditional_handover_target_routine::schedule_source_release_on_source_task_sched(cu_cp_ue_index_t source_ue_index)
 {
   auto* src_ue = ue_mng.find_du_ue(source_ue_index);
   if (src_ue == nullptr) {

@@ -4,16 +4,15 @@
 
 #pragma once
 
-#include "ocudu/cu_cp/cu_cp_types.h"
+#include "ocudu/adt/byte_buffer.h"
+#include "ocudu/ran/cu_cp_types.h"
 
-namespace ocudu {
-namespace ocucp {
+namespace ocudu::ocucp {
 
 struct ngap_dl_nas_transport_message {
-  ue_index_t  ue_index = ue_index_t::invalid;
-  byte_buffer nas_pdu;
-  bool        ue_cap_info_request = false;
+  cu_cp_ue_index_t ue_index = cu_cp_ue_index_t::invalid;
+  byte_buffer      nas_pdu;
+  bool             ue_cap_info_request = false;
 };
 
-} // namespace ocucp
-} // namespace ocudu
+} // namespace ocudu::ocucp

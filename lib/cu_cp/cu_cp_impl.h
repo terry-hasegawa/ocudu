@@ -63,37 +63,37 @@ public:
   // CU-UP handler.
   void handle_bearer_context_release_request(const cu_cp_bearer_context_release_request& msg) override;
   void handle_bearer_context_inactivity_notification(const cu_cp_inactivity_notification& msg) override;
-  void handle_dl_data_notification(ue_index_t ue_index) override;
+  void handle_dl_data_notification(cu_cp_ue_index_t ue_index) override;
   void handle_e1_release_request(cu_up_index_t cu_up_index) override;
 
   // cu_cp_rrc_ue_interface.
-  bool handle_ue_plmn_selected(ue_index_t ue_index, const plmn_identity& plmn) override;
+  bool handle_ue_plmn_selected(cu_cp_ue_index_t ue_index, const plmn_identity& plmn) override;
   rrc_ue_reestablishment_context_response
-                   handle_rrc_reestablishment_request(pci_t old_pci, rnti_t old_c_rnti, ue_index_t ue_index) override;
-  async_task<bool> handle_rrc_reestablishment_context_modification_required(ue_index_t ue_index) override;
+  handle_rrc_reestablishment_request(pci_t old_pci, rnti_t old_c_rnti, cu_cp_ue_index_t ue_index) override;
+  async_task<bool> handle_rrc_reestablishment_context_modification_required(cu_cp_ue_index_t ue_index) override;
 
   void             handle_rrc_reestablishment_failure(const cu_cp_ue_context_release_request& request) override;
-  void             handle_rrc_reestablishment_complete(ue_index_t old_ue_index) override;
-  void             handle_rrc_reconf_complete_indicator(ue_index_t ue_index) override;
-  async_task<bool> handle_ue_context_transfer(ue_index_t ue_index, ue_index_t old_ue_index) override;
+  void             handle_rrc_reestablishment_complete(cu_cp_ue_index_t old_ue_index) override;
+  void             handle_rrc_reconf_complete_indicator(cu_cp_ue_index_t ue_index) override;
+  async_task<bool> handle_ue_context_transfer(cu_cp_ue_index_t ue_index, cu_cp_ue_index_t old_ue_index) override;
   async_task<void> handle_ue_context_release(const cu_cp_ue_context_release_request& request) override;
   async_task<void> handle_access_success(const cu_cp_access_success_indication& msg) override;
   async_task<rrc_resume_request_response> handle_rrc_resume_request(const cu_cp_rrc_resume_request& request) override;
-  void                                    handle_ran_paging_required(ue_index_t ue_index) override;
+  void                                    handle_ran_paging_required(cu_cp_ue_index_t ue_index) override;
 
   // cu_cp_ue_context_manipulation_handler.
   void handle_handover_reconfiguration_sent(const cu_cp_intra_cu_handover_target_request& request) override;
   void handle_cho_reconfiguration_sent(const cu_cp_cho_target_request& request) override;
-  void handle_handover_ue_context_push(ue_index_t source_ue_index, ue_index_t target_ue_index) override;
+  void handle_handover_ue_context_push(cu_cp_ue_index_t source_ue_index, cu_cp_ue_index_t target_ue_index) override;
   void
-       initialize_handover_ue_release_timer(ue_index_t                              ue_index,
+       initialize_handover_ue_release_timer(cu_cp_ue_index_t                        ue_index,
                                             std::chrono::milliseconds               handover_ue_release_timeout,
                                             const cu_cp_ue_context_release_request& ue_context_release_request) override;
-  void initialize_rna_update_timer(ue_index_t ue_index) override;
-  void initialize_cho_execution_timer(ue_index_t source_ue_index, std::chrono::milliseconds timeout) override;
+  void initialize_rna_update_timer(cu_cp_ue_index_t ue_index) override;
+  void initialize_cho_execution_timer(cu_cp_ue_index_t source_ue_index, std::chrono::milliseconds timeout) override;
 
   // cu_cp_location_manager_handler.
-  void handle_location_update(ue_index_t ue_index) override;
+  void handle_location_update(cu_cp_ue_index_t ue_index) override;
 
   // cu_cp_ngap_handler.
   async_task<expected<ngap_init_context_setup_response, ngap_init_context_setup_failure>>
@@ -111,44 +111,46 @@ public:
   async_task<cu_cp_handover_resource_allocation_response>
        handle_ngap_handover_request(const ngap_handover_request& request) override;
   void handle_transmission_of_handover_required() override;
-  void handle_dl_ue_associated_nrppa_transport_pdu(ue_index_t ue_index, const byte_buffer& nrppa_pdu) override;
+  void handle_dl_ue_associated_nrppa_transport_pdu(cu_cp_ue_index_t ue_index, const byte_buffer& nrppa_pdu) override;
   void handle_dl_non_ue_associated_nrppa_transport_pdu(amf_index_t amf_index, const byte_buffer& nrppa_pdu) override;
-  void handle_location_reporting_control_message(ue_index_t ue_index, const location_report_request& msg) override;
+  void handle_location_reporting_control_message(cu_cp_ue_index_t               ue_index,
+                                                 const location_report_request& msg) override;
   void handle_n2_disconnection(amf_index_t amf_index) override;
 
   // cu_cp_inter_cu_handover_handler.
-  async_task<bool> handle_new_rrc_handover_command(ue_index_t                      ue_index,
+  async_task<bool> handle_new_rrc_handover_command(cu_cp_ue_index_t                ue_index,
                                                    byte_buffer                     command,
                                                    std::optional<xnc_peer_index_t> xnc_index = std::nullopt) override;
-  ue_index_t handle_ue_index_allocation_request(const nr_cell_global_id_t& cgi, const plmn_identity& plmn) override;
-  bool       handle_handover_request(ue_index_t                        ue_index,
-                                     const plmn_identity&              selected_plmn,
-                                     const security::security_context& sec_ctxt) override;
-  void       handle_inter_cu_target_handover_execution(ue_index_t ue_index,
-                                                       const std::optional<xnap_handover_target_execution_context>&
-                                                           xnap_ho_target_execution_ctxt = std::nullopt) override;
+  cu_cp_ue_index_t handle_ue_index_allocation_request(const nr_cell_global_id_t& cgi,
+                                                      const plmn_identity&       plmn) override;
+  bool             handle_handover_request(cu_cp_ue_index_t                  ue_index,
+                                           const plmn_identity&              selected_plmn,
+                                           const security::security_context& sec_ctxt) override;
+  void             handle_inter_cu_target_handover_execution(cu_cp_ue_index_t ue_index,
+                                                             const std::optional<xnap_handover_target_execution_context>&
+                                                                 xnap_ho_target_execution_ctxt = std::nullopt) override;
 
   // cu_cp_xnap_handler.
   async_task<cu_cp_handover_resource_allocation_response>
        handle_xnap_handover_request(const xnap_handover_request& request) override;
-  void handle_handover_cancel_received(ue_index_t ue_index) override;
-  void handle_xnap_ue_context_release_received(ue_index_t ue_index) override;
+  void handle_handover_cancel_received(cu_cp_ue_index_t ue_index) override;
+  void handle_xnap_ue_context_release_received(cu_cp_ue_index_t ue_index) override;
 
   // cu_cp_nrppa_handler.
-  nrppa_cu_cp_ue_notifier* handle_new_nrppa_ue(ue_index_t ue_index) override;
-  void                     handle_ul_nrppa_pdu(const byte_buffer&                    nrppa_pdu,
-                                               std::variant<ue_index_t, amf_index_t> ue_or_amf_index) override;
+  nrppa_cu_cp_ue_notifier* handle_new_nrppa_ue(cu_cp_ue_index_t ue_index) override;
+  void                     handle_ul_nrppa_pdu(const byte_buffer&                          nrppa_pdu,
+                                               std::variant<cu_cp_ue_index_t, amf_index_t> ue_or_amf_index) override;
   async_task<trp_information_cu_cp_response_t>
   handle_trp_information_request(const trp_information_request_t& request) override;
 
   // cu_cp_measurement_handler.
   std::optional<rrc_meas_cfg>
-       handle_measurement_config_request(ue_index_t                         ue_index,
+       handle_measurement_config_request(cu_cp_ue_index_t                   ue_index,
                                          nr_cell_identity                   nci,
                                          const std::optional<rrc_meas_cfg>& current_meas_config = std::nullopt,
                                          bool                               cond_meas           = false,
                                          span<const pci_t>                  candidate_pcis      = {}) override;
-  void handle_measurement_report(ue_index_t ue_index, const rrc_meas_results& meas_results) override;
+  void handle_measurement_report(cu_cp_ue_index_t ue_index, const rrc_meas_results& meas_results) override;
 
   // cu_cp_measurement_config_handler.
   bool handle_cell_config_update_request(nr_cell_identity nci, const serving_cell_meas_config& serv_cell_cfg) override;
@@ -162,11 +164,11 @@ public:
   async_task<cu_cp_intra_cu_cho_response>
   handle_intra_cu_cho_request(const cu_cp_intra_cu_cho_request& request) override;
 
-  void handle_intra_cell_handover_required(ue_index_t ue_index) override;
+  void handle_intra_cell_handover_required(cu_cp_ue_index_t ue_index) override;
 
   // cu_cp_ue_removal_handler.
-  async_task<void> handle_ue_removal_request(ue_index_t ue_index) override;
-  void             handle_pending_ue_task_cancellation(ue_index_t ue_index) override;
+  async_task<void> handle_ue_removal_request(cu_cp_ue_index_t ue_index) override;
+  void             handle_pending_ue_task_cancellation(cu_cp_ue_index_t ue_index) override;
 
   // cu_cp_ue_release_command_handler.
   void trigger_release(pci_t                                         source_pci,
@@ -202,17 +204,17 @@ public:
 
 private:
   // Handling of DU events.
-  void handle_rrc_ue_creation(ue_index_t ue_index, rrc_ue_interface& rrc_ue) override;
+  void handle_rrc_ue_creation(cu_cp_ue_index_t ue_index, rrc_ue_interface& rrc_ue) override;
 
   byte_buffer handle_target_cell_sib1_required(du_index_t du_index, nr_cell_global_id_t cgi) override;
 
   async_task<void> handle_transaction_info_loss(const ue_transaction_info_loss_event& ev) override;
 
   // NGAP UE creation handler.
-  ngap_cu_cp_ue_notifier* handle_new_ngap_ue(ue_index_t ue_index) override;
+  ngap_cu_cp_ue_notifier* handle_new_ngap_ue(cu_cp_ue_index_t ue_index) override;
 
   // cu_cp_task_scheduler_handler.
-  bool schedule_ue_task(ue_index_t ue_index, async_task<void> task) override;
+  bool schedule_ue_task(cu_cp_ue_index_t ue_index, async_task<void> task) override;
 
   void request_ue_release(cu_cp_ue& ue, const ngap_cause_t& cause);
 
@@ -220,11 +222,11 @@ private:
   /// \param[in] ue_index The index of the UE to page.
   /// \param[in] full_i_rnti Full I-RNTI of the UE to page.
   /// message.
-  void send_ran_paging(ue_index_t ue_index, full_i_rnti_t full_i_rnti);
+  void send_ran_paging(cu_cp_ue_index_t ue_index, full_i_rnti_t full_i_rnti);
 
   /// \brief Request the release of an inactive UE that failed to resume within the expected time.
   /// \param[in] ue_index The index of the UE to release.
-  void request_release_of_inactive_ue(ue_index_t ue_index);
+  void request_release_of_inactive_ue(cu_cp_ue_index_t ue_index);
 
   /// \brief Handle the reception of an inter-CU handover request message from the source CU.
   /// \param[in] request The inter-CU handover request message.

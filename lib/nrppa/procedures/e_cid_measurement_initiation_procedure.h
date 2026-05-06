@@ -18,7 +18,7 @@ namespace ocudu::ocucp {
 class e_cid_measurement_initiation_procedure
 {
 public:
-  e_cid_measurement_initiation_procedure(ue_index_t                                 ue_index_,
+  e_cid_measurement_initiation_procedure(cu_cp_ue_index_t                           ue_index_,
                                          const nrppa_e_cid_meas_initiation_request& request_,
                                          uint16_t                                   transaction_id_,
                                          nrppa_ue_context_list&                     ue_ctxt_list_,
@@ -54,7 +54,7 @@ private:
   /// \brief Send the E-CID measurement outcome to the CU-CP.
   void send_ul_nrppa_pdu(const asn1::nrppa::nr_ppa_pdu_c& pdu);
 
-  ue_index_t                                ue_index;
+  cu_cp_ue_index_t                          ue_index;
   const nrppa_e_cid_meas_initiation_request e_cid_meas_init_request;
   uint16_t                                  transaction_id;
   nrppa_ue_context_list&                    ue_ctxt_list;

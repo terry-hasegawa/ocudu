@@ -19,7 +19,7 @@ protected:
   f1ap_cu_ue_context_modification_test() {}
 
   /// \brief Generates dummy common type CU-CP UE CONTEXT MODIFICATION REQUEST message.
-  static f1ap_ue_context_modification_request generate_ue_context_modification_request(ue_index_t ue_index)
+  static f1ap_ue_context_modification_request generate_ue_context_modification_request(cu_cp_ue_index_t ue_index)
   {
     f1ap_ue_context_modification_request msg;
 

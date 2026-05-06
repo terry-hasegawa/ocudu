@@ -468,7 +468,7 @@ void e1ap_cu_cp_impl::handle_unsuccessful_outcome(const asn1::e1ap::unsuccessful
   }
 }
 
-void e1ap_cu_cp_impl::cancel_ue_tasks(ue_index_t ue_index)
+void e1ap_cu_cp_impl::cancel_ue_tasks(cu_cp_ue_index_t ue_index)
 {
   if (!ue_ctxt_list.contains(ue_index)) {
     logger.info("ue={}: UE does not exist in the CU-CP", ue_index);
@@ -479,7 +479,7 @@ void e1ap_cu_cp_impl::cancel_ue_tasks(ue_index_t ue_index)
   u.bearer_ev_mng.cancel_all();
 }
 
-void e1ap_cu_cp_impl::update_ue_context(ue_index_t ue_index, ue_index_t old_ue_index)
+void e1ap_cu_cp_impl::update_ue_context(cu_cp_ue_index_t ue_index, cu_cp_ue_index_t old_ue_index)
 {
   if (!ue_ctxt_list.contains(old_ue_index)) {
     logger.warning("Failed to transfer E1AP UE context from ue={} to ue={}. Old UE context does not exist",
@@ -493,7 +493,7 @@ void e1ap_cu_cp_impl::update_ue_context(ue_index_t ue_index, ue_index_t old_ue_i
   ue_ctxt_list.update_ue_index(ue_index, old_ue_index);
 }
 
-void e1ap_cu_cp_impl::remove_bearer_context(ue_index_t ue_index)
+void e1ap_cu_cp_impl::remove_bearer_context(cu_cp_ue_index_t ue_index)
 {
   if (!ue_ctxt_list.contains(ue_index)) {
     logger.debug("ue={}: UE context not found", ue_index);
@@ -510,11 +510,11 @@ void e1ap_cu_cp_impl::log_pdu(bool is_rx, const e1ap_message& e1ap_pdu)
   }
 
   // Fetch UE index.
-  auto                      cp_ue_id = get_gnb_cu_cp_ue_e1ap_id(e1ap_pdu.pdu);
-  std::optional<ue_index_t> ue_idx;
+  auto                            cp_ue_id = get_gnb_cu_cp_ue_e1ap_id(e1ap_pdu.pdu);
+  std::optional<cu_cp_ue_index_t> ue_idx;
   if (cp_ue_id.has_value()) {
     auto* ue_ptr = ue_ctxt_list.find_ue(cp_ue_id.value());
-    if (ue_ptr != nullptr and ue_ptr->ue_ids.ue_index != ue_index_t::invalid) {
+    if (ue_ptr != nullptr and ue_ptr->ue_ids.ue_index != cu_cp_ue_index_t::invalid) {
       ue_idx = ue_ptr->ue_ids.ue_index;
     }
   }

@@ -50,7 +50,7 @@ nrppa_impl::nrppa_impl(const cu_cp_configuration& cfg,
 // Note: For fwd declaration of member types, dtor cannot be trivial.
 nrppa_impl::~nrppa_impl() {}
 
-void nrppa_impl::remove_ue_context(ue_index_t ue_index)
+void nrppa_impl::remove_ue_context(cu_cp_ue_index_t ue_index)
 {
   if (!ue_ctxt_list.contains(ue_index)) {
     logger.debug("ue={}: UE context not found", ue_index);
@@ -60,7 +60,7 @@ void nrppa_impl::remove_ue_context(ue_index_t ue_index)
   ue_ctxt_list.remove_ue_context(ue_index);
 }
 
-void nrppa_impl::initialize_meas_report_timer(ue_index_t ue_index, std::chrono::milliseconds meas_periodicity_ms)
+void nrppa_impl::initialize_meas_report_timer(cu_cp_ue_index_t ue_index, std::chrono::milliseconds meas_periodicity_ms)
 {
   if (!ue_ctxt_list.contains(ue_index)) {
     logger.warning("ue={}: UE context not found", ue_index);
@@ -80,7 +80,7 @@ void nrppa_impl::initialize_meas_report_timer(ue_index_t ue_index, std::chrono::
   ue_ctxt.meas_report_timer.run();
 }
 
-void nrppa_impl::handle_e_cid_meas_result(ue_index_t ue_index, const nrppa_e_cid_meas_result& result)
+void nrppa_impl::handle_e_cid_meas_result(cu_cp_ue_index_t ue_index, const nrppa_e_cid_meas_result& result)
 {
   if (!ue_ctxt_list.contains(ue_index)) {
     logger.warning("ue={}: Dropping E-CID measurement result. UE context doesn't exists", ue_index);
@@ -105,7 +105,7 @@ void nrppa_impl::handle_e_cid_meas_result(ue_index_t ue_index, const nrppa_e_cid
   cu_cp_notifier.on_ul_nrppa_pdu(nrppa_pdu, ue_index);
 }
 
-void nrppa_impl::on_meas_report_timer_expired(ue_index_t ue_index)
+void nrppa_impl::on_meas_report_timer_expired(cu_cp_ue_index_t ue_index)
 {
   if (!ue_ctxt_list.contains(ue_index)) {
     logger.warning("ue={}: UE context not found", ue_index);
@@ -154,8 +154,8 @@ void nrppa_impl::on_meas_report_timer_expired(ue_index_t ue_index)
   handle_e_cid_meas_result(ue_index, meas_result.value());
 }
 
-void nrppa_impl::handle_new_nrppa_pdu(const byte_buffer&                    nrppa_pdu,
-                                      std::variant<ue_index_t, amf_index_t> ue_or_amf_index)
+void nrppa_impl::handle_new_nrppa_pdu(const byte_buffer&                          nrppa_pdu,
+                                      std::variant<cu_cp_ue_index_t, amf_index_t> ue_or_amf_index)
 {
   // Parse NRPPa-PDU.
   asn1::nrppa::nr_ppa_pdu_c nrppa_msg;
@@ -183,16 +183,18 @@ void nrppa_impl::handle_new_nrppa_pdu(const byte_buffer&                    nrpp
   }
 }
 
-void nrppa_impl::handle_initiating_message(const init_msg_s& msg, std::variant<ue_index_t, amf_index_t> ue_or_amf_index)
+void nrppa_impl::handle_initiating_message(const init_msg_s&                           msg,
+                                           std::variant<cu_cp_ue_index_t, amf_index_t> ue_or_amf_index)
 {
   switch (msg.value.type().value) {
     case nr_ppa_elem_procs_o::init_msg_c::types_opts::e_c_id_meas_initiation_request:
-      handle_e_cid_meas_initiation_request(
-          msg.value.e_c_id_meas_initiation_request(), std::get<ue_index_t>(ue_or_amf_index), msg.nrppatransaction_id);
+      handle_e_cid_meas_initiation_request(msg.value.e_c_id_meas_initiation_request(),
+                                           std::get<cu_cp_ue_index_t>(ue_or_amf_index),
+                                           msg.nrppatransaction_id);
       break;
     case nr_ppa_elem_procs_o::init_msg_c::types_opts::e_c_id_meas_termination_cmd:
       handle_e_cid_meas_termination_command(msg.value.e_c_id_meas_termination_cmd(),
-                                            std::get<ue_index_t>(ue_or_amf_index));
+                                            std::get<cu_cp_ue_index_t>(ue_or_amf_index));
       break;
     case nr_ppa_elem_procs_o::init_msg_c::types_opts::trp_info_request:
       handle_trp_information_request(
@@ -200,11 +202,12 @@ void nrppa_impl::handle_initiating_message(const init_msg_s& msg, std::variant<u
       break;
     case nr_ppa_elem_procs_o::init_msg_c::types_opts::positioning_info_request:
       handle_positioning_information_request(
-          msg.value.positioning_info_request(), std::get<ue_index_t>(ue_or_amf_index), msg.nrppatransaction_id);
+          msg.value.positioning_info_request(), std::get<cu_cp_ue_index_t>(ue_or_amf_index), msg.nrppatransaction_id);
       break;
     case nr_ppa_elem_procs_o::init_msg_c::types_opts::positioning_activation_request:
-      handle_positioning_activation_request(
-          msg.value.positioning_activation_request(), std::get<ue_index_t>(ue_or_amf_index), msg.nrppatransaction_id);
+      handle_positioning_activation_request(msg.value.positioning_activation_request(),
+                                            std::get<cu_cp_ue_index_t>(ue_or_amf_index),
+                                            msg.nrppatransaction_id);
       break;
     case nr_ppa_elem_procs_o::init_msg_c::types_opts::meas_request:
       handle_measurement_request(
@@ -217,7 +220,7 @@ void nrppa_impl::handle_initiating_message(const init_msg_s& msg, std::variant<u
 }
 
 void nrppa_impl::handle_e_cid_meas_initiation_request(const asn1::nrppa::e_c_id_meas_initiation_request_s& msg,
-                                                      ue_index_t                                           ue_index,
+                                                      cu_cp_ue_index_t                                     ue_index,
                                                       uint16_t transaction_id)
 {
   // If it doesn't exist, create NRPPA UE.
@@ -275,7 +278,7 @@ void nrppa_impl::handle_e_cid_meas_initiation_request(const asn1::nrppa::e_c_id_
 }
 
 void nrppa_impl::handle_e_cid_meas_termination_command(const asn1::nrppa::e_c_id_meas_termination_cmd_s& msg,
-                                                       ue_index_t                                        ue_index)
+                                                       cu_cp_ue_index_t                                  ue_index)
 {
   if (!ue_ctxt_list.contains(ue_index)) {
     logger.warning("ue={}: Dropping E-CID Measurement Termination Command. UE context doesn't exists", ue_index);
@@ -310,7 +313,7 @@ void nrppa_impl::handle_trp_information_request(const asn1::nrppa::trp_info_requ
 }
 
 void nrppa_impl::handle_positioning_information_request(const asn1::nrppa::positioning_info_request_s& msg,
-                                                        ue_index_t                                     ue_index,
+                                                        cu_cp_ue_index_t                               ue_index,
                                                         uint16_t                                       transaction_id)
 {
   logger.debug("Handling positioning information request");
@@ -327,7 +330,7 @@ void nrppa_impl::handle_positioning_information_request(const asn1::nrppa::posit
 }
 
 void nrppa_impl::handle_positioning_activation_request(const asn1::nrppa::positioning_activation_request_s& msg,
-                                                       ue_index_t                                           ue_index,
+                                                       cu_cp_ue_index_t                                     ue_index,
                                                        uint16_t transaction_id)
 {
   logger.debug("Handling positioning activation request");

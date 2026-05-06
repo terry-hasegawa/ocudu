@@ -10,8 +10,8 @@
 using namespace ocudu;
 using namespace ocudu::ocucp;
 
-conditional_handover_cancellation_routine::conditional_handover_cancellation_routine(ue_index_t  source_ue_index_,
-                                                                                     ue_manager& ue_mng_,
+conditional_handover_cancellation_routine::conditional_handover_cancellation_routine(cu_cp_ue_index_t source_ue_index_,
+                                                                                     ue_manager&      ue_mng_,
                                                                                      ocudulog::basic_logger& logger_) :
   source_ue_index(source_ue_index_), ue_mng(ue_mng_), logger(logger_)
 {

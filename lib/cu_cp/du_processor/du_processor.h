@@ -6,15 +6,12 @@
 
 #include "du_configuration_handler.h"
 #include "du_metrics_handler.h"
-#include "ocudu/adt/static_vector.h"
 #include "ocudu/cu_cp/cell_meas_manager_config.h"
 #include "ocudu/f1ap/cu_cp/f1ap_cu.h"
 #include "ocudu/ran/nr_cgi.h"
 #include "ocudu/rrc/rrc_du.h"
-#include <string>
 
-namespace ocudu {
-namespace ocucp {
+namespace ocudu::ocucp {
 
 /// Forward declared messages.
 struct rrc_ue_creation_message;
@@ -28,7 +25,7 @@ public:
   /// \brief Notify the F1AP to initiate the UE Context Release procedure.
   /// \param[in] msg The UE Context Release message to transmit.
   /// \return Returns the index of the released UE.
-  virtual async_task<ue_index_t> on_ue_context_release_command(const f1ap_ue_context_release_command& msg) = 0;
+  virtual async_task<cu_cp_ue_index_t> on_ue_context_release_command(const f1ap_ue_context_release_command& msg) = 0;
 
   /// \brief Notify the F1AP to initiate the UE Context Modification procedure.
   /// \param[in] request The UE Context Modification message to transmit.
@@ -40,7 +37,7 @@ public:
   /// \brief Notify the F1AP that the given UE corresponds to a reestablishment session of the old UE.
   /// \param[in] ue_index The index of the UE that is performing a reestablishment.
   /// \param[in] old_ue_index The index of the UE that
-  virtual bool on_intra_du_reestablishment(ue_index_t ue_index, ue_index_t old_ue_index) = 0;
+  virtual bool on_intra_du_reestablishment(cu_cp_ue_index_t ue_index, cu_cp_ue_index_t old_ue_index) = 0;
 };
 
 /// Interface to notify Paging procedures.
@@ -96,7 +93,7 @@ public:
   /// \brief Notifies about a successful RRC UE creation.
   /// \param[in] ue_index The index of the UE.
   /// \param[in] rrc_ue_msg_handler The created RRC UE.
-  virtual void on_rrc_ue_created(ue_index_t ue_index, rrc_ue_interface& rrc_ue) = 0;
+  virtual void on_rrc_ue_created(cu_cp_ue_index_t ue_index, rrc_ue_interface& rrc_ue) = 0;
 
   /// \brief Notify the CU-CP that the SIB1 for a given PCI of a DU is required.
   /// \param[in] du_index The index of the DU the cell is connected to.
@@ -106,7 +103,7 @@ public:
 
   /// \brief Notify the CU-CP to completly remove a UE from the CU-CP.
   /// \param[in] ue_index The index of the UE to remove.
-  virtual async_task<void> on_ue_removal_required(ue_index_t ue_index) = 0;
+  virtual async_task<void> on_ue_removal_required(cu_cp_ue_index_t ue_index) = 0;
 
   /// \brief Notify the CU-CP to release a UE.
   /// \param[in] request The release request.
@@ -149,5 +146,4 @@ public:
   virtual du_metrics_handler& get_metrics_handler() = 0;
 };
 
-} // namespace ocucp
-} // namespace ocudu
+} // namespace ocudu::ocucp

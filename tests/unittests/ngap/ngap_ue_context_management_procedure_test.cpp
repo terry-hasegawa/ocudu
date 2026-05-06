@@ -15,9 +15,9 @@ using namespace ocucp;
 class ngap_ue_context_management_procedure_test : public ngap_test
 {
 protected:
-  ue_index_t start_procedure(rnti_t rnti = rnti_t::MIN_CRNTI)
+  cu_cp_ue_index_t start_procedure(rnti_t rnti = rnti_t::MIN_CRNTI)
   {
-    ue_index_t ue_index = create_ue(rnti);
+    cu_cp_ue_index_t ue_index = create_ue(rnti);
 
     // Inject DL NAS transport message from AMF.
     run_dl_nas_transport(ue_index);
@@ -119,7 +119,7 @@ protected:
 TEST_F(ngap_ue_context_management_procedure_test, when_valid_initial_context_setup_request_received_then_response_send)
 {
   // Test preamble.
-  ue_index_t ue_index = this->start_procedure();
+  cu_cp_ue_index_t ue_index = this->start_procedure();
 
   auto& ue = test_ues.at(ue_index);
 
@@ -139,7 +139,7 @@ TEST_F(ngap_ue_context_management_procedure_test,
        when_initial_context_setup_request_with_pdu_session_received_then_response_send)
 {
   // Test preamble.
-  ue_index_t ue_index = this->start_procedure();
+  cu_cp_ue_index_t ue_index = this->start_procedure();
 
   auto& ue = test_ues.at(ue_index);
 
@@ -161,7 +161,7 @@ TEST_F(ngap_ue_context_management_procedure_test,
        when_new_amf_ue_id_is_sent_in_initial_context_setup_request_received_then_id_is_updated)
 {
   // Test preamble.
-  ue_index_t ue_index = this->start_procedure();
+  cu_cp_ue_index_t ue_index = this->start_procedure();
 
   auto& ue = test_ues.at(ue_index);
 
@@ -191,7 +191,7 @@ TEST_F(ngap_ue_context_management_procedure_test,
 TEST_F(ngap_ue_context_management_procedure_test, when_invalid_initial_context_setup_request_received_then_failure_sent)
 {
   // Test preamble
-  ue_index_t ue_index = this->start_procedure();
+  cu_cp_ue_index_t ue_index = this->start_procedure();
 
   auto& ue = test_ues.at(ue_index);
 
@@ -209,7 +209,7 @@ TEST_F(ngap_ue_context_management_procedure_test,
        when_invalid_initial_context_setup_request_with_pdu_session_received_then_failure_sent)
 {
   // Test preamble
-  ue_index_t ue_index = this->start_procedure();
+  cu_cp_ue_index_t ue_index = this->start_procedure();
 
   auto& ue = test_ues.at(ue_index);
 
@@ -230,8 +230,8 @@ TEST_F(ngap_ue_context_management_procedure_test,
        when_init_context_setup_has_inconsistent_id_pair_then_error_indication_is_sent)
 {
   // Test preamble.
-  ue_index_t ue_index1 = this->start_procedure();
-  ue_index_t ue_index2 = this->start_procedure(to_rnti(0x2));
+  cu_cp_ue_index_t ue_index1 = this->start_procedure();
+  cu_cp_ue_index_t ue_index2 = this->start_procedure(to_rnti(0x2));
 
   auto& ue1 = test_ues.at(ue_index1);
   auto& ue2 = test_ues.at(ue_index2);
@@ -255,7 +255,7 @@ TEST_F(ngap_ue_context_management_procedure_test,
        when_rrc_inactive_transition_report_transmission_is_not_requested_then_report_is_not_sent)
 {
   // Test preamble.
-  ue_index_t ue_index = this->start_procedure();
+  cu_cp_ue_index_t ue_index = this->start_procedure();
 
   // Trigger RRC Inactive Transition Report transmission.
   ngap_rrc_inactive_transition_report report;
@@ -282,7 +282,7 @@ TEST_F(ngap_ue_context_management_procedure_test,
        when_rrc_inactive_transition_report_transmission_is_requested_then_report_is_sent)
 {
   // Test preamble.
-  ue_index_t ue_index = this->start_procedure();
+  cu_cp_ue_index_t ue_index = this->start_procedure();
 
   auto& ue = test_ues.at(ue_index);
 
@@ -331,8 +331,8 @@ TEST_F(
     when_ue_context_release_command_as_first_message_from_core_received_then_ue_is_released_and_release_complete_is_sent)
 {
   // Test preamble.
-  ue_index_t ue_index = create_ue();
-  auto&      ue       = test_ues.at(ue_index);
+  cu_cp_ue_index_t ue_index = create_ue();
+  auto&            ue       = test_ues.at(ue_index);
 
   ASSERT_TRUE(was_ue_added());
 
@@ -350,7 +350,7 @@ TEST_F(ngap_ue_context_management_procedure_test,
        when_ue_context_release_command_with_amf_ue_ngap_id_received_then_ue_is_released_and_release_complete_is_sent)
 {
   // Test preamble.
-  ue_index_t ue_index = this->start_procedure();
+  cu_cp_ue_index_t ue_index = this->start_procedure();
 
   auto& ue = test_ues.at(ue_index);
 
@@ -377,7 +377,7 @@ TEST_F(ngap_ue_context_management_procedure_test,
   ASSERT_EQ(ngap->get_nof_ues(), 0);
 
   // Test preamble.
-  ue_index_t ue_index = create_ue();
+  cu_cp_ue_index_t ue_index = create_ue();
 
   auto& ue = test_ues.at(ue_index);
 
@@ -398,7 +398,7 @@ TEST_F(ngap_ue_context_management_procedure_test,
        when_ue_context_release_command_with_ue_ngap_id_pair_received_then_ue_is_released_and_release_complete_is_sent)
 {
   // Test preamble.
-  ue_index_t ue_index = this->start_procedure();
+  cu_cp_ue_index_t ue_index = this->start_procedure();
 
   auto& ue = test_ues.at(ue_index);
 
@@ -423,7 +423,7 @@ TEST_F(ngap_ue_context_management_procedure_test,
        when_ue_context_release_command_for_unknown_ue_received_then_ue_is_not_released_and_release_complete_is_not_sent)
 {
   // Test preamble
-  ue_index_t ue_index = this->start_procedure();
+  cu_cp_ue_index_t ue_index = this->start_procedure();
 
   auto& ue = test_ues.at(ue_index);
 
@@ -449,7 +449,7 @@ TEST_F(ngap_ue_context_management_procedure_test,
        when_ue_context_release_request_is_received_but_no_amf_ue_ngap_id_is_set_then_request_is_ignored)
 {
   // Test preamble - Only create UE but do not have DL traffic from the AMF.
-  ue_index_t ue_index = create_ue();
+  cu_cp_ue_index_t ue_index = create_ue();
 
   // Trigger UE context release request.
   cu_cp_ue_context_release_request release_request;
@@ -471,7 +471,7 @@ TEST_F(ngap_ue_context_management_procedure_test,
        when_ue_context_release_request_is_received_multiple_times_ngap_message_is_not_sent_more_than_once)
 {
   // Test preamble.
-  ue_index_t ue_index = this->start_procedure();
+  cu_cp_ue_index_t ue_index = this->start_procedure();
 
   auto& ue = test_ues.at(ue_index);
 
@@ -515,8 +515,8 @@ TEST_F(ngap_ue_context_management_procedure_test,
        when_ue_context_release_command_has_inconsistent_id_pair_then_error_indication_is_sent)
 {
   // Test preamble.
-  ue_index_t ue_index1 = this->start_procedure();
-  ue_index_t ue_index2 = this->start_procedure(to_rnti(0x2));
+  cu_cp_ue_index_t ue_index1 = this->start_procedure();
+  cu_cp_ue_index_t ue_index2 = this->start_procedure(to_rnti(0x2));
 
   auto& ue1 = test_ues.at(ue_index1);
   auto& ue2 = test_ues.at(ue_index2);
@@ -544,7 +544,7 @@ TEST_F(ngap_ue_context_management_procedure_test,
        when_valid_ue_context_modification_request_received_then_response_send)
 {
   // Test preamble
-  ue_index_t ue_index = this->start_procedure();
+  cu_cp_ue_index_t ue_index = this->start_procedure();
 
   auto& ue = test_ues.at(ue_index);
 
@@ -573,7 +573,7 @@ TEST_F(ngap_ue_context_management_procedure_test,
        when_invalid_ue_context_modification_request_received_then_error_indication_is_sent)
 {
   // Test preamble
-  ue_index_t ue_index = this->start_procedure();
+  cu_cp_ue_index_t ue_index = this->start_procedure();
 
   auto& ue = test_ues.at(ue_index);
 
@@ -598,7 +598,7 @@ TEST_F(ngap_ue_context_management_procedure_test,
        when_ue_context_modification_request_for_unknown_ue_received_then_failure_is_sent)
 {
   // Test preamble
-  ue_index_t ue_index = this->start_procedure();
+  cu_cp_ue_index_t ue_index = this->start_procedure();
 
   auto& ue = test_ues.at(ue_index);
 
@@ -631,8 +631,8 @@ TEST_F(ngap_ue_context_management_procedure_test,
        when_ue_context_modification_request_has_inconsistent_id_pair_then_error_indication_is_sent)
 {
   // Test preamble.
-  ue_index_t ue_index1 = this->start_procedure();
-  ue_index_t ue_index2 = this->start_procedure(to_rnti(0x2));
+  cu_cp_ue_index_t ue_index1 = this->start_procedure();
+  cu_cp_ue_index_t ue_index2 = this->start_procedure(to_rnti(0x2));
 
   auto& ue1 = test_ues.at(ue_index1);
   auto& ue2 = test_ues.at(ue_index2);

@@ -27,7 +27,8 @@ conditional_handover_reconfiguration_routine::conditional_handover_reconfigurati
   ue_mng(ue_mng_),
   logger(logger_)
 {
-  ocudu_assert(source_ue.get_ue_index() != ue_index_t::invalid, "Invalid source UE index {}", source_ue.get_ue_index());
+  ocudu_assert(
+      source_ue.get_ue_index() != cu_cp_ue_index_t::invalid, "Invalid source UE index {}", source_ue.get_ue_index());
 }
 
 void conditional_handover_reconfiguration_routine::operator()(coro_context<async_task<bool>>& ctx)
@@ -63,7 +64,7 @@ void conditional_handover_reconfiguration_routine::operator()(coro_context<async
   {
     auto& cho_ctx = source_ue.get_cho_context();
     // Only one target observer per target UE index is required.
-    std::vector<ue_index_t> armed_target_ues;
+    std::vector<cu_cp_ue_index_t> armed_target_ues;
     for (const auto& candidate : cho_ctx->candidates) {
       if (std::find(armed_target_ues.begin(), armed_target_ues.end(), candidate.target_ue_index) !=
           armed_target_ues.end()) {
@@ -253,16 +254,17 @@ void conditional_handover_reconfiguration_routine::cleanup_targets()
   }
 
   // Collect prepared candidate target UEs.
-  std::vector<ue_index_t> candidates;
+  std::vector<cu_cp_ue_index_t> candidates;
   for (const auto& candidate : source_ue.get_cho_context()->candidates) {
-    if (candidate.target_ue_index != ue_index_t::invalid && candidate.target_ue_index != source_ue.get_ue_index()) {
+    if (candidate.target_ue_index != cu_cp_ue_index_t::invalid &&
+        candidate.target_ue_index != source_ue.get_ue_index()) {
       candidates.push_back(candidate.target_ue_index);
     }
   }
   source_ue.get_cho_context()->clear();
 
   // Schedule release on each target's own task scheduler.
-  for (ue_index_t ue_idx : candidates) {
+  for (cu_cp_ue_index_t ue_idx : candidates) {
     auto* cand_ue = ue_mng.find_du_ue(ue_idx);
     if (cand_ue == nullptr) {
       continue;

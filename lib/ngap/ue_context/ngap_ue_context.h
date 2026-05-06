@@ -14,7 +14,7 @@
 namespace ocudu::ocucp {
 
 struct ngap_ue_ids {
-  ue_index_t        ue_index  = ue_index_t::invalid;
+  cu_cp_ue_index_t  ue_index  = cu_cp_ue_index_t::invalid;
   const ran_ue_id_t ran_ue_id = ran_ue_id_t::invalid;
   amf_ue_id_t       amf_ue_id = amf_ue_id_t::invalid;
 };
@@ -33,7 +33,7 @@ struct ngap_ue_context {
   ngap_ue_transaction_manager ev_mng;
   ngap_ue_logger              logger;
 
-  ngap_ue_context(ue_index_t              ue_index_,
+  ngap_ue_context(cu_cp_ue_index_t        ue_index_,
                   ran_ue_id_t             ran_ue_id_,
                   ngap_cu_cp_ue_notifier& ue_notifier_,
                   timer_factory&          timers_) :
@@ -58,7 +58,7 @@ public:
   /// \brief Checks whether a UE with the given UE index exists.
   /// \param[in] ue_index The UE index used to find the UE.
   /// \return True when a UE for the given UE index exists, false otherwise.
-  bool contains(ue_index_t ue_index) const
+  bool contains(cu_cp_ue_index_t ue_index) const
   {
     if (ue_index_to_ran_ue_id.find(ue_index) == ue_index_to_ran_ue_id.end()) {
       return false;
@@ -89,7 +89,7 @@ public:
     return ues.at(ran_ue_id);
   }
 
-  ngap_ue_context& operator[](ue_index_t ue_index)
+  ngap_ue_context& operator[](cu_cp_ue_index_t ue_index)
   {
     ocudu_assert(
         ue_index_to_ran_ue_id.find(ue_index) != ue_index_to_ran_ue_id.end(), "ue={}: RAN-UE-ID not found", ue_index);
@@ -144,9 +144,9 @@ public:
     return find(amf_ue_id_to_ran_ue_id.at(amf_ue_id));
   }
 
-  ngap_ue_context& add_ue(ue_index_t ue_index, ran_ue_id_t ran_ue_id, ngap_cu_cp_ue_notifier& ue_notifier)
+  ngap_ue_context& add_ue(cu_cp_ue_index_t ue_index, ran_ue_id_t ran_ue_id, ngap_cu_cp_ue_notifier& ue_notifier)
   {
-    ocudu_assert(ue_index != ue_index_t::invalid, "Invalid ue_index={}", fmt::underlying(ue_index));
+    ocudu_assert(ue_index != cu_cp_ue_index_t::invalid, "Invalid ue_index={}", fmt::underlying(ue_index));
     ocudu_assert(ran_ue_id != ran_ue_id_t::invalid, "Invalid ran_ue={}", fmt::underlying(ran_ue_id));
 
     logger.debug("ue={} ran_ue={}: NGAP UE context created", fmt::underlying(ue_index), fmt::underlying(ran_ue_id));
@@ -187,10 +187,11 @@ public:
     ue.logger.set_prefix({ue.ue_ids.ue_index, ran_ue_id, amf_ue_id});
   }
 
-  void update_ue_index(ue_index_t new_ue_index, ue_index_t old_ue_index, ngap_cu_cp_ue_notifier& new_ue_notifier)
+  void
+  update_ue_index(cu_cp_ue_index_t new_ue_index, cu_cp_ue_index_t old_ue_index, ngap_cu_cp_ue_notifier& new_ue_notifier)
   {
-    ocudu_assert(new_ue_index != ue_index_t::invalid, "Invalid new_ue_index={}", new_ue_index);
-    ocudu_assert(old_ue_index != ue_index_t::invalid, "Invalid old_ue_index={}", old_ue_index);
+    ocudu_assert(new_ue_index != cu_cp_ue_index_t::invalid, "Invalid new_ue_index={}", new_ue_index);
+    ocudu_assert(old_ue_index != cu_cp_ue_index_t::invalid, "Invalid old_ue_index={}", old_ue_index);
     ocudu_assert(ue_index_to_ran_ue_id.find(old_ue_index) != ue_index_to_ran_ue_id.end(),
                  "ue={}: RAN-UE-ID not found",
                  old_ue_index);
@@ -213,9 +214,9 @@ public:
     ues.at(ran_ue_id).logger.log_debug("Updated UE index from ue_index={}", old_ue_index);
   }
 
-  void remove_ue_context(ue_index_t ue_index)
+  void remove_ue_context(cu_cp_ue_index_t ue_index)
   {
-    ocudu_assert(ue_index != ue_index_t::invalid, "Invalid ue_index={}", ue_index);
+    ocudu_assert(ue_index != cu_cp_ue_index_t::invalid, "Invalid ue_index={}", ue_index);
 
     if (ue_index_to_ran_ue_id.find(ue_index) == ue_index_to_ran_ue_id.end()) {
       logger.warning("ue={}: RAN-UE-ID not found", ue_index);
@@ -298,9 +299,9 @@ private:
   }
 
   // Note: Given that UEs will self-remove from the map, we don't want to destructor to clear the lookups beforehand.
-  std::unordered_map<ue_index_t, ran_ue_id_t>      ue_index_to_ran_ue_id;  // indexed by ue_index
-  std::unordered_map<amf_ue_id_t, ran_ue_id_t>     amf_ue_id_to_ran_ue_id; // indexed by amf_ue_id_t
-  std::unordered_map<ran_ue_id_t, ngap_ue_context> ues;                    // indexed by ran_ue_id_t
+  std::unordered_map<cu_cp_ue_index_t, ran_ue_id_t> ue_index_to_ran_ue_id;  // indexed by ue_index
+  std::unordered_map<amf_ue_id_t, ran_ue_id_t>      amf_ue_id_to_ran_ue_id; // indexed by amf_ue_id_t
+  std::unordered_map<ran_ue_id_t, ngap_ue_context>  ues;                    // indexed by ran_ue_id_t
 };
 
 } // namespace ocudu::ocucp

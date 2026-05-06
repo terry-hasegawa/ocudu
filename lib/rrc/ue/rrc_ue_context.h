@@ -20,14 +20,14 @@ namespace ocudu::ocucp {
 class rrc_ue_context_t
 {
 public:
-  rrc_ue_context_t(const ue_index_t                       ue_index_,
+  rrc_ue_context_t(const cu_cp_ue_index_t                 ue_index_,
                    rnti_t                                 c_rnti_,
                    const rrc_cell_context&                cell_,
                    const rrc_ue_cfg_t&                    cfg_,
                    std::optional<rrc_ue_transfer_context> rrc_context_,
                    rrc_ue_logger&                         logger_);
 
-  const ue_index_t                   ue_index; // UE index assigned by the DU processor
+  const cu_cp_ue_index_t             ue_index; // UE index assigned by the DU processor
   rnti_t                             c_rnti;   // current C-RNTI
   rrc_cell_context                   cell;     // current cell
   const rrc_ue_cfg_t                 cfg;

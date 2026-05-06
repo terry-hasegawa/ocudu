@@ -7,27 +7,25 @@
 #include "ocudu/cu_cp/cu_cp_types.h"
 #include "ocudu/ran/logical_channel/lcid.h"
 #include "ocudu/ran/rnti.h"
-#include "ocudu/support/format/format_utils.h"
+#include "ocudu/support/format/fmt_to_c_str.h"
 #include "fmt/format.h"
 
-namespace ocudu {
-
-namespace ocucp {
+namespace ocudu::ocucp {
 
 struct ue_event_prefix {
-  const char*     direction;
-  ue_index_t      ue_index;
-  rnti_t          rnti;
-  du_cell_index_t cell_index;
-  const char*     channel = nullptr;
-  lcid_t          lcid;
+  const char*      direction;
+  cu_cp_ue_index_t ue_index;
+  rnti_t           rnti;
+  du_cell_index_t  cell_index;
+  const char*      channel = nullptr;
+  lcid_t           lcid;
 
-  ue_event_prefix(const char*     dir_      = "CTRL",
-                  ue_index_t      ue_index_ = ue_index_t::invalid,
-                  rnti_t          rnti_     = rnti_t::INVALID_RNTI,
-                  du_cell_index_t cell_idx_ = uint_to_du_cell_index(MAX_NOF_DU_CELLS),
-                  const char*     channel_  = nullptr,
-                  lcid_t          lcid_     = INVALID_LCID) :
+  ue_event_prefix(const char*      dir_      = "CTRL",
+                  cu_cp_ue_index_t ue_index_ = cu_cp_ue_index_t::invalid,
+                  rnti_t           rnti_     = rnti_t::INVALID_RNTI,
+                  du_cell_index_t  cell_idx_ = uint_to_du_cell_index(MAX_NOF_DU_CELLS),
+                  const char*      channel_  = nullptr,
+                  lcid_t           lcid_     = INVALID_LCID) :
     direction(dir_), ue_index(ue_index_), rnti(rnti_), cell_index(cell_idx_), channel(channel_), lcid(lcid_)
   {
   }
@@ -49,7 +47,7 @@ struct ue_event_prefix {
     return *this;
   }
 
-  ue_event_prefix& operator|(ue_index_t ue_index_)
+  ue_event_prefix& operator|(cu_cp_ue_index_t ue_index_)
   {
     ue_index = ue_index_;
     return *this;
@@ -68,24 +66,26 @@ struct ue_event_prefix {
   }
 };
 
-inline void log_proc_started(ocudulog::basic_logger& logger, ue_index_t ue_index, rnti_t rnti, const char* proc_name)
+inline void
+log_proc_started(ocudulog::basic_logger& logger, cu_cp_ue_index_t ue_index, rnti_t rnti, const char* proc_name)
 {
   logger.info("{}: \"{}\" started.", ue_event_prefix{"CTRL", ue_index, rnti}, proc_name);
 }
 
-inline void log_proc_started(ocudulog::basic_logger& logger, ue_index_t ue_index, const char* proc_name)
+inline void log_proc_started(ocudulog::basic_logger& logger, cu_cp_ue_index_t ue_index, const char* proc_name)
 {
   logger.info("{}: \"{}\" started.", ue_event_prefix{"CTRL", ue_index}, proc_name);
 }
 
-inline void log_proc_completed(ocudulog::basic_logger& logger, ue_index_t ue_index, rnti_t rnti, const char* proc_name)
+inline void
+log_proc_completed(ocudulog::basic_logger& logger, cu_cp_ue_index_t ue_index, rnti_t rnti, const char* proc_name)
 {
   logger.info("{}: \"{}\" completed.", ue_event_prefix{"CTRL", ue_index, rnti}, proc_name);
 }
 
 template <typename... Args>
 void log_proc_failure(ocudulog::basic_logger& logger,
-                      ue_index_t              ue_index,
+                      cu_cp_ue_index_t        ue_index,
                       const char*             proc_name,
                       const char*             cause_fmt = "",
                       Args&&... args)
@@ -100,7 +100,7 @@ void log_proc_failure(ocudulog::basic_logger& logger,
 
 template <typename... Args>
 void log_proc_failure(ocudulog::basic_logger& logger,
-                      ue_index_t              ue_index,
+                      cu_cp_ue_index_t        ue_index,
                       rnti_t                  rnti,
                       const char*             proc_name,
                       const char*             cause_fmt = "",
@@ -116,7 +116,7 @@ void log_proc_failure(ocudulog::basic_logger& logger,
 
 template <typename... Args>
 void log_proc_event(ocudulog::basic_logger& logger,
-                    ue_index_t              ue_index,
+                    cu_cp_ue_index_t        ue_index,
                     const char*             proc_name,
                     const char*             cause_fmt,
                     Args&&... args)
@@ -158,7 +158,7 @@ void log_ue_proc_event(ocudulog::log_channel& log_ch,
 
 template <typename... Args>
 void log_ul_pdu(ocudulog::basic_logger& logger,
-                ue_index_t              ue_index,
+                cu_cp_ue_index_t        ue_index,
                 rnti_t                  rnti,
                 du_cell_index_t         cell_index,
                 const char*             ch,
@@ -171,12 +171,11 @@ void log_ul_pdu(ocudulog::basic_logger& logger,
 template <typename... Args>
 void log_ul_pdu(ocudulog::basic_logger& logger, rnti_t rnti, du_cell_index_t cc, const char* cause_fmt, Args&&... args)
 {
-  log_ue_event(logger, ue_event_prefix{"UL", ue_index_t::invalid, rnti, cc}, cause_fmt, std::forward<Args>(args)...);
+  log_ue_event(
+      logger, ue_event_prefix{"UL", cu_cp_ue_index_t::invalid, rnti, cc}, cause_fmt, std::forward<Args>(args)...);
 }
 
-} // namespace ocucp
-
-} // namespace ocudu
+} // namespace ocudu::ocucp
 
 namespace fmt {
 
@@ -194,7 +193,7 @@ struct formatter<ocudu::ocucp::ue_event_prefix> {
   {
     using namespace ocudu;
     auto ret = format_to(ctx.out(), "{:<4}", ue_prefix.direction);
-    if (ue_prefix.ue_index != ocudu::ocucp::ue_index_t::invalid) {
+    if (ue_prefix.ue_index != cu_cp_ue_index_t::invalid) {
       ret = format_to(ctx.out(), " ueId={}", ue_prefix.ue_index);
     } else {
       ret = format_to(ctx.out(), "{: <7}", "");

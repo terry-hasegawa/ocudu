@@ -23,12 +23,12 @@ public:
   }
 
   /// Get UE index for a given tuple of (AMF-UE-NGAP-ID, GUAMI, GNB-CU-UE-F1AP-ID).
-  ocucp::ue_index_t get_ue_index(const ocucp::amf_ue_id_t&  amf_ue_id,
-                                 const guami_t&             guami,
-                                 const gnb_cu_ue_f1ap_id_t& gnb_cu_ue_f1ap_id) const override;
+  cu_cp_ue_index_t get_ue_index(const ocucp::amf_ue_id_t&  amf_ue_id,
+                                const guami_t&             guami,
+                                const gnb_cu_ue_f1ap_id_t& gnb_cu_ue_f1ap_id) const override;
 
   /// Get index of the DU that has UE with a given GNB-CU-UE-F1AP-ID.
-  ocucp::du_index_t get_du_index(const ocucp::ue_index_t& ue_index) const override;
+  ocucp::du_index_t get_du_index(const cu_cp_ue_index_t& ue_index) const override;
 
   /// Get DU index for a given NR Cell Global ID.
   ocucp::du_index_t get_du_index(const nr_cell_global_id_t& nr_cgi) const override;
