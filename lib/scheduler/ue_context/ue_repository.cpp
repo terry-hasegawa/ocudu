@@ -357,16 +357,21 @@ bool ue_repository::update_ue_fsm(du_ue_index_t ue_index, ue_fsm_config_event ev
       logger.debug("ue={} rnti={}: ConRes procedure completed", ue_index, ue_cc.rnti());
       return true;
     case fsm_row(states::pending_conres_ce, events::conres_ce_timeout):
-      // Timeout for ConRes CE reception. Deactivate UE.
+      // Timeout for ConRes CE reception -> Deactivate UE.
       cur_state = states::normal;
       u.deactivate();
       return true;
     case fsm_row(states::pending_crnti_ce, events::crnti_ce_received):
+      // C-RNTI CE received -> leave fallback mode.
       cur_state = states::normal;
       ue_cc.harqs.cancel_retxs();
       u.logical_channels().set_fallback_state(false);
       logger.debug("ue={} rnti={}: C-RNTI CE received, leaving fallback mode", ue_index, ue_cc.rnti());
       return true;
+    case fsm_row(states::pending_crnti_ce, events::reconf_initiated):
+    case fsm_row(states::pending_crnti_ce, events::config_applied):
+      // Any additional reconfiguration while awaiting C-RNTI CE has no effect.
+      return false;
     case fsm_row(states::pending_setup_or_reest, events::config_applied):
     case fsm_row(states::pending_reest_reconf, events::config_applied):
     case fsm_row(states::pending_reconf, events::config_applied):

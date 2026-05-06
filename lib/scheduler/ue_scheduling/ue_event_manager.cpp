@@ -272,9 +272,9 @@ void ue_cell_event_manager::handle_ue_creation(ue_config_update_event ev)
     bool                  is_in_fallback = ev.get_fallback_command().has_value() and ev.get_fallback_command().value();
     ue_db.add_ue(ev.next_config(), is_in_fallback, ev.get_ul_ccch_slot_rx());
 
-    if (not is_in_fallback) {
-      // For UEs created in non-fallback mode, initialize UCI and SRS schedulers immediately.
-      auto& ue_cc = ue_db[ue_index].get_pcell();
+    auto& ue_cc = ue_db[ue_index].get_pcell();
+    if (ue_cc.get_pcell_state().state != ue_fsm_states::pending_crnti_ce) {
+      // In case the UE is expecting a C-RNTI CE, defer activation of UCI/SR scheduling.
       uci_sched.add_ue(ue_cc.cfg());
       srs_sched.add_ue(ue_cc.cfg());
     }
@@ -311,8 +311,11 @@ void ue_cell_event_manager::handle_ue_reconfiguration(ue_config_update_event ev)
     // Reconfigure PCell
     // Note: Carrier aggregation not yet supported.
     auto& ue_cc = u.get_cell(SERVING_PCELL_IDX);
-    uci_sched.reconf_ue(ev.next_config().ue_cell_cfg(ue_cc.cell_index), ue_cc.cfg());
-    srs_sched.reconf_ue(ev.next_config().ue_cell_cfg(ue_cc.cell_index), ue_cc.cfg());
+
+    if (ue_cc.get_pcell_state().state != ue_fsm_states::pending_crnti_ce) {
+      uci_sched.reconf_ue(ev.next_config().ue_cell_cfg(ue_cc.cell_index), ue_cc.cfg());
+      srs_sched.reconf_ue(ev.next_config().ue_cell_cfg(ue_cc.cell_index), ue_cc.cfg());
+    }
 
     // Configure existing UE.
     ue_db.reconfigure_ue(ev.next_config(), ev.is_reestablished());
@@ -346,10 +349,13 @@ void ue_cell_event_manager::handle_ue_deletion(ue_config_delete_event ev)
     const auto&  u    = ue_db[ue_idx];
     const rnti_t rnti = u.crnti;
 
-    // Update UCI scheduling by removing existing UE UCI resources.
-    uci_sched.rem_ue(u.get_pcell().cfg());
-    // Update SRS scheduling by removing existing UE SRS resources.
-    srs_sched.rem_ue(u.get_pcell().cfg());
+    const auto& ue_cc = u.get_pcell();
+    if (ue_cc.get_pcell_state().state != ue_fsm_states::pending_crnti_ce) {
+      // Update UCI scheduling by removing existing UE UCI resources.
+      uci_sched.rem_ue(u.get_pcell().cfg());
+      // Update SRS scheduling by removing existing UE SRS resources.
+      srs_sched.rem_ue(u.get_pcell().cfg());
+    }
     // Schedule removal of UE from slice scheduler.
     slice_sched.rem_ue(ue_idx);
 
@@ -711,10 +717,6 @@ void ue_cell_event_manager::handle_dl_mac_ce_indication(const dl_mac_ce_indicati
 
       // Notify fallback scheduler of a pending ConRes CE.
       fallback_sched.handle_conres_indication(ce.ue_index);
-
-      // Initiate UCI and SRS schedulers with new UE resources.
-      uci_sched.add_ue(ue_cc.cfg());
-      srs_sched.add_ue(ue_cc.cfg());
     }
 
     // Log event.
