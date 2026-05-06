@@ -407,7 +407,7 @@ TEST_P(fallback_scheduler_tester, successfully_allocated_resources_for_srb1_pdu_
   setup_sched(create_expert_config(3), create_custom_cell_config_request(params.k0));
   // Add UE.
   const du_ue_index_t ue_idx = to_du_ue_index(0);
-  add_ue(to_rnti(0x4601), ue_idx);
+  add_ue(to_rnti(0x4601), ue_idx, false, current_slot);
   auto& test_ue = get_ue(ue_idx);
   // UE reports CQI 0.
   csi_report_data csi_report{};
@@ -488,7 +488,7 @@ TEST_P(fallback_scheduler_tester, when_conres_and_msg4_scheduled_separately_msg4
   setup_sched(create_expert_config(1), create_custom_cell_config_request(params.k0));
 
   // Add UE 1.
-  add_ue(to_rnti(0x4601), to_du_ue_index(0));
+  add_ue(to_rnti(0x4601), to_du_ue_index(0), false, current_slot);
   // Notify about SRB0 message in DL of size 99 bytes (this size is set empirically to force the scheduler to schedule
   // Conres and MSG4 separately).
   unsigned ue1_mac_srb0_sdu_size = 99;
@@ -535,7 +535,7 @@ TEST_P(fallback_scheduler_tester, conres_and_msg4_scheduled_scheduled_over_diffe
   setup_sched(create_expert_config(1), create_custom_cell_config_request(params.k0));
 
   // Add UE 1.
-  add_ue(to_rnti(0x4601), to_du_ue_index(0));
+  add_ue(to_rnti(0x4601), to_du_ue_index(0), false, current_slot);
   // Notify about SRB0 message in DL of size 99 bytes (this size is set empirically to force the scheduler to schedule
   // Conres and MSG4 separately).
   unsigned ue1_mac_srb0_sdu_size = 99;
@@ -579,7 +579,7 @@ TEST_P(fallback_scheduler_tester, when_conres_and_msg4_srb1_scheduled_separately
   setup_sched(create_expert_config(1), create_custom_cell_config_request(params.k0));
 
   // Add UE 1.
-  add_ue(to_rnti(0x4601), to_du_ue_index(0));
+  add_ue(to_rnti(0x4601), to_du_ue_index(0), false, current_slot);
   // Notify about SRB0 message in DL of size 99 bytes.
   unsigned ue1_mac_srb1_sdu_size = 99;
   push_buffer_state_to_dl_ue(to_du_ue_index(0), current_slot, ue1_mac_srb1_sdu_size, false);
@@ -1377,7 +1377,7 @@ TEST_P(fallback_scheduler_srb1_segmentation, test_scheduling_srb1_segmentation)
   // are left unserved (unless it reaches the max_nof_harq_retxs).
 
   for (unsigned du_idx = 0; du_idx < MAX_UES; du_idx++) {
-    add_ue(to_rnti(0x4601 + du_idx), to_du_ue_index(du_idx));
+    add_ue(to_rnti(0x4601 + du_idx), to_du_ue_index(du_idx), false, current_slot);
     bench->handle_conres_completed(to_du_ue_index(du_idx));
     ues_testers.emplace_back(bench->cell_cfg, get_ue(to_du_ue_index(du_idx)), this);
   }
@@ -1708,7 +1708,7 @@ TEST_F(fallback_sched_ue_w_out_pucch_cfg, when_srb1_is_scheduled_with_crnti_both
 {
   const auto rnti        = to_rnti(0x4601);
   const auto du_ue_index = to_du_ue_index(0);
-  ASSERT_TRUE(add_ue(rnti, du_ue_index));
+  ASSERT_TRUE(add_ue(rnti, du_ue_index, false, current_slot));
   bench->handle_conres_completed(du_ue_index);
   auto& u = bench->ue_db[to_du_ue_index(0)];
   ASSERT_TRUE(u.get_pcell().cfg().init_bwp().ul.ded() != nullptr);

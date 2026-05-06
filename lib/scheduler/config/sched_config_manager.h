@@ -25,7 +25,7 @@ public:
                          sched_config_manager&             parent_,
                          std::unique_ptr<ue_configuration> next_cfg         = nullptr,
                          const std::optional<bool>&        set_fallback     = {},
-                         slot_point                        ul_ccch_slot_rx_ = slot_point(),
+                         std::optional<slot_point>         ul_ccch_slot_rx_ = {},
                          bool                              reestablished_   = false);
   ue_config_update_event(ue_config_update_event&&) noexcept            = default;
   ue_config_update_event& operator=(ue_config_update_event&&) noexcept = default;
@@ -33,11 +33,11 @@ public:
 
   bool valid() const { return next_ded_cfg != nullptr; }
 
-  du_ue_index_t           get_ue_index() const { return ue_index; }
-  const ue_configuration& next_config() const { return *next_ded_cfg; }
-  std::optional<bool>     get_fallback_command() const { return set_fallback_mode; }
-  slot_point              get_ul_ccch_slot_rx() const { return ul_ccch_slot_rx; }
-  bool                    is_reestablished() const { return reestablished; }
+  du_ue_index_t             get_ue_index() const { return ue_index; }
+  const ue_configuration&   next_config() const { return *next_ded_cfg; }
+  std::optional<bool>       get_fallback_command() const { return set_fallback_mode; }
+  std::optional<slot_point> get_ul_ccch_slot_rx() const { return ul_ccch_slot_rx; }
+  bool                      is_reestablished() const { return reestablished; }
 
   void notify_completion();
 
@@ -47,7 +47,7 @@ private:
   std::unique_ptr<sched_config_manager, noop_operation> parent;
   std::unique_ptr<ue_configuration>                     next_ded_cfg;
   std::optional<bool>                                   set_fallback_mode;
-  slot_point                                            ul_ccch_slot_rx;
+  std::optional<slot_point>                             ul_ccch_slot_rx;
   bool                                                  reestablished;
 };
 

@@ -40,12 +40,21 @@ class ue_cell
 public:
   /// State in case carrier corresponds to UE pcell.
   struct ue_pcell_state {
-    enum class states { pending_conres, pending_setup, pending_reest_reconf, pending_reconf, normal };
+    enum class states {
+      /// RACH-created UE: waiting for ConRes MAC CE to be ACKed by the UE.
+      pending_conres_ce,
+      /// F1AP-created UE: waiting for C-RNTI MAC CE to be received from the UE.
+      pending_crnti_ce,
+      pending_setup,
+      pending_reest_reconf,
+      pending_reconf,
+      normal
+    };
     /// Current state of the UE configuration in the scheduler.
     /// \note When in fallback mode (!= normal mode), only the search spaces and the configuration of cellConfigCommon
     /// are used.
-    states state = states::pending_conres;
-    /// MSG3 rx-slot, if applicable (e.g. The UE was created via RA procedure).
+    states state = states::pending_crnti_ce;
+    /// MSG3 rx-slot, set for RACH-created UEs (state == pending_conres_ce).
     slot_point msg3_rx_slot;
   };
 

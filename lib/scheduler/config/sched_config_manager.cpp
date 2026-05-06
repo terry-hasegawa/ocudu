@@ -14,7 +14,7 @@ ue_config_update_event::ue_config_update_event(du_ue_index_t                    
                                                sched_config_manager&             parent_,
                                                std::unique_ptr<ue_configuration> next_cfg,
                                                const std::optional<bool>&        set_fallback,
-                                               slot_point                        ul_ccch_slot_rx_,
+                                               std::optional<slot_point>         ul_ccch_slot_rx_,
                                                bool                              reestablished_) :
   ue_index(ue_index_),
   parent(&parent_),
@@ -187,11 +187,8 @@ ue_config_update_event sched_config_manager::add_ue(const sched_ue_creation_requ
   auto                        next_ded_cfg   = std::make_unique<ue_configuration>(
       cfg_req.ue_index, cfg_req.crnti, added_cells, group_cfg_pool[target_grp_idx]->add_ue(cfg_req));
 
-  return ue_config_update_event{cfg_req.ue_index,
-                                *this,
-                                std::move(next_ded_cfg),
-                                cfg_req.starts_in_fallback,
-                                cfg_req.ul_ccch_slot_rx.value_or(slot_point())};
+  return ue_config_update_event{
+      cfg_req.ue_index, *this, std::move(next_ded_cfg), cfg_req.starts_in_fallback, cfg_req.ul_ccch_slot_rx};
 }
 
 ue_config_update_event sched_config_manager::update_ue(const sched_ue_reconfiguration_message& cfg_req)

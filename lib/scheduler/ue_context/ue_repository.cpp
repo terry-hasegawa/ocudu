@@ -147,7 +147,7 @@ void ue_repository::add_ue(const ue_configuration&   ue_cfg,
     cell_lookup.ue_cells.push_back(&ue_cc);
   }
 
-  // UEs start in pending_conres by default. Skip to normal state if not in fallback.
+  // UE initial state is set by the ue_cell constructor. Skip to normal state if not in fallback.
   if (not starts_in_fallback) {
     for (auto& ue_cc : cell_lookup.ue_cells) {
       ue_cc->handle_config_event(ue_cell::config_event::crnti_ce_received);

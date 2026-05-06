@@ -49,7 +49,11 @@ ue_cell::ue_cell(du_ue_index_t                ue_index_,
 {
   if (serv_cell_index_ == SERVING_PCELL_IDX) {
     pcell_state.emplace(ue_pcell_state{});
-    pcell_state->msg3_rx_slot = msg3_slot_rx.value_or(slot_point{});
+    if (msg3_slot_rx.has_value()) {
+      pcell_state->state        = ue_pcell_state::states::pending_conres_ce;
+      pcell_state->msg3_rx_slot = msg3_slot_rx.value();
+    }
+    // else: default state is pending_crnti_ce (F1AP-created UE)
   }
 }
 
@@ -477,19 +481,19 @@ bool ue_cell::handle_config_event(config_event ev)
   };
 
   switch (fsm_row(pcell_state->state, ev)) {
-    case fsm_row(states::pending_conres, config_event::conres_ce_acked):
+    case fsm_row(states::pending_conres_ce, config_event::conres_ce_acked):
       pcell_state->state        = states::pending_setup;
       pcell_state->msg3_rx_slot = slot_point{};
       logger.debug("ue={} rnti={}: ConRes procedure completed", ue_index, rnti());
       return true;
-    case fsm_row(states::pending_conres, config_event::crnti_ce_received):
-      pcell_state->state = states::normal;
-      harqs.cancel_retxs();
-      logger.debug("ue={} rnti={}: ConRes procedure completed and leaving fallback mode", ue_index, rnti());
-      return true;
-    case fsm_row(states::pending_conres, config_event::conres_ce_timeout):
+    case fsm_row(states::pending_conres_ce, config_event::conres_ce_timeout):
       pcell_state->state = states::normal;
       deactivate();
+      return true;
+    case fsm_row(states::pending_crnti_ce, config_event::crnti_ce_received):
+      pcell_state->state = states::normal;
+      harqs.cancel_retxs();
+      logger.debug("ue={} rnti={}: C-RNTI CE received, leaving fallback mode", ue_index, rnti());
       return true;
     case fsm_row(states::pending_setup, config_event::config_applied):
     case fsm_row(states::pending_reest_reconf, config_event::config_applied):
@@ -498,25 +502,28 @@ bool ue_cell::handle_config_event(config_event ev)
       harqs.cancel_retxs();
       logger.debug("ue={} rnti={}: Leaving fallback mode", ue_index, rnti());
       return true;
-    case fsm_row(states::pending_conres, config_event::reest_reconf_initiated):
+    case fsm_row(states::pending_conres_ce, config_event::reest_reconf_initiated):
+      // TODO: Remove this transition.
+    case fsm_row(states::pending_crnti_ce, config_event::reest_reconf_initiated):
+      // TODO: Remove this transition.
     case fsm_row(states::pending_setup, config_event::reest_reconf_initiated):
       pcell_state->state = states::pending_reest_reconf;
       return true;
-    case fsm_row(states::pending_conres, config_event::reconf_initiated):
+    case fsm_row(states::pending_conres_ce, config_event::reconf_initiated):
+      // TODO: Remove this transition.
+    case fsm_row(states::pending_crnti_ce, config_event::reconf_initiated):
+      // TODO: Remove this transition.
     case fsm_row(states::pending_setup, config_event::reconf_initiated):
       pcell_state->state = states::pending_reconf;
       return true;
     case fsm_row(states::normal, config_event::reconf_initiated):
-      pcell_state->state = states::pending_reconf;
+    case fsm_row(states::normal, config_event::reest_reconf_initiated):
+      pcell_state->state = ev == config_event::reconf_initiated ? states::pending_reconf : states::pending_reest_reconf;
       harqs.cancel_retxs();
       logger.debug("ue={} rnti={}: Entering fallback mode", ue_index, rnti());
       return true;
-    case fsm_row(states::normal, config_event::reest_reconf_initiated):
-      pcell_state->state = states::pending_reest_reconf;
-      harqs.cancel_retxs();
-      logger.debug("ue={} rnti={}: Entering fallback mode (reestablishment)", ue_index, rnti());
-      return true;
     case fsm_row(states::normal, config_event::config_applied):
+      // Do nothing.
       return true;
     default:
       break;
