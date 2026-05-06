@@ -15,19 +15,6 @@
 
 using namespace ocudu;
 
-span<const uint8_t> search_space_info::get_k1_candidates() const
-{
-  // TS38.213, clause 9.2.3 - For DCI format 1_0, the PDSCH-to-HARQ-timing-indicator field values map to
-  // {1, 2, 3, 4, 5, 6, 7, 8}. For DCI format 1_1, if present, the PDSCH-to-HARQ-timing-indicator field values map to
-  // values for a set of number of slots provided by dl-DataToUL-ACK as defined in Table 9.2.3-1.
-  // Note: Tested UEs do not support k1 < 4.
-  static constexpr std::array<uint8_t, 5> f1_0_list = {4, 5, 6, 7, 8};
-  if (get_dl_dci_format() == ocudu::dci_dl_format::f1_0) {
-    return f1_0_list;
-  }
-  return bwp->ul.ded()->pucch_cfg->dl_data_to_ul_ack;
-}
-
 void search_space_info::update_pdcch_candidates(
     const std::vector<std::array<pdcch_candidate_list, NOF_AGGREGATION_LEVELS>>& candidates)
 {
@@ -277,10 +264,12 @@ static dci_size_config get_dci_size_config(const ue_cell_configuration& ue_cell_
   }
 
   // Fill out parameters for Format 1_1.
-  dci_sz_cfg.nof_dl_bwp_rrc            = ue_cell_cfg.bwps().size() - (ue_cell_cfg.has_bwp_id(to_bwp_id(0)) ? 1 : 0);
-  dci_sz_cfg.nof_dl_time_domain_res    = ue_cell_cfg.search_space(ss_id).pdsch_time_domain_list.size();
-  dci_sz_cfg.nof_aperiodic_zp_csi      = 0;
-  dci_sz_cfg.nof_pdsch_ack_timings     = ss_info.get_k1_candidates().size();
+  dci_sz_cfg.nof_dl_bwp_rrc         = ue_cell_cfg.bwps().size() - (ue_cell_cfg.has_bwp_id(to_bwp_id(0)) ? 1 : 0);
+  dci_sz_cfg.nof_dl_time_domain_res = ue_cell_cfg.search_space(ss_id).pdsch_time_domain_list.size();
+  dci_sz_cfg.nof_aperiodic_zp_csi   = 0;
+  dci_sz_cfg.nof_pdsch_ack_timings =
+      pdcch_helper::get_k1_candidates(ss_info.get_dl_dci_format(), ue_cell_cfg.cell_cfg_common.dl_data_to_ul_ack)
+          .size();
   dci_sz_cfg.dynamic_prb_bundling      = false;
   dci_sz_cfg.rm_pattern_group1         = false;
   dci_sz_cfg.rm_pattern_group2         = false;

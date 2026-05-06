@@ -419,7 +419,9 @@ static std::optional<ul_sched_context> get_ul_sched_context(const slice_ue&     
         include_csi = true;
       } else if (std::holds_alternative<csi_report_config::periodic_or_semi_persistent_report_on_pucch>(
                      ue_cell_cfg.csi_meas_cfg()->csi_report_cfg_list[0].report_cfg_type) and
-                 csi_helper::is_csi_reporting_slot(*ue_cell_cfg.csi_meas_cfg(), pusch_slot)) {
+                 csi_helper::is_csi_reporting_slot(*ue_cell_cfg.init_bwp().ul.ue_cfg()->periodic_csi_report,
+                                                   cell_cfg.params.init_bwp.csi->csi_rs_period,
+                                                   pusch_slot)) {
         include_csi = true;
       }
     }

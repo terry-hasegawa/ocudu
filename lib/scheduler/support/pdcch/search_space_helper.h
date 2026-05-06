@@ -93,6 +93,13 @@ inline dci_ul_format get_ul_dci_format(const search_space_configuration& ss_cfg)
   report_fatal_error("Unsupported UL DCI format");
 }
 
+/// \brief Get the table of PDSCH-to-HARQ-timing-indicator candidates for a SearchSpace as per TS 38.213, clause 9.2.3.
+inline span<const uint8_t> get_k1_candidates(dci_dl_format dci_format, span<const uint8_t> dl_data_to_ul_ack)
+{
+  static constexpr std::array<uint8_t, 5> f1_0_list = {4, 5, 6, 7, 8};
+  return dci_format == dci_dl_format::f1_0 ? span<const uint8_t>{f1_0_list} : dl_data_to_ul_ack;
+}
+
 /// \brief Helper function to check whether a SearchSpace PDCCH is monitored by the UE for a given slot, as per
 /// TS 38.213, section 10.1.
 ///

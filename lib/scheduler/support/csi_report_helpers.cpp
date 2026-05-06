@@ -4,17 +4,9 @@
 
 #include "csi_report_helpers.h"
 
-bool ocudu::csi_helper::is_csi_reporting_slot(const csi_meas_config& csi_meas, slot_point sl_tx)
+bool ocudu::csi_helper::is_csi_reporting_slot(const ue_periodic_csi_config& periodic_csi,
+                                              csi_resource_periodicity      csi_period,
+                                              slot_point                    sl_tx)
 {
-  // We assume we only use the first CSI report configuration.
-  const unsigned csi_report_cfg_idx = 0;
-  const auto&    csi_report_cfg     = csi_meas.csi_report_cfg_list[csi_report_cfg_idx];
-  const auto&    csi_report_cfg_type =
-      std::get<csi_report_config::periodic_or_semi_persistent_report_on_pucch>(csi_report_cfg.report_cfg_type);
-
-  // > Scheduler CSI grants.
-  unsigned csi_offset = csi_report_cfg_type.report_slot_offset;
-  unsigned csi_period = csi_report_periodicity_to_uint(csi_report_cfg_type.report_slot_period);
-
-  return (sl_tx - csi_offset).to_uint() % csi_period == 0;
+  return (sl_tx - periodic_csi.offset).to_uint() % csi_resource_periodicity_to_uint(csi_period) == 0;
 }

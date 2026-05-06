@@ -4,13 +4,15 @@
 
 #pragma once
 
-#include "ocudu/scheduler/config/serving_cell_config.h"
+#include "ocudu/ran/csi_rs/csi_meas_config.h"
+#include "ocudu/ran/slot_point.h"
+#include "ocudu/scheduler/config/ue_bwp_config.h"
 
-namespace ocudu {
-namespace csi_helper {
+namespace ocudu::csi_helper {
 
-/// \brief Helpers that checks if the slot is a candidate for CSI reporting for a given user.
-bool is_csi_reporting_slot(const csi_meas_config& csi_meas, slot_point sl_tx);
+/// \brief Checks if the slot is a candidate for periodic CSI reporting on PUCCH for a given user.
+bool is_csi_reporting_slot(const ue_periodic_csi_config& periodic_csi,
+                           csi_resource_periodicity      csi_period,
+                           slot_point                    sl_tx);
 
-} // namespace csi_helper
-} // namespace ocudu
+} // namespace ocudu::csi_helper

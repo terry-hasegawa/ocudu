@@ -50,9 +50,6 @@ struct search_space_info {
   /// \return UL DCI format.
   dci_ul_format get_ul_dci_format() const { return pdcch_helper::get_ul_dci_format(*cfg); }
 
-  /// \brief Get table of PDSCH-to-HARQ candidates as per TS38.213, clause 9.2.3.
-  span<const uint8_t> get_k1_candidates() const;
-
   /// \brief Retrieve all the PDCCH candidates for a given aggregation level and slot for this SearchSpace.
   span<const uint8_t> get_pdcch_candidates(aggregation_level aggr_lvl, slot_point pdcch_slot) const
   {

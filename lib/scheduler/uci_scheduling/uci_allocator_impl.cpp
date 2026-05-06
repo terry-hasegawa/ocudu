@@ -52,7 +52,7 @@ static void add_csi_to_uci_on_pusch(uci_info::csi_info& uci_csi, const ue_cell_c
   // NOTE: The CSI size depends on whether the CSI is configured on PUSCH or PUCCH, as per Section 5.2.3, TS 38.214:
   // "For both Type I and Type II reports configured for PUCCH but transmitted on PUSCH, the determination of the
   // payload for CSI part 1 and CSI part 2 follows that of PUCCH as described in clause 5.2.4."
-  if (is_pusch_configured(*ue_cell_cfg.csi_meas_cfg())) {
+  if (not ue_cell_cfg.init_bwp().ul.ue_cfg()->periodic_csi_report.has_value()) {
     csi_report_size csi_size   = get_csi_report_pusch_size(uci_csi.csi_rep_cfg);
     uci_csi.csi_part1_nof_bits = csi_size.part1_size.value();
 
@@ -190,13 +190,15 @@ std::optional<uci_allocation> uci_allocator_impl::alloc_harq_ack(cell_resource_a
       continue;
     }
 
-    const bool is_sr_opportunity =
-        sr_helper::is_sr_opportunity_slot(ue_cell_cfg.init_bwp().ul.ded()->pucch_cfg.value(), uci_slot);
+    const bool is_sr_opportunity = sr_helper::is_sr_opportunity_slot(
+        *ue_cell_cfg.init_bwp().ul.ue_cfg(), cell_cfg.params.init_bwp.pucch.sr_period, uci_slot);
     const unsigned scheduled_harq_bits     = get_scheduled_pdsch_counter_in_ue_uci(slot_alloc.slot, crnti);
     unsigned       nof_available_harq_bits = 0U;
 
-    if (ue_cell_cfg.csi_meas_cfg() != nullptr and not is_pusch_configured(*ue_cell_cfg.csi_meas_cfg()) and
-        csi_helper::is_csi_reporting_slot(*ue_cell_cfg.csi_meas_cfg(), uci_slot)) {
+    if (ue_cell_cfg.init_bwp().ul.ue_cfg()->periodic_csi_report.has_value() and
+        csi_helper::is_csi_reporting_slot(*ue_cell_cfg.init_bwp().ul.ue_cfg()->periodic_csi_report,
+                                          cell_cfg.params.init_bwp.csi->csi_rs_period,
+                                          uci_slot)) {
       // TODO: Remove this when the PUCCH allocator handle properly more than 2 HARQ-ACK bits + CSI.
       const auto     csi_report_cfg  = create_csi_report_configuration(*ue_cell_cfg.csi_meas_cfg());
       const unsigned csi_report_size = get_csi_report_pucch_size(csi_report_cfg).part1_size.value();
