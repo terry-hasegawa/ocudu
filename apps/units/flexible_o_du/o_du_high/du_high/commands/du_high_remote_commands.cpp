@@ -261,7 +261,7 @@ static expected<q_hyst_t, std::string> parse_q_hyst_db(const nlohmann::json& obj
   if (!key->is_number_integer()) {
     return make_unexpected("'q_hyst_db' value type should be an integer");
   }
-  const int v = key->get<int>();
+  const int64_t v = key->get<int64_t>();
   switch (v) {
     case 0:
     case 1:
@@ -296,7 +296,7 @@ static expected<q_offset_range_t, std::string> parse_q_offset_range(const nlohma
   if (!val.is_number_integer()) {
     return make_unexpected(fmt::format("'{}' value type should be an integer", field_name));
   }
-  const int v = val.get<int>();
+  const int64_t v = val.get<int64_t>();
   switch (v) {
     case -24:
     case -22:
