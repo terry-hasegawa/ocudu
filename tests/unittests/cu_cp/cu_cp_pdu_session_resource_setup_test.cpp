@@ -163,6 +163,37 @@ public:
     return true;
   }
 
+  [[nodiscard]] bool await_pdu_session_setup_response_and_ue_context_release_request(
+      const std::vector<pdu_session_id_t>& expected_pdu_sessions_to_setup        = {},
+      const std::vector<pdu_session_id_t>& expected_pdu_sessions_failed_to_setup = {})
+  {
+    bool got_setup_response     = false;
+    bool got_ue_context_release = false;
+
+    for (unsigned i = 0; i != 2; ++i) {
+      report_fatal_error_if_not(this->wait_for_ngap_tx_pdu(ngap_pdu), "Failed to receive expected NGAP message");
+
+      if (test_helpers::is_valid_pdu_session_resource_setup_response(ngap_pdu)) {
+        report_fatal_error_if_not(test_helpers::is_expected_pdu_session_resource_setup_response(
+                                      ngap_pdu, expected_pdu_sessions_to_setup, expected_pdu_sessions_failed_to_setup),
+                                  "Unsuccessful PDU Session Resource Setup Response");
+        got_setup_response = true;
+        continue;
+      }
+
+      if (test_helpers::is_valid_ue_context_release_request(ngap_pdu)) {
+        got_ue_context_release = true;
+        continue;
+      }
+
+      report_fatal_error_if_not(false, "Unexpected NGAP message type");
+    }
+
+    report_fatal_error_if_not(got_setup_response, "Did not receive PDU Session Resource Setup Response");
+    report_fatal_error_if_not(got_ue_context_release, "Did not receive UE Context Release Request");
+    return true;
+  }
+
   [[nodiscard]] bool send_ue_context_modification_response_and_await_bearer_context_modification_request()
   {
     return cu_cp_test_environment::send_ue_context_modification_response_and_await_bearer_context_modification_request(
@@ -272,6 +303,24 @@ TEST_F(cu_cp_pdu_session_resource_setup_test, when_bearer_context_setup_failure_
   ASSERT_TRUE(send_bearer_context_setup_failure_and_await_pdu_session_setup_response());
 }
 
+TEST_F(cu_cp_pdu_session_resource_setup_test,
+       when_bearer_context_setup_response_contains_unexpected_session_then_setup_fails_early)
+{
+  // Request setup for PSI=1 and await Bearer Context Setup Request.
+  ngap_message setup_request = generate_valid_pdu_session_resource_setup_request_message(
+      ue_ctx->amf_ue_id.value(), ue_ctx->ran_ue_id.value(), {{psi, {pdu_session_type_t::ipv4, {{qfi, 9}}}}});
+  ASSERT_TRUE(send_pdu_session_resource_setup_request_and_await_bearer_context_setup_request(setup_request));
+
+  // Respond with an unexpected PSI to trigger early failure while handling setup response.
+  get_cu_up(cu_up_idx).push_tx_pdu(generate_bearer_context_setup_response(
+      ue_ctx->cu_cp_e1ap_id.value(), cu_up_e1ap_id, {{psi2, {drb_test_params{drb_id_t::drb2, qfi2}}}}));
+
+  // Expect immediate failed setup response.
+  ASSERT_TRUE(this->wait_for_ngap_tx_pdu(ngap_pdu));
+  ASSERT_TRUE(test_helpers::is_valid_pdu_session_resource_setup_response(ngap_pdu));
+  ASSERT_TRUE(test_helpers::is_expected_pdu_session_resource_setup_response(ngap_pdu, {}, {psi}));
+}
+
 TEST_F(cu_cp_pdu_session_resource_setup_test, when_ue_context_modification_failure_received_then_setup_fails)
 {
   ngap_message pdu_session_resource_setup_request = generate_valid_pdu_session_resource_setup_request_message(
@@ -298,6 +347,41 @@ TEST_F(cu_cp_pdu_session_resource_setup_test, when_ue_context_modification_failu
   ASSERT_TRUE(test_helpers::is_expected_pdu_session_resource_setup_response(ngap_pdu, {}, {psi}));
 }
 
+TEST_F(cu_cp_pdu_session_resource_setup_test,
+       when_setup_fails_at_ue_context_modification_then_retry_uses_fresh_e1_bearer_context_and_succeeds)
+{
+  ngap_message pdu_session_resource_setup_request = generate_valid_pdu_session_resource_setup_request_message(
+      ue_ctx->amf_ue_id.value(), ue_ctx->ran_ue_id.value(), {{psi, {pdu_session_type_t::ipv4, {{qfi, 9}}}}});
+
+  // First setup attempt fails at DU UE Context Modification.
+  ASSERT_TRUE(send_pdu_session_resource_setup_request_and_await_bearer_context_setup_request(
+      pdu_session_resource_setup_request));
+  ASSERT_TRUE(send_bearer_context_setup_response_and_await_ue_context_modification_request());
+
+  // Inject UE Context Modification Failure and validate E1AP cleanup for failed setup.
+  get_du(du_idx).push_ul_pdu(
+      test_helpers::generate_ue_context_modification_failure(ue_ctx->cu_ue_id.value(), ue_ctx->du_ue_id.value()));
+  ASSERT_TRUE(this->wait_for_e1ap_tx_pdu(cu_up_idx, e1ap_pdu));
+  ASSERT_TRUE(test_helpers::is_valid_bearer_context_release_command(e1ap_pdu));
+
+  // Complete bearer context release and await failed PDU Session Resource Setup Response.
+  get_cu_up(cu_up_idx).push_tx_pdu(
+      generate_bearer_context_release_complete(ue_ctx->cu_cp_e1ap_id.value(), ue_ctx->cu_up_e1ap_id.value()));
+  ASSERT_TRUE(this->wait_for_ngap_tx_pdu(ngap_pdu));
+  ASSERT_TRUE(test_helpers::is_valid_pdu_session_resource_setup_response(ngap_pdu));
+  ASSERT_TRUE(test_helpers::is_expected_pdu_session_resource_setup_response(ngap_pdu, {}, {psi}));
+
+  // Retry setup for the same session and verify it succeeds.
+  ASSERT_TRUE(send_pdu_session_resource_setup_request_and_await_bearer_context_setup_request(
+      pdu_session_resource_setup_request));
+  ASSERT_TRUE(send_bearer_context_setup_response_and_await_ue_context_modification_request());
+  ASSERT_TRUE(send_ue_context_modification_response_and_await_bearer_context_modification_request());
+  ASSERT_TRUE(send_bearer_context_modification_response_and_await_rrc_reconfiguration(
+      {}, {{psi, drb_id_t::drb1}}, std::vector<srb_id_t>{srb_id_t::srb2}, std::vector<drb_id_t>{drb_id_t::drb1}));
+  ASSERT_TRUE(send_rrc_reconfiguration_complete_and_await_pdu_session_setup_response(
+      generate_rrc_reconfiguration_complete_pdu(3, 7), {psi}, {}));
+}
+
 TEST_F(cu_cp_pdu_session_resource_setup_test, when_bearer_context_modification_failure_received_then_setup_fails)
 {
   // Inject NGAP PDU Session Resource Setup Request and await Bearer Context Setup Request.
@@ -311,8 +395,10 @@ TEST_F(cu_cp_pdu_session_resource_setup_test, when_bearer_context_modification_f
   // Inject UE Context Modification Response and await Bearer Context Modification Request.
   ASSERT_TRUE(send_ue_context_modification_response_and_await_bearer_context_modification_request());
 
-  // Inject Bearer Context Modification Failure and await PDU Session Resource Setup Response.
-  ASSERT_TRUE(send_bearer_context_modification_failure_and_await_pdu_session_setup_response());
+  // Inject Bearer Context Modification Failure and await both expected NGAP messages.
+  get_cu_up(cu_up_idx).push_tx_pdu(
+      generate_bearer_context_modification_failure(ue_ctx->cu_cp_e1ap_id.value(), ue_ctx->cu_up_e1ap_id.value()));
+  ASSERT_TRUE(await_pdu_session_setup_response_and_ue_context_release_request({}, {psi}));
 }
 
 TEST_F(cu_cp_pdu_session_resource_setup_test,
@@ -355,8 +441,60 @@ TEST_F(cu_cp_pdu_session_resource_setup_test, when_rrc_reconfiguration_fails_the
   ASSERT_TRUE(send_bearer_context_modification_response_and_await_rrc_reconfiguration(
       {}, {{psi, drb_id_t::drb1}}, std::vector<srb_id_t>{srb_id_t::srb2}, std::vector<drb_id_t>{drb_id_t::drb1}));
 
-  // Let the RRC Reconfiguration timeout and await PDU Session Resource Setup Response.
-  ASSERT_TRUE(timeout_rrc_reconfiguration_and_await_pdu_session_setup_response());
+  // Let the RRC Reconfiguration timeout and await both expected NGAP messages.
+  ASSERT_FALSE(tick_until(
+      rrc_test_timer_values.t310 + rrc_test_timer_values.t311 + this->get_cu_cp_cfg().rrc.rrc_procedure_guard_time_ms,
+      [&]() { return false; },
+      false));
+  ASSERT_TRUE(await_pdu_session_setup_response_and_ue_context_release_request({}, {psi}));
+}
+
+TEST_F(cu_cp_pdu_session_resource_setup_test,
+       when_second_session_setup_fails_at_ue_context_modification_then_ue_context_release_is_requested)
+{
+  // Setup first PDU session so next setup uses bearer context modification path.
+  ASSERT_TRUE(setup_pdu_session(psi, drb_id_t::drb1, qfi));
+
+  ngap_message second_setup_request = generate_valid_pdu_session_resource_setup_request_message(
+      ue_ctx->amf_ue_id.value(), ue_ctx->ran_ue_id.value(), {{psi2, {pdu_session_type_t::ipv4, {{qfi2, 9}}}}});
+
+  // Inject NGAP PDU Session Resource Setup Request and await Bearer Context Modification Request.
+  ASSERT_TRUE(
+      send_pdu_session_resource_setup_request_and_await_bearer_context_modification_request(second_setup_request));
+
+  // Inject first Bearer Context Modification Response and await UE Context Modification Request.
+  ASSERT_TRUE(send_bearer_context_modification_response_and_await_ue_context_modification_request());
+
+  // Inject UE Context Modification Failure and await both expected NGAP messages.
+  get_du(du_idx).push_ul_pdu(
+      test_helpers::generate_ue_context_modification_failure(ue_ctx->cu_ue_id.value(), ue_ctx->du_ue_id.value()));
+  ASSERT_TRUE(await_pdu_session_setup_response_and_ue_context_release_request({}, {psi2}));
+}
+
+TEST_F(cu_cp_pdu_session_resource_setup_test,
+       when_second_session_setup_first_bearer_modification_response_is_invalid_then_setup_fails_without_release)
+{
+  // Setup first PDU session so second setup uses first E1AP bearer context modification phase.
+  ASSERT_TRUE(setup_pdu_session(psi, drb_id_t::drb1, qfi));
+
+  ngap_message second_setup_request = generate_valid_pdu_session_resource_setup_request_message(
+      ue_ctx->amf_ue_id.value(), ue_ctx->ran_ue_id.value(), {{psi2, {pdu_session_type_t::ipv4, {{qfi2, 9}}}}});
+
+  // Inject NGAP PDU Session Resource Setup Request and await Bearer Context Modification Request.
+  ASSERT_TRUE(
+      send_pdu_session_resource_setup_request_and_await_bearer_context_modification_request(second_setup_request));
+
+  // Return an unexpected PSI in first bearer modification response to trigger early failure.
+  get_cu_up(cu_up_idx).push_tx_pdu(generate_bearer_context_modification_response(
+      ue_ctx->cu_cp_e1ap_id.value(), ue_ctx->cu_up_e1ap_id.value(), {{psi, {drb_test_params{drb_id_t::drb1, qfi}}}}));
+
+  // Expect failed setup response for requested PSI=2.
+  ASSERT_TRUE(this->wait_for_ngap_tx_pdu(ngap_pdu));
+  ASSERT_TRUE(test_helpers::is_valid_pdu_session_resource_setup_response(ngap_pdu));
+  ASSERT_TRUE(test_helpers::is_expected_pdu_session_resource_setup_response(ngap_pdu, {}, {psi2}));
+
+  // No UE Context Release Request should be triggered in this early-return path.
+  ASSERT_FALSE(get_amf().try_pop_rx_pdu(ngap_pdu));
 }
 
 TEST_F(cu_cp_pdu_session_resource_setup_test, when_rrc_reconfiguration_succeeds_then_setup_succeeds)
