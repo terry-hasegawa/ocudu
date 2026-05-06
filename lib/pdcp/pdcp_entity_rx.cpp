@@ -674,13 +674,13 @@ security::security_status pdcp_entity_rx::apply_deciphering_and_integrity_check(
 
   security::security_engine_rx* sec_engine = sec_engine_pool[worker_idx].get();
   if (sec_engine == nullptr) {
-    // Security is not configured. Pass through for DRBs; trim zero MAC for SRBs.
+    // Security is not configured. Pass through for DRBs; trim zero MAC-I for SRBs.
     if (is_srb()) {
       if (buf.length() <= security::sec_mac_len) {
         logger.log_warning("Failed to trim MAC-I from PDU. count={}", count);
         return security::security_status::buffer_failure;
       }
-      // Unprotected SRB PDUs must have zero MAC.
+      // Unprotected SRB PDUs must have zero MAC-I.
       byte_buffer_view                   mac{buf, buf.length() - security::sec_mac_len, ::security::sec_mac_len};
       static constexpr security::sec_mac zero_mac = {};
       if (!std::equal(zero_mac.begin(), zero_mac.end(), mac.begin(), mac.end())) {

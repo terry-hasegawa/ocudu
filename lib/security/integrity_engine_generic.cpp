@@ -51,13 +51,13 @@ security_status integrity_engine_generic::protect_integrity(byte_buffer& buf, ui
   }
 
   if (not buf.append(mac)) {
-    logger.warning("Failed to append MAC to PDU. count={} pdu_len={}", count, buf.length());
+    logger.warning("Failed to append MAC-I to PDU. count={} pdu_len={}", count, buf.length());
     return security_status::buffer_failure;
   }
 
   logger.debug("Integrity protection applied. count={}", count);
   logger.debug("K_int: {}", k_128_int);
-  logger.debug("MAC: {}", mac);
+  logger.debug("MAC-I: {}", mac);
   logger.debug(buf.begin(), buf.end(), "Message output:");
 
   return security_status::success;
@@ -94,24 +94,24 @@ security_status integrity_engine_generic::verify_integrity(byte_buffer& buf, uin
       break;
   }
 
-  // Verify MAC
+  // Verify MAC-I
   if (!std::equal(mac.begin(), mac.end(), m.begin(), m.end())) {
     security::sec_mac mac_rx;
     std::copy(m.begin(), m.end(), mac_rx.begin());
     span m_rx{mac.data(), sec_mac_len};
     logger.warning("Integrity check failed. count={}", count);
     logger.warning("K_int: {}", k_128_int);
-    logger.warning("MAC received: {}", mac_rx);
-    logger.warning("MAC expected: {}", mac);
+    logger.warning("MAC-I received: {}", mac_rx);
+    logger.warning("MAC-I expected: {}", mac);
     logger.warning(v.begin(), v.end(), "Message input:");
     return security_status::integrity_failure;
   }
   logger.debug("Integrity check passed. count={}", count);
   logger.debug("K_int: {}", k_128_int);
-  logger.debug("MAC: {}", mac);
+  logger.debug("MAC-I: {}", mac);
   logger.debug(v.begin(), v.end(), "Message input:");
 
-  // Trim MAC from PDU
+  // Trim MAC-I from PDU
   buf.trim_tail(mac.size());
 
   return security_status::success;

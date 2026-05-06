@@ -104,7 +104,7 @@ security_status integrity_engine_nia2_cmac::protect_integrity(byte_buffer& buf, 
   }
 
   logger.debug("K_int: {}", k_128_int);
-  logger.debug("MAC: {}", mac);
+  logger.debug("MAC-I: {}", mac);
   logger.debug(buf.begin(), buf.end(), "Message output:");
 
   return security_status::success;
@@ -127,23 +127,23 @@ security_status integrity_engine_nia2_cmac::verify_integrity(byte_buffer& buf, u
     return status;
   }
 
-  // verify MAC
+  // verify MAC-I
   if (!std::equal(mac.begin(), mac.end(), m.begin(), m.end())) {
     security::sec_mac mac_rx;
     std::copy(m.begin(), m.end(), mac_rx.begin());
     logger.warning("Integrity check failed. count={}", count);
     logger.warning("K_int: {}", k_128_int);
-    logger.warning("MAC received: {}", mac_rx);
-    logger.warning("MAC expected: {}", mac);
+    logger.warning("MAC-I received: {}", mac_rx);
+    logger.warning("MAC-I expected: {}", mac);
     logger.warning(v.begin(), v.end(), "Message input:");
     return security_status::integrity_failure;
   }
   logger.debug("Integrity check passed. count={}", count);
   logger.debug("K_int: {}", k_128_int);
-  logger.debug("MAC: {}", mac);
+  logger.debug("MAC-I: {}", mac);
   logger.debug(v.begin(), v.end(), "Message input:");
 
-  // trim MAC from PDU
+  // trim MAC-I from PDU
   buf.trim_tail(sec_mac_len);
 
   return security_status::success;

@@ -522,7 +522,7 @@ TEST_P(pdcp_rx_test_drb, rx_integrity_fail)
   EXPECT_EQ(pdcp_rohc_factory->get_nof_decompressors(), exp_nof_decompressors);
 }
 
-/// Test reception of SRB PDUs with zero-padded MAC across all integrity modes (off, on, SMC transition mode).
+/// Test reception of SRB PDUs with zero-padded MAC-I across all integrity modes (off, on, SMC transition mode).
 /// The PDCP should reject the PDUs only in when integrity is fully enabled.
 TEST_P(pdcp_rx_test_srb, rx_zero_padded_mac)
 {
@@ -541,7 +541,7 @@ TEST_P(pdcp_rx_test_srb, rx_zero_padded_mac)
 
     byte_buffer test_pdu1;
     get_test_pdu(count, test_pdu1);
-    // overwrite MAC with zero padding
+    // overwrite MAC-I with zero padding
     byte_buffer_view mac{test_pdu1, test_pdu1.length() - security::sec_mac_len, security::sec_mac_len};
     std::fill(mac.begin(), mac.end(), 0x0);
     pdcp_rx_state init_state = {.rx_next = count, .rx_deliv = count, .rx_reord = 0};
@@ -584,7 +584,7 @@ TEST_P(pdcp_rx_test_srb, rx_zero_padded_mac)
   EXPECT_EQ(pdcp_rohc_factory->get_nof_decompressors(), exp_nof_decompressors);
 }
 
-/// Test reception of SRB PDUs with non zero-padded MAC across all integrity modes (off, on, SMC transition mode).
+/// Test reception of SRB PDUs with non zero-padded MAC-I across all integrity modes (off, on, SMC transition mode).
 /// The PDCP should reject all PDUs.
 TEST_P(pdcp_rx_test_srb, rx_non_zero_padded_mac)
 {
@@ -603,7 +603,7 @@ TEST_P(pdcp_rx_test_srb, rx_non_zero_padded_mac)
 
     byte_buffer test_pdu1;
     get_test_pdu(count, test_pdu1);
-    // overwrite MAC with non-zero padding
+    // overwrite MAC-I with non-zero padding
     byte_buffer_view mac{test_pdu1, test_pdu1.length() - security::sec_mac_len, security::sec_mac_len};
     std::fill(mac.begin(), mac.end(), 0x1);
     pdcp_rx_state init_state = {.rx_next = count, .rx_deliv = count, .rx_reord = 0};

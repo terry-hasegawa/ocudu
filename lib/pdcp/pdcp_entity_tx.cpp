@@ -733,11 +733,11 @@ security::security_status pdcp_entity_tx::apply_ciphering_and_integrity_protecti
 
   security::security_engine_tx* sec_engine = sec_engine_pool[worker_idx].get();
   if (sec_engine == nullptr) {
-    // Security is not configured. Append zero MAC for SRBs, error for DRBs.
+    // Security is not configured. Append zero MAC-I for SRBs, error for DRBs.
     if (is_srb()) {
       security::sec_mac mac = {};
       if (not buf.append(mac)) {
-        logger.log_warning("Failed to append MAC to PDU. count={}", count);
+        logger.log_warning("Failed to append MAC-I to PDU. count={}", count);
         return security::security_status::buffer_failure;
       }
       return security::security_status::success_unprotected;

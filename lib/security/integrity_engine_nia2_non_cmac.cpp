@@ -67,7 +67,7 @@ integrity_engine_nia2_non_cmac::compute_mac(security::sec_mac& mac, const byte_b
   std::copy(v.begin(), v.end(), msg.begin() + 8);
   std::fill(msg.begin() + len + 8, msg.end(), 0);
 
-  // MAC generation
+  // MAC-I generation
   const uint32_t n = std::ceil((float)(len + 8) / (float)(16));
   std::fill(tmp_mac.begin(), tmp_mac.end(), 0);
   for (uint32_t i = 0; i < (n - 1); i++) {
@@ -116,7 +116,7 @@ security_status integrity_engine_nia2_non_cmac::protect_integrity(byte_buffer& b
   }
 
   logger.debug("K_int: {}", k_128_int);
-  logger.debug("MAC: {}", mac);
+  logger.debug("MAC-I: {}", mac);
   logger.debug(buf.begin(), buf.end(), "Message output:");
 
   return security_status::success;
@@ -131,7 +131,7 @@ security_status integrity_engine_nia2_non_cmac::verify_integrity(byte_buffer& bu
   byte_buffer_view v{buf, 0, buf.length() - sec_mac_len};
   byte_buffer_view m_rx{buf, buf.length() - sec_mac_len, sec_mac_len};
 
-  // compute MAC
+  // compute MAC-I
   security::sec_mac mac    = {};
   security_status   status = compute_mac(mac, v, count);
 
@@ -140,21 +140,21 @@ security_status integrity_engine_nia2_non_cmac::verify_integrity(byte_buffer& bu
   }
   span m_exp{mac.data(), sec_mac_len};
 
-  // verify MAC
+  // verify MAC-I
   if (!std::equal(mac.begin(), mac.end(), m_rx.begin(), m_rx.end())) {
     logger.warning("Integrity check failed. count={}", count);
     logger.warning("K_int: {}", k_128_int);
-    logger.warning("MAC received: {:x}", m_rx);
-    logger.warning("MAC expected: {}", m_exp);
+    logger.warning("MAC-I received: {:x}", m_rx);
+    logger.warning("MAC-I expected: {}", m_exp);
     logger.warning(v.begin(), v.end(), "Message input:");
     return security_status::integrity_failure;
   }
   logger.debug("Integrity check passed. count={}", count);
   logger.debug("K_int: {}", k_128_int);
-  logger.debug("MAC: {}", mac);
+  logger.debug("MAC-I: {}", mac);
   logger.debug(v.begin(), v.end(), "Message input:");
 
-  // trim MAC from PDU
+  // trim MAC-I from PDU
   buf.trim_tail(sec_mac_len);
 
   return security_status::success;
