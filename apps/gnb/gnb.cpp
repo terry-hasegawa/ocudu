@@ -428,11 +428,11 @@ int main(int argc, char** argv)
   }
 
   // Create F1-U TEID allocator (CU-UP)
-  gtpu_allocator_creation_request f1u_alloc_msg = {
+  gtpu_allocator_creation_request cu_f1u_alloc_msg = {
       .max_nof_teids = o_cu_up_app_unit->get_o_cu_up_unit_config().cu_up_cfg.max_nof_ues * MAX_NOF_PDU_SESSIONS,
       .teid_release_linger_time = GTPU_DEFAULT_TEID_RELEASE_LINGER_TIME,
       .timers                   = *cu_timers};
-  std::unique_ptr<gtpu_teid_pool> f1u_teid_allocator = create_gtpu_allocator(f1u_alloc_msg);
+  std::unique_ptr<gtpu_teid_pool> cu_f1u_teid_allocator = create_gtpu_allocator(cu_f1u_alloc_msg);
 
   // Create F1-U TEID allocator (DU)
   gtpu_allocator_creation_request du_f1u_alloc_msg      = {.max_nof_teids            = MAX_NOF_DU_UES * MAX_NOF_DRBS,
@@ -496,7 +496,7 @@ int main(int argc, char** argv)
   o_cu_up_unit_dependencies o_cuup_unit_deps;
   o_cuup_unit_deps.workers                = &workers;
   o_cuup_unit_deps.e1ap_conn_client       = e1_gw.get();
-  o_cuup_unit_deps.f1u_teid_allocator     = f1u_teid_allocator.get();
+  o_cuup_unit_deps.f1u_teid_allocator     = cu_f1u_teid_allocator.get();
   o_cuup_unit_deps.f1u_gateway            = f1u_conn->get_f1u_cu_up_gateway();
   o_cuup_unit_deps.gtpu_pcap              = cu_up_dlt_pcaps.n3.get();
   o_cuup_unit_deps.timers                 = cu_timers;
