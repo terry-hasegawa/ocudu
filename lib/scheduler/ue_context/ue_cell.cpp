@@ -87,27 +87,6 @@ void ue_cell::handle_reconfiguration_request(const ue_cell_configuration& ue_cel
   get_pusch_power_controller().reconfigure(ue_cell_cfg);
 }
 
-void ue_cell::set_fallback_state(ue_pcell_state::states new_state, bool reestablished)
-{
-  ocudu_assert(pcell_state.has_value(), "ue={} rnti={}: Cannot set fallback state on non-Pcell", ue_index, rnti());
-
-  pcell_state->reestablished = reestablished;
-  if (new_state == pcell_state->state) {
-    // No state change.
-    return;
-  }
-  auto prev_state = std::exchange(pcell_state->state, new_state);
-
-  if (prev_state == ue_pcell_state::states::normal or new_state == ue_pcell_state::states::normal) {
-    // Entering/Exiting fallback mode. Cancel pending HARQs retxs.
-    harqs.cancel_retxs();
-    logger.debug("ue={} rnti={}: {} fallback mode",
-                 ue_index,
-                 rnti(),
-                 new_state != ue_pcell_state::states::normal ? "Entering" : "Leaving");
-  }
-}
-
 std::optional<dl_harq_process_handle> ue_cell::handle_dl_ack_info(slot_point                 uci_slot,
                                                                   mac_harq_ack_report_status ack_value,
                                                                   unsigned                   harq_bit_idx,
@@ -488,16 +467,66 @@ double ue_cell::get_estimated_ul_rate(const pusch_config_params& pusch_cfg, sch_
   return tbs_bytes.value();
 }
 
-bool ue_cell::handle_conres_completed()
+bool ue_cell::handle_config_event(config_event ev)
 {
-  if (pcell_state->state != ue_pcell_state::states::pending_conres) {
-    // No changes.
-    return false;
+  using states = ue_pcell_state::states;
+  ocudu_assert(pcell_state.has_value(), "ue={} rnti={}: Cannot set fallback state on non-Pcell", ue_index, rnti());
+
+  auto fsm_row = [](ue_pcell_state::states state, config_event ev_rx) -> unsigned {
+    return static_cast<unsigned>(state) + static_cast<unsigned>(ev_rx) * (static_cast<unsigned>(states::normal) + 1);
+  };
+
+  switch (fsm_row(pcell_state->state, ev)) {
+    case fsm_row(states::pending_conres, config_event::conres_ce_acked):
+      pcell_state->state        = states::pending_setup;
+      pcell_state->msg3_rx_slot = slot_point{};
+      logger.debug("ue={} rnti={}: ConRes procedure completed", ue_index, rnti());
+      return true;
+    case fsm_row(states::pending_conres, config_event::crnti_ce_received):
+      pcell_state->state = states::normal;
+      harqs.cancel_retxs();
+      logger.debug("ue={} rnti={}: ConRes procedure completed and leaving fallback mode", ue_index, rnti());
+      return true;
+    case fsm_row(states::pending_conres, config_event::conres_ce_timeout):
+      pcell_state->state = states::normal;
+      deactivate();
+      return true;
+    case fsm_row(states::pending_setup, config_event::config_applied):
+    case fsm_row(states::pending_reest_reconf, config_event::config_applied):
+    case fsm_row(states::pending_reconf, config_event::config_applied):
+      pcell_state->state = states::normal;
+      harqs.cancel_retxs();
+      logger.debug("ue={} rnti={}: Leaving fallback mode", ue_index, rnti());
+      return true;
+    case fsm_row(states::pending_conres, config_event::reest_reconf_initiated):
+    case fsm_row(states::pending_setup, config_event::reest_reconf_initiated):
+      pcell_state->state = states::pending_reest_reconf;
+      return true;
+    case fsm_row(states::pending_conres, config_event::reconf_initiated):
+    case fsm_row(states::pending_setup, config_event::reconf_initiated):
+      pcell_state->state = states::pending_reconf;
+      return true;
+    case fsm_row(states::normal, config_event::reconf_initiated):
+      pcell_state->state = states::pending_reconf;
+      harqs.cancel_retxs();
+      logger.debug("ue={} rnti={}: Entering fallback mode", ue_index, rnti());
+      return true;
+    case fsm_row(states::normal, config_event::reest_reconf_initiated):
+      pcell_state->state = states::pending_reest_reconf;
+      harqs.cancel_retxs();
+      logger.debug("ue={} rnti={}: Entering fallback mode (reestablishment)", ue_index, rnti());
+      return true;
+    case fsm_row(states::normal, config_event::config_applied):
+      return true;
+    default:
+      break;
   }
 
-  // Update state.
-  pcell_state->state        = ue_pcell_state::states::pending_setup;
-  pcell_state->msg3_rx_slot = slot_point{};
-  logger.debug("ue={} rnti={}: ConRes procedure completed", ue_index, rnti());
-  return true;
+  logger.warning("ue={} rnti={}: Invalid UE Pcell state transition: {} {}",
+                 ue_index,
+                 rnti(),
+                 static_cast<unsigned>(pcell_state->state),
+                 static_cast<unsigned>(ev));
+
+  return false;
 }

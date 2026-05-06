@@ -40,13 +40,11 @@ class ue_cell
 public:
   /// State in case carrier corresponds to UE pcell.
   struct ue_pcell_state {
-    enum class states { pending_conres, pending_setup, pending_reconf, normal };
+    enum class states { pending_conres, pending_setup, pending_reest_reconf, pending_reconf, normal };
     /// Current state of the UE configuration in the scheduler.
     /// \note When in fallback mode (!= normal mode), only the search spaces and the configuration of cellConfigCommon
     /// are used.
     states state = states::pending_conres;
-    /// Whether the UE has been reestablished.
-    bool reestablished = false;
     /// MSG3 rx-slot, if applicable (e.g. The UE was created via RA procedure).
     slot_point msg3_rx_slot;
   };
@@ -86,9 +84,6 @@ public:
   void deactivate();
 
   void handle_reconfiguration_request(const ue_cell_configuration& ue_cell_cfg);
-
-  /// Update UE fallback state.
-  void set_fallback_state(ue_pcell_state::states new_state, bool reestablished);
 
   bool is_pdcch_enabled(slot_point dl_slot) const
   {
@@ -182,9 +177,15 @@ public:
 
   bool is_pcell() const { return pcell_state.has_value(); }
 
-  /// Sets the Contention Resolution procedure state as completed.
-  /// \return True if the state changed. False otherwise.
-  bool handle_conres_completed();
+  enum class config_event {
+    conres_ce_acked,
+    conres_ce_timeout,
+    crnti_ce_received,
+    reest_reconf_initiated,
+    reconf_initiated,
+    config_applied
+  };
+  bool handle_config_event(config_event ev);
 
   /// Retrieve the current Pcell state of the UE, if applicable.
   const ue_pcell_state& get_pcell_state() const { return pcell_state.value(); }

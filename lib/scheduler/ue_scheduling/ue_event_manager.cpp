@@ -743,18 +743,15 @@ void ue_cell_event_manager::handle_crnti_ce_received(du_ue_index_t ue_index)
       return event_result::invalid_ue_cc;
     }
 
-    if (ue_cc.handle_conres_completed()) {
+    if (ue_db.crnti_ce_received(ue_index)) {
       // Contention resolution was completed.
 
       // Initiate UCI and SRS schedulers with new UE resources.
       uci_sched.add_ue(ue_cc.cfg());
       srs_sched.add_ue(ue_cc.cfg());
 
-      // Exit fallback mode, same effect as config_applied. Guard against UEs that were not in fallback.
-      if (ue_cc.is_in_fallback_mode()) {
-        ue_db.ue_config_applied(ue_index);
-        slice_sched.config_applied(ue_index);
-      }
+      // Add UE to slice scheduling.
+      slice_sched.config_applied(ue_index);
     }
 
     return event_result::processed;
@@ -930,7 +927,7 @@ void ue_cell_event_manager::handle_harq_ind(ue_cell&                            
     // ConRes + MSG4; there is only 1 HARQ process waiting for ACKs, which acks the ConRes.
     if (h_dl->empty() and ue_cc.is_pcell() and
         ue_cc.get_pcell_state().state == ue_cell::ue_pcell_state::states::pending_conres) {
-      ue_cc.handle_conres_completed();
+      ue_db.handle_conres_ce_outcome(ue_cc.ue_index, true);
     }
 
     // Notify metrics handler with HARQ outcome.

@@ -147,11 +147,11 @@ void ue_repository::add_ue(const ue_configuration&   ue_cfg,
     cell_lookup.ue_cells.push_back(&ue_cc);
   }
 
-  // Set the UE carriers as fallback or normal operation.
-  for (auto& ue_cc : cell_lookup.ue_cells) {
-    ue_cc->set_fallback_state(starts_in_fallback ? ue_cell::ue_pcell_state::states::pending_conres
-                                                 : ue_cell::ue_pcell_state::states::normal,
-                              false);
+  // UEs start in pending_conres by default. Skip to normal state if not in fallback.
+  if (not starts_in_fallback) {
+    for (auto& ue_cc : cell_lookup.ue_cells) {
+      ue_cc->handle_config_event(ue_cell::config_event::crnti_ce_received);
+    }
   }
 
   // Add UE in the repository.
@@ -171,7 +171,8 @@ void ue_repository::reconfigure_ue(const ue_configuration& new_cfg, bool reestab
   auto& lc_mng = u.logical_channels();
 
   // UE enters fallback mode when a Reconfiguration takes place.
-  u.get_pcell().set_fallback_state(ue_cell::ue_pcell_state::states::pending_reconf, reestablished_);
+  u.get_pcell().handle_config_event(reestablished_ ? ue_cell::config_event::reest_reconf_initiated
+                                                   : ue_cell::config_event::reconf_initiated);
   lc_mng.set_fallback_state(true);
 
   // Configure Logical Channels.
@@ -218,14 +219,45 @@ void ue_repository::reconfigure_ue(const ue_configuration& new_cfg, bool reestab
   u.handle_reconfiguration_request(new_cfg);
 }
 
-void ue_repository::ue_config_applied(du_ue_index_t ue_index)
+bool ue_repository::ue_config_applied(du_ue_index_t ue_index)
 {
-  ocudu_assert(ues.contains(ue_index), "ue={} : UE not found in the repository", fmt::underlying(ue_index));
+  ocudu_assert(ues.contains(ue_index), "ue={} : UE not found in the repository", ue_index);
   auto& u = ues[ue_index];
 
   // The UE gets out of fallback mode once it has applied the new configuration.
-  u.get_pcell().set_fallback_state(ue_cell::ue_pcell_state::states::normal, false);
-  u.logical_channels().set_fallback_state(false);
+  if (u.get_pcell().handle_config_event(ue_cell::config_event::config_applied)) {
+    u.logical_channels().set_fallback_state(false);
+    return true;
+  }
+  return false;
+}
+
+bool ue_repository::crnti_ce_received(du_ue_index_t ue_index)
+{
+  ocudu_assert(ues.contains(ue_index), "ue={} : UE not found in the repository", ue_index);
+  auto& u = ues[ue_index];
+  // The UE gets out of fallback mode once it has applied the new configuration.
+  if (u.get_pcell().handle_config_event(ue_cell::config_event::crnti_ce_received)) {
+    u.logical_channels().set_fallback_state(false);
+    return true;
+  }
+  return false;
+}
+
+bool ue_repository::handle_conres_ce_outcome(du_ue_index_t ue_index, bool success)
+{
+  ocudu_assert(ues.contains(ue_index), "ue={} : UE not found in the repository", ue_index);
+  auto& u = ues[ue_index];
+  // The UE gets out of fallback mode once it has applied the new configuration.
+  if (u.get_pcell().handle_config_event(success ? ue_cell::config_event::conres_ce_acked
+                                                : ue_cell::config_event::conres_ce_timeout)) {
+    if (not success) {
+      // If ConRes CE timeout, UE is deactivated.
+      u.deactivate();
+    }
+    return true;
+  }
+  return false;
 }
 
 void ue_repository::schedule_ue_rem(ue_config_delete_event ev)

@@ -54,7 +54,13 @@ public:
   void reconfigure_ue(const ue_configuration& new_cfg, bool reestablished_);
 
   /// \brief Called when UE configuration has been applied (e.g. after RRC ReconfigurationComplete).
-  void ue_config_applied(du_ue_index_t ue_index);
+  bool ue_config_applied(du_ue_index_t ue_index);
+
+  /// \brief Called when C-RNTI CE is received.
+  bool crnti_ce_received(du_ue_index_t ue_index);
+
+  /// \brief Called when C-RNTI CE is received.
+  bool handle_conres_ce_outcome(du_ue_index_t ue_index, bool success);
 
   /// \brief Initiate removal of existing UE from the repository.
   void schedule_ue_rem(ue_config_delete_event ev);

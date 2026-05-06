@@ -80,22 +80,14 @@ struct test_bench {
       return false;
     }
     ue_db.add_ue(ev.next_config(), create_req.starts_in_fallback, create_req.ul_ccch_slot_rx);
-    auto& ue = ue_db[create_req.ue_index];
-    ue.get_pcell().set_fallback_state(ue_cell::ue_pcell_state::states::pending_conres, false);
     if (not create_req.ul_ccch_slot_rx.has_value() and not create_req.starts_in_fallback) {
-      ue.get_pcell().handle_conres_completed();
+      ue_db.crnti_ce_received(create_req.ue_index);
     }
     ev.notify_completion();
     return true;
   }
 
-  void handle_conres_completed(du_ue_index_t ue_index)
-  {
-    if (not ue_db.contains(ue_index)) {
-      return;
-    }
-    ue_db[ue_index].get_pcell().handle_conres_completed();
-  }
+  void handle_conres_completed(du_ue_index_t ue_index) { ue_db.handle_conres_ce_outcome(ue_index, true); }
 };
 
 class base_fallback_tester
