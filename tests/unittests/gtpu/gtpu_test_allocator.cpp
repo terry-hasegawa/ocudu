@@ -85,7 +85,7 @@ TEST(gtpu_pool_test, request_after_few_free_succeeds)
   }
 }
 
-TEST(gtpu_pool_test, release_lingering_time)
+TEST(gtpu_pool_test, released_teid_is_lingering)
 {
   timer_manager       timers;
   gtpu_teid_pool_impl pool(MAX_TEIDS, teid_release_linger_time, timers);
@@ -138,6 +138,22 @@ TEST(gtpu_pool_test, release_lingering_time)
   // Both TEIDs are not lingering anymore.
   EXPECT_FALSE(pool.is_teid_lingering(teid1.value()));
   EXPECT_FALSE(pool.is_teid_lingering(teid2.value()));
+}
+
+TEST(gtpu_pool_test, unused_teid_is_not_lingering)
+{
+  timer_manager       timers;
+  gtpu_teid_pool_impl pool(MAX_TEIDS, teid_release_linger_time, timers);
+
+  gtpu_teid_t unused_teid = int_to_gtpu_teid(0x3);
+
+  EXPECT_FALSE(pool.is_teid_lingering(unused_teid));
+
+  // Advance clock by lingering time.
+  for (unsigned i = 0; i < teid_release_linger_time.count(); i++) {
+    timers.tick();
+    EXPECT_FALSE(pool.is_teid_lingering(unused_teid));
+  }
 }
 
 int main(int argc, char** argv)

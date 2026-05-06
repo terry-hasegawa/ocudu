@@ -14,7 +14,7 @@ namespace ocudu {
 
 struct teid_pool_item {
   bool         is_allocated = false;
-  tick_point_t released_by{0};
+  tick_point_t linger_timestamp{0};
 };
 
 class gtpu_teid_pool_impl final : public gtpu_teid_pool
@@ -74,8 +74,8 @@ public:
       logger.error("Trying to free non-allocated TEID. teid={}", teid);
       return false;
     }
-    teid_pool[teid_idx].is_allocated = false;
-    teid_pool[teid_idx].released_by  = timers.now();
+    teid_pool[teid_idx].is_allocated     = false;
+    teid_pool[teid_idx].linger_timestamp = timers.now() + teid_release_linger_time.count();
     nof_teids--;
     return true;
   }
@@ -98,10 +98,7 @@ public:
 private:
   [[nodiscard]] bool full_no_lock() const { return nof_teids >= max_nof_teids; }
 
-  bool is_teid_lingering_no_lock(const teid_pool_item teid_item)
-  {
-    return timers.now() - teid_item.released_by < teid_release_linger_time.count();
-  }
+  bool is_teid_lingering_no_lock(const teid_pool_item teid_item) { return timers.now() < teid_item.linger_timestamp; }
 
   uint32_t       next_teid_idx = 0;
   uint32_t       nof_teids     = 0;
