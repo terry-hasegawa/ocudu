@@ -1649,9 +1649,24 @@ TEST_F(fallback_sched_ue_w_out_pucch_cfg, when_reconf_is_after_reest_both_common
 {
   const auto rnti        = to_rnti(0x4601);
   const auto du_ue_index = to_du_ue_index(0);
-  ASSERT_TRUE(add_ue(rnti, du_ue_index));
+  ASSERT_TRUE(add_ue(rnti, du_ue_index, false, current_slot));
   auto& u = bench->ue_db[to_du_ue_index(0)];
   ASSERT_TRUE(u.get_pcell().cfg().init_bwp().ul.ded() != nullptr);
+
+  // Schedule and ACK ConResCE.
+  u.handle_dl_mac_ce_indication(dl_mac_ce_indication{u.ue_index, lcid_dl_sch_t{lcid_dl_sch_t::UE_CON_RES_ID}});
+  bench->fallback_sched.handle_conres_indication(u.ue_index);
+  for (unsigned i = 0; i != MAX_TEST_RUN_SLOTS; ++i) {
+    run_slot();
+    auto&       pucchs       = bench->res_grid[0].result.ul.pucchs;
+    const auto* pucch_common = std::find_if(pucchs.begin(), pucchs.end(), [rnti = u.crnti](const pucch_info& pucch) {
+      return pucch.crnti == rnti and pucch.uci_bits.harq_ack_nof_bits > 0;
+    });
+    if (pucch_common != pucchs.end()) {
+      bench->ue_db.handle_conres_ce_outcome(u.ue_index, true);
+      break;
+    }
+  }
 
   // Signal a UE reconfiguration that happens after re-establishment.
   auto ue_cfg              = sched_config_helper::create_default_sched_ue_creation_request(bench->cell_cfg.params);

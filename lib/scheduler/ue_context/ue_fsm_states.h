@@ -15,7 +15,7 @@ enum class ue_fsm_states : uint8_t {
   /// F1AP-created UE: waiting for C-RNTI MAC CE to be received from the UE.
   pending_crnti_ce,
   /// ConRes CE was ACKed but the confirmation of the RRC Setup/Reestablishment Complete not yet confirmed.
-  pending_setup,
+  pending_setup_or_reest,
   /// Awaiting RRC Reconfiguration Complete for RRC Reconfiguration right after RRC Reestablishment.
   pending_reest_reconf,
   /// Awaiting RRC Reconfiguration Complete for RRC Reconfiguration.
@@ -37,7 +37,7 @@ inline const char* to_string(ue_fsm_states state)
       return "pending_conres_ce";
     case ue_fsm_states::pending_crnti_ce:
       return "pending_crnti_ce";
-    case ue_fsm_states::pending_setup:
+    case ue_fsm_states::pending_setup_or_reest:
       return "pending_setup";
     case ue_fsm_states::pending_reest_reconf:
       return "pending_reest_reconf";

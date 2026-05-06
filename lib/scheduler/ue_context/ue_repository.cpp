@@ -351,11 +351,12 @@ bool ue_repository::update_ue_fsm(du_ue_index_t ue_index, ue_fsm_config_event ev
 
   switch (fsm_row(cur_state, ev)) {
     case fsm_row(states::pending_conres_ce, events::conres_ce_acked):
-      cur_state = states::pending_setup;
+      // ConRes CE ACKed received -> RRCSetup/RRCReestablishment needs to be sent next.
+      cur_state = states::pending_setup_or_reest;
       logger.debug("ue={} rnti={}: ConRes procedure completed", ue_index, ue_cc.rnti());
       return true;
     case fsm_row(states::pending_conres_ce, events::conres_ce_timeout):
-      // Deactivate UE.
+      // Timeout for ConRes CE reception. Deactivate UE.
       cur_state = states::normal;
       u.deactivate();
       return true;
@@ -365,7 +366,7 @@ bool ue_repository::update_ue_fsm(du_ue_index_t ue_index, ue_fsm_config_event ev
       u.logical_channels().set_fallback_state(false);
       logger.debug("ue={} rnti={}: C-RNTI CE received, leaving fallback mode", ue_index, ue_cc.rnti());
       return true;
-    case fsm_row(states::pending_setup, events::config_applied):
+    case fsm_row(states::pending_setup_or_reest, events::config_applied):
     case fsm_row(states::pending_reest_reconf, events::config_applied):
     case fsm_row(states::pending_reconf, events::config_applied):
       // The UE gets out of fallback mode once it has applied the new configuration.
@@ -374,16 +375,8 @@ bool ue_repository::update_ue_fsm(du_ue_index_t ue_index, ue_fsm_config_event ev
       u.logical_channels().set_fallback_state(false);
       logger.debug("ue={} rnti={}: Leaving fallback mode", ue_index, ue_cc.rnti());
       return true;
-    case fsm_row(states::pending_conres_ce, events::reest_reconf_initiated):
-      // TODO: Remove this transition.
-    case fsm_row(states::pending_crnti_ce, events::reest_reconf_initiated):
-      // TODO: Remove this transition.
-    case fsm_row(states::pending_conres_ce, events::reconf_initiated):
-      // TODO: Remove this transition.
-    case fsm_row(states::pending_crnti_ce, events::reconf_initiated):
-      // TODO: Remove this transition.
-    case fsm_row(states::pending_setup, events::reest_reconf_initiated):
-    case fsm_row(states::pending_setup, events::reconf_initiated):
+    case fsm_row(states::pending_setup_or_reest, events::reest_reconf_initiated):
+    case fsm_row(states::pending_setup_or_reest, events::reconf_initiated):
       cur_state = ev == events::reconf_initiated ? states::pending_reconf : states::pending_reest_reconf;
       return true;
     case fsm_row(states::normal, events::reconf_initiated):
