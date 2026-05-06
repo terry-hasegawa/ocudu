@@ -542,7 +542,7 @@ void pdcp_entity_rx::deliver_sdu(pdcp_rx_sdu_info& sdu_info)
     auto sdu_latency_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(
         std::chrono::high_resolution_clock::now() - sdu_info.time_of_arrival);
     metrics.add_sdu_latency_ns(sdu_latency_ns.count());
-    upper_dn.on_new_sdu(std::move(sdu_info.buf));
+    upper_dn.on_new_sdu(std::move(sdu_info.buf), sdu_info.integrity_verified);
   }
 }
 
@@ -804,7 +804,7 @@ void pdcp_entity_rx::handle_t_reordering_expire()
         auto sdu_latency_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(
             std::chrono::high_resolution_clock::now() - sdu_info.time_of_arrival);
         metrics.add_sdu_latency_ns(sdu_latency_ns.count());
-        upper_dn.on_new_sdu(std::move(sdu_info.buf));
+        upper_dn.on_new_sdu(std::move(sdu_info.buf), sdu_info.integrity_verified);
       }
       rx_window.remove_sn(st.rx_deliv);
     }

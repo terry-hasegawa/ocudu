@@ -23,8 +23,9 @@ public:
 
   void connect_sdap(sdap_rx_pdu_handler& sdap_handler_) { sdap_handler = &sdap_handler_; }
 
-  void on_new_sdu(byte_buffer sdu) override
+  void on_new_sdu(byte_buffer sdu, bool integrity_verified) override
   {
+    // The value of integrity_verified is unused for DRBs.
     ocudu_assert(sdap_handler != nullptr, "SDAP handler must not be nullptr");
     sdap_handler->handle_pdu(std::move(sdu));
   }

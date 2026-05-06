@@ -6,6 +6,7 @@
 
 #include "adapters/pdcp_adapters.h"
 #include "ocudu/pdcp/pdcp_factory.h"
+#include "ocudu/ran/cu_cp_types.h"
 #include "ocudu/support/executors/inline_task_executor.h"
 
 namespace ocudu::ocucp {
@@ -22,14 +23,14 @@ struct pdcp_tx_result {
 };
 
 struct pdcp_rx_result {
-  std::variant<std::vector<byte_buffer>, ngap_cause_t> result;
+  std::variant<std::vector<rrc_ue_rx_pdu_info>, ngap_cause_t> result;
 
   /// Whether the unpacking was successful.
-  bool is_successful() const { return std::holds_alternative<std::vector<byte_buffer>>(result); }
+  bool is_successful() const { return std::holds_alternative<std::vector<rrc_ue_rx_pdu_info>>(result); }
 
   ngap_cause_t get_failure_cause() const { return std::get<ngap_cause_t>(result); }
 
-  std::vector<byte_buffer> pop_pdus() { return std::move(std::get<std::vector<byte_buffer>>(result)); }
+  std::vector<rrc_ue_rx_pdu_info> pop_pdus() { return std::move(std::get<std::vector<rrc_ue_rx_pdu_info>>(result)); }
 };
 
 /// Additional context of a SRB containing notifiers to PDCP, i.e. SRB1 and SRB2.
@@ -152,10 +153,11 @@ public:
 
     pdcp_context.entity->get_rx_lower_interface().handle_pdu(std::move(buffer_chain.value()));
 
-    // Return unpacked PDCP PDUs or error with cause.
-    // Note: List of byte_buffers (in case of success) can be empty if the PDCP Rx PDU is out-of-order.
-    std::variant<std::vector<byte_buffer>, ngap_cause_t> unpacked_pdus = pdcp_context.rrc_rx_data_notifier.pop_result();
-    return pdcp_rx_result{unpacked_pdus};
+    // Return PDCP SDUs or error with cause.
+    // Note: List of rrc_ue_rx_pdu_info (in case of success) can be empty if the PDCP Rx PDU is out-of-order.
+    std::variant<std::vector<rrc_ue_rx_pdu_info>, ngap_cause_t> pdcp_sdus =
+        pdcp_context.rrc_rx_data_notifier.pop_result();
+    return pdcp_rx_result{pdcp_sdus};
   }
 
 private:

@@ -6,9 +6,9 @@
 
 using namespace ocudu;
 
-void stress_traffic_sink::on_new_sdu(byte_buffer pdu)
+void stress_traffic_sink::on_new_sdu(byte_buffer pdu, bool integrity_verified)
 {
-  logger.log_info(pdu.begin(), pdu.end(), "Received PDU ({} B)", pdu.length());
+  logger.log_info(pdu.begin(), pdu.end(), "Received PDU ({} B). verified={}", pdu.length(), integrity_verified);
 }
 
 void stress_traffic_source::send_pdu()

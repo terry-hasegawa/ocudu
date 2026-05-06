@@ -53,7 +53,7 @@ public:
   void on_status_report(byte_buffer_chain status) override { num_status_reports++; }
 
   /// PDCP RX upper layer data notifier
-  void on_new_sdu(byte_buffer sdu) override { num_sdus++; }
+  void on_new_sdu(byte_buffer sdu, bool integrity_verified) override { num_sdus++; }
 
   /// PDCP RX upper layer control notifier
   void on_integrity_failure() override { num_integrity_failures++; }

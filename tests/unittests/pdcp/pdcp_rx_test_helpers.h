@@ -89,7 +89,7 @@ public:
   }
 
   /// PDCP RX upper layer data notifier
-  void on_new_sdu(byte_buffer sdu) override
+  void on_new_sdu(byte_buffer sdu, bool integrity_verified) override
   {
     sdu_queue.push(std::move(sdu));
     sdu_counter++;

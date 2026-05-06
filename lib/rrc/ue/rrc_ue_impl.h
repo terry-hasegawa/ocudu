@@ -121,7 +121,7 @@ private:
   void stop() override;
 
   // message handlers
-  void handle_pdu(srb_id_t srb_id, byte_buffer rrc_pdu);
+  void handle_pdu(srb_id_t srb_id, byte_buffer rrc_pdu, bool integrity_verified);
   void handle_rrc_setup_request(const asn1::rrc_nr::rrc_setup_request_s& msg);
   void handle_rrc_reest_request(const asn1::rrc_nr::rrc_reest_request_s& msg);
   void handle_rrc_resume_request(const asn1::rrc_nr::rrc_resume_request_s& msg, rnti_t c_rnti);

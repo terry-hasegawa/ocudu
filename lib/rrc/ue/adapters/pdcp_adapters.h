@@ -11,13 +11,24 @@
 namespace ocudu {
 namespace ocucp {
 
+/// Helper structure used to store and pop RRC PDUs received from PDCP.
+struct rrc_ue_rx_pdu_info {
+  /// The PDU buffer.
+  byte_buffer rrc_pdu;
+  /// Indicates whether the integrity of \c rrc_pdu is verified (true) or unverified/unchecked (false).
+  bool integrity_verified = false;
+};
+
 /// Adapter between PDCP Rx data and RRC in UL direction (Rx)
 class pdcp_rrc_ue_rx_adapter : public pdcp_rx_upper_data_notifier, public pdcp_rx_upper_control_notifier
 {
 public:
   pdcp_rrc_ue_rx_adapter() = default;
 
-  void on_new_sdu(byte_buffer sdu) override { rrc_pdus.push_back(std::move(sdu)); }
+  void on_new_sdu(byte_buffer sdu, bool integrity_verified) override
+  {
+    rrc_pdus.push_back(rrc_ue_rx_pdu_info{.rrc_pdu = std::move(sdu), .integrity_verified = integrity_verified});
+  }
 
   void on_protocol_failure() override
   {
@@ -44,7 +55,7 @@ public:
     ocudulog::fetch_basic_logger("PDCP").error("Unsupported request for SRB resume from PDCP Rx");
   }
 
-  std::variant<std::vector<byte_buffer>, ngap_cause_t> pop_result()
+  std::variant<std::vector<rrc_ue_rx_pdu_info>, ngap_cause_t> pop_result()
   {
     if (cause.has_value()) {
       auto ret = *cause;
@@ -55,8 +66,8 @@ public:
   }
 
 private:
-  std::vector<byte_buffer>    rrc_pdus;
-  std::optional<ngap_cause_t> cause;
+  std::vector<rrc_ue_rx_pdu_info> rrc_pdus;
+  std::optional<ngap_cause_t>     cause;
 };
 
 /// Adapter between PDCP and RRC UE for DL PDUs

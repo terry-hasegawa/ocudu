@@ -21,7 +21,7 @@ public:
   stress_traffic_sink(uint32_t ue_id, rb_id_t rb_id) : logger("TRAFF", {(gnb_du_id_t)0, ue_id, rb_id, "UL"}) {}
 
   // pdcp_rx_upper_data_notifier interface
-  void on_new_sdu(byte_buffer pdu) final;
+  void on_new_sdu(byte_buffer pdu, bool integrity_verified) final;
 };
 
 class stress_traffic_source

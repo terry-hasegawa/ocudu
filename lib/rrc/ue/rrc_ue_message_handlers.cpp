@@ -204,7 +204,7 @@ void rrc_ue_impl::stop()
   }
 }
 
-void rrc_ue_impl::handle_pdu(const srb_id_t srb_id, byte_buffer rrc_pdu)
+void rrc_ue_impl::handle_pdu(const srb_id_t srb_id, byte_buffer rrc_pdu, bool integrity_verified)
 {
   // Parse UL-DCCH.
   ul_dcch_msg_s ul_dcch_msg;
@@ -228,9 +228,11 @@ void rrc_ue_impl::handle_pdu(const srb_id_t srb_id, byte_buffer rrc_pdu)
       handle_rrc_transaction_complete(ul_dcch_msg, ul_dcch_msg.msg.c1().rrc_setup_complete().rrc_transaction_id);
       break;
     case ul_dcch_msg_type_c::c1_c_::types_opts::security_mode_complete:
+      // TODO: Evaluate integrity_verified == true
       handle_rrc_transaction_complete(ul_dcch_msg, ul_dcch_msg.msg.c1().security_mode_complete().rrc_transaction_id);
       break;
     case ul_dcch_msg_type_c::c1_c_::types_opts::security_mode_fail:
+      // TODO: Evaluate integrity_verified == false
       handle_rrc_transaction_complete(ul_dcch_msg, ul_dcch_msg.msg.c1().security_mode_fail().rrc_transaction_id);
       break;
     case ul_dcch_msg_type_c::c1_c_::types_opts::ue_cap_info:
@@ -276,14 +278,14 @@ void rrc_ue_impl::handle_ul_dcch_pdu(const srb_id_t srb_id, byte_buffer pdcp_pdu
     return;
   }
 
-  std::vector<byte_buffer> rrc_pdus = pdcp_unpacking_result.pop_pdus();
+  std::vector<rrc_ue_rx_pdu_info> rrc_pdus = pdcp_unpacking_result.pop_pdus();
   if (rrc_pdus.empty()) {
     logger.log_debug(
         "PDCP did not provide any SDU. PDU could be out-of-order, failed integrity or be outside of the RX window");
     return;
   }
-  for (byte_buffer& pdu : rrc_pdus) {
-    handle_pdu(srb_id, std::move(pdu));
+  for (rrc_ue_rx_pdu_info& pdu_info : rrc_pdus) {
+    handle_pdu(srb_id, std::move(pdu_info.rrc_pdu), pdu_info.integrity_verified);
   }
 }
 

@@ -60,7 +60,10 @@ public:
   pdcp_rx_upper_data_notifier& operator=(pdcp_rx_upper_data_notifier&&)      = delete;
 
   /// Pass SDU to higher layers.
-  virtual void on_new_sdu(byte_buffer sdu) = 0;
+  ///
+  /// \param sdu The SDU passed to the upper layers.
+  /// \param integrity_verified Indicates whether the integrity is verified (true) or unverified/unchecked (false).
+  virtual void on_new_sdu(byte_buffer sdu, bool integrity_verified) = 0;
 };
 
 /// This interface represents the control upper layer that the
