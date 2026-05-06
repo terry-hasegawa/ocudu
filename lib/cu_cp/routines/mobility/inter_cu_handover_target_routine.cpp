@@ -5,6 +5,7 @@
 #include "inter_cu_handover_target_routine.h"
 #include "../../cell_meas_manager/cell_meas_manager_impl.h"
 #include "../pdu_session_routine_helpers.h"
+#include "ocudu/f1ap/cu_cp/f1ap_cu_ue_context_update.h"
 #include "ocudu/ran/cause/e1ap_cause_converters.h"
 
 using namespace ocudu;
@@ -122,6 +123,12 @@ void inter_cu_handover_target_routine::operator()(
         request.rrc_handover_preparation_information.copy();
     ue_context_setup_request.cu_to_du_rrc_info.ue_cap_rat_container_list = rrc_context.ue_cap_rat_container_list.copy();
 
+    // For CHO, notify the DU to expect a conditional access (C-RNTI CE) from this UE.
+    if (request.is_conditional_handover) {
+      ue_context_setup_request.conditional_inter_du_mobility_info.emplace();
+      ue_context_setup_request.conditional_inter_du_mobility_info->cho_trigger = f1ap_cho_trigger::cho_initiation;
+    }
+
     // Generate and add Measurement Configuration to set ServingCellMO. Note that the RRC UE doesn't exist yet.
     meas_cfg = cell_meas_mng.get_measurement_config(request.ue_index, request.target_cell_id.nci, std::nullopt);
     if (meas_cfg.has_value()) {
@@ -220,8 +227,17 @@ void inter_cu_handover_target_routine::operator()(
     // trigger a HandoverNotify message.
     unsigned transaction_id = 0;
 
-    // Get RRC Handover Command container.
-    handover_command_pdu = ue->get_rrc_ue()->get_rrc_handover_command(rrc_reconfig_args, transaction_id);
+    if (request.is_conditional_handover) {
+      // CHO: produce a plain RRCReconfiguration (no HandoverCommand wrapper) to be embedded
+      // in condRRCReconfig-r16 at the source. The target UE is freshly created, so the first
+      // allocated transaction ID will be 0, matching inter_cu_cho_target_execution_routine.
+      rrc_reconfig_args.is_cho_preparation = true;
+      auto ho_ctxt         = ue->get_rrc_ue()->get_rrc_ue_handover_reconfiguration_context(rrc_reconfig_args);
+      handover_command_pdu = std::move(ho_ctxt.rrc_ue_handover_reconfiguration_pdu);
+    } else {
+      // Regular inter-CU HO: get packed RRC Handover Command container.
+      handover_command_pdu = ue->get_rrc_ue()->get_rrc_handover_command(rrc_reconfig_args, transaction_id);
+    }
   }
 
   // Configure location reporting if requested in the handover request.

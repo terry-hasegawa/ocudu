@@ -43,6 +43,7 @@ struct cu_cp_inter_cu_handover_request {
   slotted_id_vector<pdu_session_id_t, cu_cp_pdu_session_res_setup_item> pdu_session_res_setup_list;
   byte_buffer                                                           rrc_handover_preparation_information;
   std::optional<location_report_request>                                location_report_request_type;
+  bool                                                                  is_conditional_handover = false;
 
   void from_ngap_handover_request(const ngap_handover_request& ng_handover_request)
   {
@@ -91,8 +92,9 @@ struct cu_cp_inter_cu_handover_request {
     location_report_request_type = xnap_request.ue_context_info_ho_request.location_report_info;
 
     // Fill XNAP handover specific fields.
-    amf_ue_id = xnap_request.ue_context_info_ho_request.amf_ue_id;
-    amf_addr  = xnap_request.ue_context_info_ho_request.amf_addr;
+    amf_ue_id               = xnap_request.ue_context_info_ho_request.amf_ue_id;
+    amf_addr                = xnap_request.ue_context_info_ho_request.amf_addr;
+    is_conditional_handover = xnap_request.is_conditional_handover;
   }
 };
 
