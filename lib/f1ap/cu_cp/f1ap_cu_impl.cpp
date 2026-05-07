@@ -387,8 +387,7 @@ void f1ap_cu_impl::handle_initial_ul_rrc_message(const asn1::f1ap::init_ul_rrc_m
 
     resume_ue_ctxt.logger.log_info("Updated resumed UE context with new DU UE F1AP ID");
 
-    // Remove the newly created context since it's a resumed UE and we should reuse the existing context.
-    ue_ctxt_list.remove_ue(ue_index);
+    // Note: We the newly created UE will be released and removed by higher layers.
   } else {
     // Add SRB notifiers to the UE context.
     ue_ctxt_list.add_srb0_rrc_notifier(resp->ue_index, resp->f1ap_srb0_notifier);
