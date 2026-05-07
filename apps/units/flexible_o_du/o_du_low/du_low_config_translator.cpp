@@ -59,6 +59,9 @@ static odu::du_low_config generate_du_low_config(const du_low_unit_config&      
   upper_phy_factory_config.ldpc_decoder_type                 = "auto";
   if (du_low.expert_phy_cfg.enable_phy_tap) {
     upper_phy_factory_config.phy_tap_arguments = du_low.expert_phy_cfg.phy_tap_arguments;
+    if (cells[0].tdd_pattern) {
+      upper_phy_factory_config.phy_tap_tdd_pattern = cells[0].tdd_pattern;
+    }
   }
 
   // The flexible PDSCH processor implementation will be used by default.

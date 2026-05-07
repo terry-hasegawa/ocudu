@@ -905,7 +905,8 @@ create_ul_processor_factory(const upper_phy_factory_configuration& config,
   // Create a PHY TAP factory if the feature is enabled.
   std::shared_ptr<phy_tap_factory> tap_factory;
   if (config.phy_tap_arguments) {
-    tap_factory = create_phy_tap_factory(config.ul_bw_rb, config.nof_rx_ports, *config.phy_tap_arguments);
+    tap_factory = create_phy_tap_factory(
+        config.ul_bw_rb, config.nof_rx_ports, config.phy_tap_tdd_pattern, *config.phy_tap_arguments);
   }
 
   // Create base factory.
@@ -1329,8 +1330,10 @@ ocudu::create_upper_phy_factory(const upper_phy_factory_configuration& factory_c
 }
 
 #ifndef OCUDU_HAS_PHY_TAP
-std::shared_ptr<phy_tap_factory>
-ocudu::create_phy_tap_factory(unsigned nof_rb, unsigned nof_ports, const std::string& processor_arguments)
+std::shared_ptr<phy_tap_factory> ocudu::create_phy_tap_factory(unsigned                               nof_rb,
+                                                               unsigned                               nof_ports,
+                                                               std::optional<tdd_ul_dl_config_common> tdd_pattern,
+                                                               const std::string& processor_arguments)
 {
   return nullptr;
 }

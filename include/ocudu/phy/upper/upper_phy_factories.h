@@ -14,6 +14,7 @@
 #include "ocudu/phy/upper/uplink_processor.h"
 #include "ocudu/phy/upper/upper_phy.h"
 #include "ocudu/phy/upper/upper_phy_execution_configuration.h"
+#include "ocudu/ran/tdd/tdd_ul_dl_config.h"
 #include <memory>
 #include <variant>
 
@@ -283,6 +284,8 @@ struct upper_phy_factory_configuration {
   bool rx_symbol_printer_prach;
   /// Enables the PHY tap plugin if present.
   std::optional<std::string> phy_tap_arguments;
+  /// Informs the PHY tap plugin if the TDD configuration if present.
+  std::optional<tdd_ul_dl_config_common> phy_tap_tdd_pattern;
   /// \brief LDPC encoder type.
   ///
   /// Use of these options:
@@ -418,7 +421,9 @@ public:
 };
 
 /// Creates a physical layer tap factory.
-std::shared_ptr<phy_tap_factory>
-create_phy_tap_factory(unsigned nof_rb, unsigned nof_ports, const std::string& processor_arguments);
+std::shared_ptr<phy_tap_factory> create_phy_tap_factory(unsigned                               nof_rb,
+                                                        unsigned                               nof_ports,
+                                                        std::optional<tdd_ul_dl_config_common> tdd_pattern,
+                                                        const std::string&                     processor_arguments);
 
 } // namespace ocudu
