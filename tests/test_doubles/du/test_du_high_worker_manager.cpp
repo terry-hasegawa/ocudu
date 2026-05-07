@@ -62,7 +62,7 @@ public:
     for (unsigned i = 0; i != cfg.nof_cell_workers; ++i) {
       cell_workers.push_back(std::make_unique<priority_task_worker>(
           "du_cell",
-          std::vector<concurrent_queue_params>({{concurrent_queue_policy::lockfree_spsc, 8},
+          std::vector<concurrent_queue_params>({{concurrent_queue_policy::lockfree_mpmc, task_worker_queue_size},
                                                 {concurrent_queue_policy::lockfree_mpmc, task_worker_queue_size}}),
           std::chrono::microseconds{10},
           cfg.use_os_thread_prio ? os_thread_realtime_priority::max() - 10 : os_thread_realtime_priority::no_realtime(),
