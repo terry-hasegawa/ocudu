@@ -220,25 +220,42 @@ void rrc_ue_impl::handle_pdu(const srb_id_t srb_id, byte_buffer rrc_pdu, bool in
   // Log Rx message.
   log_rrc_message(logger, Rx, rrc_pdu, ul_dcch_msg, srb_id, "DCCH UL");
 
+  // According to TS 38.331 Annex B1 several messages are allowed to be sent unprotected.
+  // P=+: Message can be sent unprotected prior to security activation (e.g. before or during SMC transition).
+  // P=-: Message should never be sent unprotected.
+  //
+  // AI=+: Message can be sent without integrity protection after security activation.
+  // AI=-: Message should never be sent without integrity protection after security activation.
+  // AI=NA: Message can never bet sent after security activation.
+  //
+  // AC=+: Message can be sent unciphered after security activation.
+  // AC=+: Message shoulr never be sent unciphered after security activation.
+  // AC=NA: Message can never bet sent after security activation.
+
+  // TODO: Check which messages can pass without integrity verification.
   switch (ul_dcch_msg.msg.c1().type().value) {
     case ul_dcch_msg_type_c::c1_c_::types_opts::options::ul_info_transfer:
+      // P=+ AI=- CI=-
       handle_ul_info_transfer(ul_dcch_msg.msg.c1().ul_info_transfer().crit_exts.ul_info_transfer());
       break;
     case ul_dcch_msg_type_c::c1_c_::types_opts::rrc_setup_complete:
+      // P=+ AI=NA CI=NA
       handle_rrc_transaction_complete(ul_dcch_msg, ul_dcch_msg.msg.c1().rrc_setup_complete().rrc_transaction_id);
       break;
     case ul_dcch_msg_type_c::c1_c_::types_opts::security_mode_complete:
-      // TODO: Evaluate integrity_verified == true
+      // P=- AI=NA CI=NA (Info: Integrity is applied, but no ciphering. Ciphering is activated after this procedure.)
       handle_rrc_transaction_complete(ul_dcch_msg, ul_dcch_msg.msg.c1().security_mode_complete().rrc_transaction_id);
       break;
     case ul_dcch_msg_type_c::c1_c_::types_opts::security_mode_fail:
-      // TODO: Evaluate integrity_verified == false
+      // P=+ AI=NA CI=NA (Info: Neither integrity nor ciphering applied.)
       handle_rrc_transaction_complete(ul_dcch_msg, ul_dcch_msg.msg.c1().security_mode_fail().rrc_transaction_id);
       break;
     case ul_dcch_msg_type_c::c1_c_::types_opts::ue_cap_info:
+      // P=+ AI=- CI=-
       handle_rrc_transaction_complete(ul_dcch_msg, ul_dcch_msg.msg.c1().ue_cap_info().rrc_transaction_id);
       break;
     case ul_dcch_msg_type_c::c1_c_::types_opts::rrc_recfg_complete:
+      // P=+ AI=- CI=- (Info: Unprotected in response to RRCConnectionReconfiguration prior to security activation.)
       handle_rrc_transaction_complete(ul_dcch_msg, ul_dcch_msg.msg.c1().rrc_recfg_complete().rrc_transaction_id);
       if (context.transfer_context.has_value() && context.transfer_context.value().is_inter_cu_handover) {
         context.transfer_context.value().is_inter_cu_handover = false;
@@ -246,12 +263,15 @@ void rrc_ue_impl::handle_pdu(const srb_id_t srb_id, byte_buffer rrc_pdu, bool in
       }
       break;
     case ul_dcch_msg_type_c::c1_c_::types_opts::rrc_reest_complete:
+      // P=- AI=- CI=-
       handle_rrc_transaction_complete(ul_dcch_msg, ul_dcch_msg.msg.c1().rrc_reest_complete().rrc_transaction_id);
       break;
     case ul_dcch_msg_type_c::c1_c_::types_opts::rrc_resume_complete:
+      // P=- AI=- CI=-
       handle_rrc_transaction_complete(ul_dcch_msg, ul_dcch_msg.msg.c1().rrc_resume_complete().rrc_transaction_id);
       break;
     case ul_dcch_msg_type_c::c1_c_::types_opts::meas_report:
+      // P=- AI=- CI=- (Info: Never sent unprotected to protect privacy of the UE.)
       handle_measurement_report(ul_dcch_msg.msg.c1().meas_report());
       break;
     default:
