@@ -277,7 +277,7 @@ bool ue_fallback_scheduler::schedule_dl_new_tx(cell_resource_allocator& res_allo
     const bool srb0_or_srb1_only =
         alloc_type != dl_new_tx_alloc_type::conres_only and not u.logical_channels().is_con_res_id_pending();
     if (srb0_or_srb1_only and (u.get_pcell().get_pcell_state().state == ue_fsm_states::pending_conres_ce or
-                               u.get_pcell().get_pcell_state().state == ue_fsm_states::pending_crnti_ce)) {
+                               u.get_pcell().get_pcell_state().state == ue_fsm_states::pending_conres_crnti_ce)) {
       // If ConRes is not completed, SRB0/SRB1 cannot be scheduled. Any MAC PDU without the ConRes MAC CE would cause
       // Contention Resolution to fail (TS 38.331, Section 5.1.5).
       // F1AP-created UEs can also only start to transmit after C-RNTI CE is received.

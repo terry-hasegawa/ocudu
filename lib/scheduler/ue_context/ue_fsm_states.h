@@ -12,8 +12,8 @@ namespace ocudu {
 enum class ue_fsm_states : uint8_t {
   /// RACH-created UE: waiting for ConRes MAC CE to be ACKed by the UE.
   pending_conres_ce,
-  /// F1AP-created UE: waiting for C-RNTI MAC CE to be received from the UE.
-  pending_crnti_ce,
+  /// F1AP-created UE: waiting for C-RNTI MAC CE to be received to complete contention resolution.
+  pending_conres_crnti_ce,
   /// ConRes CE was ACKed but the confirmation of the RRC Setup/Reestablishment Complete not yet confirmed.
   pending_setup_or_reest,
   /// Awaiting RRC Reconfiguration Complete for RRC Reconfiguration right after RRC Reestablishment.
@@ -35,7 +35,7 @@ inline const char* to_string(ue_fsm_states state)
   switch (state) {
     case ue_fsm_states::pending_conres_ce:
       return "pending_conres_ce";
-    case ue_fsm_states::pending_crnti_ce:
+    case ue_fsm_states::pending_conres_crnti_ce:
       return "pending_crnti_ce";
     case ue_fsm_states::pending_setup_or_reest:
       return "pending_setup";

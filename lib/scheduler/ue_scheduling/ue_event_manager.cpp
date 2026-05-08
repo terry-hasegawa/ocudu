@@ -273,7 +273,7 @@ void ue_cell_event_manager::handle_ue_creation(ue_config_update_event ev)
     ue_db.add_ue(ev.next_config(), is_in_fallback, ev.get_ul_ccch_slot_rx());
 
     auto& ue_cc = ue_db[ue_index].get_pcell();
-    if (ue_cc.get_pcell_state().state != ue_fsm_states::pending_crnti_ce) {
+    if (ue_cc.get_pcell_state().state != ue_fsm_states::pending_conres_crnti_ce) {
       // In case the UE is expecting a C-RNTI CE, defer activation of UCI/SR scheduling.
       uci_sched.add_ue(ue_cc.cfg());
       srs_sched.add_ue(ue_cc.cfg());
@@ -312,7 +312,7 @@ void ue_cell_event_manager::handle_ue_reconfiguration(ue_config_update_event ev)
     // Note: Carrier aggregation not yet supported.
     auto& ue_cc = u.get_cell(SERVING_PCELL_IDX);
 
-    if (ue_cc.get_pcell_state().state != ue_fsm_states::pending_crnti_ce) {
+    if (ue_cc.get_pcell_state().state != ue_fsm_states::pending_conres_crnti_ce) {
       uci_sched.reconf_ue(ev.next_config().ue_cell_cfg(ue_cc.cell_index), ue_cc.cfg());
       srs_sched.reconf_ue(ev.next_config().ue_cell_cfg(ue_cc.cell_index), ue_cc.cfg());
     }
@@ -350,10 +350,9 @@ void ue_cell_event_manager::handle_ue_deletion(ue_config_delete_event ev)
     const rnti_t rnti = u.crnti;
 
     const auto& ue_cc = u.get_pcell();
-    if (ue_cc.get_pcell_state().state != ue_fsm_states::pending_crnti_ce) {
-      // Update UCI scheduling by removing existing UE UCI resources.
+    if (ue_cc.get_pcell_state().state != ue_fsm_states::pending_conres_crnti_ce) {
+      // F1AP-created UE was only added to UCI/SRS scheduling after the reception of C-RNTI CE.
       uci_sched.rem_ue(u.get_pcell().cfg());
-      // Update SRS scheduling by removing existing UE SRS resources.
       srs_sched.rem_ue(u.get_pcell().cfg());
     }
     // Schedule removal of UE from slice scheduler.

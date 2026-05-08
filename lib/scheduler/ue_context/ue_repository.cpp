@@ -124,7 +124,8 @@ void ue_repository::add_ue(const ue_configuration&   ue_cfg,
 
   ue_fsm_states init_state = ue_fsm_states::normal;
   if (starts_in_fallback) {
-    init_state = ul_ccch_slot_rx.has_value() ? ue_fsm_states::pending_conres_ce : ue_fsm_states::pending_crnti_ce;
+    init_state =
+        ul_ccch_slot_rx.has_value() ? ue_fsm_states::pending_conres_ce : ue_fsm_states::pending_conres_crnti_ce;
   }
   ue_fsms.emplace(ue_index, ue_pcell_state{init_state, ul_ccch_slot_rx.value_or(slot_point{})});
 
@@ -361,15 +362,15 @@ bool ue_repository::update_ue_fsm(du_ue_index_t ue_index, ue_fsm_config_event ev
       cur_state = states::normal;
       u.deactivate();
       return true;
-    case fsm_row(states::pending_crnti_ce, events::crnti_ce_received):
+    case fsm_row(states::pending_conres_crnti_ce, events::crnti_ce_received):
       // C-RNTI CE received -> leave fallback mode.
       cur_state = states::normal;
       ue_cc.harqs.cancel_retxs();
       u.logical_channels().set_fallback_state(false);
       logger.debug("ue={} rnti={}: C-RNTI CE received, leaving fallback mode", ue_index, ue_cc.rnti());
       return true;
-    case fsm_row(states::pending_crnti_ce, events::reconf_initiated):
-    case fsm_row(states::pending_crnti_ce, events::config_applied):
+    case fsm_row(states::pending_conres_crnti_ce, events::reconf_initiated):
+    case fsm_row(states::pending_conres_crnti_ce, events::config_applied):
       // Any additional reconfiguration while awaiting C-RNTI CE has no effect.
       return false;
     case fsm_row(states::pending_setup_or_reest, events::config_applied):
@@ -392,9 +393,16 @@ bool ue_repository::update_ue_fsm(du_ue_index_t ue_index, ue_fsm_config_event ev
       ue_cc.harqs.cancel_retxs();
       logger.debug("ue={} rnti={}: Entering fallback mode", ue_index, ue_cc.rnti());
       return true;
+    case fsm_row(states::pending_setup_or_reest, events::crnti_ce_received):
+    case fsm_row(states::pending_reest_reconf, events::crnti_ce_received):
+    case fsm_row(states::pending_reconf, events::crnti_ce_received):
+    case fsm_row(states::normal, events::crnti_ce_received):
+      // Do nothing. C-RNTI CE in this case is not used for contention resolution.
+      return false;
+    case fsm_row(states::pending_reconf, events::reconf_initiated):
     case fsm_row(states::normal, events::config_applied):
       // Do nothing.
-      return true;
+      return false;
     default:
       break;
   }
