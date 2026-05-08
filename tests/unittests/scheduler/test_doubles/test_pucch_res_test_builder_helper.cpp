@@ -78,8 +78,8 @@ TEST_F(sched_pucch_res_builder_tester, when_ues_are_added_their_cfg_have_differe
     const auto& ue_pucch_cfg = ue->ue_cell_cfg.serv_cell_cfg.ul_config.value().init_ul_bwp.pucch_cfg.value();
     // Each UE should have 2 PUCCH resource sets configured
     ASSERT_EQ(ue_pucch_cfg.pucch_res_set.size(), 2);
-    ASSERT_EQ(ue_pucch_cfg.pucch_res_set[0].pucch_res_id_list.size(), pucch_params.res_set_0_size);
-    ASSERT_EQ(ue_pucch_cfg.pucch_res_set[1].pucch_res_id_list.size(), pucch_params.res_set_1_size);
+    ASSERT_EQ(ue_pucch_cfg.pucch_res_set[0].pucch_res_id_list.size(), pucch_params.res_set_size);
+    ASSERT_EQ(ue_pucch_cfg.pucch_res_set[1].pucch_res_id_list.size(), pucch_params.res_set_size);
     // Make sure UE has all PUCCH resources with different cell_res_id.
     {
       std::set<unsigned> pucch_res_idxs;

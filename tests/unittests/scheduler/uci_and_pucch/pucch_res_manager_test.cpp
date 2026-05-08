@@ -173,8 +173,8 @@ TEST_F(test_pucch_resource_manager, common_res_available_reserve_and_check)
 
 TEST_F(test_pucch_resource_manager, reserve_harq_set_0_until_exhausted)
 {
-  const unsigned res_set_0_size = pucch_cfg_0().pucch_res_set[0].pucch_res_id_list.size();
-  for (unsigned i = 0; i != res_set_0_size; ++i) {
+  const unsigned res_set_size = pucch_cfg_0().pucch_res_set[0].pucch_res_id_list.size();
+  for (unsigned i = 0; i != res_set_size; ++i) {
     pucch_resource_manager::ue_reservation_guard guard(
         &t_bench.res_manager, t_bench.slot_alloc, to_rnti(0x4601 + i), ue_cfg_0());
     const auto record = guard.reserve_harq_set_0_resource_next_available();
@@ -187,7 +187,7 @@ TEST_F(test_pucch_resource_manager, reserve_harq_set_0_until_exhausted)
   }
 
   pucch_resource_manager::ue_reservation_guard guard(
-      &t_bench.res_manager, t_bench.slot_alloc, to_rnti(0x4601 + res_set_0_size), ue_cfg_0());
+      &t_bench.res_manager, t_bench.slot_alloc, to_rnti(0x4601 + res_set_size), ue_cfg_0());
   const pucch_harq_resource_alloc_record record = guard.reserve_harq_set_0_resource_next_available();
   ASSERT_EQ(nullptr, record.resource);
 }
@@ -248,8 +248,8 @@ TEST_F(test_pucch_resource_manager, allocate_and_release_multiple_ues)
 
 TEST_F(test_pucch_resource_manager, reserve_harq_set_1_until_exhausted)
 {
-  const unsigned res_set_1_size = pucch_cfg_0().pucch_res_set[1].pucch_res_id_list.size();
-  for (unsigned i = 0; i != res_set_1_size; ++i) {
+  const unsigned res_set_size = pucch_cfg_0().pucch_res_set[1].pucch_res_id_list.size();
+  for (unsigned i = 0; i != res_set_size; ++i) {
     pucch_resource_manager::ue_reservation_guard guard(
         &t_bench.res_manager, t_bench.slot_alloc, to_rnti(0x4601 + i), ue_cfg_0());
     const auto record = guard.reserve_harq_set_1_resource_next_available();
@@ -261,7 +261,7 @@ TEST_F(test_pucch_resource_manager, reserve_harq_set_1_until_exhausted)
   }
 
   pucch_resource_manager::ue_reservation_guard guard(
-      &t_bench.res_manager, t_bench.slot_alloc, to_rnti(0x4601 + res_set_1_size), ue_cfg_0());
+      &t_bench.res_manager, t_bench.slot_alloc, to_rnti(0x4601 + res_set_size), ue_cfg_0());
   const pucch_harq_resource_alloc_record record = guard.reserve_harq_set_1_resource_next_available();
   ASSERT_EQ(nullptr, record.resource);
 }
@@ -570,8 +570,7 @@ protected:
   void create_ues(unsigned nof_ues, unsigned nof_res_per_ue_, unsigned nof_configurations)
   {
     t_bench.emplace(pucch_resource_builder_params{
-        .res_set_0_size           = nof_res_per_ue_,
-        .res_set_1_size           = nof_res_per_ue_,
+        .res_set_size             = nof_res_per_ue_,
         .nof_cell_res_set_configs = nof_configurations,
         .nof_cell_sr_resources    = nof_configurations,
         .nof_cell_csi_resources   = nof_configurations,

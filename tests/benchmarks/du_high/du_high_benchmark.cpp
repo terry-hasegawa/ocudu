@@ -616,8 +616,7 @@ public:
     auto& pucch_resources                       = cfg.ran.cells[0].ran.init_bwp.pucch.resources;
     pucch_resources.nof_cell_sr_resources       = 80;
     pucch_resources.nof_cell_csi_resources      = 80;
-    pucch_resources.res_set_1_size              = 8;
-    pucch_resources.res_set_0_size              = 8;
+    pucch_resources.res_set_size                = 8;
     pucch_resources.nof_cell_res_set_configs    = 2;
     auto& f1_params                             = pucch_resources.f0_or_f1_params.emplace<pucch_f1_params>();
     f1_params.nof_cyc_shifts                    = pucch_nof_cyclic_shifts::twelve;

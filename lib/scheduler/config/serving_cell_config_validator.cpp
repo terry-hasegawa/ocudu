@@ -240,11 +240,10 @@ validator_result config_validators::validate_pucch_cfg(const serving_cell_config
   const bool using_02 =
       res_params.format_01() == pucch_format::FORMAT_0 and res_params.format_234() == pucch_format::FORMAT_2;
   if (using_02) {
-    VERIFY(res_set_0.pucch_res_id_list[res_params.res_set_0_size.value()] == sr_res_id,
+    VERIFY(res_set_0.pucch_res_id_list[res_params.res_set_size.value()] == sr_res_id,
            "With Format 0, the SR resource must be present in Resource Set ID 0");
 
-    VERIFY(res_set_1.pucch_res_id_list[res_params.res_set_0_size.value()].ue_res_id ==
-               res_params.get_sr_f2_ue_res_idx(),
+    VERIFY(res_set_1.pucch_res_id_list[res_params.res_set_size.value()].ue_res_id == res_params.get_sr_f2_ue_res_idx(),
            "With Format 0, the SR_F2 resource must be present in Resource Set ID 1");
   }
 
@@ -282,11 +281,11 @@ validator_result config_validators::validate_pucch_cfg(const serving_cell_config
            res_params.max_payload_234());
 
     if (using_02) {
-      VERIFY(res_set_0.pucch_res_id_list[res_params.res_set_0_size.value() + 1].ue_res_id ==
+      VERIFY(res_set_0.pucch_res_id_list[res_params.res_set_size.value() + 1].ue_res_id ==
                  res_params.get_csi_f0_ue_res_idx(),
              "With Format 0, the CSI_F0 resource must be present in Resource Set ID 0");
 
-      VERIFY(res_set_1.pucch_res_id_list[res_params.res_set_0_size.value() + 1] == csi_res_id,
+      VERIFY(res_set_1.pucch_res_id_list[res_params.res_set_size.value() + 1] == csi_res_id,
              "With Format 0, the CSI resource must be present in Resource Set ID 1");
     }
   }

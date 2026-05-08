@@ -85,8 +85,7 @@ TEST(pucch_collision_manager_test, check_mux_regions_count_for_common_resources)
 TEST(pucch_collision_manager_test, handles_max_dedicated_resources_with_mux_regions)
 {
   auto        cfg_pool   = make_test_cell_config_pool(pucch_resource_builder_params{
-               .res_set_0_size           = 8,
-               .res_set_1_size           = 8,
+               .res_set_size             = 8,
                .nof_cell_res_set_configs = 8,
                .nof_cell_sr_resources    = 96,
                .nof_cell_csi_resources   = 32,

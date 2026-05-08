@@ -55,7 +55,7 @@ pucch_config config_helpers::build_pucch_config(const ran_cell_config&        ce
                         cell_cfg.init_bwp.pucch.resources.format_234() == pucch_format::FORMAT_2;
 
   // Add Resource Set ID 0 resources for HARQ-ACK.
-  for (unsigned r_pucch = 0; r_pucch != res_params.res_set_0_size.value(); ++r_pucch) {
+  for (unsigned r_pucch = 0; r_pucch != res_params.res_set_size.value(); ++r_pucch) {
     const auto& cell_res = cell_res_list[res_params.get_res_set_cell_res_idx<0>(ue_pucch_cfg.res_set_cfg_id, r_pucch)];
 
     // Add resource to both the PUCCH resource list and Resource Set ID 0.
@@ -73,7 +73,7 @@ pucch_config config_helpers::build_pucch_config(const ran_cell_config&        ce
                                                               .pucch_res_id = sr_res.res_id});
 
   // Add Resource Set ID 1 resources for HARQ-ACK.
-  for (unsigned r_pucch = 0; r_pucch != res_params.res_set_1_size.value(); ++r_pucch) {
+  for (unsigned r_pucch = 0; r_pucch != res_params.res_set_size.value(); ++r_pucch) {
     const auto& res = cell_res_list[res_params.get_res_set_cell_res_idx<1>(ue_pucch_cfg.res_set_cfg_id, r_pucch)];
 
     // Add resource to both the PUCCH resource list and Resource Set ID 1.

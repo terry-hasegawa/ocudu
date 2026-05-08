@@ -924,24 +924,24 @@ static unsigned get_pucch_resource_ind_f0_sr_csi(pucch_uci_bits bits, const pucc
   // With Format 0, with HARQ-ACK bits <= 2, pick a resource from PUCCH resource set 0.
 
   if (bits.harq_ack_nof_bits <= 2U) {
-    // At position res_set_0_size the resource coincides with the SR resource.
+    // At position res_set_size the resource coincides with the SR resource.
     if (bits.sr_bits != sr_nof_bits::no_sr) {
-      return params.res_set_0_size.value();
+      return params.res_set_size.value();
     }
     // NOTE: Either CSI or SR bits are non-zero, but not both.
-    // At position res_set_0_size + 1 the resource is of Format 0, but set on the same PRBs/symbols as the CSI resource.
-    return params.res_set_0_size.value() + 1;
+    // At position res_set_size + 1 the resource is of Format 0, but set on the same PRBs/symbols as the CSI resource.
+    return params.res_set_size.value() + 1;
   }
 
   // This if for bits.harq_ack_nof_bits > 2U.
 
-  // At position res_set_1_size the resource is of Format 2, but set on the same PRBs/symbols as the SR resource.
+  // At position res_set_size the resource is of Format 2, but set on the same PRBs/symbols as the SR resource.
   if (bits.sr_bits != sr_nof_bits::no_sr) {
-    return params.res_set_1_size.value();
+    return params.res_set_size.value();
   }
   // NOTE: Either CSI or SR bits are non-zero, but not both.
-  // At position res_set_1_size + 1 the resource coincides with the CSI resource.
-  return params.res_set_1_size.value() + 1U;
+  // At position res_set_size + 1 the resource coincides with the CSI resource.
+  return params.res_set_size.value() + 1U;
 }
 
 std::optional<pucch_allocator_impl::pucch_grant_list>

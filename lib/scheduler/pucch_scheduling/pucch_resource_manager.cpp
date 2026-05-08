@@ -248,8 +248,7 @@ pucch_harq_resource_alloc_record pucch_resource_manager::ue_reservation_guard::r
   // If a resource is already allocated to this RNTI, use it.
   std::optional<unsigned> available_res;
   const auto              res_set_cfg_id = ue_bwp_cfg.pucch.res_set_cfg_id;
-  const unsigned          res_set_size =
-      ResourceSetId == 0 ? res_params.res_set_0_size.value() : res_params.res_set_1_size.value();
+  const unsigned          res_set_size   = res_params.res_set_size.value();
   for (uint8_t r_pucch = 0; r_pucch != res_set_size; ++r_pucch) {
     unsigned cell_res_id = res_params.get_res_set_cell_res_idx<ResourceSetId>(res_set_cfg_id, r_pucch);
 
@@ -291,11 +290,10 @@ const pucch_resource*
 pucch_resource_manager::ue_reservation_guard::reserve_harq_resource_by_res_indicator(unsigned d_pri)
 {
   ocudu_assert(parent != nullptr, "Trying to make a new PUCCH resource reservation after commit has been called");
-  const unsigned res_set_size =
-      ResourceSetId == 0 ? res_params.res_set_0_size.value() : res_params.res_set_1_size.value();
-  const unsigned max_pri = parent->cell_cfg.is_pucch_f0_and_f2()
-                               ? res_set_size + (ue_bwp_cfg.periodic_csi_report.has_value() ? 2U : 1U)
-                               : res_set_size;
+  const unsigned res_set_size = res_params.res_set_size.value();
+  const unsigned max_pri      = parent->cell_cfg.is_pucch_f0_and_f2()
+                                    ? res_set_size + (ue_bwp_cfg.periodic_csi_report.has_value() ? 2U : 1U)
+                                    : res_set_size;
   // Make sure the resource indicator points to a valid resource.
   if (d_pri >= max_pri) {
     return nullptr;
@@ -354,8 +352,7 @@ bool pucch_resource_manager::ue_reservation_guard::release_harq_resource()
 {
   ocudu_assert(parent != nullptr, "Trying to release a PUCCH resource after commit has been called");
 
-  const unsigned res_set_size =
-      ResourceSetId == 0 ? res_params.res_set_0_size.value() : res_params.res_set_1_size.value();
+  const unsigned res_set_size = res_params.res_set_size.value();
 
   // Get resource list of wanted slot.
   slot_context& ctx = parent->slots_ctx[sl.count()];

@@ -539,13 +539,13 @@ make_csi_report_configs(const csi_meas_config_builder_params&                   
     report_cfg_type.report_slot_offset = *params.csi_params.csi_report_slot_offset;
     pucch_resource_builder_params pucch_builder_params{};
     const unsigned                cell_res_id =
-        ((pucch_builder_params.res_set_0_size.value() + pucch_builder_params.res_set_1_size.value()) *
+        ((pucch_builder_params.res_set_size.value() + pucch_builder_params.res_set_size.value()) *
          pucch_builder_params.nof_cell_res_set_configs) +
         pucch_builder_params.nof_cell_sr_resources;
 
     static constexpr unsigned nof_ue_sr_resources = 1U;
     const unsigned            ue_res_id =
-        pucch_builder_params.res_set_0_size.value() + nof_ue_sr_resources + pucch_builder_params.res_set_1_size.value();
+        pucch_builder_params.res_set_size.value() + nof_ue_sr_resources + pucch_builder_params.res_set_size.value();
     report_cfg_type.pucch_csi_res_list = {csi_report_config::pucch_csi_resource{
         .ul_bwp = to_bwp_id(0), .pucch_res_id = pucch_res_id_t{cell_res_id, ue_res_id}}};
     reps[0].report_cfg_type            = report_cfg_type;

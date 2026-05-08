@@ -20,7 +20,7 @@ class pucch_alloc_ded_resources_test : public ::testing::TestWithParam<pucch_for
 public:
   pucch_alloc_ded_resources_test() :
     pucch_allocator_base_test({.pucch_ded_params = [format = GetParam()]() -> pucch_resource_builder_params {
-      pucch_resource_builder_params params{.res_set_0_size = 3};
+      pucch_resource_builder_params params{.res_set_size = 3};
       switch (format) {
         case pucch_format::FORMAT_2:
           params.f2_or_f3_or_f4_params.emplace<pucch_f2_params>();
@@ -327,8 +327,8 @@ TEST_P(pucch_alloc_ded_resources_test, alloc_ded_harq_ack_with_existing_sr_succe
 TEST_P(pucch_alloc_ded_resources_test, alloc_ded_harq_ack_succeeds_until_no_free_res_set_0_resources)
 {
   // Fill all resources in Resource Set ID 0 with UEs having their own HARQ grants.
-  const unsigned res_set_0_size = t_bench.params.pucch_ded_params.res_set_0_size.value();
-  for (unsigned i = 0; i != res_set_0_size; ++i) {
+  const unsigned res_set_size = t_bench.params.pucch_ded_params.res_set_size.value();
+  for (unsigned i = 0; i != res_set_size; ++i) {
     t_bench.add_ue();
     auto pri = alloc_ded_harq_ack(t_bench.get_ue(t_bench.last_added_ue_idx));
     ASSERT_TRUE(pri.has_value());
@@ -340,7 +340,7 @@ TEST_P(pucch_alloc_ded_resources_test, alloc_ded_harq_ack_succeeds_until_no_free
   // Try to allocate HARQ for the main UE, which should fail as there are no more free resources in Resource Set ID 0.
   auto pri = alloc_ded_harq_ack(t_bench.get_main_ue());
   ASSERT_FALSE(pri.has_value());
-  ASSERT_EQ(res_set_0_size, default_slot_grid.result.ul.pucchs.size());
+  ASSERT_EQ(res_set_size, default_slot_grid.result.ul.pucchs.size());
 }
 
 ///////  Test HARQ-ACK allocation on ded. resources - Resource Set ID 1   ///////
@@ -568,56 +568,56 @@ TEST_P(pucch_alloc_ded_resources_test, alloc_common_and_ded_harq_ack_with_existi
 
 TEST_P(pucch_alloc_ded_resources_test, alloc_common_and_ded_harq_ack_fails_when_no_free_res_set_0_resources)
 {
-  const unsigned res_set_0_size = t_bench.params.pucch_ded_params.res_set_0_size.value();
-  for (unsigned i = 0; i != res_set_0_size; ++i) {
+  const unsigned res_set_size = t_bench.params.pucch_ded_params.res_set_size.value();
+  for (unsigned i = 0; i != res_set_size; ++i) {
     t_bench.add_ue();
     alloc_ded_harq_ack(t_bench.get_ue(t_bench.last_added_ue_idx));
   }
-  ASSERT_EQ(res_set_0_size, default_slot_grid.result.ul.pucchs.size());
+  ASSERT_EQ(res_set_size, default_slot_grid.result.ul.pucchs.size());
 
   // Try to allocate common + dedicated resources.
   // This should fail as all PUCCH resources from Resource Set 0 are occupied.
   auto pri = alloc_common_and_ded_harq_ack(t_bench.get_main_ue());
   ASSERT_FALSE(pri.has_value());
-  ASSERT_EQ(res_set_0_size, default_slot_grid.result.ul.pucchs.size());
+  ASSERT_EQ(res_set_size, default_slot_grid.result.ul.pucchs.size());
 }
 
 TEST_P(pucch_alloc_ded_resources_test,
        alloc_common_and_ded_harq_ack_fails_when_existing_sr_and_no_free_res_set_0_resources)
 {
   alloc_sr_opportunity(t_bench.get_main_ue());
-  const unsigned res_set_0_size = t_bench.params.pucch_ded_params.res_set_0_size.value();
-  for (unsigned i = 0; i != res_set_0_size; ++i) {
+  const unsigned res_set_size = t_bench.params.pucch_ded_params.res_set_size.value();
+  for (unsigned i = 0; i != res_set_size; ++i) {
     t_bench.add_ue();
     alloc_ded_harq_ack(t_bench.get_ue(t_bench.last_added_ue_idx));
   }
-  ASSERT_EQ(res_set_0_size + 1, default_slot_grid.result.ul.pucchs.size());
+  ASSERT_EQ(res_set_size + 1, default_slot_grid.result.ul.pucchs.size());
 
   // Try to allocate common + dedicated resources.
   // This should fail as all PUCCH resources from Resource Set 0 are occupied.
   auto pri = alloc_common_and_ded_harq_ack(t_bench.get_main_ue());
   ASSERT_FALSE(pri.has_value());
-  ASSERT_EQ(res_set_0_size + 1, default_slot_grid.result.ul.pucchs.size());
+  ASSERT_EQ(res_set_size + 1, default_slot_grid.result.ul.pucchs.size());
 }
 
 TEST_P(pucch_alloc_ded_resources_test,
        alloc_common_and_ded_harq_ack_fails_when_existing_csi_and_no_free_res_set_1_resources)
 {
   alloc_csi_opportunity(t_bench.get_main_ue(), default_csi_part1_bits);
-  const unsigned res_set_1_size = t_bench.params.pucch_ded_params.res_set_1_size.value();
-  for (unsigned i = 0; i != res_set_1_size; ++i) {
+  const unsigned res_set_size = t_bench.params.pucch_ded_params.res_set_size.value();
+  for (unsigned i = 0; i != res_set_size; ++i) {
     t_bench.add_ue();
     alloc_ded_harq_ack(t_bench.get_ue(t_bench.last_added_ue_idx));
     alloc_ded_harq_ack(t_bench.get_ue(t_bench.last_added_ue_idx));
     alloc_ded_harq_ack(t_bench.get_ue(t_bench.last_added_ue_idx));
   }
-  ASSERT_EQ(res_set_1_size + 1, default_slot_grid.result.ul.pucchs.size());
+  ASSERT_EQ(res_set_size + 1, default_slot_grid.result.ul.pucchs.size());
 
   // Try to allocate common + dedicated resources.
   // This should fail as all PUCCH resources from Resource Set 1 are occupied.
   auto pri = alloc_common_and_ded_harq_ack(t_bench.get_main_ue());
   ASSERT_FALSE(pri.has_value());
-  ASSERT_EQ(res_set_1_size + 1, default_slot_grid.result.ul.pucchs.size());
+  ASSERT_EQ(res_set_size + 1, default_slot_grid.result.ul.pucchs.size());
 }
 
 TEST_P(pucch_alloc_ded_resources_test, if_ded_common_alloc_fails_no_harq_grants_should_be_kept_in_the_scheduler)
@@ -641,7 +641,7 @@ TEST_P(pucch_alloc_ded_resources_test, if_ded_common_alloc_fails_no_harq_grants_
   // if the allocator didn't clean the HARQ grants, the allocation would fail because it finds a dedicated HARQ grant
   // for the UE (which is not allowed the allocation of common + dedicated resources).
 
-  for (unsigned i = 0; i != t_bench.params.pucch_ded_params.res_set_0_size.value(); ++i) {
+  for (unsigned i = 0; i != t_bench.params.pucch_ded_params.res_set_size.value(); ++i) {
     t_bench.add_ue();
     alloc_ded_harq_ack(t_bench.get_ue(t_bench.last_added_ue_idx));
     alloc_ded_harq_ack(t_bench.get_ue(t_bench.last_added_ue_idx));
@@ -675,8 +675,8 @@ TEST_P(pucch_alloc_ded_resources_test, alloc_ded_harq_ack_fails_when_existing_co
 TEST_P(pucch_alloc_ded_resources_test, alloc_ded_harq_ack_succeeds_until_no_free_res_set_1_resources)
 {
   // Fill all resources in Resource Set ID 1 with UEs having their own HARQ grants.
-  const unsigned res_set_1_size = t_bench.params.pucch_ded_params.res_set_1_size.value();
-  for (unsigned i = 0; i != res_set_1_size; ++i) {
+  const unsigned res_set_size = t_bench.params.pucch_ded_params.res_set_size.value();
+  for (unsigned i = 0; i != res_set_size; ++i) {
     t_bench.add_ue();
     alloc_ded_harq_ack(t_bench.get_ue(t_bench.last_added_ue_idx));
     alloc_ded_harq_ack(t_bench.get_ue(t_bench.last_added_ue_idx));
@@ -694,7 +694,7 @@ TEST_P(pucch_alloc_ded_resources_test, alloc_ded_harq_ack_succeeds_until_no_free
   ASSERT_FALSE(pri.has_value());
 
   // The main UE will still have a HARQ grant allocated, but from Resource Set ID 0.
-  ASSERT_EQ(res_set_1_size + 1, default_slot_grid.result.ul.pucchs.size());
+  ASSERT_EQ(res_set_size + 1, default_slot_grid.result.ul.pucchs.size());
   ASSERT_EQ(pucch_format::FORMAT_1, default_slot_grid.result.ul.pucchs.back().format());
 }
 
@@ -706,22 +706,22 @@ TEST_P(pucch_alloc_ded_resources_test, alloc_ded_harq_ack_res_set_1_over_csi_fro
   ASSERT_EQ(GetParam(), default_slot_grid.result.ul.pucchs.back().format());
   ASSERT_EQ(default_csi_part1_bits, default_slot_grid.result.ul.pucchs.back().uci_bits.csi_part1_nof_bits);
 
-  const unsigned res_set_1_size = t_bench.params.pucch_ded_params.res_set_1_size.value();
-  for (unsigned i = 0; i < res_set_1_size; ++i) {
+  const unsigned res_set_size = t_bench.params.pucch_ded_params.res_set_size.value();
+  for (unsigned i = 0; i < res_set_size; ++i) {
     t_bench.add_ue();
     alloc_ded_harq_ack(t_bench.get_ue(t_bench.last_added_ue_idx));
     alloc_ded_harq_ack(t_bench.get_ue(t_bench.last_added_ue_idx));
     alloc_ded_harq_ack(t_bench.get_ue(t_bench.last_added_ue_idx));
   }
-  ASSERT_EQ(res_set_1_size + 1, default_slot_grid.result.ul.pucchs.size());
+  ASSERT_EQ(res_set_size + 1, default_slot_grid.result.ul.pucchs.size());
 }
 
 TEST_P(pucch_alloc_ded_resources_test,
        alloc_ded_harq_ack_res_set_1_with_existing_sr_succeeds_until_no_free_res_set_1_resources)
 {
   // Allocate an HARQ-ACK grant from Resource Set ID 1 for 6 UEs.
-  const unsigned res_set_1_size = t_bench.params.pucch_ded_params.res_set_1_size.value();
-  for (unsigned i = 0; i < res_set_1_size - 1; ++i) {
+  const unsigned res_set_size = t_bench.params.pucch_ded_params.res_set_size.value();
+  for (unsigned i = 0; i < res_set_size - 1; ++i) {
     t_bench.add_ue();
     alloc_sr_opportunity(t_bench.get_ue(t_bench.last_added_ue_idx));
     alloc_ded_harq_ack(t_bench.get_ue(t_bench.last_added_ue_idx));
@@ -732,14 +732,14 @@ TEST_P(pucch_alloc_ded_resources_test,
     ASSERT_EQ(3U, default_slot_grid.result.ul.pucchs.back().uci_bits.harq_ack_nof_bits);
     ASSERT_EQ(sr_nof_bits::one, default_slot_grid.result.ul.pucchs.back().uci_bits.sr_bits);
   }
-  ASSERT_EQ(res_set_1_size - 1, default_slot_grid.result.ul.pucchs.size());
+  ASSERT_EQ(res_set_size - 1, default_slot_grid.result.ul.pucchs.size());
 
   t_bench.add_ue();
   alloc_sr_opportunity(t_bench.get_ue(t_bench.last_added_ue_idx));
   alloc_ded_harq_ack(t_bench.get_ue(t_bench.last_added_ue_idx));
   alloc_ded_harq_ack(t_bench.get_ue(t_bench.last_added_ue_idx));
   alloc_ded_harq_ack(t_bench.get_ue(t_bench.last_added_ue_idx));
-  ASSERT_EQ(res_set_1_size, default_slot_grid.result.ul.pucchs.size());
+  ASSERT_EQ(res_set_size, default_slot_grid.result.ul.pucchs.size());
 }
 
 ///////   Test removal of dedicated PUCCH resources    ///////

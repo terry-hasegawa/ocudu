@@ -84,8 +84,7 @@ public:
     std::get<pucch_f2_params>(pucch_resources.f2_or_f3_or_f4_params).max_code_rate = max_pucch_code_rate::dot_35;
     pucch_resources.nof_cell_csi_resources                                         = 4;
     pucch_resources.nof_cell_sr_resources                                          = 2;
-    pucch_resources.res_set_0_size                                                 = 3;
-    pucch_resources.res_set_1_size                                                 = 6;
+    pucch_resources.res_set_size                                                   = 6;
 
     cell_cfgs = {cell_cfg_msg.ran};
 
