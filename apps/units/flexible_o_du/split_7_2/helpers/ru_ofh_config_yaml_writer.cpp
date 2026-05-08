@@ -18,7 +18,9 @@ static void fill_ru_ofh_expert_execution_section(YAML::Node node, const ru_ofh_u
 {
   YAML::Node affinities_node = node["affinities"];
   YAML::Node ofh_node        = affinities_node["ofh"];
-  ofh_node["timing_cpu"]     = fmt::format("{:,}", span<const size_t>(config.ru_timing_cpu.get_cpu_ids()));
+  if (!config.ru_timing_cpu.get_cpu_ids().empty()) {
+    ofh_node["timing_cpu"] = fmt::format("{:,}", span<const size_t>(config.ru_timing_cpu.get_cpu_ids()));
+  }
 
   if (config.txrx_affinities.size() > 0) {
     YAML::Node txrx_node = ofh_node["txrx_cpus"];
@@ -72,37 +74,37 @@ static unsigned translate_c_plane_prach_fft_len(ofh::cplane_fft_size c_plane_pra
   }
 }
 
-static YAML::Node build_ru_ofh_cell_section(const ru_ofh_unit_cell_config& config)
+// Fills only the base-cell options. These are accepted by the CLI schema both at the ru_ofh top level
+// (as the common template) and inside each cells[] entry.
+static void fill_ru_ofh_base_cell_section(YAML::Node node, const ru_ofh_unit_base_cell_config& config)
 {
-  YAML::Node node;
-
-  if (config.cell.ru_operating_bw.has_value()) {
-    node["ru_bandwidth_MHz"] = bs_channel_bandwidth_to_MHz(*config.cell.ru_operating_bw);
+  if (config.ru_operating_bw.has_value()) {
+    node["ru_bandwidth_MHz"] = bs_channel_bandwidth_to_MHz(*config.ru_operating_bw);
   }
-  node["t1a_max_cp_dl"]              = config.cell.T1a_max_cp_dl.count();
-  node["t1a_min_cp_dl"]              = config.cell.T1a_min_cp_dl.count();
-  node["t1a_max_cp_ul"]              = config.cell.T1a_max_cp_ul.count();
-  node["t1a_min_cp_ul"]              = config.cell.T1a_min_cp_ul.count();
-  node["t1a_max_up"]                 = config.cell.T1a_max_up.count();
-  node["t1a_min_up"]                 = config.cell.T1a_min_up.count();
-  node["ta4_max"]                    = config.cell.Ta4_max.count();
-  node["ta4_min"]                    = config.cell.Ta4_min.count();
-  node["is_prach_cp_enabled"]        = config.cell.is_prach_control_plane_enabled;
-  node["ignore_prach_start_symbol"]  = config.cell.ignore_prach_start_symbol;
-  node["ignore_ecpri_seq_id"]        = config.cell.ignore_ecpri_seq_id_field;
-  node["ignore_ecpri_payload_size"]  = config.cell.ignore_ecpri_payload_size_field;
-  node["log_lates_as_warnings"]      = config.cell.enable_log_warnings_for_lates;
-  node["warn_unreceived_ru_frames"]  = to_string(config.cell.log_unreceived_ru_frames);
-  node["compr_method_ul"]            = config.cell.compression_method_ul;
-  node["compr_bitwidth_ul"]          = config.cell.compression_bitwidth_ul;
-  node["compr_method_dl"]            = config.cell.compression_method_dl;
-  node["compr_bitwidth_dl"]          = config.cell.compression_bitwidth_dl;
-  node["compr_method_prach"]         = config.cell.compression_method_prach;
-  node["compr_bitwidth_prach"]       = config.cell.compression_bitwidth_prach;
-  node["enable_ul_static_compr_hdr"] = config.cell.is_uplink_static_comp_hdr_enabled;
-  node["enable_dl_static_compr_hdr"] = config.cell.is_downlink_static_comp_hdr_enabled;
-  node["cplane_prach_fft_len"]       = translate_c_plane_prach_fft_len(config.cell.c_plane_prach_fft_len);
-  if (const auto* scaling_params = std::get_if<ru_ofh_scaling_config>(&config.cell.iq_scaling_config)) {
+  node["t1a_max_cp_dl"]              = config.T1a_max_cp_dl.count();
+  node["t1a_min_cp_dl"]              = config.T1a_min_cp_dl.count();
+  node["t1a_max_cp_ul"]              = config.T1a_max_cp_ul.count();
+  node["t1a_min_cp_ul"]              = config.T1a_min_cp_ul.count();
+  node["t1a_max_up"]                 = config.T1a_max_up.count();
+  node["t1a_min_up"]                 = config.T1a_min_up.count();
+  node["ta4_max"]                    = config.Ta4_max.count();
+  node["ta4_min"]                    = config.Ta4_min.count();
+  node["is_prach_cp_enabled"]        = config.is_prach_control_plane_enabled;
+  node["ignore_prach_start_symbol"]  = config.ignore_prach_start_symbol;
+  node["ignore_ecpri_seq_id"]        = config.ignore_ecpri_seq_id_field;
+  node["ignore_ecpri_payload_size"]  = config.ignore_ecpri_payload_size_field;
+  node["log_lates_as_warnings"]      = config.enable_log_warnings_for_lates;
+  node["warn_unreceived_ru_frames"]  = to_string(config.log_unreceived_ru_frames);
+  node["compr_method_ul"]            = config.compression_method_ul;
+  node["compr_bitwidth_ul"]          = config.compression_bitwidth_ul;
+  node["compr_method_dl"]            = config.compression_method_dl;
+  node["compr_bitwidth_dl"]          = config.compression_bitwidth_dl;
+  node["compr_method_prach"]         = config.compression_method_prach;
+  node["compr_bitwidth_prach"]       = config.compression_bitwidth_prach;
+  node["enable_ul_static_compr_hdr"] = config.is_uplink_static_comp_hdr_enabled;
+  node["enable_dl_static_compr_hdr"] = config.is_downlink_static_comp_hdr_enabled;
+  node["cplane_prach_fft_len"]       = translate_c_plane_prach_fft_len(config.c_plane_prach_fft_len);
+  if (const auto* scaling_params = std::get_if<ru_ofh_scaling_config>(&config.iq_scaling_config)) {
     node["ru_reference_level_dBFS"] = scaling_params->ru_reference_level_dBFS;
 
     if (scaling_params->subcarrier_rms_backoff_dB) {
@@ -110,10 +112,16 @@ static YAML::Node build_ru_ofh_cell_section(const ru_ofh_unit_cell_config& confi
     } else {
       node["subcarrier_rms_backoff_dB"] = "auto";
     }
-  } else if (const auto* legacy_scaling_params =
-                 std::get_if<ru_ofh_legacy_scaling_config>(&config.cell.iq_scaling_config)) {
+  } else if (const auto* legacy_scaling_params = std::get_if<ru_ofh_legacy_scaling_config>(&config.iq_scaling_config)) {
     node["iq_scaling"] = legacy_scaling_params->iq_scaling;
   }
+}
+
+static YAML::Node build_ru_ofh_cell_section(const ru_ofh_unit_cell_config& config)
+{
+  YAML::Node node;
+
+  fill_ru_ofh_base_cell_section(node, config.cell);
   node["network_interface"]  = config.network_interface;
   node["enable_promiscuous"] = config.enable_promiscuous_mode;
   node["mtu"]                = config.mtu_size.value();
@@ -150,6 +158,13 @@ static void fill_ru_ofh_section(YAML::Node node, const ru_ofh_unit_config& confi
 {
   node["gps_alpha"] = config.gps_Alpha;
   node["gps_beta"]  = config.gps_Beta;
+
+  // Mirror the first cell's base configuration at the ru_ofh top level. The CLI schema treats those
+  // fields as the common template that propagates to every cell during parsing, so emitting them here
+  // preserves the user-facing keys the schema documents.
+  if (!config.cells.empty()) {
+    fill_ru_ofh_base_cell_section(node, config.cells.front().cell);
+  }
 
   for (const auto& cell : config.cells) {
     node["cells"].push_back(build_ru_ofh_cell_section(cell));

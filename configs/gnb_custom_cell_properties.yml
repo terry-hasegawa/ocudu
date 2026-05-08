@@ -21,8 +21,6 @@ cu_cp:
 ru_sdr:
   device_driver: uhd
   device_args: type=b200,num_recv_frames=64,num_send_frames=64
-  clock:
-  sync:
   srate: 23.04
   otw_format: sc12
   tx_gain: 50

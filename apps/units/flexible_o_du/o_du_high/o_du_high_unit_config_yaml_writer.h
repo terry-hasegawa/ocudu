@@ -15,7 +15,7 @@ namespace ocudu {
 /// Fills the given node with the O-DU high configuration values.
 inline void fill_o_du_high_config_in_yaml_schema(YAML::Node& node, const o_du_high_unit_config& config)
 {
-  fill_du_high_config_in_yaml_schema(node, config.du_high_cfg.config);
+  fill_du_high_config_in_yaml_schema(node, config.du_high_cfg);
   fill_fapi_config_in_yaml_schema(node, config.fapi_cfg);
   fill_o_du_high_e2_config_in_yaml_schema(node, config.e2_cfg);
 }

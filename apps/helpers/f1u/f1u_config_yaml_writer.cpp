@@ -14,7 +14,7 @@ static void fill_cu_up_f1u_socket_entry(YAML::Node& node, const f1u_socket_appco
   node["bind_addr"] = config.bind_addr;
   node["ext_addr"]  = config.udp_config.ext_addr;
   if (config.sst.has_value()) {
-    node["sst"] = *config.sst;
+    node["sst"] = static_cast<unsigned>(*config.sst);
   }
   if (config.sd.has_value()) {
     node["sd"] = *config.sd;
@@ -39,8 +39,7 @@ static void fill_f1u_socket_section(YAML::Node& node, const std::vector<f1u_sock
 
 void ocudu::fill_f1u_config_yaml_schema(YAML::Node& node, const f1u_sockets_appconfig& config)
 {
-  YAML::Node f1u_node = node["f1u"];
-  node["bind_port"]   = config.bind_port;
-  node["peer_port"]   = config.peer_port;
-  fill_f1u_socket_section(f1u_node, config.f1u_socket_cfg);
+  node["bind_port"] = config.bind_port;
+  node["peer_port"] = config.peer_port;
+  fill_f1u_socket_section(node, config.f1u_socket_cfg);
 }

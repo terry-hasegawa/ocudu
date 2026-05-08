@@ -75,7 +75,7 @@ static void fill_ru_sdr_section(YAML::Node node, const ru_sdr_unit_config& confi
   if (config.time_alignment_calibration.has_value()) {
     node["time_alignment_calibration"] = *config.time_alignment_calibration;
   } else {
-    node["time_alignment_calibration"] = "na";
+    node["time_alignment_calibration"] = "auto";
   }
   if (config.start_time.has_value()) {
     ::time_t tt = std::chrono::system_clock::to_time_t(*config.start_time);
@@ -86,18 +86,12 @@ static void fill_ru_sdr_section(YAML::Node node, const ru_sdr_unit_config& confi
     ::strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", &utc_time);
 
     node["start_time"] = buffer;
-  } else {
-    node["start_time"] = "na";
   }
   if (config.dl_freq_override_Hz.has_value()) {
     node["dl_freq_Hz"] = *config.dl_freq_override_Hz;
-  } else {
-    node["dl_freq_Hz"] = "na";
   }
   if (config.ul_freq_override_Hz.has_value()) {
     node["ul_freq_Hz"] = *config.ul_freq_override_Hz;
-  } else {
-    node["ul_freq_Hz"] = "na";
   }
 
   {

@@ -11,7 +11,7 @@ using namespace ocudu;
 static void fill_o_cu_cp_e2_pcap_section(YAML::Node node, const o_cu_cp_e2_pcap_config& config)
 {
   node["e2ap_cu_cp_filename"] = config.filename;
-  node["e2ap_cu_cp_enable"]   = config.enabled;
+  node["e2ap_enable"]         = config.enabled;
 }
 
 void ocudu::fill_o_cu_cp_e2_config_in_yaml_schema(YAML::Node& node, const o_cu_cp_e2_config& config)

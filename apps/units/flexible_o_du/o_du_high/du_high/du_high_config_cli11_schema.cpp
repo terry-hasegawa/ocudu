@@ -1346,7 +1346,7 @@ static void configure_cli11_srs_args(CLI::App& app, du_high_unit_srs_config& srs
       ->capture_default_str()
       ->check(CLI::IsMember({1, 2, 3, 5, 6, 10, 15, 30}));
   add_option(app,
-             "p0",
+             "--p0",
              srs_params.p0,
              "P0 value for SRS. Value in dBm. Valid values must be multiple of 2 and "
              "within the [-202, 24] interval.  Default: -84")
@@ -1524,8 +1524,16 @@ static void configure_cli11_prach_args(CLI::App& app, du_high_unit_rach_config& 
   add_option(app, "--ports", prach_params.ports, "List of antenna ports")
       ->default_function(get_vector_default_function(span<const uint8_t>(prach_params.ports)))
       ->capture_default_str();
-  add_option(app, "--nof_ssb_per_ro", prach_params.nof_ssb_per_ro, "Number of SSBs per RACH occasion")
-      ->check(CLI::IsMember({1}));
+  add_option_function<std::string>(
+      app,
+      "--nof_ssb_per_ro",
+      [&prach_params](const std::string& value) {
+        if (value == "1") {
+          prach_params.nof_ssb_per_ro = ssb_per_rach_occasions::one;
+        }
+      },
+      "Number of SSBs per RACH occasion")
+      ->check(CLI::IsMember({"1"}));
   add_option(app,
              "--nof_cb_preambles_per_ssb",
              prach_params.nof_cb_preambles_per_ssb,

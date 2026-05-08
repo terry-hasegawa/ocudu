@@ -8,6 +8,7 @@
 #include "apps/helpers/logger/logger_appconfig_cli11_schema.h"
 #include "apps/helpers/network/sctp_cli11_schema.h"
 #include "apps/helpers/tracing/tracer_appconfig_cli11_schema.h"
+#include "apps/services/app_execution_metrics/executor_metrics_config_cli11_schema.h"
 #include "apps/services/app_resource_usage/app_resource_usage_config_cli11_schema.h"
 #include "apps/services/buffer_pool/buffer_pool_appconfig_cli11_schema.h"
 #include "apps/services/metrics/metrics_config_cli11_schema.h"
@@ -76,6 +77,7 @@ void ocudu::configure_cli11_with_du_appconfig_schema(CLI::App& app, du_appconfig
   configure_cli11_metrics_args(*metrics_subcmd, du_cfg.metrics_cfg);
   app_services::configure_cli11_with_app_resource_usage_config_schema(app, du_cfg.metrics_cfg.rusage_config);
   app_services::configure_cli11_with_metrics_appconfig_schema(app, du_cfg.metrics_cfg.metrics_service_cfg);
+  app_services::configure_cli11_with_executor_metrics_appconfig_schema(app, du_cfg.metrics_cfg.executors_metrics_cfg);
 
 #ifdef DPDK_FOUND
   // HAL section.

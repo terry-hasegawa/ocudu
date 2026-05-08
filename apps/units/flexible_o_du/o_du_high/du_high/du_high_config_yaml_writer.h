@@ -8,9 +8,9 @@
 
 namespace ocudu {
 
-struct du_high_unit_config;
+struct du_high_parsed_config;
 
 /// Fills the given node with the DU high configuration values.
-void fill_du_high_config_in_yaml_schema(YAML::Node& node, const du_high_unit_config& config);
+void fill_du_high_config_in_yaml_schema(YAML::Node& node, const du_high_parsed_config& parsed_cfg);
 
 } // namespace ocudu

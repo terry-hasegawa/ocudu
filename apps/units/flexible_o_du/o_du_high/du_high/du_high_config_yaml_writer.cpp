@@ -450,7 +450,7 @@ static YAML::Node build_du_high_prach_section(const du_high_unit_rach_config& co
   node["preamble_rx_target_pw"]     = config.preamble_rx_target_pw;
   node["preamble_trans_max"]        = static_cast<unsigned>(config.preamble_trans_max);
   node["power_ramping_step_db"]     = static_cast<unsigned>(config.power_ramping_step_db);
-  node["nof_ssb_per_ro"]            = ssb_per_rach_occ_to_float(config.nof_ssb_per_ro);
+  node["nof_ssb_per_ro"]            = static_cast<unsigned>(ssb_per_rach_occ_to_float(config.nof_ssb_per_ro));
   node["nof_cb_preambles_per_ssb"]  = static_cast<unsigned>(config.nof_cb_preambles_per_ssb);
   for (auto id : config.ports) {
     node["ports"].push_back(static_cast<unsigned>(id));
@@ -587,17 +587,17 @@ static YAML::Node build_du_high_srs_section(const du_high_unit_srs_config& confi
 {
   YAML::Node node;
 
-  node["srs_type_enabled"]          = config.srs_type_enabled;
-  node["srs_period_prohib_time_ms"] = config.srs_period_prohibit_time_ms;
-  node["srs_max_nof_sym_per_slot"]  = config.max_nof_symbols_per_slot;
+  node["type_enabled"]         = config.srs_type_enabled;
+  node["period_ms"]            = config.srs_period_prohibit_time_ms;
+  node["max_nof_sym_per_slot"] = config.max_nof_symbols_per_slot;
   if (config.c_srs.has_value()) {
     node["c_srs"] = config.c_srs.value();
   }
-  node["srs_nof_sym_per_resource"] = config.nof_symbols;
-  node["srs_tx_comb"]              = config.tx_comb;
-  node["srs_cyclic_shift_reuse"]   = config.cyclic_shift_reuse_factor;
-  node["srs_sequence_id_reuse"]    = config.sequence_id_reuse_factor;
-  node["srs_p0"]                   = config.p0;
+  node["nof_sym_per_resource"] = config.nof_symbols;
+  node["tx_comb"]              = config.tx_comb;
+  node["cyclic_shift_reuse"]   = config.cyclic_shift_reuse_factor;
+  node["sequence_id_reuse"]    = config.sequence_id_reuse_factor;
+  node["p0"]                   = config.p0;
 
   return node;
 }
@@ -643,10 +643,12 @@ static YAML::Node build_cell_entry(const du_high_unit_base_cell_config& config)
   node["nof_antennas_ul"]       = config.nof_antennas_ul;
   node["nof_antennas_dl"]       = config.nof_antennas_dl;
   node["plmn"]                  = config.plmn;
-  node["additional_plmns"]      = config.additional_plmns;
-  node["tac"]                   = config.tac;
-  node["q_rx_lev_min"]          = config.q_rx_lev_min;
-  node["q_qual_min"]            = config.q_qual_min;
+  if (!config.additional_plmns.empty()) {
+    node["additional_plmns"] = config.additional_plmns;
+  }
+  node["tac"]          = config.tac;
+  node["q_rx_lev_min"] = config.q_rx_lev_min;
+  node["q_qual_min"]   = config.q_qual_min;
   if (config.pcg_cfg.p_nr_fr1.has_value()) {
     node["pcg_p_nr_fr1"] = config.pcg_cfg.p_nr_fr1.value();
   }
@@ -817,11 +819,12 @@ static YAML::Node build_du_high_testmode_section(const du_high_unit_test_mode_co
   return node;
 }
 
-void ocudu::fill_du_high_config_in_yaml_schema(YAML::Node& node, const du_high_unit_config& config)
+void ocudu::fill_du_high_config_in_yaml_schema(YAML::Node& node, const du_high_parsed_config& parsed_cfg)
 {
-  node["gnb_id"]            = config.gnb_id.id;
-  node["gnb_id_bit_length"] = static_cast<unsigned>(config.gnb_id.bit_length);
-  node["gnb_du_id"]         = static_cast<uint64_t>(config.gnb_du_id);
+  const du_high_unit_config& config = parsed_cfg.config;
+  node["gnb_id"]                    = config.gnb_id.id;
+  node["gnb_id_bit_length"]         = static_cast<unsigned>(config.gnb_id.bit_length);
+  node["gnb_du_id"]                 = static_cast<uint64_t>(config.gnb_du_id);
 
   app_helpers::fill_metrics_appconfig_in_yaml_schema(node, config.metrics.common_metrics_cfg);
   fill_du_high_log_section(node["log"], config.loggers);
@@ -834,6 +837,12 @@ void ocudu::fill_du_high_config_in_yaml_schema(YAML::Node& node, const du_high_u
   }
 
   fill_qos_section(node, config.qos_cfg);
+  // Emit a 'cell_cfg' section from the original common base cell config (the CLI schema treats it as
+  // the template propagated to every cell during parsing, so per-cell overrides applied later don't
+  // appear here). Only do so when at least one cell is configured.
+  if (!config.cells_cfg.empty()) {
+    node["cell_cfg"] = build_cell_entry(parsed_cfg.common_cell_cfg);
+  }
   build_du_high_cells_section(node, config.cells_cfg);
   build_du_high_sbr_section(node, config.srb_cfg);
 }
