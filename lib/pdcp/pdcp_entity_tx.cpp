@@ -758,7 +758,7 @@ security::security_status pdcp_entity_tx::apply_ciphering_and_integrity_protecti
   unsigned                  hdr_size = cfg.sn_size == pdcp_sn_size::size12bits ? 2 : 3;
   security::security_status status   = sec_engine->encrypt_and_protect_integrity(buf, hdr_size, count);
   if (not is_success(status)) {
-    logger.log_warning("Failed to apply security on PDU. count={} status", count, status);
+    logger.log_warning("Failed to apply security on PDU. count={} status={}", count, status);
   }
   return status;
 }
