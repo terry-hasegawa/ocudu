@@ -900,6 +900,15 @@ std::vector<odu::du_cell_config> ocudu::generate_du_cell_config(const du_high_un
         break;
     }
 
+    if (!user_pucch_cfg.repetition_sinr_thresholds.empty()) {
+      auto& rep           = out_cell.ran.init_bwp.pucch.resources.harq_ack_rep.emplace();
+      rep.sinr_thresholds = user_pucch_cfg.repetition_sinr_thresholds;
+      rep.factors_per_res.reserve(user_pucch_cfg.repetition_factors.size());
+      for (unsigned f : user_pucch_cfg.repetition_factors) {
+        rep.factors_per_res.push_back(static_cast<pucch_repetition_factor>(f));
+      }
+    }
+
     // Parameters for SRS-Config.
     srs_builder_params&            du_srs_cfg   = out_cell.ran.init_bwp.srs_cfg;
     const du_high_unit_srs_config& user_srs_cfg = base_cell.srs_cfg;

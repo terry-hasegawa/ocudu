@@ -13,6 +13,7 @@
 #include "ocudu/ran/pucch/pucch_mapping.h"
 #include <optional>
 #include <variant>
+#include <vector>
 
 namespace ocudu {
 
@@ -168,6 +169,19 @@ struct pucch_csi_resource_id_tag;
 using pucch_csi_resource_id =
     strong_type<uint8_t, struct pucch_csi_resource_id_tag, strong_equality, strong_increment_decrement>;
 
+/// PUCCH repetition factor (\c pucch-RepetitionNrofSlots, TS 38.331).
+enum class pucch_repetition_factor : uint8_t { n1 = 1, n2 = 2, n4 = 4, n8 = 8 };
+
+/// PUCCH HARQ-ACK repetition configuration for a cell.
+struct pucch_harq_ack_rep_params {
+  /// SINR thresholds (in dB) used to map UE SINR to PUCCH HARQ-ACK repetition factor. Up to 3 entries, in order:
+  /// [max SINR for n2, max SINR for n4, max SINR for n8].
+  std::vector<float> sinr_thresholds;
+  /// Repetition factor configured for each PUCCH resource within a HARQ-ACK PUCCH resource set.
+  /// Size equals \ref pucch_resource_builder_params::res_set_size.
+  std::vector<pucch_repetition_factor> factors_per_res;
+};
+
 /// \brief Parameters for PUCCH configuration.
 ///
 /// Defines the parameters that are used for the PUCCH configuration builder. These parameters are used to define the
@@ -214,6 +228,8 @@ struct pucch_resource_builder_params {
   ///         the PUCCH resources do not overlap in symbols with the SRS resources.
   /// \remark This parameter should be computed by the GNB and not exposed to the user configuration interface.
   bounded_integer<unsigned, 1, 14> max_nof_symbols = NOF_OFDM_SYM_PER_SLOT_NORMAL_CP;
+  /// PUCCH HARQ-ACK repetition configuration. If not set, HARQ-ACK repetition is disabled.
+  std::optional<pucch_harq_ack_rep_params> harq_ack_rep;
 
   /// Get the PUCCH format used for Resource Set ID 0 and SR resources.
   pucch_format format_01() const

@@ -10,6 +10,7 @@
 #include "ocudu/support/math/math_utils.h"
 #include "ocudu/support/ocudu_assert.h"
 #include "fmt/ranges.h"
+#include <algorithm>
 #include <variant>
 
 using namespace ocudu;
@@ -131,6 +132,24 @@ error_type<const char*> config_helpers::pucch_parameters_validator(const pucch_r
   static constexpr float max_allowed_rb_usage = 0.5F;
   if (nof_rbs_01 + nof_rbs_234 >= max_allowed_rb_usage * bwp_size_rbs) {
     return make_unexpected("With the given parameters, the number of PRBs for PUCCH exceeds the 50% of the BWP PRBs");
+  }
+
+  if (params.harq_ack_rep.has_value()) {
+    const auto& rep = params.harq_ack_rep.value();
+    if (rep.factors_per_res.size() != params.res_set_size.value()) {
+      return make_unexpected(
+          "The number of PUCCH HARQ-ACK repetition factors must equal the HARQ-ACK resource set size.");
+    }
+    if (rep.sinr_thresholds.size() > 3) {
+      return make_unexpected("The number of PUCCH HARQ-ACK repetition SINR thresholds cannot exceed 3.");
+    }
+    const auto max_factor =
+        static_cast<unsigned>(*std::max_element(rep.factors_per_res.begin(), rep.factors_per_res.end()));
+    const unsigned required_thresholds = log2_ceil(max_factor);
+    if (rep.sinr_thresholds.size() < required_thresholds) {
+      return make_unexpected("The number of PUCCH HARQ-ACK repetition SINR thresholds is insufficient for the "
+                             "configured maximum repetition factor.");
+    }
   }
   return {};
 }
