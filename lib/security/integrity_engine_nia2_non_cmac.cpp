@@ -39,6 +39,8 @@ integrity_engine_nia2_non_cmac::integrity_engine_nia2_non_cmac(sec_128_key      
   }
 }
 
+integrity_engine_nia2_non_cmac::~integrity_engine_nia2_non_cmac() = default;
+
 security_status
 integrity_engine_nia2_non_cmac::compute_mac(security::sec_mac& mac, const byte_buffer_view v, uint32_t count)
 {

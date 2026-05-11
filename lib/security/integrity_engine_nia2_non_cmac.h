@@ -15,7 +15,7 @@ class integrity_engine_nia2_non_cmac final : public integrity_engine
 {
 public:
   integrity_engine_nia2_non_cmac(sec_128_key k_128_int_, uint8_t bearer_id_, security_direction direction_);
-  ~integrity_engine_nia2_non_cmac() = default;
+  ~integrity_engine_nia2_non_cmac();
 
   security_status protect_integrity(byte_buffer& buf, uint32_t count) override;
   security_status verify_integrity(byte_buffer& buf, uint32_t count) override;
