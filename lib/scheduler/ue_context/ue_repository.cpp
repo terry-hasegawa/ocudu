@@ -122,12 +122,19 @@ void ue_repository::add_ue(const ue_configuration&   ue_cfg,
   // Create UE components.
   const du_ue_index_t ue_index = ue_cfg.ue_index;
 
-  ue_fsm_states init_state = ue_fsm_states::normal;
+  ue_config_state init_cfg_st    = ue_config_state::config_applied;
+  ue_conres_state init_conres_st = ue_conres_state::conres_completed;
   if (starts_in_fallback) {
-    init_state =
-        ul_ccch_slot_rx.has_value() ? ue_fsm_states::pending_conres_ce : ue_fsm_states::pending_conres_crnti_ce;
+    if (ul_ccch_slot_rx.has_value()) {
+      // RACH-created UE: ConRes CE pending + RRC Setup/Reestablishment pending.
+      init_cfg_st    = ue_config_state::pending_setup_or_reest;
+      init_conres_st = ue_conres_state::pending_conres_ce;
+    } else {
+      // F1AP-created UE: already RRC connected but waiting for C-RNTI CE.
+      init_conres_st = ue_conres_state::pending_conres_crnti_ce;
+    }
   }
-  ue_fsms.emplace(ue_index, ue_pcell_state{init_state, ul_ccch_slot_rx.value_or(slot_point{})});
+  ue_fsms.emplace(ue_index, ue_pcell_state{init_cfg_st, init_conres_st, ul_ccch_slot_rx.value_or(slot_point{})});
 
   const rnti_t             rnti      = ue_cfg.crnti;
   const auto&              pcell_cmn = ue_cfg.pcell_common_cfg();
@@ -342,76 +349,102 @@ void ue_repository::handle_cell_deactivation(du_cell_index_t cell_index)
 
 bool ue_repository::update_ue_fsm(du_ue_index_t ue_index, ue_fsm_config_event ev)
 {
-  using states = ue_fsm_states;
   using events = ue_fsm_config_event;
   ocudu_assert(ues.contains(ue_index), "ue={} : UE not found in the repository", ue_index);
-  auto& cur_state = ue_fsms[ue_index].state;
-  auto& u         = ues[ue_index];
-  auto& ue_cc     = u.get_pcell();
+  auto& fsm    = ue_fsms[ue_index];
+  auto& u      = ues[ue_index];
+  auto& ue_cc  = u.get_pcell();
+  auto& cfg_st = fsm.config_st;
+  auto& con_st = fsm.conres_st;
 
-  // Conversion of (state, event) into row entry of FSM.
-  auto fsm_row = [](states state, events ev_rx) -> unsigned {
-    return static_cast<unsigned>(state) + static_cast<unsigned>(ev_rx) * (static_cast<unsigned>(states::normal) + 1);
-  };
+  const bool was_in_fallback = is_in_fallback(cfg_st, con_st);
 
-  switch (fsm_row(cur_state, ev)) {
-    case fsm_row(states::pending_conres_ce, events::conres_ce_acked):
-      // ConRes CE ACKed received -> RRCSetup/RRCReestablishment needs to be sent next.
-      cur_state = states::pending_setup_or_reest;
-      logger.debug("ue={} rnti={}: ConRes procedure completed", ue_index, ue_cc.rnti());
-      return true;
-    case fsm_row(states::pending_conres_ce, events::conres_ce_timeout):
-      // Timeout for ConRes CE reception -> Deactivate UE.
-      cur_state = states::normal;
+  switch (ev) {
+    case events::conres_ce_acked:
+      if (con_st != ue_conres_state::pending_conres_ce) {
+        logger.warning("ue={} rnti={}: Invalid event={} in conres_state={}",
+                       ue_index,
+                       ue_cc.rnti(),
+                       to_string(ev),
+                       to_string(con_st));
+        return false;
+      }
+      con_st = ue_conres_state::conres_completed;
+      logger.debug("ue={} rnti={}: ConRes CE ACKed", ue_index, ue_cc.rnti());
+      break;
+    case events::conres_ce_timeout:
+      if (con_st != ue_conres_state::pending_conres_ce) {
+        logger.warning("ue={} rnti={}: Invalid event={} in conres_state={}",
+                       ue_index,
+                       ue_cc.rnti(),
+                       to_string(ev),
+                       to_string(con_st));
+        return false;
+      }
+      // Timeout before ConRes CE could be ACKed: deactivate UE.
+      con_st = ue_conres_state::conres_completed;
       u.deactivate();
       return true;
-    case fsm_row(states::pending_conres_crnti_ce, events::crnti_ce_received):
-      // C-RNTI CE received -> leave fallback mode.
-      cur_state = states::normal;
-      ue_cc.harqs.cancel_retxs();
-      u.logical_channels().set_fallback_state(false);
-      logger.debug("ue={} rnti={}: C-RNTI CE received, leaving fallback mode", ue_index, ue_cc.rnti());
+    case events::crnti_ce_received:
+      if (con_st != ue_conres_state::pending_conres_crnti_ce) {
+        // C-RNTI CE not relevant for contention resolution in this context.
+        return false;
+      }
+      con_st = ue_conres_state::conres_completed;
+      logger.debug("ue={} rnti={}: C-RNTI CE received, contention resolution completed", ue_index, ue_cc.rnti());
+      break;
+    case events::reconf_initiated:
+      if (cfg_st == ue_config_state::pending_reconf) {
+        // Already waiting for reconf complete: no-op.
+        return false;
+      }
+      if (cfg_st != ue_config_state::pending_setup_or_reest and cfg_st != ue_config_state::config_applied) {
+        logger.warning("ue={} rnti={}: Invalid event={} in config_state={}",
+                       ue_index,
+                       ue_cc.rnti(),
+                       to_string(ev),
+                       to_string(cfg_st));
+        return false;
+      }
+      cfg_st = ue_config_state::pending_reconf;
+      if (not was_in_fallback) {
+        u.logical_channels().set_fallback_state(true);
+        ue_cc.harqs.cancel_retxs();
+        logger.debug("ue={} rnti={}: Entering fallback mode", ue_index, ue_cc.rnti());
+      }
       return true;
-    case fsm_row(states::pending_conres_crnti_ce, events::reconf_initiated):
-    case fsm_row(states::pending_conres_crnti_ce, events::config_applied):
-      // Any additional reconfiguration while awaiting C-RNTI CE has no effect.
-      return false;
-    case fsm_row(states::pending_setup_or_reest, events::config_applied):
-    case fsm_row(states::pending_reest_reconf, events::config_applied):
-    case fsm_row(states::pending_reconf, events::config_applied):
-      // The UE gets out of fallback mode once it has applied the new configuration.
-      cur_state = states::normal;
-      ue_cc.harqs.cancel_retxs();
-      u.logical_channels().set_fallback_state(false);
-      logger.debug("ue={} rnti={}: Leaving fallback mode", ue_index, ue_cc.rnti());
+    case events::reest_reconf_initiated:
+      if (cfg_st != ue_config_state::pending_setup_or_reest and cfg_st != ue_config_state::config_applied) {
+        logger.warning("ue={} rnti={}: Invalid event={} in config_state={}",
+                       ue_index,
+                       ue_cc.rnti(),
+                       to_string(ev),
+                       to_string(cfg_st));
+        return false;
+      }
+      cfg_st = ue_config_state::pending_reest_reconf;
+      if (not was_in_fallback) {
+        u.logical_channels().set_fallback_state(true);
+        ue_cc.harqs.cancel_retxs();
+        logger.debug("ue={} rnti={}: Entering fallback mode", ue_index, ue_cc.rnti());
+      }
       return true;
-    case fsm_row(states::pending_setup_or_reest, events::reest_reconf_initiated):
-    case fsm_row(states::pending_setup_or_reest, events::reconf_initiated):
-      cur_state = ev == events::reconf_initiated ? states::pending_reconf : states::pending_reest_reconf;
-      return true;
-    case fsm_row(states::normal, events::reconf_initiated):
-    case fsm_row(states::normal, events::reest_reconf_initiated):
-      cur_state = ev == events::reconf_initiated ? states::pending_reconf : states::pending_reest_reconf;
-      u.logical_channels().set_fallback_state(true);
-      ue_cc.harqs.cancel_retxs();
-      logger.debug("ue={} rnti={}: Entering fallback mode", ue_index, ue_cc.rnti());
-      return true;
-    case fsm_row(states::pending_setup_or_reest, events::crnti_ce_received):
-    case fsm_row(states::pending_reest_reconf, events::crnti_ce_received):
-    case fsm_row(states::pending_reconf, events::crnti_ce_received):
-    case fsm_row(states::normal, events::crnti_ce_received):
-      // Do nothing. C-RNTI CE in this case is not used for contention resolution.
-      return false;
-    case fsm_row(states::pending_reconf, events::reconf_initiated):
-    case fsm_row(states::normal, events::config_applied):
-      // Do nothing.
-      return false;
-    default:
+    case events::config_applied:
+      if (cfg_st == ue_config_state::config_applied) {
+        // No pending config: no-op.
+        return false;
+      }
+      cfg_st = ue_config_state::config_applied;
+      logger.debug("ue={} rnti={}: Config applied", ue_index, ue_cc.rnti());
       break;
   }
 
-  logger.warning(
-      "ue={} rnti={}: Invalid event={} when in state {}", ue_index, ue_cc.rnti(), to_string(ev), to_string(cur_state));
+  // Check whether the UE just exited fallback mode (both states at their terminal values).
+  if (was_in_fallback and not is_in_fallback(cfg_st, con_st)) {
+    ue_cc.harqs.cancel_retxs();
+    u.logical_channels().set_fallback_state(false);
+    logger.debug("ue={} rnti={}: Leaving fallback mode", ue_index, ue_cc.rnti());
+  }
 
-  return false;
+  return true;
 }

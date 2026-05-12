@@ -30,11 +30,12 @@ struct ue_shared_context {
 
 /// State of the UE PCell.
 struct ue_pcell_state {
-  /// Current state of the UE configurations in the scheduler.
-  /// \note When in fallback mode (!= normal mode), only the search spaces and the configuration of cellConfigCommon
-  /// are used.
-  ue_fsm_states state;
-  /// MSG3 rx-slot, set for RACH-created UEs (state == pending_conres_ce).
+  /// RRC configuration progress state.
+  /// \note When in fallback mode, only the search spaces and the configuration of cellConfigCommon are used.
+  ue_config_state config_st;
+  /// Contention resolution state.
+  ue_conres_state conres_st;
+  /// MSG3 rx-slot, set for RACH-created UEs (conres_st == pending_conres_ce).
   slot_point msg3_rx_slot;
 };
 
@@ -75,7 +76,8 @@ public:
   /// Whether the UE is in fallback mode.
   bool is_in_fallback_mode() const
   {
-    return components.pcell_state != nullptr and is_in_fallback(components.pcell_state->state);
+    return components.pcell_state != nullptr and
+           is_in_fallback(components.pcell_state->config_st, components.pcell_state->conres_st);
   }
 
   const ue_cell_configuration& cfg() const { return *ue_cfg; }

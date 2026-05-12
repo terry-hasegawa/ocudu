@@ -8,43 +8,58 @@
 
 namespace ocudu {
 
-/// States of the Finite State Machine (FSM) representing the UE stage of configuration.
-enum class ue_fsm_states : uint8_t {
-  /// RACH-created UE: waiting for ConRes MAC CE to be ACKed by the UE.
-  pending_conres_ce,
-  /// F1AP-created UE: waiting for C-RNTI MAC CE to be received to complete contention resolution.
-  pending_conres_crnti_ce,
-  /// ConRes CE was ACKed but the confirmation of the RRC Setup/Reestablishment Complete not yet confirmed.
+/// State tracking the UE's RRC configuration progress in the scheduler.
+enum class ue_config_state : uint8_t {
+  /// Awaiting confirmation that the UE applied the RRC Setup or RRC Reestablishment.
   pending_setup_or_reest,
-  /// Awaiting RRC Reconfiguration Complete for RRC Reconfiguration right after RRC Reestablishment.
-  pending_reest_reconf,
-  /// Awaiting RRC Reconfiguration Complete for RRC Reconfiguration.
+  /// Awaiting confirmation that the UE applied an RRC Reconfiguration.
   pending_reconf,
-  /// The UE is not in fallback mode.
-  normal
+  /// Awaiting confirmation that the UE applied an RRC Reconfiguration following RRC Reestablishment.
+  pending_reest_reconf,
+  /// The UE configuration has been applied.
+  config_applied,
 };
 
-/// Whether the UE is in fallback mode.
-inline bool is_in_fallback(ue_fsm_states state)
+/// State tracking the UE's contention resolution progress in the scheduler.
+enum class ue_conres_state : uint8_t {
+  /// RACH-created UE: waiting for the ConRes MAC CE to be ACKed by the UE.
+  pending_conres_ce,
+  /// F1AP-created UE: waiting for the C-RNTI MAC CE to be received to complete contention resolution.
+  pending_conres_crnti_ce,
+  /// Contention resolution is complete.
+  conres_completed,
+};
+
+/// Whether the UE is in fallback mode (true when either state has not reached its terminal value).
+inline bool is_in_fallback(ue_config_state cfg_st, ue_conres_state conres_st)
 {
-  return state != ue_fsm_states::normal;
+  return cfg_st != ue_config_state::config_applied or conres_st != ue_conres_state::conres_completed;
 }
 
-inline const char* to_string(ue_fsm_states state)
+inline const char* to_string(ue_config_state state)
 {
   switch (state) {
-    case ue_fsm_states::pending_conres_ce:
-      return "pending_conres_ce";
-    case ue_fsm_states::pending_conres_crnti_ce:
-      return "pending_crnti_ce";
-    case ue_fsm_states::pending_setup_or_reest:
+    case ue_config_state::pending_setup_or_reest:
       return "pending_setup";
-    case ue_fsm_states::pending_reest_reconf:
-      return "pending_reest_reconf";
-    case ue_fsm_states::pending_reconf:
+    case ue_config_state::pending_reconf:
       return "pending_reconf";
-    case ue_fsm_states::normal:
-      return "normal";
+    case ue_config_state::pending_reest_reconf:
+      return "pending_reest_reconf";
+    case ue_config_state::config_applied:
+      return "config_applied";
+  }
+  return "unknown";
+}
+
+inline const char* to_string(ue_conres_state state)
+{
+  switch (state) {
+    case ue_conres_state::pending_conres_ce:
+      return "pending_conres_ce";
+    case ue_conres_state::pending_conres_crnti_ce:
+      return "pending_crnti_ce";
+    case ue_conres_state::conres_completed:
+      return "conres_completed";
   }
   return "unknown";
 }
