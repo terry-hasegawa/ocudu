@@ -110,7 +110,7 @@ public:
   [[nodiscard]] bool trigger_handover_manually_and_await_ue_context_setup_request()
   {
     get_cu_cp().get_command_handler().get_mobility_command_handler().trigger_handover(
-        source_cell_info.pci, ue_ctx->crnti, target_cell_info.pci);
+        source_cell_info.pci, ue_ctx->crnti, target_cell_info.pci, target_cell_info.plmn_id, target_cell_info.tac);
 
     report_fatal_error_if_not(this->wait_for_f1ap_tx_pdu(target_du_idx, target_f1ap_pdu),
                               "Failed to receive UE Context Setup Request");
@@ -122,7 +122,7 @@ public:
   [[nodiscard]] bool trigger_handover_via_controller_and_await_ue_context_setup_request()
   {
     get_cu_cp().get_command_handler().get_mobility_command_handler().trigger_handover(
-        source_cell_info.pci, ue_ctx->crnti, target_cell_info.pci);
+        source_cell_info.pci, ue_ctx->crnti, target_cell_info.pci, target_cell_info.plmn_id, target_cell_info.tac);
 
     report_fatal_error_if_not(this->wait_for_f1ap_tx_pdu(target_du_idx, target_f1ap_pdu),
                               "Failed to receive UE Context Setup Request");

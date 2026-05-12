@@ -13,12 +13,16 @@ namespace ocudu::ocucp {
 /// \brief Generate an NGAP Handover Preparation Request message based on the provided parameters.
 /// \param[in] source_ue_index The UE index of the source UE context.
 /// \param[in] target_gnb_id The gNB ID of the target cell.
+/// \param[in] target_plmn The PLMN Identity of the target cell.
+/// \param[in] target_tac The TAC of the target cell.
 /// \param[in] target_nci The NR Cell Identity of the target cell.
 /// \param[in] pdu_sessions The PDU sessions of the UE, including their QoS flows and UP context information.
 /// \returns The generated NGAP Handover Preparation Request message.
 ngap_handover_preparation_request
 generate_ngap_handover_preparation_request(cu_cp_ue_index_t                                          source_ue_index,
                                            gnb_id_t                                                  target_gnb_id,
+                                           plmn_identity                                             target_plmn,
+                                           tac_t                                                     target_tac,
                                            nr_cell_identity                                          target_nci,
                                            const std::map<pdu_session_id_t, up_pdu_session_context>& pdu_sessions);
 

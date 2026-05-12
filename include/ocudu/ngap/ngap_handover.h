@@ -9,6 +9,8 @@
 #include "ocudu/ngap/ngap_types.h"
 #include "ocudu/ran/cu_cp_types.h"
 #include "ocudu/ran/guami.h"
+#include "ocudu/ran/plmn_identity.h"
+#include "ocudu/ran/tac.h"
 #include "ocudu/security/security.h"
 #include <map>
 
@@ -20,9 +22,15 @@ struct ngap_ue_source_handover_context {
   byte_buffer rrc_container;
 };
 
+struct target_ran_node_id_t {
+  gnb_id_t      gnb_id;
+  plmn_identity plmn = plmn_identity::test_value();
+  tac_t         tac;
+};
+
 struct ngap_handover_preparation_request {
   cu_cp_ue_index_t                                       ue_index = cu_cp_ue_index_t::invalid;
-  gnb_id_t                                               gnb_id;
+  target_ran_node_id_t                                   target_id;
   nr_cell_identity                                       nci;
   std::map<pdu_session_id_t, std::vector<qos_flow_id_t>> pdu_sessions;
 };

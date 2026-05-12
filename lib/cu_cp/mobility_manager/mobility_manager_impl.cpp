@@ -6,6 +6,8 @@
 #include "../du_processor/du_processor_repository.h"
 #include "mobility_manager_helpers.h"
 #include "ocudu/ran/nr_cgi.h"
+#include "ocudu/ran/plmn_identity.h"
+#include "ocudu/ran/tac.h"
 #include <optional>
 #include <set>
 #include <vector>
@@ -31,7 +33,11 @@ mobility_manager::mobility_manager(const mobility_manager_cfg&      cfg_,
 {
 }
 
-void mobility_manager::trigger_handover(pci_t source_pci, rnti_t rnti, pci_t target_pci)
+void mobility_manager::trigger_handover(pci_t         source_pci,
+                                        rnti_t        rnti,
+                                        pci_t         target_pci,
+                                        plmn_identity target_plmn,
+                                        tac_t         target_tac)
 {
   cu_cp_ue_index_t ue_index = ue_mng.get_ue_index(source_pci, rnti);
   if (ue_index == cu_cp_ue_index_t::invalid) {
@@ -44,7 +50,12 @@ void mobility_manager::trigger_handover(pci_t source_pci, rnti_t rnti, pci_t tar
     return;
   }
 
-  handle_handover(ue_index, target.value().second.gnb_id(target->first), target.value().second, target_pci);
+  handle_handover(ue_index,
+                  target.value().second.gnb_id(target->first),
+                  target.value().second,
+                  target_pci,
+                  target_plmn,
+                  target_tac);
 }
 
 void mobility_manager::trigger_conditional_handover(
@@ -230,22 +241,26 @@ void mobility_manager::handle_conditional_handover(
   u->get_task_sched().schedule_async_task(launch_async(std::move(cho_trigger)));
 }
 
-void mobility_manager::handle_neighbor_better_than_spcell(cu_cp_ue_index_t ue_index,
-                                                          gnb_id_t         neighbor_gnb_id,
-                                                          nr_cell_identity neighbor_nci,
-                                                          pci_t            neighbor_pci)
+void mobility_manager::handle_neighbor_better_than_spcell(cu_cp_ue_index_t     ue_index,
+                                                          gnb_id_t             neighbor_gnb_id,
+                                                          nr_cell_identity     neighbor_nci,
+                                                          pci_t                neighbor_pci,
+                                                          plmn_identity        neighbor_plmn,
+                                                          std::optional<tac_t> neighbor_tac)
 {
   if (!cfg.trigger_handover_from_measurements) {
     logger.debug("ue={}: Ignoring better neighbor pci={}", ue_index, neighbor_pci);
     return;
   }
-  handle_handover(ue_index, neighbor_gnb_id, neighbor_nci, neighbor_pci);
+  handle_handover(ue_index, neighbor_gnb_id, neighbor_nci, neighbor_pci, neighbor_plmn, neighbor_tac);
 }
 
-void mobility_manager::handle_handover(cu_cp_ue_index_t ue_index,
-                                       gnb_id_t         neighbor_gnb_id,
-                                       nr_cell_identity neighbor_nci,
-                                       pci_t            neighbor_pci)
+void mobility_manager::handle_handover(cu_cp_ue_index_t     ue_index,
+                                       gnb_id_t             neighbor_gnb_id,
+                                       nr_cell_identity     neighbor_nci,
+                                       pci_t                neighbor_pci,
+                                       plmn_identity        neighbor_plmn,
+                                       std::optional<tac_t> neighbor_tac)
 {
   // Find the UE context.
   cu_cp_ue* u = ue_mng.find_du_ue(ue_index);
@@ -273,7 +288,11 @@ void mobility_manager::handle_handover(cu_cp_ue_index_t ue_index,
   du_index_t target_du = du_db.find_du(neighbor_pci);
   if (target_du == du_index_t::invalid) {
     logger.debug("ue={}: Requesting inter CU handover. No local DU/cell with pci={} found", ue_index, neighbor_pci);
-    handle_inter_cu_handover(ue_index, neighbor_gnb_id, neighbor_nci);
+    if (!neighbor_tac.has_value()) {
+      logger.error("ue={}: Cannot trigger inter-CU handover. Target TAC is required but not set", ue_index);
+      return;
+    }
+    handle_inter_cu_handover(ue_index, neighbor_gnb_id, neighbor_plmn, neighbor_tac.value(), neighbor_nci);
     return;
   }
 
@@ -328,6 +347,8 @@ void mobility_manager::handle_intra_cu_handover(cu_cp_ue_index_t source_ue_index
 
 void mobility_manager::handle_inter_cu_handover(cu_cp_ue_index_t source_ue_index,
                                                 gnb_id_t         target_gnb_id,
+                                                plmn_identity    target_plmn,
+                                                tac_t            target_tac,
                                                 nr_cell_identity target_nci)
 {
   cu_cp_ue* ue = ue_mng.find_du_ue(source_ue_index);
@@ -350,7 +371,7 @@ void mobility_manager::handle_inter_cu_handover(cu_cp_ue_index_t source_ue_index
     logger.debug("ue={}: Requesting NG handover. No XN-C peer CU-CP peer with gnb_id={} found",
                  source_ue_index,
                  target_gnb_id.id);
-    handle_ngap_handover(*ngap, *ue, target_gnb_id, target_nci);
+    handle_ngap_handover(*ngap, *ue, target_gnb_id, target_plmn, target_tac, target_nci);
     return;
   }
 
@@ -361,10 +382,17 @@ void mobility_manager::handle_inter_cu_handover(cu_cp_ue_index_t source_ue_index
 void mobility_manager::handle_ngap_handover(ngap_interface&  ngap,
                                             cu_cp_ue&        ue,
                                             gnb_id_t         target_gnb_id,
+                                            plmn_identity    target_plmn,
+                                            tac_t            target_tac,
                                             nr_cell_identity target_nci)
 {
-  ngap_handover_preparation_request request = generate_ngap_handover_preparation_request(
-      ue.get_ue_index(), target_gnb_id, target_nci, ue.get_up_resource_manager().get_pdu_sessions_map());
+  ngap_handover_preparation_request request =
+      generate_ngap_handover_preparation_request(ue.get_ue_index(),
+                                                 target_gnb_id,
+                                                 target_plmn,
+                                                 target_tac,
+                                                 target_nci,
+                                                 ue.get_up_resource_manager().get_pdu_sessions_map());
 
   // Send handover preparation request to the NGAP handler.
   auto ho_trigger = [&ngap, request, response = ngap_handover_preparation_response{}](

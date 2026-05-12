@@ -18,6 +18,7 @@
 #include "ocudu/f1ap/f1ap_message.h"
 #include "ocudu/f1ap/f1ap_ue_id_types.h"
 #include "ocudu/ngap/ngap_message.h"
+#include "ocudu/ran/plmn_identity.h"
 #include <gtest/gtest.h>
 
 using namespace ocudu;
@@ -99,7 +100,8 @@ public:
   [[nodiscard]] bool send_intra_cell_ho_command_and_await_ue_context_setup_request()
   {
     // Inject UL RRC Message (containing RRC Measurement Report) and wait for UE Context Setup Request.
-    get_cu_cp().get_command_handler().get_mobility_command_handler().trigger_handover(pci_t{0}, crnti, pci_t{0});
+    get_cu_cp().get_command_handler().get_mobility_command_handler().trigger_handover(
+        pci_t{0}, crnti, pci_t{0}, plmn_identity::parse("00101").value(), 7);
     report_fatal_error_if_not(this->wait_for_f1ap_tx_pdu(du_idx, f1ap_pdu),
                               "Failed to receive UE Context Setup Request");
     report_fatal_error_if_not(test_helpers::is_valid_ue_context_setup_request_with_ue_capabilities(f1ap_pdu),

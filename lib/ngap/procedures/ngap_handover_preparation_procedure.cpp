@@ -175,7 +175,9 @@ void ngap_handover_preparation_procedure::fill_asn1_target_ran_node_id(target_id
   auto& global_gnb   = target_node.global_ran_node_id.global_gnb_id();
   global_gnb.plmn_id = serving_plmn.to_bytes();
   global_gnb.gnb_id.set_gnb_id();
-  global_gnb.gnb_id.gnb_id().from_number(request.gnb_id.id, request.gnb_id.bit_length);
+  global_gnb.gnb_id.gnb_id().from_number(request.target_id.gnb_id.id, request.target_id.gnb_id.bit_length);
+  target_node.sel_tai.plmn_id = request.target_id.plmn.to_bytes();
+  target_node.sel_tai.tac.from_number(request.target_id.tac);
 }
 
 void ngap_handover_preparation_procedure::fill_asn1_pdu_session_res_list(

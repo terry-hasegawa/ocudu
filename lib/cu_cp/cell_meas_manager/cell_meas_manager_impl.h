@@ -8,6 +8,7 @@
 #include "ocudu/adt/span.h"
 #include "ocudu/cu_cp/cell_meas_manager_config.h"
 #include "ocudu/ran/cu_cp_types.h"
+#include "ocudu/ran/plmn_identity.h"
 #include "ocudu/rrc/meas_types.h"
 #include <unordered_map>
 
@@ -20,10 +21,12 @@ public:
   virtual ~cell_meas_mobility_manager_notifier() = default;
 
   /// \brief Notifies that a neighbor cell became stronger than the current serving cell.
-  virtual void on_neighbor_better_than_spcell(cu_cp_ue_index_t ue_index,
-                                              gnb_id_t         neighbor_gnb_id,
-                                              nr_cell_identity neighbor_nci,
-                                              pci_t            neighbor_pci) = 0;
+  virtual void on_neighbor_better_than_spcell(cu_cp_ue_index_t     ue_index,
+                                              gnb_id_t             neighbor_gnb_id,
+                                              nr_cell_identity     neighbor_nci,
+                                              pci_t                neighbor_pci,
+                                              plmn_identity        neighbor_plmn,
+                                              std::optional<tac_t> neighbor_tac = std::nullopt) = 0;
 };
 
 /// Basic cell manager implementation

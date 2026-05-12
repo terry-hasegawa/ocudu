@@ -1119,8 +1119,9 @@ ngap_handover_preparation_request ocudu::ocucp::generate_handover_preparation_re
 {
   ngap_handover_preparation_request request = {};
   request.ue_index                          = ue_index;
-  request.gnb_id                            = nci.gnb_id(gnb_id_bit_length);
-  request.nci                               = nci;
+  request.target_id.gnb_id                  = nci.gnb_id(gnb_id_bit_length);
+  request.target_id.plmn = plmn_identity::test_value(), request.target_id.tac = 7;
+  request.nci = nci;
   // Fill create a map of all PDU sessions and their associated QoS flows.
   for (const auto& pdu_session : pdu_sessions) {
     std::vector<qos_flow_id_t> qos_flows;

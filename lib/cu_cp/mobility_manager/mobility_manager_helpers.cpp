@@ -4,6 +4,7 @@
 
 #include "mobility_manager_helpers.h"
 #include "ocudu/cu_cp/cu_cp_types.h"
+#include "ocudu/ran/plmn_identity.h"
 
 using namespace ocudu;
 using namespace ocucp;
@@ -11,13 +12,17 @@ using namespace ocucp;
 ngap_handover_preparation_request ocudu::ocucp::generate_ngap_handover_preparation_request(
     cu_cp_ue_index_t                                          source_ue_index,
     gnb_id_t                                                  target_gnb_id,
+    plmn_identity                                             target_plmn,
+    tac_t                                                     target_tac,
     nr_cell_identity                                          target_nci,
     const std::map<pdu_session_id_t, up_pdu_session_context>& pdu_sessions)
 {
   ngap_handover_preparation_request request;
-  request.ue_index = source_ue_index;
-  request.gnb_id   = target_gnb_id;
-  request.nci      = target_nci;
+  request.ue_index         = source_ue_index;
+  request.target_id.gnb_id = target_gnb_id;
+  request.target_id.plmn   = target_plmn;
+  request.target_id.tac    = target_tac;
+  request.nci              = target_nci;
 
   // Create a map of all PDU sessions and their associated QoS flows.
   for (const auto& pdu_session : pdu_sessions) {

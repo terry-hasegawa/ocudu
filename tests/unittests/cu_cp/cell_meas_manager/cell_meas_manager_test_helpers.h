@@ -8,16 +8,19 @@
 #include "lib/cu_cp/cell_meas_manager/cell_meas_manager_impl.h"
 #include "ocudu/support/executors/manual_task_worker.h"
 #include <gtest/gtest.h>
+#include <optional>
 
 namespace ocudu::ocucp {
 
 class dummy_mobility_manager : public cell_meas_mobility_manager_notifier
 {
 public:
-  void on_neighbor_better_than_spcell(cu_cp_ue_index_t ue_index,
-                                      gnb_id_t         neighbor_gnb_id,
-                                      nr_cell_identity neighbor_nci,
-                                      pci_t            neighbor_pci) override
+  void on_neighbor_better_than_spcell(cu_cp_ue_index_t     ue_index,
+                                      gnb_id_t             neighbor_gnb_id,
+                                      nr_cell_identity     neighbor_nci,
+                                      pci_t                neighbor_pci,
+                                      plmn_identity        neighbor_plmn,
+                                      std::optional<tac_t> neighbor_tac = std::nullopt) override
   {
     fmt::print("on_neighbor_better_than_spcell() called.\n");
   }

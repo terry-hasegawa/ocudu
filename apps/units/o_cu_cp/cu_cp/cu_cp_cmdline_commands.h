@@ -9,7 +9,9 @@
 #include "cu_cp_unit_config_helpers.h"
 #include "ocudu/cu_cp/cu_cp_command_handler.h"
 #include "ocudu/ran/pci.h"
+#include "ocudu/ran/plmn_identity.h"
 #include "ocudu/ran/rnti.h"
+#include "ocudu/ran/tac.h"
 #include <chrono>
 #include <optional>
 #include <vector>
@@ -28,13 +30,18 @@ public:
   std::string_view get_name() const override { return "ho"; }
 
   // See interface for documentation.
-  std::string_view get_description() const override { return " <serving pci> <rnti> <target pci>: force UE handover"; }
+  std::string_view get_description() const override
+  {
+    return " <serving pci> <rnti> <target pci> <target plmn> <target tac>: force UE handover";
+  }
 
   // See interface for documentation.
   void execute(span<const std::string> args) override
   {
-    if (args.size() != 3) {
-      fmt::print("Invalid handover command structure. Usage: ho <serving pci> <rnti> <target pci>\n");
+    if (args.size() != 5) {
+      fmt::print(
+          "Invalid handover command structure. Usage: ho <serving pci> <rnti> <target pci> <target plmn> <target "
+          "tac>\n");
       return;
     }
 
@@ -56,14 +63,40 @@ public:
       fmt::print("Invalid target PCI.\n");
       return;
     }
+    ++arg;
+
+    expected<plmn_identity> target_plmn = plmn_identity::parse(*arg);
+    if (not target_plmn.has_value()) {
+      fmt::print("Invalid target PLMN '{}'. Expected 5 or 6 digits (e.g. 00101 or 001001).\n", *arg);
+      return;
+    }
+    ++arg;
+
+    expected<unsigned, std::string> target_tac = app_services::parse_int<unsigned>(*arg);
+    if (not target_tac.has_value()) {
+      fmt::print("Invalid target TAC '{}'.\n", *arg);
+      return;
+    }
+    if (target_tac.value() == 0U || target_tac.value() == 0xfffffeU) {
+      fmt::print("Invalid target TAC {}. Values 0 and 16777214 (0xfffffe) are reserved.\n", target_tac.value());
+      return;
+    }
+    if (not is_valid(static_cast<tac_t>(target_tac.value()))) {
+      fmt::print("Invalid target TAC {}. Must be in range [0..16777215].\n", target_tac.value());
+      return;
+    }
 
     cu_cp.get_mobility_command_handler().trigger_handover(static_cast<pci_t>(serving_pci.value()),
                                                           static_cast<rnti_t>(rnti.value()),
-                                                          static_cast<pci_t>(target_pci.value()));
-    fmt::print("Handover triggered for UE with pci={} rnti={} to pci={}.\n",
+                                                          static_cast<pci_t>(target_pci.value()),
+                                                          target_plmn.value(),
+                                                          static_cast<tac_t>(target_tac.value()));
+    fmt::print("Handover triggered for UE with pci={} rnti={} to pci={} plmn={} tac={}.\n",
                serving_pci.value(),
                static_cast<rnti_t>(rnti.value()),
-               target_pci.value());
+               target_pci.value(),
+               target_plmn.value(),
+               target_tac.value());
   }
 };
 
@@ -150,7 +183,7 @@ public:
           fmt::print("Missing datetime value after 't1' keyword.\n");
           return;
         }
-        auto t1_result = parse_timestamp_ms(*arg);
+        expected<std::chrono::system_clock::time_point, std::string> t1_result = parse_timestamp_ms(*arg);
         if (not t1_result.has_value()) {
           fmt::print("Invalid t1 datetime '{}': {}.\n", *arg, t1_result.error());
           return;

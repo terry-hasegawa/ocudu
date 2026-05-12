@@ -23,7 +23,8 @@ public:
   ///
   /// The UE is uniquely identified in the CU-CP through the serving Cell PCI
   /// and RNTI. The target is identified through the Target PCI.
-  virtual void trigger_handover(pci_t source_pci, rnti_t rnti, pci_t target_pci) = 0;
+  virtual void
+  trigger_handover(pci_t source_pci, rnti_t rnti, pci_t target_pci, plmn_identity target_plmn, tac_t target_tac) = 0;
 
   /// \brief Trigger Conditional Handover (CHO) with one or more target cells.
   ///

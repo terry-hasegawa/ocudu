@@ -5,10 +5,10 @@
 #include "cell_meas_manager_impl.h"
 #include "cell_meas_manager_helpers.h"
 #include "ocudu/cu_cp/cell_meas_manager_config.h"
+#include "ocudu/ran/plmn_identity.h"
 #include "ocudu/rrc/meas_types.h"
 #include "ocudu/support/ocudu_assert.h"
 #include <set>
-#include <unordered_set>
 #include <utility>
 
 using namespace ocudu;
@@ -350,7 +350,9 @@ void cell_meas_manager::report_measurement(cu_cp_ue_index_t ue_index, const rrc_
               ue_index,
               ncell_cfg.serving_cell_cfg.nci.gnb_id(ncell_cfg.serving_cell_cfg.gnb_id_bit_length),
               ncell_cfg.serving_cell_cfg.nci,
-              strongest_neighbor.value());
+              strongest_neighbor.value(),
+              ncell_cfg.serving_cell_cfg.plmn,
+              ncell_cfg.serving_cell_cfg.tac);
           return;
         }
       }
@@ -363,11 +365,14 @@ void cell_meas_manager::report_measurement(cu_cp_ue_index_t ue_index, const rrc_
       if (serv_cell.meas_result_best_neigh_cell.has_value()) {
         // Report this cell.
         if (serv_cell.meas_result_best_neigh_cell.value().pci.has_value()) {
+          const cell_meas_config& cell_cfg = cfg.cells.at(meas_ctxt.nci);
           mobility_mng_notifier.on_neighbor_better_than_spcell(
               ue_index,
               meas_ctxt.nci.gnb_id(meas_ctxt.gnb_id_bit_length),
               meas_ctxt.nci,
-              serv_cell.meas_result_best_neigh_cell.value().pci.value());
+              serv_cell.meas_result_best_neigh_cell.value().pci.value(),
+              cell_cfg.serving_cell_cfg.plmn,
+              cell_cfg.serving_cell_cfg.tac);
           return;
         }
       }
@@ -377,8 +382,13 @@ void cell_meas_manager::report_measurement(cu_cp_ue_index_t ue_index, const rrc_
     std::optional<pci_t> strongest_neighbor = find_strongest_neighbor(ue_index, meas_results, logger);
     if (strongest_neighbor.has_value()) {
       // Report cell.
-      mobility_mng_notifier.on_neighbor_better_than_spcell(
-          ue_index, meas_ctxt.nci.gnb_id(meas_ctxt.gnb_id_bit_length), meas_ctxt.nci, strongest_neighbor.value());
+      const cell_meas_config& cell_cfg = cfg.cells.at(meas_ctxt.nci);
+      mobility_mng_notifier.on_neighbor_better_than_spcell(ue_index,
+                                                           meas_ctxt.nci.gnb_id(meas_ctxt.gnb_id_bit_length),
+                                                           meas_ctxt.nci,
+                                                           strongest_neighbor.value(),
+                                                           cell_cfg.serving_cell_cfg.plmn,
+                                                           cell_cfg.serving_cell_cfg.tac);
       return;
     }
   }
