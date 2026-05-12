@@ -114,3 +114,7 @@ gtest_discover_tests(phy_time_unit_test)
 add_executable(i_rnti_test i_rnti_test.cpp)
 target_link_libraries(i_rnti_test ocudu_support GTest::gtest ocudu_gtest_main)
 add_test(i_rnti_test i_rnti_test)
+
+add_executable(precoding_codebooks_test precoding/precoding_codebooks_test.cpp)
+target_link_libraries(precoding_codebooks_test ocudu_ran GTest::gtest ocudu_gtest_main)
+add_test(precoding_codebooks_test precoding_codebooks_test)
