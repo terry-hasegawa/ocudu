@@ -54,6 +54,6 @@ add_library(ocudu_ran
         ssb/ssb_mapping.cpp
         tdd_ul_dl_config.cpp
         drx_config.cpp)
-target_link_libraries(ocudu_ran ocudulog)
+target_link_libraries(ocudu_ran ocudulog ocuduvec)
 
 add_to_exported_libs(ocudu_ran)

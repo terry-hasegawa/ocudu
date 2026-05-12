@@ -4,6 +4,9 @@
 
 #include "ocudu/ran/precoding/precoding_codebooks.h"
 #include "ocudu/adt/interval.h"
+#include "ocudu/ran/precoding/precoding_codebook_configuration.h"
+#include "ocudu/ran/precoding/precoding_codebook_helpers.h"
+#include "ocudu/ran/precoding/precoding_matrix_indicator.h"
 #include "ocudu/support/math/math_utils.h"
 
 using namespace ocudu;
@@ -134,361 +137,201 @@ precoding_weight_matrix ocudu::make_two_layer_two_ports(unsigned i_codebook)
   return result;
 }
 
-// Creates horizontal beam coefficients, given a phase increment between adjacent elements, an initial phase, and a
-// scaling factor.
-static void create_horizontal_beam(span<cf_t> beam, float phase_increment_rad, float initial_phase_rad, float scaling)
+/// \brief Generates precoding weights for a selected layer of a Type I Single-Panel codebook, as defined in TS 38.214
+/// Section 5.2.2.2.1.
+///
+/// The generated column follows the structure:
+///
+/// \f[
+///   W_\text{layer} = \begin{bmatrix} \nu_{l,m} \\ \varphi_n \cdot \nu_{l,m} \end{bmatrix}
+/// \f]
+///
+/// where \f$\nu_{l,m}\f$ is the beam steering vector and \f$\varphi_n = e^{j \cdot \text{pol\_offset\_rad}}\f$
+/// is the co-phasing factor between the two cross-polarization antenna groups.
+///
+/// The beam steering vector \f$\nu_{l,m}\f$ is built as a Kronecker product of horizontal and vertical phase offset
+/// vectors. For antenna element at horizontal position \f$i_h\f$ and vertical position \f$i_v\f$, the beam coefficient
+/// is:
+///
+/// \f[
+///   \nu_{l,m} [i_h, i_v] = e^{j 2\pi l \cdot i_h / (O_1 N_1)} \cdot e^{j 2\pi m \cdot i_v / (O_2 N_2)}
+/// \f]
+///
+/// \note The normalization factor \f$1/\sqrt{v \cdot P_\text{CSI-RS}}\f$ (where \f$v\f$ is the number of layers
+/// and \f$P_\text{CSI-RS} = 2 N_1 N_2\f$ is the number of CSI-RS ports) is not applied by this function. The caller is
+/// responsible for applying it after assembling all layers.
+///
+/// \param[out] result Precoding weight matrix where the generated weights will be stored.
+/// \param[in] panel Type I Single-Panel antenna panel information.
+/// \param[in] i_layer Layer index within the precoding weight matrix.
+/// \param[in] l Horizontal beam index.
+/// \param[in] m Vertical beam index.
+/// \param[in] polarization_offset  Cross-polarization phase offset,
+static void make_layer_type1_sp_mode1(precoding_weight_matrix&              result,
+                                      const pmi_codebook_single_panel_info& panel,
+                                      unsigned                              i_layer,
+                                      unsigned                              l,
+                                      unsigned                              m,
+                                      cf_t                                  polarization_offset)
 {
-  // Number of beam coefficients.
-  unsigned nof_elements = beam.size();
+  ocudu_assert((panel.n2 == 1) && (panel.o2 == 1),
+               "Unsupported panel configuration. Only the 2x1 panel (i.e., N1 = 2, N2 = 1) is supported.");
 
-  // Phasor to increment the phase of each beam coefficient.
-  cf_t phase_increment = std::polar(1.0F, phase_increment_rad);
+  // Phase increment for each beam coefficient. This defines the direction of the beam in the horizontal plane.
+  float phase_inc_h_rad = TWOPI * (static_cast<float>(l) / static_cast<float>(panel.o1 * panel.n1));
+  // Phase increment for each beam coefficient. This defines the direction of the beam in the vertical plane.
+  float phase_inc_v_rad = TWOPI * (static_cast<float>(m) / static_cast<float>(panel.o2 * panel.n2));
+  // Get the number of physical ports, which is half the number of CSI-RS ports given that two polarizations are used.
+  unsigned nof_ports_2 = result.get_nof_ports() / 2;
 
-  // Initial beam coefficient.
-  cf_t beam_coefficient = std::polar(scaling, initial_phase_rad);
+  // Phasor to increment the phase of each beam coefficient in the horizontal plane.
+  cf_t phase_inc_h = std::polar(1.0F, phase_inc_h_rad);
+  // Phasor to increment the phase of each beam coefficient in the vertical plane.
+  cf_t phase_inc_v = std::polar(1.0F, phase_inc_v_rad);
 
-  for (unsigned i_element = 0; i_element != nof_elements; ++i_element) {
-    beam[i_element] = beam_coefficient;
+  // Current beam coefficient in the horizontal plane. Initially set to one.
+  cf_t beam_coef_h = std::polar(1.0F, 0.0F);
+  // Current beam coefficient in the vertical plane. Initially set to one.
+  cf_t beam_coef_v = std::polar(1.0F, 0.0F);
 
-    // Increment phase;
-    beam_coefficient *= phase_increment;
+  // Current processed port index.
+  unsigned i_port = 0;
+
+  // Iterate every horizontal physical port.
+  for (unsigned i_h = 0; i_h != panel.n1; ++i_h) {
+    // Reset vertical beam coefficient.
+    beam_coef_v = std::polar(1.0F, 0.0F);
+
+    // For each horizontal port, iterate every vertical physical port.
+    for (unsigned i_v = 0; i_v != panel.n2; ++i_v) {
+      // Compute the beam coefficient for this port and layer.
+      cf_t beam_coef = beam_coef_h * beam_coef_v;
+      // First polarization.
+      result.set_coefficient(beam_coef, i_layer, i_port);
+      // Second polarization, same beam but with phase offset.
+      result.set_coefficient(polarization_offset * beam_coef, i_layer, nof_ports_2 + i_port);
+
+      // Increase the port index.
+      i_port++;
+      // Apply the phase increment to the vertical beam coefficient.
+      beam_coef_v *= phase_inc_v;
+    }
+
+    // Apply the phase increment to the horizontal beam coefficient.
+    beam_coef_h *= phase_inc_h;
   }
 }
 
-precoding_weight_matrix ocudu::make_one_layer_four_ports_type1_sp_mode1(unsigned beam_azimuth_id, unsigned pol_shift_id)
+precoding_weight_matrix ocudu::make_type1_sp_mode1(const precoding_matrix_indicator& pmi, unsigned nof_layers)
 {
-  // Beam oversampling factor in the horizontal plane, from TS38.214 Section 5.2.2.2.1.
-  static constexpr unsigned O_1 = 4;
-  // Number of cross-polarized antenna elements, from TS38.214 Section 5.2.2.2.1.
-  static constexpr unsigned N_1 = 2;
-  // Number of possible horizontal beams to choose from.
-  static constexpr unsigned nof_beams = O_1 * N_1;
-  // Number of possible polarization phase shifts to choose from.
-  static constexpr unsigned nof_pol_shifts = 4;
+  ocudu_assert(nof_layers <= precoding_constants::MAX_NOF_LAYERS,
+               "The number of layers ({}) cannot be higher than the maximum ({}).",
+               nof_layers,
+               precoding_constants::MAX_NOF_LAYERS);
+  ocudu_assert(nof_layers > 0, "The number of layers must be a positive number.");
 
-  static constexpr interval<unsigned, false> beam_azimuth_range(0, nof_beams);
-  static constexpr interval<unsigned, false> pol_phase_shift_range(0, nof_pol_shifts);
+  // Get the underlying Type I Single-Panel PMI type from the parameter PMI.
+  const auto* type1_sp_pmi = std::get_if<pmi_typeI_single_panel>(&pmi);
+  ocudu_assert(type1_sp_pmi != nullptr, "The precoding matrix indication (PMI) must be of type Type I Single-Panel.");
 
-  ocudu_assert(beam_azimuth_range.contains(beam_azimuth_id),
-               "The given beam azimuth identifier i1_1 (i.e., {}) is out of the range {}",
-               beam_azimuth_id,
-               beam_azimuth_range);
+  // Ensure the given panel configuration is supported.
+  ocudu_assert(type1_sp_pmi->panel_config == pmi_codebook_single_panel_config::two_one,
+               "For 4 CSI-RS antenna ports, only the 2x1 panel distribution is supported (i.e., N1 = 2, N2 = 1).");
 
-  ocudu_assert(pol_phase_shift_range.contains(pol_shift_id),
-               "The given polarization phase shift i2 (i.e., {}) is out of the range {}",
-               pol_shift_id,
-               pol_phase_shift_range);
+  // Extract the panel information.
+  const pmi_codebook_single_panel_info& panel_info = get_single_panel_info(type1_sp_pmi->panel_config);
 
-  // Precoding weight matrix for one layer mapped into four antenna ports.
-  precoding_weight_matrix result(1, 4);
+  // Calculate the number of CSI-RS ports.
+  unsigned nof_ports = 2 * panel_info.n1 * panel_info.n2;
 
-  // Power normalization factor. It is equal to the square root of the number of antenna ports.
-  static constexpr float scaling = 0.5F;
+  // Get the bitwidth for the Precoding Matrix Indicator parameters given the selected panel configuration and number of
+  // layers.
+  pmi_typeI_single_panel_param_sizes pmi_param_sizes = get_pmi_sizes_typeI_single_panel(panel_info, nof_layers);
 
-  // Phase increment for each beam coefficient. This defines the direction of the beam in the horizontal plane.
-  float phase_increment_rad = 2.0F * M_PI * static_cast<float>(beam_azimuth_id) / static_cast<float>(nof_beams);
+  // Derive the number of beams from the beam selector parameter (i_1_1) bitwidth.
+  unsigned nof_beams = pow2(pmi_param_sizes.i_1_1);
+
+  // Number of possible polarization phase shifts given the number of layers.
+  const unsigned nof_pol_shifts = (nof_layers > 1) ? 2 : 4;
+
+  // Validate the selected horizontal beam identifier (i_1_1).
+  const interval<unsigned, false> beam_selector_range(0, nof_beams);
+  ocudu_assert(beam_selector_range.contains(type1_sp_pmi->i_1_1),
+               "The given beam identifier i_1_1 (i.e., {}) is out of the range {}.",
+               type1_sp_pmi->i_1_1,
+               beam_selector_range);
+
+  // Validate the selected polarization shift identifier (i_2).
+  const interval<unsigned, false> pol_shift_selector_range(0, nof_pol_shifts);
+  ocudu_assert(pol_shift_selector_range.contains(type1_sp_pmi->i_2),
+               "The given polarization shift identifier i_2 (i.e., {}) is out of the range {}.",
+               type1_sp_pmi->i_2,
+               pol_shift_selector_range);
+
+  // Create the resulting precoding weight matrix.
+  precoding_weight_matrix result(nof_layers, nof_ports);
+
   // Polarization phase shift. This defines the relative phase between the cross-polarized antenna elements.
-  float pol_phase_shift_rad = M_PI_2 * static_cast<float>(pol_shift_id);
-
-  std::array<cf_t, N_1> beam;
-
-  // Beam for the first polarization.
-  create_horizontal_beam(beam, phase_increment_rad, 0.0F, scaling);
-
-  // Set weights for the first polarization.
-  result.set_coefficient(beam[0], 0, 0);
-  result.set_coefficient(beam[1], 0, 1);
-
-  // Beam for the second polarization.
-  create_horizontal_beam(beam, phase_increment_rad, pol_phase_shift_rad, scaling);
-
-  // Set weights for the second polarization.
-  result.set_coefficient(beam[0], 0, 2);
-  result.set_coefficient(beam[1], 0, 3);
-
-  return result;
-}
-
-precoding_weight_matrix ocudu::make_two_layer_four_ports_type1_sp_mode1(unsigned beam_azimuth_id,
-                                                                        unsigned beam_offset_id,
-                                                                        unsigned pol_shift_id)
-{
-  // Beam oversampling factor in the horizontal plane, from TS38.214 Section 5.2.2.2.1.
-  static constexpr unsigned O_1 = 4;
-  // Number of cross-polarized antenna elements, from TS38.214 Section 5.2.2.2.1.
-  static constexpr unsigned N_1 = 2;
-  // Number of possible horizontal beams to choose from.
-  static constexpr unsigned nof_beams = O_1 * N_1;
-  // Number of possible polarization phase shifts to choose from.
-  static constexpr unsigned nof_pol_shifts = 2;
-
-  static constexpr interval<unsigned, false> beam_azimuth_range(0, nof_beams);
-  static constexpr interval<unsigned, false> beam_offset_range(0, 2);
-  static constexpr interval<unsigned, false> pol_phase_shift_range(0, nof_pol_shifts);
-
-  ocudu_assert(beam_azimuth_range.contains(beam_azimuth_id),
-               "The given beam azimuth identifier i1_1 (i.e., {}) is out of the range {}",
-               beam_azimuth_id,
-               beam_azimuth_range);
-
-  ocudu_assert(beam_offset_range.contains(beam_offset_id),
-               "The given beam offset identifier i1_3 (i.e., {}) is out of the range {}",
-               beam_offset_id,
-               beam_offset_range);
-
-  ocudu_assert(pol_phase_shift_range.contains(pol_shift_id),
-               "The given polarization phase shift i2 (i.e., {}) is out of the range {}",
-               pol_shift_id,
-               pol_phase_shift_range);
-
-  // Precoding weight matrix for two layers mapped into four antenna ports.
-  precoding_weight_matrix result(2, 4);
-
-  // Power normalization factor. It is equal to the square root of the number of ports times the number of layers.
-  static constexpr float scaling = 0.5F * M_SQRT1_2;
-
-  // Select k1 as per TS38.214 Section 5.2.2.2.1-3.
-  unsigned k1 = (beam_offset_id == 0) ? 0 : O_1;
-
-  // Phase increment for each beam coefficient. This defines the direction of the beam in the horizontal plane.
-  float phase_increment_rad = static_cast<float>(beam_azimuth_id) * 2.0F * M_PI / static_cast<float>(nof_beams);
-  // Polarization phase shift. This defines the relative phase between the cross-polarized antenna elements.
-  float pol_phase_shift_rad = M_PI_2 * static_cast<float>(pol_shift_id);
-
-  std::array<cf_t, N_1> beam;
-
-  // Layer 0.
-
-  // Beam for the first polarization.
-  create_horizontal_beam(beam, phase_increment_rad, 0.0F, scaling);
-
-  // Set weights for the first polarization.
-  result.set_coefficient(beam[0], 0, 0);
-  result.set_coefficient(beam[1], 0, 1);
-
-  // Beam for the second polarization.
-  create_horizontal_beam(beam, phase_increment_rad, pol_phase_shift_rad, scaling);
-
-  // Set weights for the second polarization.
-  result.set_coefficient(beam[0], 0, 2);
-  result.set_coefficient(beam[1], 0, 3);
-
-  // Layer 1. Recalculate phase increment for adjacent beam antenna elements.
-  phase_increment_rad = static_cast<float>(beam_azimuth_id + k1) * 2.0F * M_PI / static_cast<float>(nof_beams);
-
-  // Beam for the first polarization.
-  create_horizontal_beam(beam, phase_increment_rad, 0.0F, scaling);
-
-  // Set weights for the first polarization.
-  result.set_coefficient(beam[0], 1, 0);
-  result.set_coefficient(beam[1], 1, 1);
-
-  // Beam for the second polarization.
-  create_horizontal_beam(beam, phase_increment_rad, pol_phase_shift_rad + M_PI, scaling);
-
-  // Set weights for the second polarization.
-  result.set_coefficient(beam[0], 1, 2);
-  result.set_coefficient(beam[1], 1, 3);
-
-  return result;
-}
-
-precoding_weight_matrix ocudu::make_three_layer_four_ports_type1_sp(unsigned beam_azimuth_id, unsigned pol_shift_id)
-{
-  // Beam oversampling factor in the horizontal plane, from TS38.214 Section 5.2.2.2.1.
-  static constexpr unsigned O_1 = 4;
-  // Number of cross-polarized antenna elements, from TS38.214 Section 5.2.2.2.1.
-  static constexpr unsigned N_1 = 2;
-  // Number of possible horizontal beams to choose from.
-  static constexpr unsigned nof_beams = O_1 * N_1;
-  // Number of possible polarization phase shifts to choose from.
-  static constexpr unsigned nof_pol_shifts = 2;
-
-  static constexpr interval<unsigned, false> beam_azimuth_range(0, nof_beams);
-  static constexpr interval<unsigned, false> pol_phase_shift_range(0, nof_pol_shifts);
-
-  ocudu_assert(beam_azimuth_range.contains(beam_azimuth_id),
-               "The given beam azimuth identifier i1_1 (i.e., {}) is out of the range {}",
-               beam_azimuth_id,
-               beam_azimuth_range);
-
-  ocudu_assert(pol_phase_shift_range.contains(pol_shift_id),
-               "The given polarization phase shift i2 (i.e., {}) is out of the range {}",
-               pol_shift_id,
-               pol_phase_shift_range);
-
-  // Precoding weight matrix for three layers mapped into four antenna ports.
-  precoding_weight_matrix result(3, 4);
-
-  // Power normalization factor. It is equal to the square root of the number of ports times the number of layers.
-  float scaling = 1.0F / std::sqrt(12.0F);
-
-  // Select k1 as per TS38.214 Section 5.2.2.2.1-4.
-  static constexpr unsigned k1 = O_1;
-
-  // Phase increment for each beam coefficient. This defines the direction of the beam in the horizontal plane.
-  float phase_increment_rad = static_cast<float>(beam_azimuth_id) * 2.0F * M_PI / static_cast<float>(nof_beams);
-  // Polarization phase shift. This defines the relative phase between the cross-polarized antenna elements.
-  float pol_phase_shift_rad = M_PI_2 * static_cast<float>(pol_shift_id);
-
-  std::array<cf_t, N_1> beam;
-
-  // Layer 0.
-
-  // Beam for the first polarization.
-  create_horizontal_beam(beam, phase_increment_rad, 0.0F, scaling);
-
-  // Set weights for the first polarization.
-  result.set_coefficient(beam[0], 0, 0);
-  result.set_coefficient(beam[1], 0, 1);
-
-  // Beam for the second polarization.
-  create_horizontal_beam(beam, phase_increment_rad, pol_phase_shift_rad, scaling);
-
-  // Set weights for the second polarization.
-  result.set_coefficient(beam[0], 0, 2);
-  result.set_coefficient(beam[1], 0, 3);
-
-  // Layer 2. The phase increment for adjacent beam antenna elements is the same as layer 0.
-
-  // Beam for the first polarization.
-  create_horizontal_beam(beam, phase_increment_rad, 0.0F, scaling);
-
-  // Set weights for the first polarization.
-  result.set_coefficient(beam[0], 2, 0);
-  result.set_coefficient(beam[1], 2, 1);
-
-  // Beam for the second polarization.
-  create_horizontal_beam(beam, phase_increment_rad, pol_phase_shift_rad + M_PI, scaling);
-
-  // Set weights for the second polarization.
-  result.set_coefficient(beam[0], 2, 2);
-  result.set_coefficient(beam[1], 2, 3);
-
-  // Layer 1. Recalculate phase increment for adjacent beam antenna elements.
-  phase_increment_rad = static_cast<float>(beam_azimuth_id + k1) * 2.0F * M_PI / static_cast<float>(nof_beams);
-
-  // Beam for the first polarization.
-  create_horizontal_beam(beam, phase_increment_rad, 0.0F, scaling);
-
-  // Set weights for the first polarization.
-  result.set_coefficient(beam[0], 1, 0);
-  result.set_coefficient(beam[1], 1, 1);
-
-  // Beam for the second polarization.
-  create_horizontal_beam(beam, phase_increment_rad, pol_phase_shift_rad, scaling);
-
-  // Set weights for the second polarization.
-  result.set_coefficient(beam[0], 1, 2);
-  result.set_coefficient(beam[1], 1, 3);
-
-  return result;
-}
-
-precoding_weight_matrix ocudu::make_four_layer_four_ports_type1_sp(unsigned beam_azimuth_id, unsigned pol_shift_id)
-{
-  // Beam oversampling factor in the horizontal plane, from TS38.214 Section 5.2.2.2.1.
-  static constexpr unsigned O_1 = 4;
-  // Number of cross-polarized antenna elements, from TS38.214 Section 5.2.2.2.1.
-  static constexpr unsigned N_1 = 2;
-  // Number of possible horizontal beams to choose from.
-  static constexpr unsigned nof_beams = O_1 * N_1;
-  // Number of possible polarization phase shifts to choose from.
-  static constexpr unsigned nof_pol_shifts = 2;
-
-  static constexpr interval<unsigned, false> beam_azimuth_range(0, nof_beams);
-  static constexpr interval<unsigned, false> pol_phase_shift_range(0, nof_pol_shifts);
-
-  ocudu_assert(beam_azimuth_range.contains(beam_azimuth_id),
-               "The given beam azimuth identifier i1_1 (i.e., {}) is out of the range {}",
-               beam_azimuth_id,
-               beam_azimuth_range);
-
-  ocudu_assert(pol_phase_shift_range.contains(pol_shift_id),
-               "The given polarization phase shift i2 (i.e., {}) is out of the range {}",
-               pol_shift_id,
-               pol_phase_shift_range);
-
-  // Precoding weight matrix for three layers mapped into four antenna ports.
-  precoding_weight_matrix result(4, 4);
-
-  // Power normalization factor. It is equal to the square root of the number of ports times the number of layers.
-  static constexpr float scaling = 1.0F / 4.0F;
-
-  // Select k1 as per TS38.214 Section 5.2.2.2.1-4.
-  static constexpr unsigned k1 = O_1;
-
-  // Phase increment for each beam coefficient. This defines the direction of the beam in the horizontal plane.
-  float phase_increment_rad = static_cast<float>(beam_azimuth_id) * 2.0F * M_PI / static_cast<float>(nof_beams);
-  // Polarization phase shift. This defines the relative phase between the cross-polarized antenna elements.
-  float pol_phase_shift_rad = M_PI_2 * static_cast<float>(pol_shift_id);
-
-  std::array<cf_t, N_1> beam;
-
-  // Layer 0.
-
-  // Beam for the first polarization.
-  create_horizontal_beam(beam, phase_increment_rad, 0.0F, scaling);
-
-  // Set weights for the first polarization.
-  result.set_coefficient(beam[0], 0, 0);
-  result.set_coefficient(beam[1], 0, 1);
-
-  // Beam for the second polarization.
-  create_horizontal_beam(beam, phase_increment_rad, pol_phase_shift_rad, scaling);
-
-  // Set weights for the second polarization.
-  result.set_coefficient(beam[0], 0, 2);
-  result.set_coefficient(beam[1], 0, 3);
-
-  // Layer 2. The phase increment for adjacent beam antenna elements is the same as layer 0.
-
-  // Beam for the first polarization.
-  create_horizontal_beam(beam, phase_increment_rad, 0.0F, scaling);
-
-  // Set weights for the first polarization.
-  result.set_coefficient(beam[0], 2, 0);
-  result.set_coefficient(beam[1], 2, 1);
-
-  // Beam for the second polarization.
-  create_horizontal_beam(beam, phase_increment_rad, pol_phase_shift_rad + M_PI, scaling);
-
-  // Set weights for the second polarization.
-  result.set_coefficient(beam[0], 2, 2);
-  result.set_coefficient(beam[1], 2, 3);
-
-  // Layer 1. Recalculate phase increment for adjacent beam antenna elements.
-  phase_increment_rad = static_cast<float>(beam_azimuth_id + k1) * 2.0F * M_PI / static_cast<float>(nof_beams);
-
-  // Beam for the first polarization.
-  create_horizontal_beam(beam, phase_increment_rad, 0.0F, scaling);
-
-  // Set weights for the first polarization.
-  result.set_coefficient(beam[0], 1, 0);
-  result.set_coefficient(beam[1], 1, 1);
-
-  // Beam for the second polarization.
-  create_horizontal_beam(beam, phase_increment_rad, pol_phase_shift_rad, scaling);
-
-  // Set weights for the second polarization.
-  result.set_coefficient(beam[0], 1, 2);
-  result.set_coefficient(beam[1], 1, 3);
-
-  // Layer 3. The phase increment for adjacent beam antenna elements is the same as layer 1.
-
-  // Beam for the first polarization.
-  create_horizontal_beam(beam, phase_increment_rad, 0.0F, scaling);
-
-  // Set weights for the first polarization.
-  result.set_coefficient(beam[0], 3, 0);
-  result.set_coefficient(beam[1], 3, 1);
-
-  // Beam for the second polarization.
-  create_horizontal_beam(beam, phase_increment_rad, pol_phase_shift_rad + M_PI, scaling);
-
-  // Set weights for the second polarization.
-  result.set_coefficient(beam[0], 3, 2);
-  result.set_coefficient(beam[1], 3, 3);
+  cf_t phi = std::polar(1.0F, M_PI_2f * static_cast<float>(type1_sp_pmi->i_2));
+
+  // Beam identifiers for each layer.
+  static_vector<unsigned, precoding_constants::MAX_NOF_LAYERS> layer_beam(nof_layers);
+  // Cross-polarization phase offset for each layer.
+  static_vector<cf_t, precoding_constants::MAX_NOF_LAYERS> layer_pol(nof_layers);
+
+  switch (nof_layers) {
+    case 1: {
+      layer_beam.assign({type1_sp_pmi->i_1_1});
+      layer_pol.assign({phi});
+      break;
+    }
+    case 2: {
+      // For two layer - four antenna ports, the beam offset identifier (i.e., i_1_3) can take values 0 or 1.
+      ocudu_assert(type1_sp_pmi->i_1_3.has_value(), "The PMI report is missing the beam offset identifier (i_1_3).");
+
+      unsigned                                   i_1_3 = *type1_sp_pmi->i_1_3;
+      static constexpr interval<unsigned, false> beam_offset_range(0, 2);
+      ocudu_assert(beam_offset_range.contains(i_1_3),
+                   "The given beam offset identifier i_1_3 (i.e., {}) is out of the range {}.",
+                   i_1_3,
+                   beam_offset_range);
+
+      // Beam offset between layers, as per TS 38.214 Table 5.2.2.2.1-3 for N1=2 and N2=1.
+      const std::array<unsigned, 2> k1 = {0, panel_info.o1};
+
+      layer_beam.assign({type1_sp_pmi->i_1_1, type1_sp_pmi->i_1_1 + k1[i_1_3]});
+      layer_pol.assign({phi, -phi});
+      break;
+    }
+    case 3: {
+      // Beam offset between layers, as per TS 38.214 Table 5.2.2.2.1-4.
+      const unsigned k1 = panel_info.o1;
+
+      layer_beam.assign({type1_sp_pmi->i_1_1, type1_sp_pmi->i_1_1 + k1, type1_sp_pmi->i_1_1});
+      layer_pol.assign({phi, phi, -phi});
+      break;
+    }
+    case 4: {
+      // Beam offset between layers, as per TS 38.214 Table 5.2.2.2.1-4.
+      const unsigned k1 = panel_info.o1;
+
+      layer_beam.assign({type1_sp_pmi->i_1_1, type1_sp_pmi->i_1_1 + k1, type1_sp_pmi->i_1_1, type1_sp_pmi->i_1_1 + k1});
+      layer_pol.assign({phi, phi, -phi, -phi});
+      break;
+    }
+    default:
+      ocudu_assert(false, "Invalid number of layers.");
+      break;
+  }
+
+  // Build the coefficients for each port and layer.
+  for (unsigned i_layer = 0; i_layer != nof_layers; ++i_layer) {
+    make_layer_type1_sp_mode1(result, panel_info, i_layer, layer_beam[i_layer], 0, layer_pol[i_layer]);
+  }
+
+  // Apply scaling.
+  float scaling = 1.0F / std::sqrt(nof_layers * nof_ports);
+  result *= scaling;
 
   return result;
 }

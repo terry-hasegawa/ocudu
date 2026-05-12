@@ -90,15 +90,16 @@ TEST(precoding_matrix_table_generator, four_port_typeI_single_panel_mode1_one_la
   // Iterate over all possible PMI.
   for (unsigned i_1_1 = 0; i_1_1 != 8; ++i_1_1) {
     for (unsigned i_2 = 0; i_2 != 4; ++i_2) {
-      mac_pdsch_precoding_info info;
-      info.report.emplace(precoding_matrix_indicator{
-          pmi_typeI_single_panel{pmi_codebook_single_panel_config::two_one, i_1_1, std::nullopt, std::nullopt, i_2}});
+      mac_pdsch_precoding_info   info;
+      precoding_matrix_indicator pmi =
+          pmi_typeI_single_panel{pmi_codebook_single_panel_config::two_one, i_1_1, std::nullopt, std::nullopt, i_2};
+      info.report.emplace(pmi);
 
       unsigned index = mapper->map(info, 1);
 
       precoding_weight_matrix matrix = repository->get_precoding_matrix(index);
 
-      precoding_weight_matrix expected_matrix = make_one_layer_four_ports_type1_sp_mode1(i_1_1, i_2);
+      precoding_weight_matrix expected_matrix = make_type1_sp_mode1(pmi, 1);
 
       ASSERT_EQ(matrix, expected_matrix);
     }
@@ -115,15 +116,16 @@ TEST(precoding_matrix_table_generator, four_port_typeI_single_panel_mode1_two_la
   for (unsigned i_1_1 = 0; i_1_1 != 8; ++i_1_1) {
     for (unsigned i_1_3 = 0; i_1_3 != 2; ++i_1_3) {
       for (unsigned i_2 = 0; i_2 != 2; ++i_2) {
-        mac_pdsch_precoding_info info;
-        info.report.emplace(precoding_matrix_indicator{
-            pmi_typeI_single_panel{pmi_codebook_single_panel_config::two_one, i_1_1, std::nullopt, i_1_3, i_2}});
+        mac_pdsch_precoding_info   info;
+        precoding_matrix_indicator pmi =
+            pmi_typeI_single_panel{pmi_codebook_single_panel_config::two_one, i_1_1, std::nullopt, i_1_3, i_2};
+        info.report.emplace(pmi);
 
         unsigned index = mapper->map(info, 2);
 
         precoding_weight_matrix matrix = repository->get_precoding_matrix(index);
 
-        precoding_weight_matrix expected_matrix = make_two_layer_four_ports_type1_sp_mode1(i_1_1, i_1_3, i_2);
+        precoding_weight_matrix expected_matrix = make_type1_sp_mode1(pmi, 2);
 
         ASSERT_EQ(matrix, expected_matrix);
       }
@@ -140,15 +142,16 @@ TEST(precoding_matrix_table_generator, four_port_typeI_single_panel_three_layer)
   // Iterate over all possible PMI.
   for (unsigned i_1_1 = 0; i_1_1 != 8; ++i_1_1) {
     for (unsigned i_2 = 0; i_2 != 2; ++i_2) {
-      mac_pdsch_precoding_info info;
-      info.report.emplace(precoding_matrix_indicator{
-          pmi_typeI_single_panel{pmi_codebook_single_panel_config::two_one, i_1_1, std::nullopt, std::nullopt, i_2}});
+      mac_pdsch_precoding_info   info;
+      precoding_matrix_indicator pmi =
+          pmi_typeI_single_panel{pmi_codebook_single_panel_config::two_one, i_1_1, std::nullopt, std::nullopt, i_2};
+      info.report.emplace(pmi);
 
       unsigned index = mapper->map(info, 3);
 
       precoding_weight_matrix matrix = repository->get_precoding_matrix(index);
 
-      precoding_weight_matrix expected_matrix = make_three_layer_four_ports_type1_sp(i_1_1, i_2);
+      precoding_weight_matrix expected_matrix = make_type1_sp_mode1(pmi, 3);
 
       ASSERT_EQ(matrix, expected_matrix);
     }
@@ -164,15 +167,16 @@ TEST(precoding_matrix_table_generator, four_port_typeI_single_panel_four_layer)
   // Iterate over all possible PMI.
   for (unsigned i_1_1 = 0; i_1_1 != 8; ++i_1_1) {
     for (unsigned i_2 = 0; i_2 != 2; ++i_2) {
-      mac_pdsch_precoding_info info;
-      info.report.emplace(precoding_matrix_indicator{
-          pmi_typeI_single_panel{pmi_codebook_single_panel_config::two_one, i_1_1, std::nullopt, std::nullopt, i_2}});
+      mac_pdsch_precoding_info   info;
+      precoding_matrix_indicator pmi =
+          pmi_typeI_single_panel{pmi_codebook_single_panel_config::two_one, i_1_1, std::nullopt, std::nullopt, i_2};
+      info.report.emplace(pmi);
 
       unsigned index = mapper->map(info, 4);
 
       precoding_weight_matrix matrix = repository->get_precoding_matrix(index);
 
-      precoding_weight_matrix expected_matrix = make_four_layer_four_ports_type1_sp(i_1_1, i_2);
+      precoding_weight_matrix expected_matrix = make_type1_sp_mode1(pmi, 4);
 
       ASSERT_EQ(matrix, expected_matrix);
     }

@@ -149,8 +149,13 @@ static unsigned generate_pdsch_4_ports_1_layer(unsigned offset, precoding_matrix
   unsigned base_offset = offset;
   for (unsigned i_1_1 = 0, e_1_1 = 8; i_1_1 != e_1_1; ++i_1_1) {
     for (unsigned i_2 = 0, e_2 = 4; i_2 != e_2; ++i_2) {
-      precoding_weight_matrix precoding = make_one_layer_four_ports_type1_sp_mode1(i_1_1, i_2);
-      unsigned                pm_index  = base_offset + get_pdsch_four_port_precoding_matrix_index(i_1_1, 0, i_2);
+      precoding_matrix_indicator pmi = pmi_typeI_single_panel{.panel_config = pmi_codebook_single_panel_config::two_one,
+                                                              .i_1_1        = i_1_1,
+                                                              .i_1_2        = std::nullopt,
+                                                              .i_1_3        = std::nullopt,
+                                                              .i_2          = i_2};
+      precoding_weight_matrix    precoding = make_type1_sp_mode1(pmi, 1);
+      unsigned                   pm_index  = base_offset + get_pdsch_four_port_precoding_matrix_index(i_1_1, 0, i_2);
       repo_builder.add(pm_index, precoding);
       ++offset = pm_index;
     }
@@ -166,7 +171,13 @@ static unsigned generate_pdsch_4_ports_2_layers(unsigned offset, precoding_matri
   for (unsigned i_1_1 = 0, e_1_1 = 8; i_1_1 != e_1_1; ++i_1_1) {
     for (unsigned i_1_3 = 0, e_1_3 = 2; i_1_3 != e_1_3; ++i_1_3) {
       for (unsigned i_2 = 0, e_2 = 2; i_2 != e_2; ++i_2) {
-        precoding_weight_matrix precoding = make_two_layer_four_ports_type1_sp_mode1(i_1_1, i_1_3, i_2);
+        precoding_matrix_indicator pmi =
+            pmi_typeI_single_panel{.panel_config = pmi_codebook_single_panel_config::two_one,
+                                   .i_1_1        = i_1_1,
+                                   .i_1_2        = std::nullopt,
+                                   .i_1_3        = i_1_3,
+                                   .i_2          = i_2};
+        precoding_weight_matrix precoding = make_type1_sp_mode1(pmi, 2);
         unsigned                pm_index  = base_offset + get_pdsch_four_port_precoding_matrix_index(i_1_1, i_1_3, i_2);
         repo_builder.add(pm_index, precoding);
         offset = pm_index;
@@ -183,8 +194,13 @@ static unsigned generate_pdsch_4_ports_3_layers(unsigned offset, precoding_matri
   unsigned base_offset = offset;
   for (unsigned i_1_1 = 0, e_1_1 = 8; i_1_1 != e_1_1; ++i_1_1) {
     for (unsigned i_2 = 0, e_2 = 2; i_2 != e_2; ++i_2) {
-      precoding_weight_matrix precoding = make_three_layer_four_ports_type1_sp(i_1_1, i_2);
-      unsigned                pm_index  = base_offset + get_pdsch_four_port_precoding_matrix_index(i_1_1, 0, i_2);
+      precoding_matrix_indicator pmi = pmi_typeI_single_panel{.panel_config = pmi_codebook_single_panel_config::two_one,
+                                                              .i_1_1        = i_1_1,
+                                                              .i_1_2        = std::nullopt,
+                                                              .i_1_3        = std::nullopt,
+                                                              .i_2          = i_2};
+      precoding_weight_matrix    precoding = make_type1_sp_mode1(pmi, 3);
+      unsigned                   pm_index  = base_offset + get_pdsch_four_port_precoding_matrix_index(i_1_1, 0, i_2);
       repo_builder.add(pm_index, precoding);
       ++offset = pm_index;
     }
@@ -199,8 +215,13 @@ static unsigned generate_pdsch_4_ports_4_layers(unsigned offset, precoding_matri
   unsigned base_offset = offset;
   for (unsigned i_1_1 = 0, e_1_1 = 8; i_1_1 != e_1_1; ++i_1_1) {
     for (unsigned i_2 = 0, e_2 = 2; i_2 != e_2; ++i_2) {
-      precoding_weight_matrix precoding = make_four_layer_four_ports_type1_sp(i_1_1, i_2);
-      unsigned                pm_index  = base_offset + get_pdsch_four_port_precoding_matrix_index(i_1_1, 0, i_2);
+      precoding_matrix_indicator pmi = pmi_typeI_single_panel{.panel_config = pmi_codebook_single_panel_config::two_one,
+                                                              .i_1_1        = i_1_1,
+                                                              .i_1_2        = std::nullopt,
+                                                              .i_1_3        = std::nullopt,
+                                                              .i_2          = i_2};
+      precoding_weight_matrix    precoding = make_type1_sp_mode1(pmi, 4);
+      unsigned                   pm_index  = base_offset + get_pdsch_four_port_precoding_matrix_index(i_1_1, 0, i_2);
       repo_builder.add(pm_index, precoding);
       offset = pm_index;
     }
