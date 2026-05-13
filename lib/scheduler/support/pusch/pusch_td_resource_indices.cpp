@@ -4,7 +4,7 @@
 
 #include "ocudu/scheduler/config/pusch_td_resource_indices.h"
 #include "../../config/ue_configuration.h"
-#include "../pdcch/search_space_helper.h"
+#include "../pucch/pucch_k1_helper.h"
 #include "pusch_default_time_allocation.h"
 #include "ocudu/ocudulog/logger.h"
 #include "ocudu/ocudulog/ocudulog.h"
@@ -14,12 +14,11 @@ using namespace ocudu;
 using pusch_index_list = static_vector<unsigned, pusch_constants::MAX_NOF_PUSCH_TD_RES_ALLOCS>;
 
 /// Get minimum value for k1 given the common and dedicated configurations.
-/// When a search space is provided, its k1 candidates takes precedence over the cell-level dl-DataToUL-ACK list.
+/// When a search space is provided, its k1 candidates take precedence over the cell-level dl-DataToUL-ACK list.
 static unsigned get_min_k1(span<const uint8_t> dl_data_to_ul_ack, const search_space_info* ss_info)
 {
   const span<const uint8_t> k1_candidates =
-      ss_info != nullptr ? pdcch_helper::get_k1_candidates(ss_info->get_dl_dci_format(), dl_data_to_ul_ack)
-                         : dl_data_to_ul_ack;
+      ss_info != nullptr ? get_k1_candidates(ss_info->get_dl_dci_format(), dl_data_to_ul_ack) : dl_data_to_ul_ack;
   return *std::min_element(k1_candidates.begin(), k1_candidates.end());
 }
 

@@ -5,6 +5,7 @@
 #include "ue_configuration.h"
 #include "../support/pdsch/pdsch_default_time_allocation.h"
 #include "../support/pdsch/pdsch_resource_allocation.h"
+#include "../support/pucch/pucch_k1_helper.h"
 #include "../support/pusch/pusch_default_time_allocation.h"
 #include "../support/pusch/pusch_resource_allocation.h"
 #include "sched_config_params.h"
@@ -268,8 +269,7 @@ static dci_size_config get_dci_size_config(const ue_cell_configuration& ue_cell_
   dci_sz_cfg.nof_dl_time_domain_res = ue_cell_cfg.search_space(ss_id).pdsch_time_domain_list.size();
   dci_sz_cfg.nof_aperiodic_zp_csi   = 0;
   dci_sz_cfg.nof_pdsch_ack_timings =
-      pdcch_helper::get_k1_candidates(ss_info.get_dl_dci_format(), ue_cell_cfg.cell_cfg_common.dl_data_to_ul_ack)
-          .size();
+      get_k1_candidates(ss_info.get_dl_dci_format(), ue_cell_cfg.cell_cfg_common.dl_data_to_ul_ack).size();
   dci_sz_cfg.dynamic_prb_bundling      = false;
   dci_sz_cfg.rm_pattern_group1         = false;
   dci_sz_cfg.rm_pattern_group2         = false;

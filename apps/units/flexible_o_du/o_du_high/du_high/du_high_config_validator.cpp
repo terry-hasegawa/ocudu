@@ -527,7 +527,7 @@ static bool validate_pucch_cell_unit_config(const du_high_unit_base_cell_config&
     const unsigned max_factor =
         *std::max_element(pucch_cfg.repetition_factors.begin(), pucch_cfg.repetition_factors.end());
     // Enabling repetition factor 2 requires 1 threshold, 4 requires 2, and 8 requires 3.
-    unsigned required_thresholds = log2_ceil(max_factor);
+    const unsigned required_thresholds = log2_ceil(max_factor);
     if (pucch_cfg.repetition_sinr_thresholds.size() < required_thresholds) {
       fmt::print(
           "Enabling PUCCH repetition factor {} requires {} PUCCH repetition SINR thresholds (only {} provided).\n",

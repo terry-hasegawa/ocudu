@@ -4,6 +4,7 @@
 
 #include "dci_builder.h"
 #include "../cell/cell_harq_manager.h"
+#include "pucch/pucch_k1_helper.h"
 #include "rb_helper.h"
 #include "ocudu/ran/pdcch/dci_packing.h"
 #include "ocudu/ran/pdcch/search_space.h"
@@ -228,7 +229,7 @@ void ocudu::build_dci_f1_1_c_rnti(dci_dl_info&                  dci,
 
   const bwp_configuration& active_dl_bwp = ss_info.bwp->dl.cfg();
   const auto               k1_candidates =
-      pdcch_helper::get_k1_candidates(ss_info.get_dl_dci_format(), ue_cell_cfg.cell_cfg_common.dl_data_to_ul_ack);
+      get_k1_candidates(ss_info.get_dl_dci_format(), ue_cell_cfg.cell_cfg_common.dl_data_to_ul_ack);
 
   dci.type                    = dci_dl_rnti_config_type::c_rnti_f1_1;
   dci.c_rnti_f1_1             = {};

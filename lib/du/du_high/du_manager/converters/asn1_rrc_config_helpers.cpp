@@ -1651,7 +1651,7 @@ calculate_pucch_config_diff(asn1::rrc_nr::pucch_cfg_s& out, const pucch_config& 
     out.res_to_add_mod_list_ext_v1610.set_present();
     auto* ext_list = out.res_to_add_mod_list_ext_v1610.get();
     for (const auto& asn1_res : out.res_to_add_mod_list) {
-      const auto it =
+      const auto* const it =
           std::find_if(dest.pucch_res_list.begin(), dest.pucch_res_list.end(), [&](const pucch_resource& r) {
             return r.res_id.ue_res_id == asn1_res.pucch_res_id;
           });
