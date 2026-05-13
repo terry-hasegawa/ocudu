@@ -226,7 +226,7 @@ static bool validate_mobility_appconfig(gnb_id_t gnb_id, const cu_cp_unit_mobili
                    "If this cell is correctly assigned to a different CU-CP - fix the missing parameters:\n"
                    "  - gnb_id_bit_length: {}\n"
                    "  - pci: {}\n"
-                   "  - plmn_id: {}\n"
+                   "  - plmn: {}\n"
                    "  - tac: {}\n"
                    "  - band: {}\n"
                    "  - ssb_arfcn: {}\n"
