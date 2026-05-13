@@ -104,7 +104,8 @@ void inter_cu_handover_execution_target_routine::operator()(coro_context<async_t
 
     // Inform CU-UP of new UL NG-U tunnel endpoints and any PDU sessions released by the AMF.
     fill_e1ap_bearer_context_tunnel_update_request(std::get<cu_cp_path_switch_request_ack>(path_switch_response));
-    if (!tunnel_context_modification_request.ng_ran_bearer_context_mod_request->pdu_session_res_to_modify_list.empty() ||
+    if (!tunnel_context_modification_request.ng_ran_bearer_context_mod_request->pdu_session_res_to_modify_list
+             .empty() ||
         !tunnel_context_modification_request.ng_ran_bearer_context_mod_request->pdu_session_res_to_rem_list.empty()) {
       CORO_AWAIT(e1ap.handle_bearer_context_modification_request(tunnel_context_modification_request));
     }
@@ -204,7 +205,7 @@ void inter_cu_handover_execution_target_routine::fill_e1ap_bearer_context_tunnel
     const cu_cp_path_switch_request_ack& ack)
 {
   tunnel_context_modification_request.ue_index = ue->get_ue_index();
-  auto& ng_request = tunnel_context_modification_request.ng_ran_bearer_context_mod_request;
+  auto& ng_request                             = tunnel_context_modification_request.ng_ran_bearer_context_mod_request;
   ng_request.emplace();
 
   for (const auto& switched_session : ack.pdu_session_res_switched_list) {
