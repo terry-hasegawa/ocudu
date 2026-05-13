@@ -29,12 +29,13 @@ static meas_gap_config create_meas_gap(subcarrier_spacing scs, const ssb_mtc_s& 
       break;
     case ssb_mtc_s::dur_opts::sf2:
       meas_gap.mgl = meas_gap_length::ms3;
+      break;
     case ssb_mtc_s::dur_opts::sf3:
       meas_gap.mgl = meas_gap_length::ms4;
       break;
     case ssb_mtc_s::dur_opts::sf4:
     case ssb_mtc_s::dur_opts::sf5:
-      meas_gap.mgl = scs != subcarrier_spacing::kHz15 ? meas_gap_length::ms5dot5 : meas_gap_length::ms6;
+      meas_gap.mgl = meas_gap_length::ms6;
       break;
     default:
       report_fatal_error("Invalid SSB MTC duration");

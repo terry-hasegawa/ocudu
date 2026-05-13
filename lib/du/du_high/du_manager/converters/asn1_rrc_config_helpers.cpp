@@ -3526,10 +3526,10 @@ void odu::calculate_meas_gap_config_diff(meas_gap_cfg_s&                       o
                                          const std::optional<meas_gap_config>& dest)
 {
   out = {};
-  out.gap_fr1.set_present();
+  out.gap_ue.set_present();
   out.ext =
-      calculate_setup_release(*out.gap_fr1, src, dest, [](const meas_gap_config& cfg) { return make_gap_cfg(cfg); });
+      calculate_setup_release(*out.gap_ue, src, dest, [](const meas_gap_config& cfg) { return make_gap_cfg(cfg); });
   if (not out.ext) {
-    out.gap_fr1.reset();
+    out.gap_ue.reset();
   }
 }
