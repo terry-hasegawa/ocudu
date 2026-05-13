@@ -227,9 +227,9 @@ pucch_processor_result pucch_processor_impl::process(const resource_grid_reader&
   estimator_config.group_hopping      = pucch_group_hopping::NEITHER;
   estimator_config.start_symbol_index = config.start_symbol_index;
   estimator_config.nof_symbols        = config.nof_symbols;
-  estimator_config.starting_prb       = config.bwp_start_rb + config.starting_prb;
+  estimator_config.starting_prb       = config.bwp_start_rb + config.prbs.start();
   estimator_config.second_hop_prb     = transform_optional(config.second_hop_prb, std::plus(), config.bwp_start_rb);
-  estimator_config.nof_prb            = config.nof_prb;
+  estimator_config.nof_prb            = config.prbs.length();
   estimator_config.n_id               = config.n_id_hopping;
   estimator_config.ports.assign(config.ports.begin(), config.ports.end());
   estimator_config.additional_dmrs = config.additional_dmrs;
@@ -253,15 +253,15 @@ pucch_processor_result pucch_processor_impl::process(const resource_grid_reader&
   const modulation_scheme mod_scheme = config.pi2_bpsk ? modulation_scheme::PI_2_BPSK : modulation_scheme::QPSK;
 
   span<log_likelihood_ratio> llr = span<log_likelihood_ratio>(temp_llr).first(
-      NOF_SUBCARRIERS_PER_RB * config.nof_prb * (config.nof_symbols - dmrs_symb_mask.count()) *
+      NOF_SUBCARRIERS_PER_RB * config.prbs.length() * (config.nof_symbols - dmrs_symb_mask.count()) *
       get_bits_per_symbol(mod_scheme));
 
   // PUCCH Format 3 demodulator configuration.
   pucch_demodulator::format3_configuration demod_config;
   demod_config.rx_ports           = config.ports;
-  demod_config.first_prb          = config.bwp_start_rb + config.starting_prb;
+  demod_config.first_prb          = config.bwp_start_rb + config.prbs.start();
   demod_config.second_hop_prb     = transform_optional(config.second_hop_prb, std::plus(), config.bwp_start_rb);
-  demod_config.nof_prb            = config.nof_prb;
+  demod_config.nof_prb            = config.prbs.length();
   demod_config.start_symbol_index = config.start_symbol_index;
   demod_config.nof_symbols        = config.nof_symbols;
   demod_config.rnti               = config.rnti;
@@ -619,10 +619,18 @@ error_type<std::string> pucch_pdu_validator_impl::is_valid(const pucch_processor
   }
 
   // None of the occupied PRB within the BWP can exceed the BWP dimensions.
-  if (config.starting_prb + config.nof_prb > config.bwp_size_rb) {
+  if (config.prbs.stop() > config.bwp_size_rb) {
     return make_unexpected(fmt::format("PRB allocation within the BWP goes up to PRB {}, exceeding BWP size, i.e., {}.",
-                                       config.starting_prb + config.nof_prb,
+                                       config.prbs.stop(),
                                        config.bwp_size_rb));
+  }
+
+  // If needed, check the PRB allocation for the second hop.
+  if (config.second_hop_prb.has_value() && (*config.second_hop_prb + config.prbs.length() > config.bwp_size_rb)) {
+    return make_unexpected(
+        fmt::format("PRB allocation within the BWP goes up to PRB {} in the second hop, exceeding BWP size, i.e., {}.",
+                    *config.second_hop_prb + config.prbs.length(),
+                    config.bwp_size_rb));
   }
 
   // None of the occupied symbols can exceed the configured maximum slot size, or the slot size given by the CP.
@@ -666,7 +674,7 @@ error_type<std::string> pucch_pdu_validator_impl::is_valid(const pucch_processor
   symbol_slot_mask dmrs_symb_mask = get_pucch_formats3_4_dmrs_symbol_mask(
       config.nof_symbols, config.second_hop_prb.has_value(), config.additional_dmrs);
   float effective_code_rate = pucch_format3_code_rate(
-      config.nof_prb, config.nof_symbols - dmrs_symb_mask.count(), config.pi2_bpsk, nof_uci_bits);
+      config.prbs.length(), config.nof_symbols - dmrs_symb_mask.count(), config.pi2_bpsk, nof_uci_bits);
 
   // The code rate shall not exceed the maximum.
   if (effective_code_rate > pucch_constants::f3::MAX_CODE_RATE) {
@@ -685,10 +693,10 @@ error_type<std::string> pucch_pdu_validator_impl::is_valid(const pucch_processor
 
   // The number of allocated PRBs is outside the allowed range.
   static constexpr interval<unsigned, true> nof_prb_range(1, 16);
-  if (!nof_prb_range.contains(config.nof_prb)) {
+  if (!nof_prb_range.contains(config.prbs.length())) {
     return make_unexpected(
         fmt::format("Number of PRBs (i.e., {}) is outside the allowed range for PUCCH Format 3 (i.e., {}).",
-                    config.nof_prb,
+                    config.prbs.length(),
                     nof_prb_range));
   }
 
