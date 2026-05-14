@@ -503,12 +503,6 @@ void ra_scheduler::handle_msg1_occasion(const rach_indication_message::occasion&
     // Store Msg3 request and create a HARQ entity of 1 UL HARQ.
     msg3_entry.preamble = preamble;
     msg3_entry.harq_ent = ra_harqs.add_ue(to_du_ue_index(msg3_ring_idx), preamble.tc_rnti, 1, 1);
-
-    if (cfra_preambles.contains(preamble.preamble_id)) {
-      // CFRA is enabled and preamble is a CFRA preamble.
-      // We mark its RNTI to handle upcoming CRCs.
-      pending_cfra_ues[static_cast<unsigned>(preamble.tc_rnti)] = preamble.tc_rnti;
-    }
   }
 }
 
@@ -705,7 +699,8 @@ void ra_scheduler::handle_crc_indication(const ul_crc_indication& crc_ind)
   auto is_ra_crc = [this](const ul_crc_pdu_indication& pdu) {
     return pdu.harq_id == to_harq_id(0) and
            (pdu.ue_index == INVALID_DU_UE_INDEX or
-            (not pending_cfra_ues.empty() and pending_cfra_ues[static_cast<unsigned>(pdu.rnti)] == pdu.rnti));
+            (not pending_cfra_ues.empty() and
+             pending_cfra_ues[pdu.ue_index].load(std::memory_order_relaxed) == pdu.rnti));
   };
   ul_crc_indication ra_crc_ind;
   for (auto& crc : crc_ind.crcs) {
@@ -724,6 +719,12 @@ void ra_scheduler::handle_crc_indication(const ul_crc_indication& crc_ind)
     logger.warning(
         "pci={}: CRC indication for slot={} discarded. Cause: Event queue is full", cell_cfg.params.pci, crc_ind.sl_rx);
   }
+}
+
+void ra_scheduler::handle_cfra_mapping_update(du_ue_index_t ue_index, rnti_t crnti)
+{
+  ocudu_assert(not pending_cfra_ues.empty(), "RACH config does not support CFRA UEs");
+  pending_cfra_ues[ue_index].store(crnti, std::memory_order_relaxed);
 }
 
 void ra_scheduler::handle_pending_crc_indications_impl(cell_resource_allocator& res_alloc)

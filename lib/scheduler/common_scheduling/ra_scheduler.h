@@ -40,6 +40,9 @@ public:
   /// \note Potentially called from a different executor than the cell scheduler executor.
   void handle_crc_indication(const ul_crc_indication& crc_ind);
 
+  /// Save an upcoming CFRA UE Ids.
+  void handle_cfra_mapping_update(du_ue_index_t ue_index, rnti_t crnti);
+
   /// Allocate pending RARs + Msg3s
   void run_slot(cell_resource_allocator& res_alloc);
 
@@ -258,7 +261,7 @@ private:
   bool first_slot_flag = true;
 
   // Circular map of RNTIs associated with CFRA.
-  circular_vector<std::atomic<rnti_t>> pending_cfra_ues;
+  std::vector<std::atomic<rnti_t>> pending_cfra_ues;
 };
 
 } // namespace ocudu
