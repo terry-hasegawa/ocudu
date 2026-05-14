@@ -956,6 +956,11 @@ cu_cp_impl::handle_ue_context_release_command(const cu_cp_ue_context_release_com
   cu_cp_ue* ue = ue_mng.find_du_ue(command.ue_index);
   ocudu_assert(ue != nullptr, "ue={}: Could not find DU UE", command.ue_index);
 
+  if (ue->get_handover_ue_release_timer().is_running()) {
+    logger.debug("ue={}: Stopping handover UE release timer", command.ue_index);
+    ue->get_handover_ue_release_timer().stop();
+  }
+
   e1ap_bearer_context_manager* e1ap_bearer_ctxt_mng = nullptr;
   if (ue->get_cu_up_index() != cu_up_index_t::invalid) {
     e1ap_bearer_ctxt_mng = &cu_up_db.find_cu_up_processor(ue->get_cu_up_index())->get_e1ap_bearer_context_manager();
@@ -1034,6 +1039,8 @@ async_task<bool> cu_cp_impl::handle_new_rrc_handover_command(cu_cp_ue_index_t   
                                                              byte_buffer                     command,
                                                              std::optional<xnc_peer_index_t> xnc_index)
 {
+  static constexpr std::chrono::milliseconds tng_reloc_overall_timeout{1000};
+
   // Notify mobility manager metrics handler about the successful handover preparation.
   mobility_mng.get_metrics_handler().aggregate_successful_handover_preparation();
 
@@ -1058,6 +1065,13 @@ async_task<bool> cu_cp_impl::handle_new_rrc_handover_command(cu_cp_ue_index_t   
     // Set XNC peer index in UE context.
     ue->set_xnc_peer_index(xnc_index.value());
   }
+
+  initialize_handover_ue_release_timer(
+      ue_index,
+      tng_reloc_overall_timeout,
+      cu_cp_ue_context_release_request{ue_index,
+                                       ue->get_up_resource_manager().get_pdu_sessions(),
+                                       ngap_cause_radio_network_t::tngrelocoverall_expiry});
 
   return launch_async<inter_cu_handover_source_routine>(
       ue_index, std::move(command), ue_mng, du_db, cu_up_db, ngap->get_ngap_control_message_handler(), xnap, logger);
@@ -1517,9 +1531,10 @@ void cu_cp_impl::initialize_handover_ue_release_timer(
   }
 
   // Start timer.
-  logger.debug("ue={}: Setting release timer to {}ms", ue_index, handover_ue_release_timeout.count());
+  logger.debug("ue={}: Setting handover UE release timer to {}ms", ue_index, handover_ue_release_timeout.count());
   ue->get_handover_ue_release_timer().set(
       handover_ue_release_timeout, [this, ue, ue_context_release_request](timer_id_t /*tid*/) {
+        logger.debug("ue={}: Handover UE release timer expired", ue_context_release_request.ue_index);
         ue->get_task_sched().schedule_async_task(handle_ue_context_release(ue_context_release_request));
       });
   ue->get_handover_ue_release_timer().run();

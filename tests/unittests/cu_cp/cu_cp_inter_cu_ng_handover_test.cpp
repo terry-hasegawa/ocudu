@@ -264,6 +264,26 @@ public:
     return true;
   }
 
+  [[nodiscard]] bool timeout_tng_reloc_overall_and_await_ue_context_release_request()
+  {
+    if (tick_until(std::chrono::milliseconds(1200), [&]() { return false; }, false)) {
+      return false;
+    }
+
+    report_fatal_error_if_not(this->wait_for_ngap_tx_pdu(ngap_pdu),
+                              "Failed to receive NGAP UE Context Release Request");
+    report_fatal_error_if_not(test_helpers::is_valid_ue_context_release_request(ngap_pdu),
+                              "Invalid NGAP UE Context Release Request");
+
+    const auto& release_request = ngap_pdu.pdu.init_msg().value.ue_context_release_request();
+    report_fatal_error_if_not(release_request->cause.type() == asn1::ngap::cause_c::types_opts::radio_network,
+                              "Invalid UE Context Release Request cause type");
+    report_fatal_error_if_not(release_request->cause.radio_network() ==
+                                  asn1::ngap::cause_radio_network_opts::tngrelocoverall_expiry,
+                              "Invalid UE Context Release Request radio network cause");
+    return true;
+  }
+
   [[nodiscard]] bool
   send_ue_context_modification_response_and_await_bearer_context_modification_request(gnb_cu_ue_f1ap_id_t f1ap_cu_ue_id,
                                                                                       gnb_du_ue_f1ap_id_t f1ap_du_ue_id)
@@ -469,6 +489,30 @@ TEST_F(cu_cp_inter_cu_ng_handover_test, when_handover_succeeds_then_amf_releases
   // STATUS: UE should be removed at this stage
   report = this->get_cu_cp().get_metrics_handler().request_metrics_report();
   ASSERT_EQ(report.ues.size(), 0) << "UE should be removed";
+}
+
+TEST_F(cu_cp_inter_cu_ng_handover_test,
+       when_tng_reloc_overall_expires_after_handover_command_then_source_requests_ue_context_release)
+{
+  // Attach UE.
+  ASSERT_TRUE(attach_ue());
+
+  // Inject RRC Measurement Report and await Handover Required.
+  ASSERT_TRUE(
+      send_rrc_measurement_report_and_await_handover_required(ue_ctx->cu_ue_id.value(), ue_ctx->du_ue_id.value()));
+
+  // Send Handover Command and await UE Context Modification Request (with RRC Reconfiguration).
+  ASSERT_TRUE(send_handover_command_and_await_ue_context_modification_request(ue_ctx->amf_ue_id.value(),
+                                                                              ue_ctx->ran_ue_id.value()));
+
+  // Complete the source-side UE context modification and PDCP status transfer steps.
+  ASSERT_TRUE(send_ue_context_modification_response_and_await_bearer_context_modification_request(
+      ue_ctx->cu_ue_id.value(), ue_ctx->du_ue_id.value()));
+  ASSERT_TRUE(send_bearer_context_modification_response_and_await_ul_status_transfer(ue_ctx->cu_cp_e1ap_id.value(),
+                                                                                     ue_ctx->cu_up_e1ap_id.value()));
+
+  // Let TNGRELOCoverall expire and await the source UE Context Release Request.
+  ASSERT_TRUE(timeout_tng_reloc_overall_and_await_ue_context_release_request());
 }
 
 TEST_F(cu_cp_inter_cu_ng_handover_test, when_ncell_is_not_strong_enough_then_ho_from_periodic_report_is_not_triggered)
