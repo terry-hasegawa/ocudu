@@ -429,12 +429,10 @@ ocucp::cu_cp_configuration ocudu::generate_cu_cp_config(const cu_cp_unit_config&
       xn_config.peer_addr = transport_layer_address::create_from_string(peer.peer_addrs.front());
       xn_config.peer_addr.set_port(XNAP_PORT);
       out_cfg.xnap.xnaps.push_back(xn_config);
-      // TO-DO: support multiple XnAP gateways.
-      // All XnAP peers are temporarily served by single gateway
       out_cfg.xnap.peer_to_gateway[ocucp::uint_to_xnc_peer_index(peer_idx)] = ocucp::uint_to_xnc_gateway_index(gw_idx);
       ++peer_idx;
     }
-    // ++gw_idx;
+    ++gw_idx;
   }
 
   out_cfg.rrc.force_reestablishment_fallback = cu_cfg.rrc_config.force_reestablishment_fallback;

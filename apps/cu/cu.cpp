@@ -341,20 +341,15 @@ int main(int argc, char** argv)
       o_cu_up_app_unit->get_o_cu_up_unit_config(), workers.get_cu_up_pcap_executors(), cleanup_signal_dispatcher);
   auto on_pcap_close_init = make_scope_exit([&cu_logger]() { cu_logger.info("Closing PCAP files..."); });
 
-  // Create XN-C GW (TODO cleanup port and PPID args with factory)
-  cu_cp_unit_config                              cp_unit_cfg = o_cu_cp_app_unit->get_o_cu_cp_unit_config().cucp_cfg;
-  std::unique_ptr<ocucp::xnc_connection_gateway> xnc_gw;
-  if (!cp_unit_cfg.xnap_config.gateways.empty()) {
+  // Create XN-C GWs. (TODO cleanup port and PPID args with factory)
+  cu_cp_unit_config cp_unit_cfg = o_cu_cp_app_unit->get_o_cu_cp_unit_config().cucp_cfg;
+  std::vector<std::unique_ptr<ocucp::xnc_connection_gateway>> xnc_gws;
+  for (const auto& gw_cfg : cp_unit_cfg.xnap_config.gateways) {
     sctp_network_gateway_config xnc_sctp_cfg = {};
     xnc_sctp_cfg.if_name                     = "XN-C";
     xnc_sctp_cfg.non_blocking_mode           = true;
-    // TO-DO: support multiple XnAP gateways.
-    // All entries are temporarily merged into a single SCTP gateway/socket, using the first gateway's SCTP options.
-    for (const auto& gw_cfg : cp_unit_cfg.xnap_config.gateways) {
-      xnc_sctp_cfg.bind_addresses.insert(
-          xnc_sctp_cfg.bind_addresses.end(), gw_cfg.bind_addrs.begin(), gw_cfg.bind_addrs.end());
-    }
-    fill_sctp_network_gateway_config_socket_params(xnc_sctp_cfg, cp_unit_cfg.xnap_config.gateways.front().sctp);
+    xnc_sctp_cfg.bind_addresses              = gw_cfg.bind_addrs;
+    fill_sctp_network_gateway_config_socket_params(xnc_sctp_cfg, gw_cfg.sctp);
     xnc_sctp_cfg.bind_port = XNAP_PORT;
     xnc_sctp_cfg.ppid      = XNAP_PPID;
     xnc_sctp_gateway_config xnc_server_cfg({xnc_sctp_cfg,
@@ -363,7 +358,7 @@ int main(int argc, char** argv)
                                             workers.get_cu_cp_executor_mapper().ctrl_executor(),
                                             *cu_cp_dlt_pcaps.xnap});
 
-    xnc_gw = create_xnc_connection_gateway(xnc_server_cfg);
+    xnc_gws.push_back(create_xnc_connection_gateway(xnc_server_cfg));
   }
 
   // Create F1-C GW (TODO cleanup port and PPID args with factory)
@@ -455,8 +450,8 @@ int main(int argc, char** argv)
   o_cucp_deps.timers          = cu_timers;
   o_cucp_deps.ngap_pcap       = cu_cp_dlt_pcaps.ngap.get();
   o_cucp_deps.broker          = epoll_broker.get();
-  if (xnc_gw != nullptr) {
-    o_cucp_deps.xnc_gws.push_back(xnc_gw.get());
+  for (auto& gw : xnc_gws) {
+    o_cucp_deps.xnc_gws.push_back(gw.get());
   }
   o_cucp_deps.e2_gw                  = e2_gw_cu_cp.get();
   o_cucp_deps.metrics_notifier       = &metrics_notifier_forwarder;
@@ -513,9 +508,9 @@ int main(int argc, char** argv)
   // Connect E1AP to O-CU-CP.
   e1_gw->attach_cu_cp(o_cucp_obj.get_cu_cp().get_e1_handler());
 
-  if (xnc_gw != nullptr) {
-    // Connect XN-C to O-CU-CP and start listening for new XN-C connection requests.
-    xnc_gw->attach_cu_cp(o_cucp_obj.get_cu_cp().get_xnc_handler());
+  // Connect each XN-C gateway to O-CU-CP and start listening for new XN-C connection requests.
+  for (auto& gw : xnc_gws) {
+    gw->attach_cu_cp(o_cucp_obj.get_cu_cp().get_xnc_handler());
   }
 
   // Start O-CU-CP.
