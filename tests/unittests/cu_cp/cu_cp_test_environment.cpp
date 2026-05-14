@@ -77,11 +77,14 @@ cu_cp_test_environment::cu_cp_test_environment(cu_cp_test_env_params params_) :
   for (const auto& [amf_index, amf_config] : amf_configs) {
     cu_cp_cfg.ngap.ngaps.push_back(cu_cp_configuration::ngap_config{&*amf_config.amf_stub, amf_config.supported_tas});
   }
-  // Fill XNAP config.
+  // Fill XNAP config. Each peer test stub becomes its own XnAP gateway; record the peer-gateway mapping.
   for (const auto& [_, peer] : xnc_peers) {
+    const auto peer_idx = uint_to_xnc_peer_index(cu_cp_cfg.xnap.xnaps.size());
+    const auto gw_idx   = uint_to_xnc_gateway_index(cu_cp_cfg.xnap.xnc_gws.size());
+    cu_cp_cfg.xnap.xnc_gws.push_back(peer.get());
+    cu_cp_cfg.xnap.peer_to_gateway[peer_idx] = gw_idx;
     cu_cp_cfg.xnap.xnaps.push_back(
         cu_cp_configuration::xnap_config{.peer_addr = transport_layer_address::create_from_string("127.0.0.1")});
-    cu_cp_cfg.xnap.xnc_gw = peer.get();
     next_xnc_peer_idx++;
   }
 
@@ -362,8 +365,8 @@ void cu_cp_test_environment::enqueue_procedure_outcome_pdus_and_start_cu_cp()
   }
 
   // Attach XN-C handler before starting CU-CP (matching real app startup order).
-  if (not xnc_peers.empty()) {
-    cu_cp_cfg.xnap.xnc_gw->attach_cu_cp(get_cu_cp().get_xnc_handler());
+  for (auto* gateway : cu_cp_cfg.xnap.xnc_gws) {
+    gateway->attach_cu_cp(get_cu_cp().get_xnc_handler());
   }
 
   // Start CU-CP.

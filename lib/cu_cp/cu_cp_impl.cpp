@@ -58,7 +58,7 @@ static void assert_cu_cp_configuration_valid(const cu_cp_configuration& cfg)
     ocudu_assert(ngap.n2_gw != nullptr, "Invalid N2 GW client handler");
   }
   if (!cfg.xnap.xnaps.empty()) {
-    ocudu_assert(cfg.xnap.xnc_gw != nullptr, "Invalid XN-C GW client handler");
+    ocudu_assert(!cfg.xnap.xnc_gws.empty(), "No XN-C gateways configured for XNAP peers");
   }
   ocudu_assert(cfg.services.timers != nullptr, "Invalid timers");
 
@@ -162,9 +162,16 @@ bool cu_cp_impl::start()
 
         uint32_t xnc_idx = 0;
         for (const auto& xnap : cfg.xnap.xnaps) {
-          xnap_interface* xnap_entity = xnap_db.add_xnap(uint_to_xnc_peer_index(xnc_idx), xnap.peer_addr, xnc_cfg);
+          const auto      peer_idx    = uint_to_xnc_peer_index(xnc_idx);
+          xnap_interface* xnap_entity = xnap_db.add_xnap(peer_idx, xnap.peer_addr, xnc_cfg);
           if (xnap_entity == nullptr) {
             report_fatal_error("Failed to create XNAP entity for peer address {}", xnap.peer_addr);
+          }
+          auto gw_it = cfg.xnap.peer_to_gateway.find(peer_idx);
+          if (gw_it != cfg.xnap.peer_to_gateway.end() &&
+              xnc_gateway_index_to_uint(gw_it->second) < cfg.xnap.xnc_gws.size()) {
+            controller.xnc_connection_handler().register_peer_gateway(
+                peer_idx, cfg.xnap.xnc_gws[xnc_gateway_index_to_uint(gw_it->second)]);
           }
           ++xnc_idx;
         }

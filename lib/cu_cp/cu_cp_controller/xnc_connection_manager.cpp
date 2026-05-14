@@ -102,18 +102,23 @@ private:
   std::shared_ptr<shared_xnc_connection_context> ctxt;
 };
 
-xnc_connection_manager::xnc_connection_manager(xnap_repository&        xnaps_,
-                                               xnc_connection_gateway* xnc_gw_,
-                                               timer_manager&          timers_,
-                                               task_executor&          cu_cp_exec_,
-                                               common_task_scheduler&  common_task_sched_) :
+xnc_connection_manager::xnc_connection_manager(xnap_repository&                            xnaps_,
+                                               const std::vector<xnc_connection_gateway*>& xnc_gws_,
+                                               timer_manager&                              timers_,
+                                               task_executor&                              cu_cp_exec_,
+                                               common_task_scheduler&                      common_task_sched_) :
   xnaps(xnaps_),
-  xnc_gw(xnc_gw_),
+  xnc_gws(xnc_gws_),
   timers(timers_),
   cu_cp_exec(cu_cp_exec_),
   common_task_sched(common_task_sched_),
   logger(ocudulog::fetch_basic_logger("CU-CP"))
 {
+}
+
+void xnc_connection_manager::register_peer_gateway(xnc_peer_index_t xnc_idx, xnc_connection_gateway* gateway)
+{
+  xnc_gateways[xnc_idx] = gateway;
 }
 
 void xnc_connection_manager::start(const xnap_configuration& xnap_cfg_)
@@ -136,18 +141,25 @@ void xnc_connection_manager::start(const xnap_configuration& xnap_cfg_)
       continue;
     }
 
+    auto gw_it = xnc_gateways.find(xnc_idx);
+    if (gw_it == xnc_gateways.end() || gw_it->second == nullptr) {
+      logger.warning("No XnAP gateway for XN-C peer {}", xnc_idx);
+      continue;
+    }
+    xnc_connection_gateway* gateway = gw_it->second;
+
     xnaps.get_xnap_task_scheduler().handle_xnc_async_task(
         xnc_idx,
-        launch_async([this, xnc_idx, xnap_if, peer_addr = peer_addr.value(), connect_result = false](
+        launch_async([this, xnc_idx, xnap_if, peer_addr = peer_addr.value(), gateway, connect_result = false](
                          coro_context<async_task<void>>& ctx) mutable {
           CORO_BEGIN(ctx);
-          // Establish the SCTP association first.
-          CORO_AWAIT_VALUE(connect_result, xnc_gw->connect_to_peer(peer_addr));
+          // Establish the SCTP association via the XnAP gateway assigned to this peer.
+          CORO_AWAIT_VALUE(connect_result, gateway->connect_to_peer(peer_addr));
           if (!connect_result) {
             logger.warning("Failed to connect to XN-C peer at {}. Scheduling reconnection in {}...",
                            peer_addr,
                            std::chrono::duration_cast<std::chrono::seconds>(xnap_cfg.reconnect_timer));
-            reconnect_peer(xnc_idx, peer_addr);
+            reconnect_peer(xnc_idx, peer_addr, gateway);
             CORO_EARLY_RETURN();
           }
           // Trigger XN Setup on the established association.
@@ -194,8 +206,10 @@ void xnc_connection_manager::stop()
     stop_cvar.wait(lock, [this] { return stop_completed; });
   }
 
-  if (xnc_gw != nullptr) {
-    xnc_gw->stop();
+  for (auto* gateway : xnc_gws) {
+    if (gateway != nullptr) {
+      gateway->stop();
+    }
   }
 }
 
@@ -295,8 +309,11 @@ void xnc_connection_manager::handle_xnc_gw_connection_closed(xnc_peer_index_t xn
             logger.info("XN-C peer {} disconnected. Recreated XNAP, scheduling reconnection in {}...",
                         xnc_idx,
                         std::chrono::duration_cast<std::chrono::seconds>(xnap_cfg.reconnect_timer));
-            // Schedule outbound reconnection attempt.
-            reconnect_peer(xnc_idx, peer_addr.value());
+            auto gw_it = xnc_gateways.find(xnc_idx);
+            if (gw_it != xnc_gateways.end() && gw_it->second != nullptr) {
+              // Schedule outbound reconnection attempt.
+              reconnect_peer(xnc_idx, peer_addr.value(), gw_it->second);
+            }
           }
         }
 
@@ -304,7 +321,9 @@ void xnc_connection_manager::handle_xnc_gw_connection_closed(xnc_peer_index_t xn
       }));
 }
 
-void xnc_connection_manager::reconnect_peer(xnc_peer_index_t xnc_idx, const transport_layer_address& peer_addr)
+void xnc_connection_manager::reconnect_peer(xnc_peer_index_t               xnc_idx,
+                                            const transport_layer_address& peer_addr,
+                                            xnc_connection_gateway*        xnc_gw)
 {
   // Schedule on the per-peer task scheduler so the reconnect coroutine does not block the common task queue.
   xnaps.get_xnap_task_scheduler().handle_xnc_async_task(
@@ -312,6 +331,7 @@ void xnc_connection_manager::reconnect_peer(xnc_peer_index_t xnc_idx, const tran
       launch_async([this,
                     xnc_idx,
                     peer_addr,
+                    xnc_gw,
                     retry_timer    = unique_timer{timer_factory{timers, cu_cp_exec}.create_timer()},
                     connect_result = false,
                     xnap_if = static_cast<xnap_interface*>(nullptr)](coro_context<async_task<void>>& ctx) mutable {
@@ -325,7 +345,7 @@ void xnc_connection_manager::reconnect_peer(xnc_peer_index_t xnc_idx, const tran
           CORO_EARLY_RETURN();
         }
 
-        // Establish SCTP association.
+        // Establish SCTP association via the XnAP gateway assigned to this peer.
         CORO_AWAIT_VALUE(connect_result, xnc_gw->connect_to_peer(peer_addr));
         if (!connect_result) {
           CORO_EARLY_RETURN();

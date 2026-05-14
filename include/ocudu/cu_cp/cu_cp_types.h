@@ -45,7 +45,8 @@ const uint16_t MAX_NOF_CU_UPS = 65535;
 /// Maximum number of AMFs supported by CU-CP (implementation-defined).
 const uint16_t MAX_NOF_AMFS = 65535;
 /// Maximum number of XN-C peers supported by CU-CP (implementation-defined).
-const uint16_t MAX_NOF_XNC_PEERS = 65535;
+const uint16_t MAX_NOF_XNC_PEERS    = 65535;
+const uint16_t MAX_NOF_XNC_GATEWAYS = 256;
 
 /// Maximum number of DUs supported by CU-CP (implementation-defined).
 enum class du_index_t : uint16_t { min = 0, max = MAX_NOF_DUS - 1, invalid = MAX_NOF_DUS };
@@ -110,10 +111,25 @@ constexpr std::underlying_type_t<amf_index_t> amf_index_to_uint(amf_index_t amf_
 /// Maximum number of XN-C peers supported by CU-CP (implementation-defined).
 enum class xnc_peer_index_t : uint16_t { min = 0, max = MAX_NOF_XNC_PEERS - 1, invalid = MAX_NOF_XNC_PEERS };
 
-/// Convert integer to AMF index type.
+/// Convert integer to XN-C peer index type.
 constexpr xnc_peer_index_t uint_to_xnc_peer_index(std::underlying_type_t<xnc_peer_index_t> index)
 {
   return static_cast<xnc_peer_index_t>(index);
+}
+
+/// XN-C gateway index in `cu_cp_configuration::xnap_params::xnc_gws`.
+enum class xnc_gateway_index_t : uint16_t { min = 0, max = MAX_NOF_XNC_GATEWAYS - 1, invalid = MAX_NOF_XNC_GATEWAYS };
+
+/// Convert integer to XN-C gateway index type.
+constexpr xnc_gateway_index_t uint_to_xnc_gateway_index(std::underlying_type_t<xnc_gateway_index_t> index)
+{
+  return static_cast<xnc_gateway_index_t>(index);
+}
+
+/// Convert XN-C gateway index type to integer.
+constexpr std::underlying_type_t<xnc_gateway_index_t> xnc_gateway_index_to_uint(xnc_gateway_index_t gw_index)
+{
+  return static_cast<std::underlying_type_t<xnc_gateway_index_t>>(gw_index);
 }
 
 /// Notification from the E1AP/F1AP that transaction reference information for some UEs has been lost.
@@ -712,6 +728,25 @@ struct formatter<ocudu::ocucp::xnc_peer_index_t> {
   auto format(const ocudu::ocucp::xnc_peer_index_t& idx, FormatContext& ctx) const
   {
     if (idx == ocudu::ocucp::xnc_peer_index_t::invalid) {
+      return format_to(ctx.out(), "invalid");
+    }
+    return format_to(ctx.out(), "{}", (unsigned)idx);
+  }
+};
+
+// XNC gateway index formatter.
+template <>
+struct formatter<ocudu::ocucp::xnc_gateway_index_t> {
+  template <typename ParseContext>
+  auto parse(ParseContext& ctx)
+  {
+    return ctx.begin();
+  }
+
+  template <typename FormatContext>
+  auto format(const ocudu::ocucp::xnc_gateway_index_t& idx, FormatContext& ctx) const
+  {
+    if (idx == ocudu::ocucp::xnc_gateway_index_t::invalid) {
       return format_to(ctx.out(), "invalid");
     }
     return format_to(ctx.out(), "{}", (unsigned)idx);

@@ -40,10 +40,10 @@ struct o_cu_cp_unit_dependencies {
   timer_manager*                               timers                 = nullptr;
   dlt_pcap*                                    ngap_pcap              = nullptr;
   io_broker*                                   broker                 = nullptr;
-  ocucp::xnc_connection_gateway*               xnc_gw                 = nullptr;
   e2_connection_client*                        e2_gw                  = nullptr;
   app_services::metrics_notifier*              metrics_notifier       = nullptr;
   app_services::remote_server_metrics_gateway* remote_metrics_gateway = nullptr;
+  std::vector<ocucp::xnc_connection_gateway*>  xnc_gws;
 };
 
 /// O-RAN CU-CP unit.

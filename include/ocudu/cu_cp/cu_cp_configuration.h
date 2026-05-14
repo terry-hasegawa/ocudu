@@ -7,6 +7,7 @@
 #include "ocudu/cu_cp/cell_meas_manager_config.h"
 #include "ocudu/cu_cp/cu_cp_metrics_notifier.h"
 #include "ocudu/cu_cp/cu_cp_ng_setup_notifier.h"
+#include "ocudu/cu_cp/cu_cp_types.h"
 #include "ocudu/cu_cp/mobility_manager_config.h"
 #include "ocudu/cu_cp/ue_configuration.h"
 #include "ocudu/e1ap/cu_cp/e1ap_configuration.h"
@@ -18,8 +19,8 @@
 #include "ocudu/rrc/rrc_ue_config.h"
 #include "ocudu/support/async/async_task.h"
 #include "ocudu/support/executors/task_executor.h"
-#include "ocudu/xnap/gateways/xnc_connection_gateway.h"
 #include <chrono>
+#include <map>
 
 namespace ocudu {
 
@@ -28,6 +29,7 @@ class pdcp_metrics_notifier;
 namespace ocucp {
 class n2_connection_client;
 class ngap_repository;
+class xnc_connection_gateway;
 
 struct plmn_item {
   plmn_identity plmn_id;
@@ -101,9 +103,12 @@ struct cu_cp_configuration {
     std::chrono::milliseconds reconnect_timer{10000};
     /// When true, the CU-CP will not initiate outbound XNAP connections but will accept inbound ones.
     bool no_connection_init = false;
-    /// XNAP configuration.
+    /// XnAP peer configuration.
     std::vector<xnap_config> xnaps;
-    xnc_connection_gateway*  xnc_gw = nullptr;
+    /// Xn-C gateways.
+    std::vector<xnc_connection_gateway*> xnc_gws;
+    /// XnAP peer to Xn-C gateway mapping.
+    std::map<xnc_peer_index_t, xnc_gateway_index_t> peer_to_gateway;
   };
 
   struct rrc_params {
