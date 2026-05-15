@@ -190,3 +190,67 @@ TEST_F(sched_ue_test, when_mcs_increases_estimated_ul_rate_increases)
     }
   }
 }
+
+class cfra_ue_repository_test : public ::testing::Test
+{
+protected:
+  cfra_ue_repository_test() :
+    expert_cfg(config_helpers::make_default_scheduler_expert_config()),
+    cfg_mng(scheduler_config{expert_cfg, metric_notif}, metrics_handler),
+    sched_cfg(sched_config_helper::make_default_sched_cell_configuration_request(builder_params)),
+    cell_cfg(*cfg_mng.add_cell(sched_cfg)),
+    ue_db(expert_cfg.ue)
+  {
+    ue_db.add_cell(cell_cfg, nullptr);
+  }
+
+  du_ue_index_t add_ue(bool cfra_enabled, bool starts_in_fallback, rnti_t crnti = to_rnti(0x4601))
+  {
+    sched_ue_creation_request_message ue_req = sched_config_helper::create_default_sched_ue_creation_request(
+        cell_cfg.params, std::array<lcid_t, 3>{lcid_t::LCID_SRB1, lcid_t::LCID_SRB2, lcid_t::LCID_MIN_DRB});
+    ue_req.crnti                   = crnti;
+    ue_req.starts_in_fallback      = starts_in_fallback;
+    ue_req.cfra_enabled            = cfra_enabled;
+    ue_req.ul_ccch_slot_rx         = std::nullopt;
+    ue_config_update_event  ev     = cfg_mng.add_ue(ue_req);
+    const ue_configuration& ue_cfg = ev.next_config();
+    du_ue_index_t           ue_idx = ue_req.ue_index;
+    ue_db.add_ue(ue_cfg, ue_req.starts_in_fallback, ue_req.ul_ccch_slot_rx, ue_req.cfra_enabled);
+    ev.notify_completion();
+    return ue_idx;
+  }
+
+  scheduler_expert_config                  expert_cfg;
+  sched_cfg_dummy_notifier                 metric_notif;
+  scheduler_metrics_handler                metrics_handler;
+  cell_config_builder_params               builder_params;
+  sched_config_manager                     cfg_mng;
+  sched_cell_configuration_request_message sched_cfg;
+  const cell_configuration&                cell_cfg;
+  ue_repository                            ue_db;
+};
+
+TEST_F(cfra_ue_repository_test, cfra_ue_starts_in_pending_cfra_state)
+{
+  du_ue_index_t         ue_idx   = add_ue(true, true);
+  const ue_pcell_state& pcell_st = ue_db[ue_idx].get_pcell().get_pcell_state();
+  ASSERT_EQ(pcell_st.conres_st, ue_conres_state::pending_cfra);
+  ASSERT_TRUE(is_in_fallback(pcell_st.config_st, pcell_st.conres_st));
+}
+
+TEST_F(cfra_ue_repository_test, cfra_msg3_acked_transitions_to_conres_completed)
+{
+  du_ue_index_t ue_idx = add_ue(true, true);
+  ASSERT_TRUE(ue_db.cfra_msg3_acked(ue_idx));
+  const ue_pcell_state& pcell_st = ue_db[ue_idx].get_pcell().get_pcell_state();
+  ASSERT_EQ(pcell_st.conres_st, ue_conres_state::conres_completed);
+  ASSERT_FALSE(is_in_fallback(pcell_st.config_st, pcell_st.conres_st));
+}
+
+TEST_F(cfra_ue_repository_test, cfra_msg3_acked_is_noop_when_not_in_pending_cfra)
+{
+  du_ue_index_t ue_idx = add_ue(false, false);
+  ASSERT_EQ(ue_db[ue_idx].get_pcell().get_pcell_state().conres_st, ue_conres_state::conres_completed);
+  ASSERT_FALSE(ue_db.cfra_msg3_acked(ue_idx));
+  ASSERT_EQ(ue_db[ue_idx].get_pcell().get_pcell_state().conres_st, ue_conres_state::conres_completed);
+}

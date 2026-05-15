@@ -693,4 +693,137 @@ INSTANTIATE_TEST_SUITE_P(two_step_rach,
                                            two_step_test_params{10, create_tdd_pattern(tdd_fr1_30khz::DDDDDDDSUU)},
                                            two_step_test_params{4, create_tdd_pattern(tdd_fr1_30khz::DSUU)}));
 
+/// Test fixture for CFRA-specific RA scheduler behaviour.
+///
+/// The cell is configured with 4 dedicated CFRA preambles (IDs [60, 64)), leaving 60 preambles for CBRA.
+class ra_scheduler_cfra_test : public ra_scheduler_setup, public ::testing::Test
+{
+  static constexpr unsigned NOF_CB_PREAMBLES = 60;
+
+public:
+  ra_scheduler_cfra_test() : ra_scheduler_setup(make_cfra_sched_req(), false, false) {}
+
+  static sched_cell_configuration_request_message make_cfra_sched_req()
+  {
+    cell_config_builder_params bparams;
+    auto                       req = sched_config_helper::make_default_sched_cell_configuration_request(bparams);
+    req.ran.ul_cfg_common.init_ul_bwp.rach_cfg_common->nof_cb_preambles_per_ssb = NOF_CB_PREAMBLES;
+    return req;
+  }
+
+  rach_indication_message create_cfra_rach_indication(rnti_t tc_rnti) const
+  {
+    const unsigned cfra_preamble_id =
+        cell_cfg.params.ul_cfg_common.init_ul_bwp.rach_cfg_common->nof_cb_preambles_per_ssb;
+    auto preamble = test_helper::create_preamble(cfra_preamble_id, tc_rnti);
+    return test_helper::create_rach_indication(next_slot_rx(), {preamble});
+  }
+
+  void send_cfra_crc(rnti_t tc_rnti, bool success)
+  {
+    ul_crc_indication crc_ind;
+    crc_ind.cell_index = cell_cfg.cell_index;
+    crc_ind.sl_rx      = res_grid[0].slot;
+    auto& pdu          = crc_ind.crcs.emplace_back();
+    pdu.rnti           = tc_rnti;
+    pdu.ue_index       = cfra_ue_index;
+    pdu.harq_id        = to_harq_id(0);
+    pdu.tb_crc_success = success;
+    handle_crc_indication(crc_ind);
+  }
+
+  const du_ue_index_t cfra_ue_index = to_du_ue_index(5);
+};
+
+/// Verify that a Msg3 CRC with a valid UE index (CFRA path) is accepted by the RA scheduler.
+TEST_F(ra_scheduler_cfra_test, cfra_msg3_crc_with_valid_ue_index_is_accepted)
+{
+  const rnti_t tc_rnti = to_rnti(0x4601);
+  ra_sch.handle_cfra_mapping_update(cfra_ue_index, tc_rnti);
+  handle_rach_indication(create_cfra_rach_indication(tc_rnti));
+
+  for (unsigned slot_count = 0, max_slots = 1000; slot_count < max_slots and tracker.nof_msg3_acked() == 0;
+       ++slot_count) {
+    run_slot();
+    if (not res_grid[0].result.ul.puschs.empty()) {
+      send_cfra_crc(tc_rnti, true);
+    }
+  }
+
+  ASSERT_EQ(tracker.nof_msg3_acked(), 1);
+}
+
+/// Verify the Msg3 retransmission flow for a CFRA UE: CRC KO triggers retx, CRC OK completes the procedure.
+TEST_F(ra_scheduler_cfra_test, cfra_msg3_crc_ko_causes_retx_then_ok_completes)
+{
+  const rnti_t tc_rnti = to_rnti(0x4601);
+  ra_sch.handle_cfra_mapping_update(cfra_ue_index, tc_rnti);
+  handle_rach_indication(create_cfra_rach_indication(tc_rnti));
+
+  // NACK the first Msg3 new-tx.
+  for (unsigned slot_count = 0, max_slots = 1000; slot_count < max_slots and tracker.nof_msg3_newtxs() == 0;
+       ++slot_count) {
+    run_slot();
+    if (not res_grid[0].result.ul.puschs.empty()) {
+      send_cfra_crc(tc_rnti, false);
+    }
+  }
+  ASSERT_GE(tracker.nof_msg3_newtxs(), 1);
+  ASSERT_EQ(tracker.nof_msg3_acked(), 0);
+
+  // ACK the retx.
+  for (unsigned slot_count = 0, max_slots = 1000; slot_count < max_slots and tracker.nof_msg3_acked() == 0;
+       ++slot_count) {
+    run_slot();
+    if (not res_grid[0].result.ul.puschs.empty()) {
+      send_cfra_crc(tc_rnti, true);
+    }
+  }
+
+  ASSERT_GE(tracker.nof_msg3_retxs(), 1);
+  ASSERT_EQ(tracker.nof_msg3_acked(), 1);
+}
+
+/// Verify that a CRC with a valid but unregistered UE index is filtered by the RA scheduler.
+///
+/// Because the RNTI is not in pending_cfra_ues for that ue_index, is_ra_crc() returns false and
+/// the Msg3 HARQ is not freed.  A retransmission must therefore be scheduled.
+TEST_F(ra_scheduler_cfra_test, non_cfra_crc_with_valid_ue_index_is_filtered)
+{
+  const rnti_t tc_rnti            = to_rnti(0x4601);
+  const auto   unrelated_ue_index = to_du_ue_index(10);
+  ra_sch.handle_cfra_mapping_update(cfra_ue_index, tc_rnti);
+  handle_rach_indication(create_cfra_rach_indication(tc_rnti));
+
+  // Wait for the Msg3 new-tx.
+  for (unsigned slot_count = 0, max_slots = 1000; slot_count < max_slots and tracker.nof_msg3_newtxs() == 0;
+       ++slot_count) {
+    run_slot();
+  }
+  ASSERT_GE(tracker.nof_msg3_newtxs(), 1) << "Msg3 new-tx was not scheduled";
+
+  // Send a CRC with a valid but unregistered UE index directly to the RA scheduler, bypassing the tracker.
+  // pending_cfra_ues[unrelated_ue_index] is INVALID_RNTI, so is_ra_crc() must reject it.
+  {
+    ul_crc_indication bad_crc;
+    bad_crc.cell_index = cell_cfg.cell_index;
+    bad_crc.sl_rx      = res_grid[0].slot;
+    auto& pdu          = bad_crc.crcs.emplace_back();
+    pdu.rnti           = tc_rnti;
+    pdu.ue_index       = unrelated_ue_index;
+    pdu.harq_id        = to_harq_id(0);
+    pdu.tb_crc_success = true;
+    ra_sch.handle_crc_indication(bad_crc);
+  }
+  // Send a valid NACK to give the HARQ real feedback and trigger a retransmission.
+  // If the bad CRC above was wrongly accepted, the HARQ would already be freed and no retx would appear.
+  send_cfra_crc(tc_rnti, false);
+
+  // The HARQ must not have been freed by the filtered CRC — a retransmission must be scheduled.
+  for (unsigned i = 0, max_slots = 1000; i < max_slots and tracker.nof_msg3_retxs() == 0; ++i) {
+    run_slot();
+  }
+  ASSERT_GE(tracker.nof_msg3_retxs(), 1) << "Filtered CRC must not free the HARQ — retx expected";
+}
+
 } // namespace

@@ -577,3 +577,105 @@ TEST_F(scheduler_ue_no_config_test, when_ue_has_no_serv_cell_cfg_then_msg4_and_c
   const dl_msg_alloc* msg4_retx_alloc = find_ue_pdsch(rnti, *this->last_sched_result());
   ASSERT_FALSE(msg4_retx_alloc->pdsch_cfg.codewords[0].new_data);
 }
+
+// ------------------------------------------------------------------------------------------------------------------ //
+
+/// Fixture that wires together a full scheduler instance with a cell configured for CFRA (preamble IDs [60, 64))
+/// and a pre-created CFRA UE.
+class cfra_scheduler_test : public scheduler_test_simulator, public ::testing::Test
+{
+  static constexpr unsigned NOF_CB_PREAMBLES = 60;
+
+public:
+  cfra_scheduler_test()
+  {
+    cell_config_builder_params bparams;
+    auto                       cell_req = sched_config_helper::make_default_sched_cell_configuration_request(bparams);
+    cell_req.ran.ul_cfg_common.init_ul_bwp.rach_cfg_common->nof_cb_preambles_per_ssb = NOF_CB_PREAMBLES;
+    add_cell(cell_req);
+
+    auto ue_req = sched_config_helper::create_default_sched_ue_creation_request(
+        cell_cfg().params, std::array<lcid_t, 3>{lcid_t::LCID_SRB1, lcid_t::LCID_SRB2, lcid_t::LCID_MIN_DRB});
+    ue_req.crnti              = cfra_tc_rnti;
+    ue_req.ue_index           = cfra_ue_index;
+    ue_req.starts_in_fallback = true;
+    ue_req.cfra_enabled       = true;
+    ue_req.ul_ccch_slot_rx    = std::nullopt;
+    add_ue(ue_req);
+  }
+
+  rach_indication_message create_cfra_rach_indication() const
+  {
+    const unsigned cfra_preamble_id =
+        cell_cfg().params.ul_cfg_common.init_ul_bwp.rach_cfg_common->nof_cb_preambles_per_ssb;
+    auto preamble = test_helper::create_preamble(cfra_preamble_id, cfra_tc_rnti);
+    return test_helper::create_rach_indication(next_slot_rx(), {preamble});
+  }
+
+  void send_cfra_crc(bool success)
+  {
+    ul_crc_indication crc_ind;
+    crc_ind.cell_index = to_du_cell_index(0);
+    crc_ind.sl_rx      = last_result_slot();
+    auto& pdu          = crc_ind.crcs.emplace_back();
+    pdu.rnti           = cfra_tc_rnti;
+    pdu.ue_index       = cfra_ue_index;
+    pdu.harq_id        = to_harq_id(0);
+    pdu.tb_crc_success = success;
+    sched->handle_crc_indication(crc_ind);
+  }
+
+  const du_ue_index_t cfra_ue_index = to_du_ue_index(0);
+  const rnti_t        cfra_tc_rnti  = to_rnti(0x4601);
+};
+
+/// Verify that no PUCCH is scheduled for the CFRA UE in the same slot as its Msg3 PUSCH.
+///
+/// This guards against the regression where uci_sched.add_ue() was called at UE creation, causing a
+/// PUCCH+PUSCH conflict before Msg3 was ACKed.
+TEST_F(cfra_scheduler_test, no_pucch_in_msg3_slot_while_cfra_pending)
+{
+  sched->handle_rach_indication(create_cfra_rach_indication());
+
+  bool msg3_found = false;
+  ASSERT_TRUE(run_slot_until([this, &msg3_found]() {
+    const auto& puschs = last_sched_result()->ul.puschs;
+    for (const auto& pusch : puschs) {
+      if (pusch.pusch_cfg.rnti == cfra_tc_rnti) {
+        // Verify no PUCCH for the same RNTI in the same slot.
+        const pucch_info* pucch = find_ue_pucch(cfra_tc_rnti, *last_sched_result());
+        EXPECT_EQ(pucch, nullptr) << "PUCCH scheduled for CFRA UE in the same slot as Msg3 PUSCH";
+        msg3_found = true;
+        return true;
+      }
+    }
+    return false;
+  })) << "Msg3 PUSCH was not scheduled within the timeout";
+
+  ASSERT_TRUE(msg3_found);
+}
+
+/// Verify that after the Msg3 ACK (cfra_msg3_acked), the scheduler runs stably without any resource conflicts.
+///
+/// The CFRA UE transitions from pending_cfra to conres_completed, and uci_sched.add_ue is called.
+/// Subsequent slots must not trigger any scheduling assertions.
+TEST_F(cfra_scheduler_test, scheduler_is_stable_after_msg3_ack)
+{
+  sched->handle_rach_indication(create_cfra_rach_indication());
+
+  // Run until Msg3 PUSCH is scheduled.
+  ASSERT_TRUE(run_slot_until([this]() {
+    const auto& puschs = last_sched_result()->ul.puschs;
+    return std::any_of(
+        puschs.begin(), puschs.end(), [this](const ul_sched_info& p) { return p.pusch_cfg.rnti == cfra_tc_rnti; });
+  })) << "Msg3 PUSCH was not scheduled within the timeout";
+
+  // Send CFRA CRC ACK: routes through both RA scheduler (clears Msg3 HARQ) and UE event manager
+  // (cfra_msg3_acked → conres_completed → uci_sched.add_ue).
+  send_cfra_crc(true);
+
+  // Run several more slots to confirm no assertions fire after UCI scheduling is activated.
+  for (unsigned i = 0; i < 30; ++i) {
+    run_slot();
+  }
+}
