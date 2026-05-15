@@ -26,6 +26,8 @@ enum class ue_conres_state : uint8_t {
   pending_conres_ce,
   /// F1AP-created UE: waiting for the C-RNTI MAC CE to be received to complete contention resolution.
   pending_conres_crnti_ce,
+  /// F1AP-created UE undergoing CFRA: waiting for Msg3 to be ACKed before starting normal UL scheduling.
+  pending_cfra,
   /// Contention resolution is complete.
   conres_completed,
 };
@@ -58,6 +60,8 @@ inline const char* to_string(ue_conres_state state)
       return "pending_conres_ce";
     case ue_conres_state::pending_conres_crnti_ce:
       return "pending_crnti_ce";
+    case ue_conres_state::pending_cfra:
+      return "pending_cfra";
     case ue_conres_state::conres_completed:
       return "conres_completed";
   }
@@ -72,6 +76,8 @@ enum class ue_fsm_config_event : uint8_t {
   conres_ce_timeout,
   /// C-RNTI MAC CE has been received from the UE (F1AP-created UE path).
   crnti_ce_received,
+  /// ACK received for the RAR UL grant in a CFRA procedure.
+  cfra_msg3_acked,
   /// An RRC Reconfiguration following an RRC Reestablishment has been initiated.
   reest_reconf_initiated,
   /// A UE Context Setup Request from the CU has been received (may trigger a reconfiguration or be a no-op).
@@ -89,6 +95,8 @@ inline const char* to_string(ue_fsm_config_event ev)
       return "conres_ce_timeout";
     case ue_fsm_config_event::crnti_ce_received:
       return "crnti_ce_received";
+    case ue_fsm_config_event::cfra_msg3_acked:
+      return "cfra_msg3_acked";
     case ue_fsm_config_event::reest_reconf_initiated:
       return "reest_reconf_initiated";
     case ue_fsm_config_event::ue_ctx_setup_received:

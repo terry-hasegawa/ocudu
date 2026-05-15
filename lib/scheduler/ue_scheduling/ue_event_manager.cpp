@@ -274,7 +274,8 @@ void ue_cell_event_manager::handle_ue_creation(ue_config_update_event ev)
 
     auto& u     = ue_db[ue_index];
     auto& ue_cc = u.get_pcell();
-    if (ue_cc.get_pcell_state().conres_st != ue_conres_state::pending_conres_crnti_ce) {
+    if (ue_cc.get_pcell_state().conres_st != ue_conres_state::pending_conres_crnti_ce and
+        ue_cc.get_pcell_state().conres_st != ue_conres_state::pending_cfra) {
       // In case the UE is expecting a C-RNTI CE, defer activation of UCI/SR scheduling.
       uci_sched.add_ue(ue_cc.cfg());
       srs_sched.add_ue(ue_cc.cfg());
@@ -323,7 +324,8 @@ void ue_cell_event_manager::handle_ue_reconfiguration(ue_config_update_event ev)
     // Note: Carrier aggregation not yet supported.
     auto& ue_cc = u.get_cell(SERVING_PCELL_IDX);
 
-    if (ue_cc.get_pcell_state().conres_st != ue_conres_state::pending_conres_crnti_ce) {
+    if (ue_cc.get_pcell_state().conres_st != ue_conres_state::pending_conres_crnti_ce and
+        ue_cc.get_pcell_state().conres_st != ue_conres_state::pending_cfra) {
       uci_sched.reconf_ue(ev.next_config().ue_cell_cfg(ue_cc.cell_index), ue_cc.cfg());
       srs_sched.reconf_ue(ev.next_config().ue_cell_cfg(ue_cc.cell_index), ue_cc.cfg());
     }
@@ -361,7 +363,8 @@ void ue_cell_event_manager::handle_ue_deletion(ue_config_delete_event ev)
     const rnti_t rnti = u.crnti;
 
     const auto& ue_cc = u.get_pcell();
-    if (ue_cc.get_pcell_state().conres_st != ue_conres_state::pending_conres_crnti_ce) {
+    if (ue_cc.get_pcell_state().conres_st != ue_conres_state::pending_conres_crnti_ce and
+        ue_cc.get_pcell_state().conres_st != ue_conres_state::pending_cfra) {
       // F1AP-created UE was only added to UCI/SRS scheduling after the reception of C-RNTI CE.
       uci_sched.rem_ue(u.get_pcell().cfg());
       srs_sched.rem_ue(u.get_pcell().cfg());
@@ -470,6 +473,10 @@ void ue_cell_event_manager::handle_ul_bsr_indication(const ul_bsr_indication_mes
 void ue_cell_event_manager::handle_crc_indication(const ul_crc_indication& crc_ind)
 {
   for (unsigned i = 0, e = crc_ind.crcs.size(); i != e; ++i) {
+    if (crc_ind.crcs[i].ue_index == INVALID_DU_UE_INDEX) {
+      // CRCs with invalid UE index are ignored (They are handled by the RA scheduler).
+      continue;
+    }
     auto crc_ind_ptr = ind_pdu_pool->create_pdu(crc_ind.crcs[i]);
     if (crc_ind_ptr == nullptr) {
       return;
@@ -486,8 +493,17 @@ void ue_cell_event_manager::handle_crc_indication(const ul_crc_indication& crc_i
       }
 
       // Update HARQ.
-      const auto tbs = ue_cc->handle_crc_pdu(sl_rx, *crc_ptr);
+      const bool was_pending_cfra = ue_cc->get_pcell_state().conres_st == ue_conres_state::pending_cfra;
+      const auto tbs              = ue_cc->handle_crc_pdu(sl_rx, *crc_ptr);
       if (not tbs.has_value()) {
+        if (was_pending_cfra and crc_ptr->tb_crc_success and ue_db.cfra_msg3_acked(crc_ptr->ue_index)) {
+          // CFRA Msg3 ACKed: start UCI/SRS scheduling now that Msg3 is complete.
+          uci_sched.add_ue(ue_cc->cfg());
+          srs_sched.add_ue(ue_cc->cfg());
+          if (not ue_cc->is_in_fallback_mode()) {
+            slice_sched.config_applied(crc_ptr->ue_index);
+          }
+        }
         return event_result::processed;
       }
 
@@ -1024,7 +1040,7 @@ void ue_cell_event_manager::log_invalid_ue_index(du_ue_index_t ue_index,
   ocudulog::log_channel& log_channel = warn_if_ignored ? logger.warning : logger.info;
   log_channel("cell={} ue={}: Discarding {} event. Cause: UE with provided Id does not exist",
               fmt::underlying(cfg.cell_index),
-              fmt::underlying(ue_index),
+              ue_index,
               event_name);
 }
 
@@ -1033,7 +1049,7 @@ void ue_cell_event_manager::log_invalid_cc(du_ue_index_t ue_idx, const char* eve
   ocudulog::log_channel& log_channel = warn_if_ignored ? logger.warning : logger.info;
   log_channel("cell={} ue={}: Discarding {} event. Cause: UE is not configured in this cell",
               fmt::underlying(cfg.cell_index),
-              fmt::underlying(ue_idx),
+              ue_idx,
               event_name);
 }
 

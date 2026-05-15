@@ -63,6 +63,9 @@ public:
   /// \brief Called when C-RNTI CE is received.
   bool crnti_ce_received(du_ue_index_t ue_index);
 
+  /// \brief Called when CFRA Msg3 is successfully ACKed.
+  bool cfra_msg3_acked(du_ue_index_t ue_index);
+
   /// \brief Called when C-RNTI CE is received.
   bool handle_conres_ce_outcome(du_ue_index_t ue_index, bool success);
 

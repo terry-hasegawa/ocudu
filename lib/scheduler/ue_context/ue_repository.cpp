@@ -131,10 +131,8 @@ void ue_repository::add_ue(const ue_configuration&   ue_cfg,
       st.config_st = ue_config_state::pending_initial_conf;
       st.conres_st = ue_conres_state::pending_conres_ce;
     } else if (cfra_enabled) {
-      // F1AP-created UE that is expecting a CFRA.
-      st.cfra_pending = cfra_enabled;
-      st.config_st    = ue_config_state::pending_reconf;
-      st.conres_st    = ue_conres_state::conres_completed;
+      // F1AP-created UE that is expecting a CFRA. Defer UCI/SRS scheduling until Msg3 is ACKed.
+      st.conres_st = ue_conres_state::pending_cfra;
     } else {
       // F1AP-created UE: already RRC connected but waiting for C-RNTI CE.
       st.conres_st = ue_conres_state::pending_conres_crnti_ce;
@@ -246,6 +244,11 @@ bool ue_repository::ue_config_applied(du_ue_index_t ue_index)
 bool ue_repository::crnti_ce_received(du_ue_index_t ue_index)
 {
   return update_ue_fsm(ue_index, ue_fsm_config_event::crnti_ce_received);
+}
+
+bool ue_repository::cfra_msg3_acked(du_ue_index_t ue_index)
+{
+  return update_ue_fsm(ue_index, ue_fsm_config_event::cfra_msg3_acked);
 }
 
 bool ue_repository::handle_conres_ce_outcome(du_ue_index_t ue_index, bool success)
@@ -398,6 +401,13 @@ bool ue_repository::update_ue_fsm(du_ue_index_t ue_index, ue_fsm_config_event ev
       }
       con_st = ue_conres_state::conres_completed;
       logger.debug("ue={} rnti={}: C-RNTI CE received, contention resolution completed", ue_index, ue_cc.rnti());
+      break;
+    case events::cfra_msg3_acked:
+      if (con_st != ue_conres_state::pending_cfra) {
+        return false;
+      }
+      con_st = ue_conres_state::conres_completed;
+      logger.debug("ue={} rnti={}: CFRA Msg3 ACKed, UCI/SRS scheduling activated", ue_index, ue_cc.rnti());
       break;
     case events::ue_ctx_setup_received:
       if (cfg_st == ue_config_state::pending_reconf) {

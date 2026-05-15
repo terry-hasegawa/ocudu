@@ -36,8 +36,6 @@ struct ue_pcell_state {
   ue_conres_state conres_st = ue_conres_state::conres_completed;
   /// MSG3 rx-slot, set for RACH-created UEs (conres_st == pending_conres_ce).
   slot_point msg3_rx_slot;
-  /// Set to true when the UE is expecting a CFRA.
-  bool cfra_pending = false;
 };
 
 struct ue_cell_components {

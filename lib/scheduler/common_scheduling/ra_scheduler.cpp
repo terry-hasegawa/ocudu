@@ -700,7 +700,7 @@ void ra_scheduler::handle_crc_indication(const ul_crc_indication& crc_ind)
     return pdu.harq_id == to_harq_id(0) and
            (pdu.ue_index == INVALID_DU_UE_INDEX or
             (not pending_cfra_ues.empty() and
-             pending_cfra_ues[pdu.ue_index].load(std::memory_order_relaxed) == pdu.rnti));
+             pending_cfra_ues[pdu.ue_index].load(std::memory_order_acquire) == pdu.rnti));
   };
   ul_crc_indication ra_crc_ind;
   for (auto& crc : crc_ind.crcs) {
@@ -746,7 +746,6 @@ void ra_scheduler::handle_pending_crc_indications_impl(cell_resource_allocator& 
   ul_crc_indication crc_ind;
   while (pending_crcs.try_pop(crc_ind)) {
     for (const ul_crc_pdu_indication& crc : crc_ind.crcs) {
-      ocudu_assert(crc.ue_index == INVALID_DU_UE_INDEX, "Msg3 HARQ CRCs cannot have a ue index assigned yet");
       auto crc_it = pending_msg3s.find(get_msg3_ring_key(crc.rnti));
       if (crc_it == pending_msg3s.end()) {
         if (not mark_msga_crc(crc.rnti, crc.tb_crc_success)) {
@@ -774,6 +773,10 @@ void ra_scheduler::handle_pending_crc_indications_impl(cell_resource_allocator& 
       if (h_ul->empty()) {
         // Deallocate Msg3 entry.
         pending_msg3s.erase(crc_it);
+        // In case of CFRA, update cfra mapping.
+        if (crc.ue_index != INVALID_DU_UE_INDEX) {
+          pending_cfra_ues[crc.ue_index].store(rnti_t::INVALID_RNTI, std::memory_order_release);
+        }
       }
 
       // Forward MSG3 CRC indication to metrics handler.
