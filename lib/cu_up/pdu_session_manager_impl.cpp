@@ -596,6 +596,17 @@ pdu_session_manager_impl::modify_pdu_session(const e1ap_pdu_session_res_to_modif
     logger.log_info("Removed {} for {}", drb_to_rem, session.pdu_session_id);
   }
 
+  // > Update N3 UL UP tunnel endpoint (e.g. after Xn path switch provides new UPF address/TEID).
+  if (session.ng_ul_up_tnl_info.has_value()) {
+    const auto& ul_tnl = session.ng_ul_up_tnl_info.value();
+    logger.log_info("{}: Updating N3 UL tunnel endpoint to addr={} teid={}",
+                    session.pdu_session_id,
+                    ul_tnl.tp_address,
+                    ul_tnl.gtp_teid);
+    pdu_session->gtpu->get_tx_lower_layer_interface()->update_tx_endpoint(
+        ul_tnl.tp_address.to_string(), n3_config.upf_port, ul_tnl.gtp_teid.value());
+  }
+
   pdu_session_result.success = true;
   return pdu_session_result;
 }

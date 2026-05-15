@@ -531,6 +531,12 @@ inline bool fill_e1ap_bearer_context_modification_request(e1ap_bearer_context_mo
         e1ap_pdu_session_res_to_modify_item pdu_session_res_to_mod_item;
         pdu_session_res_to_mod_item.pdu_session_id = uint_to_pdu_session_id(asn1_res_to_mod_item.pdu_session_id);
 
+        // Fill NG UL UP transport layer information (updated UPF endpoint, e.g. after Xn path switch).
+        if (asn1_res_to_mod_item.ng_ul_up_tnl_info_present) {
+          pdu_session_res_to_mod_item.ng_ul_up_tnl_info =
+              asn1_to_up_transport_layer_info(asn1_res_to_mod_item.ng_ul_up_tnl_info);
+        }
+
         // Fill DRB to setup list.
         for (const auto& asn1_drb_to_setup_item : asn1_res_to_mod_item.drb_to_setup_list_ng_ran) {
           e1ap_drb_to_setup_item_ng_ran drb_to_setup_item;

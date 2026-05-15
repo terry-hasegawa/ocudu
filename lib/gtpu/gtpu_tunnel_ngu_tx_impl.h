@@ -24,7 +24,9 @@ public:
                           const gtpu_tunnel_ngu_config::gtpu_tunnel_ngu_tx_config& cfg_,
                           dlt_pcap&                                                gtpu_pcap_,
                           gtpu_tunnel_common_tx_upper_layer_notifier&              upper_dn_) :
-    gtpu_tunnel_base_tx(gtpu_tunnel_log_prefix{ue_index, cfg_.peer_teid, "UL"}, gtpu_pcap_, upper_dn_), cfg(cfg_)
+    gtpu_tunnel_base_tx(gtpu_tunnel_log_prefix{ue_index, cfg_.peer_teid, "UL"}, gtpu_pcap_, upper_dn_),
+    cfg(cfg_),
+    current_peer_teid(cfg_.peer_teid)
   {
     to_sockaddr(peer_sockaddr, cfg.peer_addr.c_str(), cfg.peer_port);
     logger.log_info("GTPU NGU Tx configured. {}", cfg);
@@ -48,7 +50,7 @@ public:
     hdr.flags.ext_hdr       = true;
     hdr.message_type        = GTPU_MSG_DATA_PDU;
     hdr.length              = buf.length() + 4 + 4;
-    hdr.teid                = cfg.peer_teid;
+    hdr.teid                = current_peer_teid;
     hdr.next_ext_hdr_type   = gtpu_extension_header_type::pdu_session_container;
 
     byte_buffer ext_buf;
@@ -81,9 +83,18 @@ public:
     send_pdu(std::move(buf), peer_sockaddr);
   }
 
+  void update_tx_endpoint(const std::string& new_addr, uint16_t new_port, uint32_t new_teid) override
+  {
+    current_peer_teid = int_to_gtpu_teid(new_teid);
+    to_sockaddr(peer_sockaddr, new_addr.c_str(), new_port);
+    logger.log_info(
+        "GTPU NGU Tx endpoint updated. peer_addr={} peer_port={} peer_teid={}", new_addr, new_port, current_peer_teid);
+  }
+
 private:
   const gtpu_tunnel_ngu_config::gtpu_tunnel_ngu_tx_config cfg;
-  sockaddr_storage                                        peer_sockaddr = {};
-  bool                                                    stopped       = false;
+  gtpu_teid_t                                             current_peer_teid = {};
+  sockaddr_storage                                        peer_sockaddr     = {};
+  bool                                                    stopped           = false;
 };
 } // namespace ocudu

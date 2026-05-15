@@ -6,6 +6,7 @@
 
 #include "ocudu/adt/byte_buffer.h"
 #include "ocudu/ran/cu_types.h"
+#include <string>
 
 struct sockaddr_storage;
 
@@ -48,6 +49,12 @@ public:
   /// \param sdu SDU to be handled.
   /// \param qfi QoS flow ID that is associated with the SDU.
   virtual void handle_sdu(byte_buffer sdu, qos_flow_id_t qfi) = 0;
+
+  /// \brief Update the remote UPF endpoint (N3 UL tunnel), e.g. after an Xn path switch.
+  /// \param new_addr New peer IPv4/IPv6 address string.
+  /// \param new_port New peer UDP port.
+  /// \param new_teid New peer GTP-U TEID.
+  virtual void update_tx_endpoint(const std::string& new_addr, uint16_t new_port, uint32_t new_teid) = 0;
 };
 
 } // namespace ocudu
