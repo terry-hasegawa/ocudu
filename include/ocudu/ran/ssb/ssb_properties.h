@@ -40,7 +40,7 @@ inline float ssb_pss_to_sss_epre_to_dB(ssb_pss_to_sss_epre value)
 /// \brief Converts the PSS EPRE to SSS EPRE value to a linear amplitude.
 inline float ssb_pss_to_sss_epre_to_amplitude(ssb_pss_to_sss_epre value)
 {
-  return (value == ssb_pss_to_sss_epre::dB_3) ? M_SQRT2f : 1.0F;
+  return (value == ssb_pss_to_sss_epre::dB_3) ? M_SQRT2f32 : 1.0F;
 }
 
 /// Labels for the different SS/PBCH block patterns defined in TS38.213 Section 4.1.
