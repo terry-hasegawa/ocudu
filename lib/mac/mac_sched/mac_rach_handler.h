@@ -26,10 +26,10 @@ public:
   /// Handle detected RACH indication.
   void handle_rach_indication(const mac_rach_indication& rach_ind) override;
 
-  /// Reserve Contention-free RACH preamble for a given UE.
+  /// Add a new mapping entry between a Contention-free RACH preamble and a given UE.
   [[nodiscard]] bool handle_cfra_allocation(uint8_t preamble_idx, du_ue_index_t ue_idx, rnti_t crnti);
 
-  /// Deallocate Contention-free RACH preamble that was previously given to a UE.
+  /// Remove any existing CFRA preamble mapping for a given UE.
   void handle_cfra_deallocation(du_ue_index_t ue_idx);
 
 private:
@@ -54,11 +54,15 @@ public:
 
   void rem_cell(du_cell_index_t cell_index);
 
+  /// Deallocate the CFRA preamble for a UE if one is still allocated.
+  void handle_cfra_deallocation(du_ue_index_t ue_idx);
+
 private:
   friend class mac_cell_rach_handler_impl;
 
   struct cfra_ue_context {
-    uint8_t preamble_id;
+    uint8_t         preamble_id;
+    du_cell_index_t cell_index;
   };
 
   scheduler_rach_handler& sched;

@@ -150,6 +150,10 @@ async_task<void> ocudu_scheduler_adapter::handle_ue_removal_request(const mac_ue
 
 void ocudu_scheduler_adapter::handle_ue_config_applied(du_ue_index_t ue_index)
 {
+  // Free any CFRA preamble slot still held by this UE — the config being applied means
+  // the random access procedure is complete and the slot can be reused.
+  rach_handler.handle_cfra_deallocation(ue_index);
+
   // Notify scheduler that the UE confirmed the configuration.
   sched_impl->handle_ue_config_applied(ue_index);
 }

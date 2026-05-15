@@ -87,6 +87,7 @@ bool mac_cell_rach_handler_impl::handle_cfra_allocation(uint8_t preamble_id, du_
   rnti_t         expected_rnti = rnti_t::INVALID_RNTI;
   if (preambles[idx].compare_exchange_strong(expected_rnti, crnti, std::memory_order_acq_rel)) {
     parent.ue_map[ue_idx].preamble_id = preamble_id;
+    parent.ue_map[ue_idx].cell_index  = cell_index;
     return true;
   }
   return false;
@@ -108,8 +109,19 @@ mac_rach_handler::mac_rach_handler(scheduler_rach_handler& sched_,
   sched(sched_),
   rnti_mng(rnti_mng_),
   logger(logger_),
-  ue_map(MAX_NOF_DU_UES, cfra_ue_context{MAX_NOF_RA_PREAMBLES_PER_OCCASION})
+  ue_map(MAX_NOF_DU_UES, cfra_ue_context{MAX_NOF_RA_PREAMBLES_PER_OCCASION, INVALID_DU_CELL_INDEX})
 {
+}
+
+void mac_rach_handler::handle_cfra_deallocation(du_ue_index_t ue_idx)
+{
+  auto& entry = ue_map[ue_idx];
+  if (entry.preamble_id == MAX_NOF_RA_PREAMBLES_PER_OCCASION) {
+    return;
+  }
+  if (cell_map.contains(entry.cell_index)) {
+    cell_map[entry.cell_index]->handle_cfra_deallocation(ue_idx);
+  }
 }
 
 mac_cell_rach_handler_impl& mac_rach_handler::add_cell(const sched_cell_configuration_request_message& sched_cfg)
