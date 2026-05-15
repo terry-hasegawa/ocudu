@@ -3,8 +3,10 @@
 
 #pragma once
 
+#include "loopback_buffer.h"
 #include "ocudu/gateways/baseband/baseband_gateway_receiver.h"
 #include "ocudu/gateways/baseband/baseband_gateway_transmitter.h"
+#include "ocudu/gateways/baseband/buffer/baseband_gateway_buffer_dynamic.h"
 #include "ocudu/radio/radio_session.h"
 #include "ocudu/support/executors/task_executor.h"
 #include "ocudu/support/synchronization/stop_event.h"
@@ -80,6 +82,9 @@ private:
   /// The system time corresponding to timestamp 0 in nanoseconds.
   std::chrono::nanoseconds ts0_epoch;
 
+  /// Sampling rate common to all channels.
+  double sampling_rate_hz;
+
   /// Timestamp of the next sample to deliver to the stack.
   baseband_gateway_timestamp next_receive_timestamp;
 
@@ -107,14 +112,14 @@ private:
   /// event is logged.
   uint64_t tx_processing_delay_samples;
 
-  /// Sampling rate common to all channels.
-  double sampling_rate_hz;
-
   /// Start request flag. It is used to signal the start of the receive stream.
   std::atomic<bool> start_requested;
 
   /// Stop control.
   rt_stop_event_source stop_control;
+
+  /// Loopback buffer, connecting the receive and transmit streams.
+  loopback_buffer buffer;
 
   /// \brief Derives the current RF timestamp, based on the system time and the epoch of timestamp 0.
   ///

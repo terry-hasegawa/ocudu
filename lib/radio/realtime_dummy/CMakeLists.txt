@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: BSD-3-Clause-Open-MPI
 
 set(SOURCES_REALTIME_DUMMY
+        loopback_buffer.cpp
         radio_config_realtime_dummy_validator.cpp
         radio_factory_realtime_dummy_impl.cpp
         radio_session_realtime_dummy_impl.cpp)

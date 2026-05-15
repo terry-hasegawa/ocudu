@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: BSD-3-Clause-Open-MPI
 
 #include "radio_session_realtime_dummy_impl.h"
-#include "ocudu/gateways/baseband/buffer/baseband_gateway_buffer_dynamic.h"
+#include "ocudu/gateways/baseband/buffer/baseband_gateway_buffer_reader.h"
+#include "ocudu/gateways/baseband/buffer/baseband_gateway_buffer_writer.h"
 #include "ocudu/ocudulog/ocudulog.h"
-#include "ocudu/ocuduvec/zero.h"
 #include <thread>
 
 using namespace ocudu;
@@ -12,26 +12,18 @@ using namespace ocudu;
 radio_session_realtime_dummy_impl::radio_session_realtime_dummy_impl(const radio_configuration::radio& config,
                                                                      task_executor&        async_task_executor,
                                                                      radio_event_notifier& notification_handler) :
-  logger(ocudulog::fetch_basic_logger("RF"))
+  logger(ocudulog::fetch_basic_logger("RF")),
+  ts0_epoch(std::chrono::duration_cast<std::chrono::nanoseconds>(
+      std::chrono::high_resolution_clock::now().time_since_epoch())),
+  sampling_rate_hz(config.sampling_rate_Hz),
+  next_receive_timestamp(0),
+  next_transmit_timestamp(0),
+  max_nof_buffered_rx_samples(static_cast<uint64_t>(sampling_rate_hz / 100)),
+  max_nof_buffered_tx_samples(max_nof_buffered_rx_samples),
+  tx_processing_delay_samples(static_cast<uint64_t>(sampling_rate_hz / 100000)),
+  start_requested(false),
+  buffer(config.rx_streams[0].channels.size(), max_nof_buffered_tx_samples * 10)
 {
-  // Set the epoch of timestamp 0.
-  ts0_epoch = std::chrono::duration_cast<std::chrono::nanoseconds>(
-      std::chrono::high_resolution_clock::now().time_since_epoch());
-
-  sampling_rate_hz = config.sampling_rate_Hz;
-
-  // Set the emulated TX and RX buffer sizes to hold 10 ms of baseband signal.
-  max_nof_buffered_rx_samples = static_cast<uint64_t>(sampling_rate_hz / 100);
-  max_nof_buffered_tx_samples = max_nof_buffered_rx_samples;
-
-  next_transmit_timestamp = 0;
-  next_receive_timestamp  = 0;
-
-  start_requested.store(false);
-
-  // Set the TX processing delay of the radio to 10 microseconds.
-  tx_processing_delay_samples = static_cast<uint64_t>(sampling_rate_hz / 100000);
-
   report_fatal_error_if_not(tx_processing_delay_samples < max_nof_buffered_tx_samples,
                             "The emulated TX processing delay must be smaller than the emulated TX buffer size.");
   report_error_if_not(max_nof_buffered_tx_samples >= static_cast<uint64_t>(sampling_rate_hz / 10000),
@@ -58,7 +50,8 @@ void radio_session_realtime_dummy_impl::start(baseband_gateway_timestamp init_ti
   stop_control.reset();
 
   // Set the next timestamp for the RX samples.
-  next_receive_timestamp        = init_time;
+  next_receive_timestamp = init_time;
+  buffer.set_first_expected_rx_timestamp(init_time);
   bool expected_start_requested = false;
   if (!start_requested.compare_exchange_weak(expected_start_requested, true)) {
     report_fatal_error("Called start when radio is already running");
@@ -96,7 +89,7 @@ baseband_gateway_receiver::metadata radio_session_realtime_dummy_impl::receive(b
   // Sleep until the radio is requested to start.
   while (!start_requested.load()) {
     OCUDU_RTSAN_SCOPED_DISABLER(scoped_disabler);
-    std::this_thread::sleep_for(std::chrono::microseconds(10));
+    std::this_thread::sleep_for(std::chrono::microseconds(1));
   }
 
   unsigned nof_requested_samples = data.get_nof_samples();
@@ -106,11 +99,6 @@ baseband_gateway_receiver::metadata radio_session_realtime_dummy_impl::receive(b
       nof_requested_samples,
       max_nof_buffered_rx_samples);
 
-  // Fill the buffer with zeros.
-  for (unsigned i_channel = 0, nof_channels = data.get_nof_channels(); i_channel < nof_channels; ++i_channel) {
-    ocuduvec::zero(data.get_channel_buffer(i_channel));
-  }
-
   // If the timestamp of the next sample to be provided to the stack is smaller than the timestamp of the earliest
   // sample in the RX buffer, it means that samples have been dropped due to a buffer overflow.
   baseband_gateway_timestamp current_rf_timestamp = get_current_rf_timestamp();
@@ -119,6 +107,9 @@ baseband_gateway_receiver::metadata radio_session_realtime_dummy_impl::receive(b
   if (next_receive_timestamp < earliest_timestamp_in_rx_buffer) {
     logger.warning(
         "RX Overflow detected while receiving TS={}, current RF TS: {}", next_receive_timestamp, current_rf_timestamp);
+
+    // Read samples from the loopback buffer.
+    buffer.read(data, earliest_timestamp_in_rx_buffer);
 
     // Provide the earliest samples in the buffer to the stack and update the next RX timestamp accordingly. This
     // results in a discontinuity in the timestamp of the received samples, which the stack must handle.
@@ -132,6 +123,9 @@ baseband_gateway_receiver::metadata radio_session_realtime_dummy_impl::receive(b
     OCUDU_RTSAN_SCOPED_DISABLER(scoped_disabler);
     std::this_thread::sleep_for(std::chrono::microseconds(1));
   }
+
+  // Read samples from the loopback buffer.
+  buffer.read(data, next_receive_timestamp);
 
   // Update the timestamp for the next receive call and return the current timestamp.
   metadata return_md = {.ts = next_receive_timestamp};
@@ -161,22 +155,16 @@ void radio_session_realtime_dummy_impl::transmit(const baseband_gateway_buffer_r
     return;
   }
 
-  // If the samples to be transmitted are not contiguous to the latest transmission, notify a transmission gap.
-  if ((next_transmit_timestamp != 0) && (first_requested_sample_ts > next_transmit_timestamp)) {
-    logger.warning("TX discontinuity detected while transmitting TS={}, expected TS: {}",
-                   first_requested_sample_ts,
-                   next_transmit_timestamp);
-  }
-
   // If the timestamp of the first sample to be transmitted is not ahead of the current timestamp by at least the TX
   // processing delay, notify an underflow and return (samples are dropped).
   baseband_gateway_timestamp current_rf_timestamp = get_current_rf_timestamp();
   baseband_gateway_timestamp required_tx_timestamp_in_buffer =
       current_rf_timestamp > tx_processing_delay_samples ? current_rf_timestamp - tx_processing_delay_samples : 0;
   if (first_requested_sample_ts < required_tx_timestamp_in_buffer) {
-    logger.warning("TX underflow detected while transmitting TS={}, current RF TS: {}",
+    logger.warning("TX underflow detected while transmitting TS={}, current RF TS: {}, lagging by {} samples.",
                    first_requested_sample_ts,
-                   current_rf_timestamp);
+                   current_rf_timestamp,
+                   current_rf_timestamp - first_requested_sample_ts);
     return;
   }
 
@@ -184,10 +172,13 @@ void radio_session_realtime_dummy_impl::transmit(const baseband_gateway_buffer_r
   // TX buffering depth, block until that's no longer the case.
   baseband_gateway_timestamp last_requested_sample_ts = first_requested_sample_ts + nof_requested_samples - 1;
   while (last_requested_sample_ts >
-         (get_current_rf_timestamp() + tx_processing_delay_samples + max_nof_buffered_tx_samples)) {
+         (get_current_rf_timestamp() - tx_processing_delay_samples + max_nof_buffered_tx_samples)) {
     OCUDU_RTSAN_SCOPED_DISABLER(scoped_disabler);
     std::this_thread::sleep_for(std::chrono::microseconds(1));
   }
+
+  // Write the samples to the loopback buffer.
+  buffer.write(data, first_requested_sample_ts);
 
   // Update the next expected TX timestamp.
   next_transmit_timestamp = last_requested_sample_ts + 1;
