@@ -229,10 +229,9 @@ void rrc_ue_impl::handle_pdu(const srb_id_t srb_id, byte_buffer rrc_pdu, bool in
   // AI=NA: Message can never bet sent after security activation.
   //
   // AC=+: Message can be sent unciphered after security activation.
-  // AC=+: Message shoulr never be sent unciphered after security activation.
+  // AC=-: Message should never be sent unciphered after security activation.
   // AC=NA: Message can never bet sent after security activation.
 
-  // TODO: Check which messages can pass without integrity verification.
   switch (ul_dcch_msg.msg.c1().type().value) {
     case ul_dcch_msg_type_c::c1_c_::types_opts::options::ul_info_transfer:
       // P=+ AI=- CI=-
@@ -244,10 +243,18 @@ void rrc_ue_impl::handle_pdu(const srb_id_t srb_id, byte_buffer rrc_pdu, bool in
       break;
     case ul_dcch_msg_type_c::c1_c_::types_opts::security_mode_complete:
       // P=- AI=NA CI=NA (Info: Integrity is applied, but no ciphering. Ciphering is activated after this procedure.)
+      if (!integrity_verified) {
+        handle_illegal_pdu_integrity(ul_dcch_msg.msg.c1().type().to_string(), integrity_verified);
+        return;
+      }
       handle_rrc_transaction_complete(ul_dcch_msg, ul_dcch_msg.msg.c1().security_mode_complete().rrc_transaction_id);
       break;
     case ul_dcch_msg_type_c::c1_c_::types_opts::security_mode_fail:
       // P=+ AI=NA CI=NA (Info: Neither integrity nor ciphering applied.)
+      if (integrity_verified) { // Never integrity protected.
+        handle_illegal_pdu_integrity(ul_dcch_msg.msg.c1().type().to_string(), integrity_verified);
+        return;
+      }
       handle_rrc_transaction_complete(ul_dcch_msg, ul_dcch_msg.msg.c1().security_mode_fail().rrc_transaction_id);
       break;
     case ul_dcch_msg_type_c::c1_c_::types_opts::ue_cap_info:
@@ -260,20 +267,38 @@ void rrc_ue_impl::handle_pdu(const srb_id_t srb_id, byte_buffer rrc_pdu, bool in
       break;
     case ul_dcch_msg_type_c::c1_c_::types_opts::rrc_reest_complete:
       // P=- AI=- CI=-
+      if (!integrity_verified) {
+        handle_illegal_pdu_integrity(ul_dcch_msg.msg.c1().type().to_string(), integrity_verified);
+        return;
+      }
       handle_rrc_transaction_complete(ul_dcch_msg, ul_dcch_msg.msg.c1().rrc_reest_complete().rrc_transaction_id);
       break;
     case ul_dcch_msg_type_c::c1_c_::types_opts::rrc_resume_complete:
       // P=- AI=- CI=-
+      if (!integrity_verified) {
+        handle_illegal_pdu_integrity(ul_dcch_msg.msg.c1().type().to_string(), integrity_verified);
+        return;
+      }
       handle_rrc_transaction_complete(ul_dcch_msg, ul_dcch_msg.msg.c1().rrc_resume_complete().rrc_transaction_id);
       break;
     case ul_dcch_msg_type_c::c1_c_::types_opts::meas_report:
       // P=- AI=- CI=- (Info: Never sent unprotected to protect privacy of the UE.)
+      if (!integrity_verified) {
+        handle_illegal_pdu_integrity(ul_dcch_msg.msg.c1().type().to_string(), integrity_verified);
+        return;
+      }
       handle_measurement_report(ul_dcch_msg.msg.c1().meas_report());
       break;
     default:
       logger.log_error("Unsupported DCCH UL message type");
       break;
   }
+}
+
+void rrc_ue_impl::handle_illegal_pdu_integrity(const char* msg, bool integrity_verified)
+{
+  logger.log_warning("Requesting UE release. Cause: Illegal PDU integrity={} for msg={}", integrity_verified, msg);
+  on_ue_release_required(cause_protocol_t::unspecified);
 }
 
 void rrc_ue_impl::handle_ul_dcch_pdu(const srb_id_t srb_id, byte_buffer pdcp_pdu)

@@ -293,7 +293,7 @@ TEST_F(cu_cp_initial_context_setup_test, when_security_mode_command_fails_then_i
 
   // Inject Security Mode Failure
   f1ap_message ul_rrc_msg_transfer = test_helpers::generate_ul_rrc_message_transfer(
-      du_ue_id, ue_ctx->cu_ue_id.value(), srb_id_t::srb1, make_byte_buffer("00033200c1bf019d").value());
+      du_ue_id, ue_ctx->cu_ue_id.value(), srb_id_t::srb1, make_byte_buffer("0003320000000000").value());
   get_du(du_idx).push_ul_pdu(ul_rrc_msg_transfer);
 
   // Wait for NGAP Initial Context Setup Failure

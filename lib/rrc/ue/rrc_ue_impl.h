@@ -143,6 +143,9 @@ private:
   void on_new_dl_dcch(srb_id_t srb_id, const asn1::rrc_nr::dl_dcch_msg_s& dl_dcch_msg) override;
   void on_new_as_security_context(bool security_mode_active) override;
 
+  // helpers
+  void handle_illegal_pdu_integrity(const char* msg, bool integrity_verified);
+
   rrc_ue_logger                   logger;
   rrc_ue_context_t                context;
   rrc_pdu_f1ap_notifier&          f1ap_pdu_notifier;    // PDU notifier to the F1AP
