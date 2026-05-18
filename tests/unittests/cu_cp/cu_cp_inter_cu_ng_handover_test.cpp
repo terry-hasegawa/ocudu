@@ -151,6 +151,19 @@ public:
     // Inject UL RRC Message (containing RRC Reconfiguration Complete) and wait for Handover Notify.
     get_du(du_idx).push_ul_pdu(test_helpers::generate_ul_rrc_message_transfer(
         du_ue_id, cu_ue_id, srb_id_t::srb1, make_byte_buffer("800008005b7d9d03").value()));
+    return await_handover_notify_and_ue_context_modification_request();
+  }
+
+  [[nodiscard]] bool send_rrc_reconfiguration_complete()
+  {
+    // Inject UL RRC Message containing RRC Reconfiguration Complete.
+    get_du(du_idx).push_ul_pdu(test_helpers::generate_ul_rrc_message_transfer(
+        du_ue_id, cu_ue_id, srb_id_t::srb1, make_byte_buffer("800008005b7d9d03").value()));
+    return true;
+  }
+
+  [[nodiscard]] bool await_handover_notify_and_ue_context_modification_request()
+  {
     report_fatal_error_if_not(this->wait_for_ngap_tx_pdu(ngap_pdu), "Failed to receive Handover Notify");
     report_fatal_error_if_not(this->wait_for_f1ap_tx_pdu(du_idx, f1ap_pdu),
                               "Failed to receive UE context modification response");
@@ -562,6 +575,25 @@ TEST_F(cu_cp_inter_cu_ng_handover_test, when_handover_request_received_then_hand
   get_du(du_idx).push_ul_pdu(ul_rrc_msg_transfer);
   ASSERT_TRUE(this->wait_for_ngap_tx_pdu(ngap_pdu));
   ASSERT_TRUE(test_helpers::is_valid_ul_nas_transport_message(ngap_pdu));
+}
+
+TEST_F(cu_cp_inter_cu_ng_handover_test,
+       when_rrc_reconfiguration_complete_arrives_before_dl_ran_status_transfer_then_handover_notify_is_sent)
+{
+  // Bring handover up to the point where either event can arrive first.
+  ASSERT_TRUE(send_handover_request_and_await_bearer_context_setup_request());
+  ASSERT_TRUE(send_bearer_context_setup_response_and_await_ue_context_setup_request());
+  ASSERT_TRUE(send_ue_context_setup_response_and_await_bearer_context_modification_request());
+  ASSERT_TRUE(send_bearer_context_modification_response_and_await_handover_request_ack());
+
+  // Inject RRC Reconfiguration Complete first.
+  ASSERT_TRUE(send_rrc_reconfiguration_complete());
+
+  // Inject DL RAN Status Transfer and continue normal execution.
+  ASSERT_TRUE(send_dl_ran_status_transfer_and_await_bearer_context_modification_request());
+  ASSERT_TRUE(send_bearer_context_modification_response());
+  ASSERT_TRUE(await_handover_notify_and_ue_context_modification_request());
+  ASSERT_TRUE(send_ue_context_modification_response_empty(cu_ue_id, du_ue_id));
 }
 
 ///////////////////////////////////////////////////////////////////////////////

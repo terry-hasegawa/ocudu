@@ -172,6 +172,19 @@ public:
     // Inject UL RRC Message (containing RRC Reconfiguration Complete) and wait for Path Switch Request.
     get_du(du_idx).push_ul_pdu(test_helpers::generate_ul_rrc_message_transfer(
         du_ue_id, cu_ue_id, srb_id_t::srb1, make_byte_buffer("80000800795ae600").value()));
+    return await_path_switch_request();
+  }
+
+  [[nodiscard]] bool send_rrc_reconfiguration_complete()
+  {
+    // Inject UL RRC Message containing RRC Reconfiguration Complete.
+    get_du(du_idx).push_ul_pdu(test_helpers::generate_ul_rrc_message_transfer(
+        du_ue_id, cu_ue_id, srb_id_t::srb1, make_byte_buffer("80000800795ae600").value()));
+    return true;
+  }
+
+  [[nodiscard]] bool await_path_switch_request()
+  {
     report_fatal_error_if_not(this->wait_for_ngap_tx_pdu(ngap_pdu), "Failed to receive Path Switch Request");
     report_fatal_error_if_not(test_helpers::is_valid_path_switch_request(ngap_pdu), "Invalid Path Switch Request");
 
@@ -488,6 +501,27 @@ TEST_F(cu_cp_inter_cu_xn_handover_test, when_handover_request_received_then_path
   ASSERT_TRUE(send_path_switch_request_ack_and_await_ue_context_modification_request());
 
   // Inject UE Context Modification Response to ACK the RRC reconfiguration complete indicator.
+  ASSERT_TRUE(send_ue_context_modification_response_empty(cu_ue_id, du_ue_id));
+}
+
+TEST_F(cu_cp_inter_cu_xn_handover_test,
+       when_rrc_reconfiguration_complete_arrives_before_sn_status_transfer_then_path_switch_request_is_sent)
+{
+  // Bring handover up to the point where either event can arrive first.
+  ASSERT_TRUE(send_handover_request_and_await_bearer_context_setup_request(source_local_xnap_ue_id));
+  ASSERT_TRUE(send_bearer_context_setup_response_and_await_ue_context_setup_request());
+  ASSERT_TRUE(send_ue_context_setup_response_and_await_bearer_context_modification_request());
+  ASSERT_TRUE(send_bearer_context_modification_response_and_await_handover_request_ack());
+
+  // Inject RRC Reconfiguration Complete first.
+  ASSERT_TRUE(send_rrc_reconfiguration_complete());
+
+  // Inject SN Status Transfer and continue normal execution.
+  ASSERT_TRUE(send_sn_status_transfer_and_await_bearer_context_modification_request(source_local_xnap_ue_id,
+                                                                                    source_peer_xnap_ue_id));
+  ASSERT_TRUE(send_bearer_context_modification_response());
+  ASSERT_TRUE(await_path_switch_request());
+  ASSERT_TRUE(send_path_switch_request_ack_and_await_ue_context_modification_request());
   ASSERT_TRUE(send_ue_context_modification_response_empty(cu_ue_id, du_ue_id));
 }
 
