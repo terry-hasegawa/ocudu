@@ -261,7 +261,7 @@ public:
   /// Get the PUCCH resource according to the current state.
   pucch_resource get(unsigned bwp_size_rbs) const
   {
-    pucch_resource res;
+    pucch_resource res{};
     // Format and resource ID will be set later, assign invalid values to avoid uninitialized variable warnings.
     res.format                               = pucch_format::NOF_FORMATS;
     static constexpr unsigned invalid_res_id = std::numeric_limits<unsigned>::max();
