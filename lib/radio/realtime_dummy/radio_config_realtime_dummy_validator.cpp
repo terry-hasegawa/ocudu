@@ -152,12 +152,12 @@ bool radio_config_realtime_dummy_validator::is_configuration_valid(const radio_c
   }
 
   if (config.tx_mode != radio_configuration::transmission_mode::continuous) {
-    fmt::print("Discontinuous transmission modes are not supported by the dummy realtime radio.\n");
+    fmt::print("Discontinuous transmission modes are not supported by the realtime dummy radio.\n");
     return false;
   }
 
   if (config.power_ramping_us != 0.0F) {
-    fmt::print("Power ramping is not supported by the dummy realtime radio.\n");
+    fmt::print("Power ramping is not supported by the realtime dummy radio.\n");
     return false;
   }
 

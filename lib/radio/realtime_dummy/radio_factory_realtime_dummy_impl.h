@@ -19,6 +19,13 @@ public:
   std::unique_ptr<radio_session> create(const radio_configuration::radio& config,
                                         task_executor&                    async_task_executor,
                                         radio_event_notifier&             notifier) override;
+
+  /// Creates a realtime dummy radio with a customizable function to obtain the current RF time.
+  std::unique_ptr<radio_session>
+  create_with_custom_time(const radio_configuration::radio&                    config,
+                          task_executor&                                       async_task_executor,
+                          radio_event_notifier&                                notifier,
+                          const unique_function<baseband_gateway_timestamp()>& get_current_rf_timestamp_fn);
 };
 
 } // namespace ocudu

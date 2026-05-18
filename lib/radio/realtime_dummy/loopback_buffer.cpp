@@ -1,5 +1,5 @@
 // SPDX-FileCopyrightText: Copyright (C) 2021-2026 Software Radio Systems Limited
-// SPDX-License-Identifier: LicenseRef-SRS-Custom
+// SPDX-License-Identifier: BSD-3-Clause-Open-MPI
 
 #include "loopback_buffer.h"
 #include "ocudu/ocuduvec/copy.h"

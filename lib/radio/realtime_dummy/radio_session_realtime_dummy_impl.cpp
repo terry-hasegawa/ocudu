@@ -4,7 +4,9 @@
 #include "radio_session_realtime_dummy_impl.h"
 #include "ocudu/gateways/baseband/buffer/baseband_gateway_buffer_reader.h"
 #include "ocudu/gateways/baseband/buffer/baseband_gateway_buffer_writer.h"
+#include "ocudu/gateways/baseband/buffer/baseband_gateway_buffer_writer_view.h"
 #include "ocudu/ocudulog/ocudulog.h"
+#include <boost/next_prior.hpp>
 #include <thread>
 
 using namespace ocudu;
@@ -12,6 +14,18 @@ using namespace ocudu;
 radio_session_realtime_dummy_impl::radio_session_realtime_dummy_impl(const radio_configuration::radio& config,
                                                                      task_executor&        async_task_executor,
                                                                      radio_event_notifier& notification_handler) :
+  radio_session_realtime_dummy_impl(config,
+                                    async_task_executor,
+                                    notification_handler,
+                                    get_current_rf_timestamp_realtime_clock)
+{
+}
+
+radio_session_realtime_dummy_impl::radio_session_realtime_dummy_impl(
+    const radio_configuration::radio&                    config,
+    task_executor&                                       async_task_executor,
+    radio_event_notifier&                                notification_handler,
+    const unique_function<baseband_gateway_timestamp()>& current_rf_timestamp_fn) :
   logger(ocudulog::fetch_basic_logger("RF")),
   ts0_epoch(std::chrono::duration_cast<std::chrono::nanoseconds>(
       std::chrono::high_resolution_clock::now().time_since_epoch())),
@@ -22,7 +36,8 @@ radio_session_realtime_dummy_impl::radio_session_realtime_dummy_impl(const radio
   max_nof_buffered_tx_samples(max_nof_buffered_rx_samples),
   tx_processing_delay_samples(static_cast<uint64_t>(sampling_rate_hz / 100000)),
   start_requested(false),
-  buffer(config.rx_streams[0].channels.size(), max_nof_buffered_tx_samples * 10)
+  buffer(config.rx_streams[0].channels.size(), max_nof_buffered_tx_samples * 10),
+  get_current_rf_timestamp(current_rf_timestamp_fn)
 {
   report_fatal_error_if_not(tx_processing_delay_samples < max_nof_buffered_tx_samples,
                             "The emulated TX processing delay must be smaller than the emulated TX buffer size.");
@@ -108,13 +123,29 @@ baseband_gateway_receiver::metadata radio_session_realtime_dummy_impl::receive(b
     logger.warning(
         "RX Overflow detected while receiving TS={}, current RF TS: {}", next_receive_timestamp, current_rf_timestamp);
 
-    // Read samples from the loopback buffer.
-    buffer.read(data, earliest_timestamp_in_rx_buffer);
+    unsigned nof_samples_to_skip = earliest_timestamp_in_rx_buffer - next_receive_timestamp;
+    if (nof_samples_to_skip >= nof_requested_samples) {
+      // If there are more samples to skip than requested samples, zero the entire buffer.
+      for (unsigned i_channel = 0, nof_channels = data.get_nof_channels(); i_channel != nof_channels; ++i_channel) {
+        ocuduvec::zero(data.get_channel_buffer(i_channel));
+      }
+    } else {
+      // Otherwise, zero the first samples of the output, and fill the remaining samples from the loopback buffer.
+      for (unsigned i_channel = 0, nof_channels = data.get_nof_channels(); i_channel != nof_channels; ++i_channel) {
+        ocuduvec::zero(data.get_channel_buffer(i_channel).first(nof_samples_to_skip));
 
-    // Provide the earliest samples in the buffer to the stack and update the next RX timestamp accordingly. This
-    // results in a discontinuity in the timestamp of the received samples, which the stack must handle.
-    next_receive_timestamp = earliest_timestamp_in_rx_buffer + data.get_nof_samples();
-    return metadata{.ts = earliest_timestamp_in_rx_buffer};
+        // Copy the available samples in the same positions as if there had been no overflow.
+        baseband_gateway_buffer_writer_view offset_buffer(
+            data, nof_samples_to_skip, nof_requested_samples - nof_samples_to_skip);
+        buffer.read(offset_buffer, earliest_timestamp_in_rx_buffer);
+      }
+    }
+
+    // Update the timestamp for the next receive call and return the current timestamp.
+    metadata return_md = {.ts = next_receive_timestamp};
+    next_receive_timestamp += nof_requested_samples;
+
+    return return_md;
   }
 
   // Sleep until all the requested samples are available in the buffer.
@@ -157,14 +188,13 @@ void radio_session_realtime_dummy_impl::transmit(const baseband_gateway_buffer_r
 
   // If the timestamp of the first sample to be transmitted is not ahead of the current timestamp by at least the TX
   // processing delay, notify an underflow and return (samples are dropped).
-  baseband_gateway_timestamp current_rf_timestamp = get_current_rf_timestamp();
-  baseband_gateway_timestamp required_tx_timestamp_in_buffer =
-      current_rf_timestamp > tx_processing_delay_samples ? current_rf_timestamp - tx_processing_delay_samples : 0;
+  baseband_gateway_timestamp current_rf_timestamp            = get_current_rf_timestamp();
+  baseband_gateway_timestamp required_tx_timestamp_in_buffer = current_rf_timestamp + tx_processing_delay_samples;
   if (first_requested_sample_ts < required_tx_timestamp_in_buffer) {
-    logger.warning("TX underflow detected while transmitting TS={}, current RF TS: {}, lagging by {} samples.",
+    logger.warning("TX underflow detected while transmitting TS={}, required TS: {}, lagging by {} samples.",
                    first_requested_sample_ts,
-                   current_rf_timestamp,
-                   current_rf_timestamp - first_requested_sample_ts);
+                   required_tx_timestamp_in_buffer,
+                   required_tx_timestamp_in_buffer - first_requested_sample_ts);
     return;
   }
 
@@ -182,13 +212,4 @@ void radio_session_realtime_dummy_impl::transmit(const baseband_gateway_buffer_r
 
   // Update the next expected TX timestamp.
   next_transmit_timestamp = last_requested_sample_ts + 1;
-}
-
-baseband_gateway_timestamp radio_session_realtime_dummy_impl::get_current_rf_timestamp()
-{
-  // Get the time since the epoch.
-  auto time_since_epoch = std::chrono::duration_cast<std::chrono::nanoseconds>(
-      std::chrono::high_resolution_clock::now().time_since_epoch());
-
-  return (time_since_epoch.count() - ts0_epoch.count()) * sampling_rate_hz / 1000000000U;
 }
