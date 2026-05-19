@@ -11,19 +11,6 @@
 
 namespace ocudu::ocuup {
 
-/// Interface to notify about E1AP connections (from the CU-CP) to the CU-UP
-class cu_up_manager_e1ap_connection_notifier
-{
-public:
-  virtual ~cu_up_manager_e1ap_connection_notifier() = default;
-
-  /// \brief Notifies the CU-UP about a successful E1AP connection.
-  virtual void on_e1ap_connection_establish() = 0;
-
-  /// \brief Notifies the CU-CP about a dropped E1AP connection.
-  virtual void on_e1ap_connection_drop() = 0;
-};
-
 /// Interface for the E1AP to notify the CU-UP manger
 /// of events and messages that require handling.
 class cu_up_manager_e1ap_interface
@@ -51,10 +38,6 @@ public:
   /// \param[in] msg The reset message.
   virtual async_task<void> handle_e1_reset(const e1ap_reset& msg) = 0;
 
-  /// \brief Get the state of the E1AP connection.
-  /// \return True if E1AP is connected, false otherwise.
-  virtual bool e1ap_is_connected() = 0;
-
   virtual void handle_e1ap_connection_drop() = 0;
 
   virtual void schedule_cu_up_async_task(async_task<void> task) = 0;
@@ -78,9 +61,7 @@ public:
   virtual void handle_pdcp_resume_required(cu_up_ue_index_t ue_index) = 0;
 };
 
-class cu_up_manager : public cu_up_manager_e1ap_connection_notifier,
-                      public cu_up_manager_e1ap_interface,
-                      public cu_up_manager_pdcp_interface
+class cu_up_manager : public cu_up_manager_e1ap_interface, public cu_up_manager_pdcp_interface
 {
 public:
   ~cu_up_manager() override = default;

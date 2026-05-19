@@ -63,11 +63,6 @@ public:
 
   void schedule_ue_async_task(cu_up_ue_index_t ue_index, async_task<void> task) override;
 
-  // cu_up_e1ap_connection_notifier
-  void on_e1ap_connection_establish() override { e1ap_connected = true; }
-  void on_e1ap_connection_drop() override { e1ap_connected = false; }
-  bool e1ap_is_connected() override { return e1ap_connected; }
-
   size_t get_nof_ues() override { return ue_mng->get_nof_ues(); }
 
   // PDCP event handlers.
@@ -105,7 +100,6 @@ private:
   ocudulog::basic_logger& logger = ocudulog::fetch_basic_logger("CU-UP", false);
 
   // Components
-  std::atomic<bool>           e1ap_connected = {false};
   std::unique_ptr<ue_manager> ue_mng;
 
   unique_timer statistics_report_timer;
