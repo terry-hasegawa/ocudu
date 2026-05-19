@@ -1,8 +1,7 @@
 # SPDX-FileCopyrightText: Copyright (C) 2021-2026 Software Radio Systems Limited
 # SPDX-License-Identifier: BSD-3-Clause-Open-MPI
 
-
-set_directory_properties(PROPERTIES LABELS "ofh")
+set_directory_properties(PROPERTIES LABELS "ofh;MVP-ARCH-INTF-4")
 
 add_executable(ofh_integration_test ofh_integration_test.cpp)
 target_link_libraries(ofh_integration_test
