@@ -50,6 +50,7 @@ private:
   e1ap_bearer_context_modification_request bearer_context_modification_request;
   e1ap_bearer_context_modification_request tunnel_context_modification_request;
   cu_cp_path_switch_request                path_switch_request;
+  cu_cp_ue_context_release_request         ue_context_release_request;
 
   // (sub-)routine results
   expected<cu_cp_status_transfer>           sn_status;

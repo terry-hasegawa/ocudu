@@ -31,6 +31,8 @@ bool is_valid_handover_cancel(const ocucp::xnap_message& msg);
 
 bool is_valid_sn_status_transfer(const ocucp::xnap_message& msg);
 
+bool is_valid_ue_context_release(const ocucp::xnap_message& msg);
+
 byte_buffer get_rrc_container(const ocucp::xnap_message& msg);
 
 } // namespace test_helpers

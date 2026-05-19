@@ -79,6 +79,13 @@ bool ocudu::test_helpers::is_valid_sn_status_transfer(const xnap_message& msg)
   return true;
 }
 
+bool ocudu::test_helpers::is_valid_ue_context_release(const xnap_message& msg)
+{
+  TRUE_OR_RETURN(msg.pdu.type() == asn1::xnap::xn_ap_pdu_c::types_opts::init_msg);
+  TRUE_OR_RETURN(msg.pdu.init_msg().proc_code == ASN1_XNAP_ID_U_E_CONTEXT_RELEASE);
+  return true;
+}
+
 byte_buffer ocudu::test_helpers::get_rrc_container(const xnap_message& msg)
 {
   if (msg.pdu.init_msg().proc_code == ASN1_XNAP_ID_HO_PREP) {

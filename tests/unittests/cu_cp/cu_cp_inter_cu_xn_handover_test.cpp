@@ -218,6 +218,15 @@ public:
     return true;
   }
 
+  [[nodiscard]] bool await_ngap_ue_context_release_request()
+  {
+    report_fatal_error_if_not(this->wait_for_ngap_tx_pdu(ngap_pdu),
+                              "Failed to receive NGAP UE Context Release Request");
+    report_fatal_error_if_not(test_helpers::is_valid_ue_context_release_request(ngap_pdu),
+                              "Invalid NGAP UE Context Release Request");
+    return true;
+  }
+
   [[nodiscard]] bool send_rrc_measurement_report_and_await_handover_request(
       gnb_cu_ue_f1ap_id_t f1ap_cu_ue_id,
       gnb_du_ue_f1ap_id_t f1ap_du_ue_id,
@@ -550,7 +559,7 @@ TEST_F(cu_cp_inter_cu_xn_handover_test,
   ASSERT_TRUE(send_ue_context_modification_response_empty(cu_ue_id, du_ue_id));
 }
 
-TEST_F(cu_cp_inter_cu_xn_handover_test, when_path_switch_request_is_rejected_by_amf_then_routine_fails)
+TEST_F(cu_cp_inter_cu_xn_handover_test, when_path_switch_request_is_rejected_by_amf_then_ue_is_released)
 {
   // Bring handover up to the point where the Path Switch Request has been sent.
   ASSERT_TRUE(send_handover_request_and_await_bearer_context_setup_request(source_local_xnap_ue_id));
@@ -562,19 +571,20 @@ TEST_F(cu_cp_inter_cu_xn_handover_test, when_path_switch_request_is_rejected_by_
   ASSERT_TRUE(send_bearer_context_modification_response());
   ASSERT_TRUE(send_rrc_reconfiguration_complete_and_await_path_switch_request());
 
-  // Inject Path Switch Request Failure; the routine should terminate without sending further messages.
+  // Inject Path Switch Request Failure; the routine should trigger UE release.
   get_amf().push_tx_pdu(generate_path_switch_request_failure(
       uint_to_amf_ue_id(1), ran_ue_id_t::min, ngap_cause_t{ngap_cause_radio_network_t::ho_target_not_allowed}));
 
-  // TODO: this should not be sent on path swith request failure.
-  report_fatal_error_if_not(
-      this->wait_for_f1ap_tx_pdu(du_idx, f1ap_pdu),
-      "Failed to transmit F1AP UE Context Modification Request (containing RRC Reconf complete indicator)");
+  // Verify UE release is requested to AMF.
+  ASSERT_TRUE(await_ngap_ue_context_release_request());
 
+  // Verify that no RRC reconfiguration complete indicator is sent on path switch failure.
+  // Instead, UE release should be triggered.
+  report_fatal_error_if_not(
+      not this->get_du(du_idx).try_pop_dl_pdu(f1ap_pdu),
+      "Unexpected F1AP message after path switch failure (RRC reconf complete should not be sent)");
   report_fatal_error_if_not(not this->get_xnc_cu_cp(xnc_peer_idx).try_pop_rx_pdu(xnap_pdu),
                             "Unexpected XNAP message after path switch failure");
-  report_fatal_error_if_not(not this->get_du(du_idx).try_pop_dl_pdu(f1ap_pdu),
-                            "Unexpected F1AP message after path switch failure");
   report_fatal_error_if_not(not this->get_cu_up(cu_up_idx).try_pop_rx_pdu(e1ap_pdu),
                             "Unexpected E1AP message after path switch failure");
 }

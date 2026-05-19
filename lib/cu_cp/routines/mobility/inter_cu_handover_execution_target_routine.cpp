@@ -90,6 +90,12 @@ void inter_cu_handover_execution_target_routine::operator()(coro_context<async_t
                      ngap.get_ngap_control_message_handler().handle_path_switch_request_required(path_switch_request));
     if (std::holds_alternative<cu_cp_path_switch_request_failure>(path_switch_response)) {
       logger.warning("ue={}: \"{}\" failed. Cause: Path Switch Request rejected by AMF", ue->get_ue_index(), name());
+      // Request UE release on path switch failure.
+      ue_context_release_request = cu_cp_ue_context_release_request{
+          .ue_index                         = ue->get_ue_index(),
+          .pdu_session_res_list_cxt_rel_req = ue->get_up_resource_manager().get_pdu_sessions(),
+          .cause = ngap_cause_radio_network_t::ho_fail_in_target_5_gc_ngran_node_or_target_sys};
+      CORO_AWAIT(ngap.handle_ue_context_release_request(ue_context_release_request));
       CORO_EARLY_RETURN();
     }
 
