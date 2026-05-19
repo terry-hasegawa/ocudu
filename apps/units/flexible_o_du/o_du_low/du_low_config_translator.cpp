@@ -79,6 +79,17 @@ static odu::du_low_config generate_du_low_config(const du_low_unit_config&      
     upper_phy_factory_config.pdsch_processor.emplace<pdsch_processor_flexible_configuration>(
         pdsch_processor_flexible_configuration{.cb_batch_length = cb_batch_length});
   } else if (upper_phy_threads_cfg.pdsch_processor_type == "generic") {
+    // The hardware-accelerated DU does not currently support the 'generic' PDSCH processor implementation.
+    bool hw_acc_pdsch = false;
+    if (du_low.hal_config.has_value()) {
+      const du_low_unit_hal_config& hal_config = *du_low.hal_config;
+      if (hal_config.bbdev_hwacc.has_value()) {
+        const bbdev_appconfig& bbdev_hwacc = *hal_config.bbdev_hwacc;
+        hw_acc_pdsch                       = bbdev_hwacc.pdsch_enc.has_value();
+      }
+    }
+    report_error_if_not(!hw_acc_pdsch,
+                        "The hardware-accelerated DU does not support the 'generic' PDSCH processor type.");
     upper_phy_factory_config.pdsch_processor.emplace<pdsch_processor_generic_configuration>();
   }
 

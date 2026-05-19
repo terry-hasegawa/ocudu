@@ -27,6 +27,7 @@ struct bbdev_hwacc_pusch_dec_factory_configuration {
 };
 
 /// \brief Creates a bbdev-based PUSCH decoder hardware accelerator factory.
+///
 /// \param[in] cfg    Configuration parameters of the bbdev-based PUSCH decoder hardware accelerator.
 /// \return A valid PUSCH decoder hardware accelerator factory on success, otherwise \c nullptr.
 std::shared_ptr<hw_accelerator_pusch_dec_factory>

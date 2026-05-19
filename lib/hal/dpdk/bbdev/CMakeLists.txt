@@ -3,7 +3,13 @@
 
 
 set(SOURCES 
-  bbdev_acc_factory.cpp)
+  bbdev.cpp
+  bbdev_acc.cpp
+  bbdev_acc_factory.cpp
+  bbdev_op_pool_factory.cpp
+  ldpc/bbdev_ldpc_encoder.cpp
+  ldpc/bbdev_ldpc_decoder.cpp
+)
 
 add_library(ocudu_hal_bbdev STATIC ${SOURCES})
 target_compile_options(ocudu_hal_bbdev PRIVATE ${DPDK_CFLAGS})

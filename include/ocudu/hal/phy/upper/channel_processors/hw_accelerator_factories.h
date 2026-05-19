@@ -27,6 +27,7 @@ struct bbdev_hwacc_pdsch_enc_factory_configuration {
 };
 
 /// \brief Creates a bbdev-based PDSCH encoder hardware accelerator factory.
+///
 /// \param[in] cfg    Configuration parameters of the bbdev-based PDSCH encoder hardware accelerator.
 /// \return A valid PDSCH encoder hardware accelerator factory on success, otherwise \c nullptr.
 std::shared_ptr<hw_accelerator_pdsch_enc_factory>

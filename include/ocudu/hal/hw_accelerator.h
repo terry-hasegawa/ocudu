@@ -11,6 +11,7 @@ namespace ocudu {
 namespace hal {
 
 /// \brief This interface provides the basic functions to enqueue and dequeue an operation to hardware accelerator.
+///
 /// \tparam T Type of the input data, and of the packed codeword in the case of encoders or soft-data in case of
 ///           decoders, to the hardware accelerator. \tparam U Type of the output data to the hardware accelerator.
 template <typename T, typename U>
@@ -22,6 +23,7 @@ public:
   virtual ~hw_accelerator() = default;
 
   /// \brief Enqueues an accelerated operation and provides the input data.
+  ///
   /// \param[in] data      The input data to the hardware accelerator.
   /// \param[in] aux_data  Optional soft combining data typically used by hardware-accelerated decoding operations.
   /// \param[in] cb_index  Optional index of the CB within the TB.
@@ -29,6 +31,7 @@ public:
   virtual bool enqueue_operation(span<const T> data, span<const T> aux_data = {}, unsigned cb_index = 0) = 0;
 
   /// \brief Dequeues an accelerated operation and retrieves both the output data, while using a soft-buffer.
+  ///
   /// \param[out] data          The output data from the hardware accelerator.
   /// \param[out] aux_data      Soft combining data for hardware-accelerated decoding operations, packed codeword for
   ///                           hardware-accelerated encoding operations.

@@ -94,11 +94,13 @@ public:
   ocudulog::basic_logger& get_logger() { return logger; }
 
   /// \brief Reserves a free queue to be used by a specific hardware-accelerated channel processor function.
+  ///
   /// \param[in] op_type Type of bbdev op.
   /// \return The identifier of the reserved queue if successful, otherwise a negative integer.
   int reserve_queue(::rte_bbdev_op_type op_type);
 
   /// \brief Frees a queue used by a specific hardware-accelerated channel processor function.
+  ///
   /// \param[in] queue_id Identifier of the queue to be freed.
   void free_queue(::rte_bbdev_op_type op_type, unsigned queue_id);
 

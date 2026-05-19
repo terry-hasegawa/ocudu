@@ -9,6 +9,7 @@ namespace ocudu {
 namespace dpdk {
 
 /// \brief Instantiates a bbdev hardware accelerator.
+///
 /// \param[in] cfg    Configuration parameters of the bbdev-based hardware accelerator.
 /// \param[in] logger OCUDU logger.
 /// \return A pointer to a valid bbdev accelerator on success, otherwise \c nullptr.
