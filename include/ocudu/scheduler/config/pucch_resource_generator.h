@@ -5,6 +5,7 @@
 #pragma once
 
 #include "ocudu/adt/expected.h"
+#include "ocudu/ran/pucch/pucch_constants.h"
 #include "ocudu/scheduler/config/pucch_resource_builder_params.h"
 
 namespace ocudu {
@@ -18,6 +19,14 @@ namespace config_helpers {
 /// \param[in] bwp_size_rbs size of the BWP in RBs.
 /// \return An error message if the parameters are not valid. Otherwise, success.
 error_type<const char*> pucch_parameters_validator(const pucch_resource_builder_params& params, unsigned bwp_size_rbs);
+
+/// \brief Generates the list of cell common PUCCH resources from TS38.213 Table 9.2.1-1.
+///
+/// \param[in] pucch_res_common PUCCH default row index (pucch-ResourceCommon in TS38.331). Range {0, ..., 15}.
+/// \param[in] bwp_size_rbs size of the BWP in RBs.
+/// \return The 16 PUCCH resources for the default common table row.
+std::array<pucch_resource, pucch_constants::MAX_NOF_CELL_COMMON_PUCCH_RESOURCES>
+generate_cell_common_pucch_res_list(unsigned pucch_res_common, unsigned bwp_size_rbs);
 
 /// \brief Generates the list of cell PUCCH resources from the PUCCH resource builder parameters.
 ///

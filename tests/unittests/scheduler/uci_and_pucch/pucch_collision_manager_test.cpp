@@ -149,8 +149,8 @@ private:
   std::vector<pucch_collision_info> make_ded_infos()
   {
     std::vector<pucch_collision_info> infos;
-    infos.reserve(cell_cfg.bwp_res[to_bwp_id(0)].ul().pucch.resources.size());
-    for (const auto& resource : cell_cfg.bwp_res[to_bwp_id(0)].ul().pucch.resources) {
+    infos.reserve(cell_cfg.bwp_res[to_bwp_id(0)].ul().pucch.dedicated.size());
+    for (const auto& resource : cell_cfg.bwp_res[to_bwp_id(0)].ul().pucch.dedicated) {
       infos.emplace_back(resource, cell_cfg.params.ul_cfg_common.init_ul_bwp.generic_params);
     }
     return infos;
@@ -190,7 +190,7 @@ TEST_F(pucch_collision_manager_rg_test, alloc_fills_grants_in_ul_res_grid)
   expected_grants.clear();
 
   // Allocate all dedicated resources one by one.
-  for (unsigned i = 0; i != cell_cfg.bwp_res[to_bwp_id(0)].ul().pucch.resources.size(); ++i) {
+  for (unsigned i = 0; i != cell_cfg.bwp_res[to_bwp_id(0)].ul().pucch.dedicated.size(); ++i) {
     ASSERT_TRUE(col_manager.alloc_ded(slot_alloc.ul_res_grid, sl, i).has_value());
 
     // Check that only the expected grants were written to the resource grid.
@@ -231,7 +231,7 @@ TEST_F(pucch_collision_manager_rg_test, alloc_fails_if_ul_res_grid_occupied)
                               [&]() { return col_manager.alloc_common(slot_alloc.ul_res_grid, sl, r_pucch); });
   }
 
-  for (unsigned i = 0; i != cell_cfg.bwp_res[to_bwp_id(0)].ul().pucch.resources.size(); ++i) {
+  for (unsigned i = 0; i != cell_cfg.bwp_res[to_bwp_id(0)].ul().pucch.dedicated.size(); ++i) {
     // Simulate UL grant collision when allocating the dedicated PUCCH resource.
     expect_ul_grant_collision(ded_infos[i].grants.first_hop,
                               [&]() { return col_manager.alloc_ded(slot_alloc.ul_res_grid, sl, i); });
@@ -269,7 +269,7 @@ TEST_F(pucch_collision_manager_rg_test, free_clears_grants_in_ul_res_grid)
   }
 
   // Allocate and free all dedicated resources one by one.
-  for (unsigned i = 0; i != cell_cfg.bwp_res[to_bwp_id(0)].ul().pucch.resources.size(); ++i) {
+  for (unsigned i = 0; i != cell_cfg.bwp_res[to_bwp_id(0)].ul().pucch.dedicated.size(); ++i) {
     ASSERT_TRUE(col_manager.alloc_ded(slot_alloc.ul_res_grid, sl, i).has_value());
     ASSERT_TRUE(col_manager.free_ded(slot_alloc.ul_res_grid, sl, i));
 

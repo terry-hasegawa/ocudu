@@ -30,7 +30,7 @@ crb_bitmap ocudu::compute_pucch_crbs(const cell_configuration& cell_cfg)
   }
 
   // Fill the CRB bitmap with the PRBs used by the dedicated PUCCH resources.
-  for (const auto& res : cell_cfg.bwp_res[to_bwp_id(0)].ul().pucch.resources) {
+  for (const auto& res : cell_cfg.bwp_res[to_bwp_id(0)].ul().pucch.dedicated) {
     const crb_interval crbs1 = prb_to_crb(cell_cfg.params.ul_cfg_common.init_ul_bwp.generic_params.crbs, res.prbs());
     pucch_crbs.fill(crbs1.start(), crbs1.stop());
 

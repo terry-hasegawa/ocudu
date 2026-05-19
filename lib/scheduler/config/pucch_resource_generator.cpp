@@ -3,7 +3,9 @@
 // Portions of this file may implement 3GPP specifications, which may be subject to additional licensing requirements.
 
 #include "ocudu/scheduler/config/pucch_resource_generator.h"
+#include "../support/pucch/pucch_default_resource.h"
 #include "ocudu/adt/expected.h"
+#include "ocudu/ran/pucch/pucch_constants.h"
 #include "ocudu/ran/pucch/pucch_info.h"
 #include "ocudu/ran/pucch/pucch_mapping.h"
 #include "ocudu/scheduler/config/pucch_resource_builder_params.h"
@@ -384,6 +386,39 @@ private:
 };
 
 } // namespace
+  //
+
+std::array<pucch_resource, pucch_constants::MAX_NOF_CELL_COMMON_PUCCH_RESOURCES>
+config_helpers::generate_cell_common_pucch_res_list(unsigned pucch_res_common, unsigned bwp_size_rbs)
+{
+  const pucch_default_resource default_res = get_pucch_default_resource(pucch_res_common, bwp_size_rbs);
+  const unsigned               nof_cs      = default_res.cs_indexes.size();
+
+  std::array<pucch_resource, pucch_constants::MAX_NOF_CELL_COMMON_PUCCH_RESOURCES> out;
+  for (unsigned r_pucch = 0; r_pucch != out.size(); ++r_pucch) {
+    const auto     prbs = get_pucch_default_prb_index(r_pucch, default_res.rb_bwp_offset, nof_cs, bwp_size_rbs);
+    const uint8_t  cs   = default_res.cs_indexes[get_pucch_default_cyclic_shift(r_pucch, nof_cs)];
+    pucch_resource res;
+    res.res_id         = pucch_res_id_t::make_cmn(r_pucch);
+    res.starting_prb   = prbs.first;
+    res.second_hop_prb = prbs.second;
+    res.syms           = ofdm_symbol_range::start_and_len(default_res.first_symbol_index, default_res.nof_symbols);
+    res.rep_factor     = pucch_repetition_factor::n1;
+    switch (default_res.format) {
+      case pucch_format::FORMAT_0:
+        res.format_params = pucch_resource::f0_config{.initial_cyclic_shift = cs};
+        break;
+      case pucch_format::FORMAT_1:
+        res.format_params = pucch_resource::f1_config{.initial_cyclic_shift = cs, .time_domain_occ = 0};
+        break;
+      default:
+        ocudu_assertion_failure("Unexpected PUCCH format in default common table.");
+        break;
+    }
+    out[r_pucch] = res;
+  }
+  return out;
+}
 
 std::vector<pucch_resource> config_helpers::generate_cell_pucch_res_list(const pucch_resource_builder_params& params,
                                                                          unsigned bwp_size_rbs)

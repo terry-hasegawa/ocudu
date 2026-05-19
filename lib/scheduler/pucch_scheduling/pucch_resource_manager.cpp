@@ -21,7 +21,7 @@ pucch_resource_manager::pucch_resource_manager(const cell_configuration& cell_cf
   collision_manager(cell_cfg_),
   slots_ctx(get_allocator_ring_size_gt_min(get_max_slot_ul_alloc_delay(cell_cfg_.ntn_cs_koffset)),
             {static_vector<rnti_t, pucch_constants::MAX_NOF_CELL_DED_RESOURCES>(
-                cell_cfg_.bwp_res[to_bwp_id(0)].ul().pucch.resources.size(),
+                cell_cfg_.bwp_res[to_bwp_id(0)].ul().pucch.dedicated.size(),
                 rnti_t::INVALID_RNTI)})
 {
 }
@@ -140,7 +140,7 @@ const pucch_resource* pucch_resource_manager::ue_reservation_guard::reserve_sr_r
     reservations[static_cast<unsigned>(resource_usage_type::sr)] = {sr_cell_res_id};
   }
 
-  return &cell_pucch_cfg.resources[sr_cell_res_id];
+  return &cell_pucch_cfg.dedicated[sr_cell_res_id];
 }
 
 const pucch_resource* pucch_resource_manager::ue_reservation_guard::reserve_csi_resource()
@@ -168,7 +168,7 @@ const pucch_resource* pucch_resource_manager::ue_reservation_guard::reserve_csi_
     reservations[static_cast<unsigned>(resource_usage_type::csi)] = {csi_cell_res_id};
   }
 
-  return &cell_pucch_cfg.resources[csi_cell_res_id];
+  return &cell_pucch_cfg.dedicated[csi_cell_res_id];
 }
 
 const pucch_resource* pucch_resource_manager::ue_reservation_guard::peek_sr_resource() const
@@ -176,7 +176,7 @@ const pucch_resource* pucch_resource_manager::ue_reservation_guard::peek_sr_reso
   ocudu_assert(parent != nullptr, "Trying to make a new PUCCH resource reservation after commit has been called");
 
   const unsigned sr_cell_res_id = res_params.get_sr_cell_res_idx(ue_bwp_cfg.pucch.sr_res_id);
-  return &cell_pucch_cfg.resources[sr_cell_res_id];
+  return &cell_pucch_cfg.dedicated[sr_cell_res_id];
 }
 
 const pucch_resource* pucch_resource_manager::ue_reservation_guard::peek_csi_resource() const
@@ -184,7 +184,7 @@ const pucch_resource* pucch_resource_manager::ue_reservation_guard::peek_csi_res
   ocudu_assert(parent != nullptr, "Trying to make a new PUCCH resource reservation after commit has been called");
 
   const unsigned csi_cell_res_id = res_params.get_csi_cell_res_idx(ue_bwp_cfg.periodic_csi_report->pucch_res_id);
-  return &cell_pucch_cfg.resources[csi_cell_res_id];
+  return &cell_pucch_cfg.dedicated[csi_cell_res_id];
 }
 
 bool pucch_resource_manager::ue_reservation_guard::release_harq_set_0_resource()
@@ -279,7 +279,7 @@ pucch_harq_resource_alloc_record pucch_resource_manager::ue_reservation_guard::r
   // If an available resource was found, return it.
   if (available_res.has_value()) {
     const unsigned cell_res_id = res_params.get_res_set_cell_res_idx<ResourceSetId>(res_set_cfg_id, *available_res);
-    return pucch_harq_resource_alloc_record{.resource            = &cell_pucch_cfg.resources[cell_res_id],
+    return pucch_harq_resource_alloc_record{.resource            = &cell_pucch_cfg.dedicated[cell_res_id],
                                             .pucch_res_indicator = static_cast<uint8_t>(available_res.value())};
   }
   return pucch_harq_resource_alloc_record{.resource = nullptr};
@@ -311,16 +311,16 @@ pucch_resource_manager::ue_reservation_guard::reserve_harq_resource_by_res_indic
   if (parent->cell_cfg.is_pucch_f0_and_f2() and d_pri >= res_set_size) {
     if (ResourceSetId == 0) {
       if (d_pri == res_set_size) {
-        return &cell_pucch_cfg.resources[res_params.get_sr_cell_res_idx(ue_bwp_cfg.pucch.sr_res_id)];
+        return &cell_pucch_cfg.dedicated[res_params.get_sr_cell_res_idx(ue_bwp_cfg.pucch.sr_res_id)];
       }
       return &cell_pucch_cfg
-                  .resources[res_params.get_csi_f0_cell_res_idx(ue_bwp_cfg.periodic_csi_report->pucch_res_id)];
+                  .dedicated[res_params.get_csi_f0_cell_res_idx(ue_bwp_cfg.periodic_csi_report->pucch_res_id)];
     }
     // Resource Set ID 1.
     if (d_pri == res_set_size) {
-      return &cell_pucch_cfg.resources[res_params.get_sr_f2_cell_res_idx(ue_bwp_cfg.pucch.sr_res_id)];
+      return &cell_pucch_cfg.dedicated[res_params.get_sr_f2_cell_res_idx(ue_bwp_cfg.pucch.sr_res_id)];
     }
-    return &cell_pucch_cfg.resources[res_params.get_csi_cell_res_idx(ue_bwp_cfg.periodic_csi_report->pucch_res_id)];
+    return &cell_pucch_cfg.dedicated[res_params.get_csi_cell_res_idx(ue_bwp_cfg.periodic_csi_report->pucch_res_id)];
   }
 
   // Check first if the wanted PUCCH resource is available.
@@ -333,7 +333,7 @@ pucch_resource_manager::ue_reservation_guard::reserve_harq_resource_by_res_indic
 
   if (res_rnti == rnti) {
     // If the resource is already allocated to this RNTI, just return it.
-    return &cell_pucch_cfg.resources[cell_res_id];
+    return &cell_pucch_cfg.dedicated[cell_res_id];
   }
 
   // Allocate the resource to this RNTI.
@@ -344,7 +344,7 @@ pucch_resource_manager::ue_reservation_guard::reserve_harq_resource_by_res_indic
   const unsigned usage_type_idx = ResourceSetId == 0 ? static_cast<unsigned>(resource_usage_type::harq_set_0)
                                                      : static_cast<unsigned>(resource_usage_type::harq_set_1);
   reservations[usage_type_idx]  = {cell_res_id};
-  return &cell_pucch_cfg.resources[cell_res_id];
+  return &cell_pucch_cfg.dedicated[cell_res_id];
 }
 
 template <unsigned ResourceSetId>

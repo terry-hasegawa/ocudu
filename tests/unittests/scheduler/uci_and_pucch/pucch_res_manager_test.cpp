@@ -35,7 +35,7 @@ public:
       req.ran.init_bwp.pucch.resources = builder_params;
       return req;
     }())),
-    cell_res_list(cell_cfg.bwp_res[to_bwp_id(0)].ul().pucch.resources),
+    cell_res_list(cell_cfg.bwp_res[to_bwp_id(0)].ul().pucch.dedicated),
     ues(config_helpers::make_default_scheduler_expert_config().ue),
     cell_ues(ues.add_cell(cell_cfg, nullptr)),
     pucch_builder(cell_cfg.expert_cfg.ue.max_pucchs_per_slot),
@@ -183,7 +183,7 @@ TEST_F(test_pucch_resource_manager, reserve_harq_set_0_until_exhausted)
     ASSERT_EQ(i, record.pucch_res_indicator);
     ASSERT_EQ(&t_bench.cell_cfg.bwp_res[to_bwp_id(0)]
                    .ul()
-                   .pucch.resources[pucch_cfg_0().pucch_res_set[0].pucch_res_id_list[i].as_ded().cell_res_id],
+                   .pucch.dedicated[pucch_cfg_0().pucch_res_set[0].pucch_res_id_list[i].as_ded().cell_res_id],
               record.resource);
     guard.commit();
   }

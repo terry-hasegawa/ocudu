@@ -29,7 +29,7 @@ pucch_config config_helpers::build_pucch_config(const ran_cell_config&        ce
                                                 const ue_bwp_config&          ue_bwp_cfg)
 {
   const pucch_resource_builder_params& res_params                 = cell_cfg.init_bwp.pucch.resources;
-  const auto&                          cell_res_list              = cell_ul_bwp_res.pucch.resources;
+  const auto&                          cell_res_list              = cell_ul_bwp_res.pucch.dedicated;
   const auto&                          ue_pucch_cfg               = ue_bwp_cfg.ul.pucch;
   const auto&                          ue_periodic_csi_report_cfg = ue_bwp_cfg.ul.periodic_csi_report;
 

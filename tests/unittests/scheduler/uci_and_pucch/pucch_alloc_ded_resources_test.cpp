@@ -37,7 +37,7 @@ public:
       return params;
     }()})
   {
-    const auto& cell_resources = t_bench.cell_cfg.bwp_res[to_bwp_id(0)].ul().pucch.resources;
+    const auto& cell_resources = t_bench.cell_cfg.bwp_res[to_bwp_id(0)].ul().pucch.dedicated;
     const auto& res_params     = t_bench.params.pucch_ded_params;
 
     const auto sr_res_id      = pucch_sr_resource_id(0);

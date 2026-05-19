@@ -220,8 +220,7 @@ std::optional<unsigned> pucch_allocator_impl::alloc_common_harq_ack(cell_resourc
 
   // Fill scheduler output.
   pucch_info& pucch_info = pucch_slot_alloc.result.ul.pucchs.emplace_back();
-  fill_common_pdu(
-      pucch_info, cell_cfg.bwp_res[to_bwp_id(0)].ul().pucch.common_resources[pucch_res.value().r_pucch], tcrnti);
+  fill_common_pdu(pucch_info, cell_cfg.bwp_res[to_bwp_id(0)].ul().pucch.common[pucch_res.value().r_pucch], tcrnti);
   unsigned pucch_res_indicator = pucch_res.value().pucch_res_indicator;
 
   if (existing_ue_grants != nullptr) {
@@ -608,7 +607,7 @@ void pucch_allocator_impl::compute_pucch_common_params_and_alloc(cell_slot_resou
 {
   // Fill scheduler output.
   pucch_info& common_pdu = pucch_alloc.result.ul.pucchs.emplace_back();
-  fill_common_pdu(common_pdu, cell_cfg.bwp_res[to_bwp_id(0)].ul().pucch.common_resources[pucch_params.r_pucch], rnti);
+  fill_common_pdu(common_pdu, cell_cfg.bwp_res[to_bwp_id(0)].ul().pucch.common[pucch_params.r_pucch], rnti);
 
   // Update the PUCCH grants with the common resource.
   auto&      slot_ctx           = slots_ctx[pucch_alloc.slot.to_uint()];
