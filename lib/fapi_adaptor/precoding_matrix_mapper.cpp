@@ -4,11 +4,21 @@
 #include "ocudu/fapi_adaptor/precoding_matrix_mapper.h"
 #include "precoding_matrix_mapper_functions.h"
 #include "ocudu/ocudulog/ocudulog.h"
+#include "ocudu/ran/precoding/precoding_codebook_helpers.h"
 #include "ocudu/ran/precoding/precoding_matrix_indicator.h"
 #include "ocudu/support/ocudu_assert.h"
 
 using namespace ocudu;
 using namespace fapi_adaptor;
+
+/// Table of PMI parameter sizes for single-panel type 1 PDSCH precoding codebook. Indexed by the number of layers.
+static const std::array<pmi_typeI_single_panel_param_sizes, 5> pdsch_codebook_param_sizes_sp_type1_4port = {{
+    {},
+    get_pmi_sizes_typeI_single_panel(get_single_panel_info(pmi_codebook_single_panel_config::two_one), 1),
+    get_pmi_sizes_typeI_single_panel(get_single_panel_info(pmi_codebook_single_panel_config::two_one), 2),
+    get_pmi_sizes_typeI_single_panel(get_single_panel_info(pmi_codebook_single_panel_config::two_one), 3),
+    get_pmi_sizes_typeI_single_panel(get_single_panel_info(pmi_codebook_single_panel_config::two_one), 4),
+}};
 
 precoding_matrix_mapper::precoding_matrix_mapper(unsigned sector_id_,
                                                  unsigned nof_ports_,
@@ -68,6 +78,8 @@ static unsigned get_pdsch_precoding_matrix_index(unsigned                       
   }
 
   if (nof_ports == 4U) {
+    ocudu_assert(nof_layers < pdsch_codebook_param_sizes_sp_type1_4port.size(),
+                 "The number of layers exceeds the supported number of layers.");
     ocudu_assert(std::holds_alternative<pmi_typeI_single_panel>(precoding_info), "Invalid PMI information");
     const auto& report = std::get<pmi_typeI_single_panel>(precoding_info);
 
@@ -78,8 +90,8 @@ static unsigned get_pdsch_precoding_matrix_index(unsigned                       
                  report.i_2,
                  nof_layers);
 
-    return offset + get_pdsch_four_port_precoding_matrix_index(
-                        report.i_1_1, (report.i_1_3) ? report.i_1_3.value() : 0U, report.i_2);
+    return offset + get_pdsch_single_panel_type1_precoding_matrix_index(
+                        pdsch_codebook_param_sizes_sp_type1_4port[nof_layers], report);
   }
 
   return 0;

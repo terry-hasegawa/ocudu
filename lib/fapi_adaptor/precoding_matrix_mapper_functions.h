@@ -3,6 +3,8 @@
 
 #pragma once
 
+#include "ocudu/ran/precoding/precoding_codebook_helpers.h"
+
 namespace ocudu {
 namespace fapi_adaptor {
 
@@ -42,14 +44,26 @@ inline unsigned get_pdsch_two_port_precoding_matrix_index(unsigned pmi)
   return pmi;
 }
 
-/// Returns the precoding matrix index for the four-port PDSCH codebook using the given i_1_1, i_1_3 and i_1_2 PMI
-/// parameters.
-inline unsigned get_pdsch_four_port_precoding_matrix_index(unsigned i_1_1, unsigned i_1_3, unsigned i_2)
+/// Returns the precoding matrix index for a single-panel type 1 PDSCH codebook for the given PMI parameters.
+inline unsigned
+get_pdsch_single_panel_type1_precoding_matrix_index(const pmi_typeI_single_panel_param_sizes& param_sizes,
+                                                    const pmi_typeI_single_panel&             pmi)
 {
-  static constexpr unsigned MAX_NUM_I_1_3 = 2U;
-  static constexpr unsigned MAX_NUM_I_2   = 4U;
+  unsigned index = pmi.i_1_1;
 
-  return MAX_NUM_I_2 * MAX_NUM_I_1_3 * i_1_1 + MAX_NUM_I_2 * i_1_3 + i_2;
+  if (param_sizes.i_1_2) {
+    ocudu_assert(pmi.i_1_2.has_value(), "Parameter i_1_2 is missing.");
+    index = (index << param_sizes.i_1_2) + *pmi.i_1_2;
+  }
+
+  if (param_sizes.i_1_3) {
+    ocudu_assert(pmi.i_1_3.has_value(), "Parameter i_1_3 is missing.");
+    index = (index << param_sizes.i_1_3) + *pmi.i_1_3;
+  }
+
+  index = (index << param_sizes.i_2) + pmi.i_2;
+
+  return index;
 }
 
 } // namespace fapi_adaptor
