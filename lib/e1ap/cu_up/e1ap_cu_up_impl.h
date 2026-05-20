@@ -55,6 +55,8 @@ public:
   // e1ap_statistics_handler functions
   size_t get_nof_ues() const override { return ue_ctxt_list.size(); }
 
+  cu_up_e1_index_t get_e1_index() const override { return e1_index; }
+
 private:
   /// \brief Decorator of e1ap_message_notifier that logs the transmitted E1AP messages.
   class e1ap_message_notifier_with_logging final : public e1ap_message_notifier

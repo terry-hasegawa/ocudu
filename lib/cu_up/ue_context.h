@@ -197,6 +197,8 @@ public:
     resume_requested = false;
   }
 
+  cu_up_e1_index_t get_e1_index() { return e1ap.get_e1_index(); }
+
 private:
   cu_up_ue_index_t index;
   ue_context_cfg   cfg;

@@ -337,6 +337,8 @@ public:
 
   async_task<void> handle_cu_up_e1ap_release_request() override { return {}; }
 
+  cu_up_e1_index_t get_e1_index() const override { return cu_up_e1_index_t{0}; }
+
   size_t get_nof_ues() const override { return 0; }
 
   void handle_message(const e1ap_message& msg) override {}

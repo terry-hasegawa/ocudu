@@ -118,7 +118,9 @@ class e1ap_interface : public e1ap_message_handler,
                        public e1ap_statistics_handler
 {
 public:
-  virtual ~e1ap_interface() = default;
+  ~e1ap_interface() override = default;
+
+  virtual cu_up_e1_index_t get_e1_index() const = 0;
 };
 
 /// Combined exit point of the E1AP to CU-UP manager.
