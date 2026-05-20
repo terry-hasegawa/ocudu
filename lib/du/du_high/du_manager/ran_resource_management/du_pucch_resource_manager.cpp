@@ -230,8 +230,8 @@ du_pucch_resource_manager::get_compatible_csi_cfg(const cell_resource_context&  
                                                   const std::vector<periodic_pucch_config>& free_csi_list,
                                                   unsigned                                  csi_report_size) const
 {
-  const pucch_resource& sr_res = cell_ctx.cell_bwp_cfg.ul.pucch.dedicated.at(
-      cell_ctx.cell_params.init_bwp.pucch.resources.get_sr_cell_res_idx(pucch_sr_resource_id(sr_cfg.res)));
+  const pucch_resource& sr_res = cell_ctx.cell_bwp_cfg.ul.pucch.get_ded(
+      cell_ctx.cell_params.init_bwp.pucch.resources.sr_res_id(pucch_sr_resource_id(sr_cfg.res)));
   const unsigned max_pucch_payload = cell_ctx.cell_params.init_bwp.pucch.resources.max_payload_234();
   const auto     is_compatible     = [&](const periodic_pucch_config& csi_cfg) {
     // Ensure the max PUCCH grants limit is not exceeded.
@@ -240,8 +240,8 @@ du_pucch_resource_manager::get_compatible_csi_cfg(const cell_resource_context&  
     }
 
     // Ensure the CSI and SR resources collide in OFDM symbols, so they are multiplexed.
-    const pucch_resource& csi_res = cell_ctx.cell_bwp_cfg.ul.pucch.dedicated.at(
-        cell_ctx.cell_params.init_bwp.pucch.resources.get_csi_cell_res_idx(pucch_csi_resource_id(csi_cfg.res)));
+    const pucch_resource& csi_res = cell_ctx.cell_bwp_cfg.ul.pucch.get_ded(
+        cell_ctx.cell_params.init_bwp.pucch.resources.csi_res_id(pucch_csi_resource_id(csi_cfg.res)));
     if (not csi_res.syms.overlaps(sr_res.syms)) {
       return false;
     }

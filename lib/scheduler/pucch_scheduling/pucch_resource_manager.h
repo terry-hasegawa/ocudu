@@ -148,7 +148,7 @@ public:
     pucch_resource_manager*              parent;
     cell_slot_resource_grid&             ul_res_grid;
     const pucch_resource_builder_params& res_params;
-    const cell_pucch_res_config&         cell_pucch_cfg;
+    const cell_pucch_res_config&         cell_resources;
     const rnti_t                         rnti;
     const slot_point                     sl;
     const ue_uplink_bwp_config&          ue_bwp_cfg;
@@ -199,8 +199,9 @@ private:
     }
   };
 
-  const cell_configuration& cell_cfg;
-  pucch_collision_manager   collision_manager;
+  const cell_configuration&    cell_cfg;
+  const cell_pucch_res_config& cell_resources;
+  pucch_collision_manager      collision_manager;
 
   // Ring buffer of slot contexts to keep track of PUCCH resource usage in recent slots.
   circular_vector<slot_context> slots_ctx;

@@ -501,50 +501,52 @@ std::vector<pucch_resource> config_helpers::generate_cell_pucch_res_list(const p
 
   for (unsigned res_set_cfg_id = 0; res_set_cfg_id != params.nof_cell_res_set_configs; ++res_set_cfg_id) {
     for (unsigned pri = 0; pri != params.res_set_size.value(); ++pri) {
-      unsigned cell_res_id = params.get_res_set_cell_res_idx<0>(pucch_resource_set_config_id(res_set_cfg_id), pri);
-      resources[cell_res_id].res_id = pucch_res_id_t::make_ded(cell_res_id, params.get_res_set_ue_res_idx<0>(pri));
+      pucch_res_id_t res_id         = params.harq_res_id<0>(pucch_resource_set_config_id(res_set_cfg_id), pri);
+      const unsigned cell_res_id    = res_id.ded().cell_res_id;
+      resources[cell_res_id].res_id = res_id;
       if (params.harq_ack_rep.has_value()) {
         resources[cell_res_id].rep_factor = params.harq_ack_rep->factors_per_res[pri];
       }
     }
     for (unsigned pri = 0; pri != params.res_set_size.value(); ++pri) {
-      unsigned cell_res_id = params.get_res_set_cell_res_idx<1>(pucch_resource_set_config_id(res_set_cfg_id), pri);
-      resources[cell_res_id].res_id = pucch_res_id_t::make_ded(cell_res_id, params.get_res_set_ue_res_idx<1>(pri));
+      pucch_res_id_t res_id         = params.harq_res_id<1>(pucch_resource_set_config_id(res_set_cfg_id), pri);
+      unsigned       cell_res_id    = res_id.ded().cell_res_id;
+      resources[cell_res_id].res_id = res_id;
       if (params.harq_ack_rep.has_value()) {
         resources[cell_res_id].rep_factor = params.harq_ack_rep->factors_per_res[pri];
       }
     }
   }
   for (unsigned sr_res_id = 0; sr_res_id != params.nof_cell_sr_resources; ++sr_res_id) {
-    unsigned cell_res_id = params.get_sr_cell_res_idx(pucch_sr_resource_id(sr_res_id));
-    auto&    sr_res      = resources[cell_res_id];
-    sr_res.res_id        = pucch_res_id_t::make_ded(cell_res_id, params.get_sr_ue_res_idx());
+    pucch_res_id_t res_id      = params.sr_res_id(pucch_sr_resource_id(sr_res_id));
+    unsigned       cell_res_id = res_id.ded().cell_res_id;
+    auto&          sr_res      = resources[cell_res_id];
+    sr_res.res_id              = res_id;
     if (using_02) {
       // Add SR_F2 resource.
-      unsigned cell_res_id_sr_f2 = params.get_sr_f2_cell_res_idx(pucch_sr_resource_id(sr_res_id));
-      resources.emplace_back(
-          pucch_resource{.res_id       = pucch_res_id_t::make_ded(cell_res_id_sr_f2, params.get_sr_f2_ue_res_idx()),
-                         .starting_prb = sr_res.starting_prb,
-                         // Must overlap in symbols with the SR resource.
-                         .syms           = sr_res.syms,
-                         .second_hop_prb = sr_res.second_hop_prb,
-                         .format_params  = pucch_resource::f2_config{.nof_prbs = 1U}});
+      pucch_res_id_t res_id_sr_f2 = params.sr_f2_res_id(pucch_sr_resource_id(sr_res_id));
+      resources.emplace_back(pucch_resource{.res_id       = res_id_sr_f2,
+                                            .starting_prb = sr_res.starting_prb,
+                                            // Must overlap in symbols with the SR resource.
+                                            .syms           = sr_res.syms,
+                                            .second_hop_prb = sr_res.second_hop_prb,
+                                            .format_params  = pucch_resource::f2_config{.nof_prbs = 1U}});
     }
   }
   for (unsigned csi_res_id = 0; csi_res_id != params.nof_cell_csi_resources; ++csi_res_id) {
-    unsigned cell_res_id = params.get_csi_cell_res_idx(pucch_csi_resource_id(csi_res_id));
-    auto&    csi_res     = resources[cell_res_id];
-    csi_res.res_id       = pucch_res_id_t::make_ded(cell_res_id, params.get_csi_ue_res_idx());
+    pucch_res_id_t res_id      = params.csi_res_id(pucch_csi_resource_id(csi_res_id));
+    unsigned       cell_res_id = res_id.ded().cell_res_id;
+    auto&          csi_res     = resources[cell_res_id];
+    csi_res.res_id             = res_id;
     if (using_02) {
       // Add CSI_F0 resource.
-      unsigned cell_res_id_csi_f0 = params.get_csi_f0_cell_res_idx(pucch_csi_resource_id(csi_res_id));
-      resources.emplace_back(
-          pucch_resource{.res_id       = pucch_res_id_t::make_ded(cell_res_id_csi_f0, params.get_csi_f0_ue_res_idx()),
-                         .starting_prb = csi_res.starting_prb,
-                         // Must overlap in symbols with the CSI resource.
-                         .syms           = csi_res.syms,
-                         .second_hop_prb = csi_res.second_hop_prb,
-                         .format_params  = pucch_resource::f0_config{.initial_cyclic_shift = 0U}});
+      pucch_res_id_t res_id_csi_f0 = params.csi_f0_res_id(pucch_csi_resource_id(csi_res_id));
+      resources.emplace_back(pucch_resource{.res_id       = res_id_csi_f0,
+                                            .starting_prb = csi_res.starting_prb,
+                                            // Must overlap in symbols with the CSI resource.
+                                            .syms           = csi_res.syms,
+                                            .second_hop_prb = csi_res.second_hop_prb,
+                                            .format_params  = pucch_resource::f0_config{.initial_cyclic_shift = 0U}});
     }
   }
 

@@ -233,7 +233,7 @@ validator_result config_validators::validate_pucch_cfg(const serving_cell_config
            "With Format 0, the SR resource must be present in Resource Set ID 0");
 
     VERIFY(res_set_1.pucch_res_id_list[res_params.res_set_size.value()].ded().ue_res_id ==
-               res_params.get_sr_f2_ue_res_idx(),
+               res_params.sr_f2_res_id(pucch_sr_resource_id(0)).ded().ue_res_id,
            "With Format 0, the SR_F2 resource must be present in Resource Set ID 1");
   }
 
@@ -272,7 +272,7 @@ validator_result config_validators::validate_pucch_cfg(const serving_cell_config
 
     if (using_02) {
       VERIFY(res_set_0.pucch_res_id_list[res_params.res_set_size.value() + 1].ded().ue_res_id ==
-                 res_params.get_csi_f0_ue_res_idx(),
+                 res_params.csi_f0_res_id(pucch_csi_resource_id(0)).ded().ue_res_id,
              "With Format 0, the CSI_F0 resource must be present in Resource Set ID 0");
 
       VERIFY(res_set_1.pucch_res_id_list[res_params.res_set_size.value() + 1] == csi_res_id,

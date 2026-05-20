@@ -2,8 +2,7 @@
 // SPDX-License-Identifier: BSD-3-Clause-Open-MPI
 // Portions of this file may implement 3GPP specifications, which may be subject to additional licensing requirements.
 
-#include "lib/scheduler/support/pucch/pucch_collision_info.h"
-#include "ocudu/ran/bwp/bwp_configuration.h"
+#include "lib/scheduler/support/pucch/pucch_collision.h"
 #include "ocudu/ran/pucch/pucch_configuration.h"
 #include "ocudu/ran/pucch/pucch_constants.h"
 #include "ocudu/ran/pucch/pucch_mapping.h"
@@ -16,7 +15,6 @@
 #include "ocudu/scheduler/config/ue_bwp_config.h"
 #include "fmt/format.h"
 #include <gtest/gtest.h>
-#include <limits>
 
 using namespace ocudu;
 
@@ -79,22 +77,15 @@ TEST_P(pucch_resource_generator_test, successful_generation_results_in_no_collis
   std::vector<pucch_resource> res_list = config_helpers::generate_cell_pucch_res_list(params, bwp_cfg.crbs.length());
   ASSERT_FALSE(res_list.empty());
 
-  std::vector<pucch_collision_info> collision_infos;
-  collision_infos.reserve(res_list.size());
-  for (const auto& res : res_list) {
-    collision_infos.emplace_back(res, bwp_cfg);
-  }
-
   // Not all resources are checked for the F0+F2 case, since the extra resources there (SR_F0 and CSI_F2) are generated
   // so that they collide with their respective SR/CSI resources.
   const unsigned nof_res_f0_f1 =
       params.nof_cell_sr_resources + params.nof_cell_res_set_configs * params.res_set_size.value();
   const unsigned nof_res_f2_f3_f4 =
       params.nof_cell_csi_resources + params.nof_cell_res_set_configs * params.res_set_size.value();
-  collision_infos.reserve(nof_res_f0_f1 + nof_res_f2_f3_f4);
   for (unsigned i = 0; i != nof_res_f0_f1 + nof_res_f2_f3_f4; ++i) {
     for (unsigned j = i + 1; j != nof_res_f0_f1 + nof_res_f2_f3_f4; ++j) {
-      ASSERT_FALSE(collision_infos[i].collides(collision_infos[j]));
+      ASSERT_FALSE(pucch_resources_collide(res_list[i], res_list[j]));
     }
   }
 }
@@ -144,8 +135,7 @@ TEST_P(pucch_resource_generator_test, ue_pucch_config_builder_test)
         };
 
         // Check the SR resource.
-        const pucch_res_id_t expected_sr_res_id =
-            pucch_res_id_t::make_ded(params.get_sr_cell_res_idx(sr_res_id), params.get_sr_ue_res_idx());
+        const pucch_res_id_t expected_sr_res_id = params.sr_res_id(sr_res_id);
         ASSERT_EQ(1U, pucch_cfg.sr_res_list.size());
         ASSERT_EQ(pucch_cfg.sr_res_list.front().pucch_res_id, expected_sr_res_id);
         ASSERT_TRUE(are_cell_and_ue_resources_equal(expected_sr_res_id));
@@ -155,8 +145,7 @@ TEST_P(pucch_resource_generator_test, ue_pucch_config_builder_test)
             config_helpers::build_csi_meas_config(cell_cfg, make_cell_bwp_res_config(cell_cfg).ul, ue_bwp_cfg);
         ASSERT_EQ(params.nof_cell_csi_resources != 0, csi_meas_cfg.has_value());
         if (params.nof_cell_csi_resources != 0) {
-          const pucch_res_id_t expected_csi_res_id =
-              pucch_res_id_t::make_ded(params.get_csi_cell_res_idx(csi_res_id), params.get_csi_ue_res_idx());
+          const pucch_res_id_t expected_csi_res_id = params.csi_res_id(csi_res_id);
           ASSERT_EQ(1U, csi_meas_cfg->csi_report_cfg_list.size());
           const auto& periodic_report_cfg = std::get<csi_report_config::periodic_or_semi_persistent_report_on_pucch>(
               csi_meas_cfg->csi_report_cfg_list.front().report_cfg_type);
@@ -171,8 +160,7 @@ TEST_P(pucch_resource_generator_test, ue_pucch_config_builder_test)
         ASSERT_EQ(params.res_set_size.value() + extra_res_per_res_set, res_set_0.pucch_res_id_list.size());
 
         for (unsigned pri = 0; pri != params.res_set_size.value(); ++pri) {
-          const pucch_res_id_t expected_res_id = pucch_res_id_t::make_ded(
-              params.get_res_set_cell_res_idx<0>(res_set_cfg_id, pri), params.get_res_set_ue_res_idx<0>(pri));
+          const pucch_res_id_t expected_res_id = params.harq_res_id<0>(res_set_cfg_id, pri);
           ASSERT_EQ(expected_res_id, res_set_0.pucch_res_id_list[pri]);
           ASSERT_TRUE(are_cell_and_ue_resources_equal(expected_res_id));
         }
@@ -183,8 +171,7 @@ TEST_P(pucch_resource_generator_test, ue_pucch_config_builder_test)
         ASSERT_EQ(params.res_set_size.value() + extra_res_per_res_set, res_set_1.pucch_res_id_list.size());
 
         for (unsigned pri = 0; pri != params.res_set_size.value(); ++pri) {
-          const pucch_res_id_t expected_res_id = pucch_res_id_t::make_ded(
-              params.get_res_set_cell_res_idx<1>(res_set_cfg_id, pri), params.get_res_set_ue_res_idx<1>(pri));
+          const pucch_res_id_t expected_res_id = params.harq_res_id<1>(res_set_cfg_id, pri);
           ASSERT_EQ(expected_res_id, res_set_1.pucch_res_id_list[pri]);
           ASSERT_TRUE(are_cell_and_ue_resources_equal(expected_res_id));
         }
@@ -192,20 +179,17 @@ TEST_P(pucch_resource_generator_test, ue_pucch_config_builder_test)
         if (using_02) {
           // Check SR_F0 and SR_F2.
           ASSERT_EQ(expected_sr_res_id, res_set_0.pucch_res_id_list[params.res_set_size.value()]);
-          const pucch_res_id_t expected_id_sr_f2 =
-              pucch_res_id_t::make_ded(params.get_sr_f2_cell_res_idx(sr_res_id), params.get_sr_f2_ue_res_idx());
+          const pucch_res_id_t expected_id_sr_f2 = params.sr_f2_res_id(sr_res_id);
           ASSERT_EQ(expected_id_sr_f2, res_set_1.pucch_res_id_list[params.res_set_size.value()]);
           ASSERT_TRUE(are_cell_and_ue_resources_equal(expected_id_sr_f2));
 
           if (params.nof_cell_csi_resources != 0) {
             // Check CSI_F0 and CSI_F2.
-            const pucch_res_id_t expected_id_csi_f0 =
-                pucch_res_id_t::make_ded(params.get_csi_f0_cell_res_idx(csi_res_id), params.get_csi_f0_ue_res_idx());
+            const pucch_res_id_t expected_id_csi_f0 = params.csi_f0_res_id(csi_res_id);
             ASSERT_EQ(expected_id_csi_f0, res_set_0.pucch_res_id_list[params.res_set_size.value() + 1U]);
             ASSERT_TRUE(are_cell_and_ue_resources_equal(expected_id_csi_f0));
 
-            const pucch_res_id_t expected_csi_res_id =
-                pucch_res_id_t::make_ded(params.get_csi_cell_res_idx(csi_res_id), params.get_csi_ue_res_idx());
+            const pucch_res_id_t expected_csi_res_id = params.csi_res_id(csi_res_id);
             ASSERT_EQ(expected_csi_res_id, res_set_1.pucch_res_id_list[params.res_set_size.value() + 1U]);
           }
         }

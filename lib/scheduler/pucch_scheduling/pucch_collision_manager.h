@@ -6,7 +6,6 @@
 
 #include "../cell/resource_grid.h"
 #include "../config/cell_configuration.h"
-#include "../support/pucch/pucch_collision_info.h"
 #include "ocudu/adt/bounded_bitset.h"
 #include "ocudu/adt/expected.h"
 #include "ocudu/adt/slotted_array.h"
@@ -14,24 +13,19 @@
 #include "ocudu/adt/static_vector.h"
 #include "ocudu/ran/pucch/pucch_constants.h"
 #include "ocudu/ran/slot_point.h"
+#include "ocudu/scheduler/config/cell_bwp_res_config.h"
 
 namespace ocudu {
 
 namespace detail {
-
-/// \brief List of all PUCCH resources (common + dedicated) in the cell configuration.
-using cell_resource_list = static_vector<pucch_collision_info, pucch_constants::MAX_NOF_TOT_CELL_RESOURCES>;
-
-/// Compute the collision matrix for all PUCCH resources in the cell configuration.
-cell_resource_list make_cell_resource_list(const cell_configuration& cell_cfg);
 
 /// \brief Collision matrix indicating which resources collide with each other.
 ///  - C[i][j] = 1 if resource i collides with resource j, 0 otherwise.
 using collision_matrix = static_vector<bounded_bitset<pucch_constants::MAX_NOF_TOT_CELL_RESOURCES>,
                                        pucch_constants::MAX_NOF_TOT_CELL_RESOURCES>;
 
-/// Compute the collision matrix for all PUCCH resources in the cell configuration.
-collision_matrix make_collision_matrix(const cell_resource_list& resources);
+/// Compute the collision matrix for all PUCCH resources in the cell.
+collision_matrix make_collision_matrix(const cell_pucch_res_config& cell_resources);
 
 /// \brief Matrix of multiplexing regions indicating which resources can be multiplexed together.
 ///  - Each row represents a multiplexing region.
@@ -41,8 +35,8 @@ collision_matrix make_collision_matrix(const cell_resource_list& resources);
 using mux_regions_matrix = static_vector<bounded_bitset<pucch_constants::MAX_NOF_TOT_CELL_RESOURCES>,
                                          pucch_constants::MAX_NOF_TOT_CELL_RESOURCES / 2>;
 
-/// Compute the multiplexing matrix for all PUCCH resources in the cell configuration.
-mux_regions_matrix make_mux_regions_matrix(const cell_resource_list& resources);
+/// Compute the multiplexing matrix for all PUCCH resources in the cell.
+mux_regions_matrix make_mux_regions_matrix(const cell_pucch_res_config& cell_resources);
 
 } // namespace detail
 
@@ -82,28 +76,18 @@ public:
   };
   using alloc_result_t = error_type<alloc_failure_reason>;
 
-  /// \brief Allocate a common PUCCH resource at a given slot.
+  /// \brief Allocate a PUCCH resource at a given slot.
   /// \return Success if the allocation was successful, otherwise an error indicating the reason of failure.
-  alloc_result_t alloc_common(cell_slot_resource_grid& ul_res_grid, slot_point sl, r_pucch_t r_pucch);
-
-  /// \brief Allocate a dedicated PUCCH resource at a given slot.
-  /// \return Success if the allocation was successful, otherwise an error indicating the reason of failure.
-  alloc_result_t alloc_ded(cell_slot_resource_grid& ul_res_grid, slot_point sl, unsigned cell_res_id);
+  alloc_result_t alloc(cell_slot_resource_grid& ul_res_grid, slot_point sl, const pucch_resource& res);
 
   /// Free a common PUCCH resource at the given slot.
   /// \return True if the resource was successfully freed, false if the resource was not allocated.
-  bool free_common(cell_slot_resource_grid& ul_res_grid, slot_point sl, r_pucch_t r_pucch);
-
-  /// Free a dedicated PUCCH resource at the given slot.
-  /// \return True if the resource was successfully freed, false if the resource was not allocated.
-  bool free_ded(cell_slot_resource_grid& ul_res_grid, slot_point sl, unsigned cell_res_id);
+  bool free(cell_slot_resource_grid& ul_res_grid, slot_point sl, const pucch_resource& res);
 
 private:
   using mux_region_lookup_t = slotted_array<size_t, pucch_constants::MAX_NOF_TOT_CELL_RESOURCES>;
 
   const cell_configuration& cell_cfg;
-  /// List of all PUCCH resources in the cell.
-  const detail::cell_resource_list resources;
   /// Precomputed collision matrix for all PUCCH resources.
   const detail::collision_matrix col_matrix;
   /// Precomputed multiplexing regions matrix for all PUCCH resources.
@@ -136,19 +120,8 @@ private:
   // Keeps track of the last slot_point used by the resource manager.
   slot_point last_sl_ind;
 
-  /// Get the internal index of the dedicated PUCCH resource inside the collision manager.
-  unsigned get_ded_idx(unsigned cell_res_id) const;
-
   /// Build the lookup table that maps each resource index to its multiplexing region.
   static mux_region_lookup_t build_mux_region_lookup(const detail::mux_regions_matrix& mux_matrix);
-
-  /// \brief Allocate the PUCCH resource indexed by \ref res_idx at the given slot.
-  /// \return Success if the allocation was successful, otherwise an error indicating the reason of failure.
-  alloc_result_t alloc(cell_slot_resource_grid& ul_res_grid, slot_point sl, unsigned res_idx);
-
-  /// \brief Free the PUCCH resource indexed by \c res_idx at the given slot.
-  /// \return True if the resource was successfully freed, false if the resource was not allocated.
-  bool free(cell_slot_resource_grid& ul_res_grid, slot_point sl, unsigned res_idx);
 };
 
 } // namespace ocudu

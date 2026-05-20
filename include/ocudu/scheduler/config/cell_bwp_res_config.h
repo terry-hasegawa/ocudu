@@ -30,6 +30,26 @@ struct cell_pucch_res_config {
   {
     return common == other.common and dedicated == other.dedicated;
   }
+
+  /// Returns the total number of PUCCH resources in the cell.
+  unsigned nof_total_res() const { return common.size() + dedicated.size(); }
+
+  /// Gets the common PUCCH resource indexed by \f$r_{PUCCH}\f$.
+  const pucch_resource& get_cmn(unsigned r_pucch) const
+  {
+    ocudu_assert(r_pucch < common.size(), "Invalid r_pucch for common PUCCH resource: {}", r_pucch);
+    return common[r_pucch];
+  }
+
+  /// Gets the dedicated PUCCH resource indexed by its resource ID.
+  const pucch_resource& get_ded(pucch_res_id_t res_id) const
+  {
+    ocudu_assert(res_id.ded().cell_res_id < dedicated.size(),
+                 "PUCCH cell resource ID {} exceeds the size of the dedicated cell resource list ({})",
+                 res_id.ded().cell_res_id,
+                 dedicated.size());
+    return dedicated[res_id.ded().cell_res_id];
+  }
 };
 
 /// \brief Cell-wide UL resources available in a given BWP.

@@ -29,7 +29,7 @@ pucch_config config_helpers::build_pucch_config(const ran_cell_config&        ce
                                                 const ue_bwp_config&          ue_bwp_cfg)
 {
   const pucch_resource_builder_params& res_params                 = cell_cfg.init_bwp.pucch.resources;
-  const auto&                          cell_res_list              = cell_ul_bwp_res.pucch.dedicated;
+  const auto&                          cell_resources             = cell_ul_bwp_res.pucch;
   const auto&                          ue_pucch_cfg               = ue_bwp_cfg.ul.pucch;
   const auto&                          ue_periodic_csi_report_cfg = ue_bwp_cfg.ul.periodic_csi_report;
 
@@ -56,7 +56,7 @@ pucch_config config_helpers::build_pucch_config(const ran_cell_config&        ce
 
   // Add Resource Set ID 0 resources for HARQ-ACK.
   for (unsigned r_pucch = 0; r_pucch != res_params.res_set_size.value(); ++r_pucch) {
-    const auto& cell_res = cell_res_list[res_params.get_res_set_cell_res_idx<0>(ue_pucch_cfg.res_set_cfg_id, r_pucch)];
+    const auto& cell_res = cell_resources.get_ded(res_params.harq_res_id<0>(ue_pucch_cfg.res_set_cfg_id, r_pucch));
 
     // Add resource to both the PUCCH resource list and Resource Set ID 0.
     res_list.emplace_back(cell_res);
@@ -64,7 +64,7 @@ pucch_config config_helpers::build_pucch_config(const ran_cell_config&        ce
   }
 
   // Add SR resource to both the PUCCH resource list and the SR resource list.
-  const auto& sr_res = cell_res_list[res_params.get_sr_cell_res_idx(ue_pucch_cfg.sr_res_id)];
+  const auto& sr_res = cell_resources.get_ded(res_params.sr_res_id(ue_pucch_cfg.sr_res_id));
   res_list.emplace_back(sr_res);
   sr_res_list.emplace_back(scheduling_request_resource_config{.sr_res_id    = 1,
                                                               .sr_id        = uint_to_sched_req_id(0),
@@ -74,7 +74,7 @@ pucch_config config_helpers::build_pucch_config(const ran_cell_config&        ce
 
   // Add Resource Set ID 1 resources for HARQ-ACK.
   for (unsigned r_pucch = 0; r_pucch != res_params.res_set_size.value(); ++r_pucch) {
-    const auto& res = cell_res_list[res_params.get_res_set_cell_res_idx<1>(ue_pucch_cfg.res_set_cfg_id, r_pucch)];
+    const auto& res = cell_resources.get_ded(res_params.harq_res_id<1>(ue_pucch_cfg.res_set_cfg_id, r_pucch));
 
     // Add resource to both the PUCCH resource list and Resource Set ID 1.
     res_list.emplace_back(res);
@@ -83,7 +83,7 @@ pucch_config config_helpers::build_pucch_config(const ran_cell_config&        ce
 
   if (ue_periodic_csi_report_cfg.has_value()) {
     // Add CSI resource to the CSI resource list.
-    const auto& csi_res = cell_res_list[res_params.get_csi_cell_res_idx(ue_periodic_csi_report_cfg->pucch_res_id)];
+    const auto& csi_res = cell_resources.get_ded(res_params.csi_res_id(ue_periodic_csi_report_cfg->pucch_res_id));
     res_list.emplace_back(csi_res);
   }
 
@@ -114,17 +114,17 @@ pucch_config config_helpers::build_pucch_config(const ran_cell_config&        ce
     // - CSI_F2 is the same F2 resource in the PUCCH resource list as the CSI resource.
     res_set_0.pucch_res_id_list.emplace_back(sr_res.res_id);
 
-    const auto& sr_f2_res = cell_res_list[res_params.get_sr_f2_cell_res_idx(ue_pucch_cfg.sr_res_id)];
+    const auto& sr_f2_res = cell_resources.get_ded(res_params.sr_f2_res_id(ue_pucch_cfg.sr_res_id));
     res_list.emplace_back(sr_f2_res);
     res_set_1.pucch_res_id_list.emplace_back(sr_f2_res.res_id);
 
     if (ue_periodic_csi_report_cfg.has_value()) {
       const auto& csi_f0_res =
-          cell_res_list[res_params.get_csi_f0_cell_res_idx(ue_periodic_csi_report_cfg->pucch_res_id)];
+          cell_resources.get_ded(res_params.csi_f0_res_id(ue_periodic_csi_report_cfg->pucch_res_id));
       res_list.emplace_back(csi_f0_res);
       res_set_0.pucch_res_id_list.emplace_back(csi_f0_res.res_id);
 
-      const auto& csi_res = cell_res_list[res_params.get_csi_cell_res_idx(ue_periodic_csi_report_cfg->pucch_res_id)];
+      const auto& csi_res = cell_resources.get_ded(res_params.csi_res_id(ue_periodic_csi_report_cfg->pucch_res_id));
       res_set_1.pucch_res_id_list.emplace_back(csi_res.res_id);
     }
   }
