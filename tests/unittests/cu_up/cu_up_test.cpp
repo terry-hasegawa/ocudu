@@ -184,6 +184,7 @@ protected:
 
     // Convert to common type
     e1ap_bearer_context_setup_request bearer_context_setup;
+    bearer_context_setup.e1_index = cu_up_e1_index_t{0};
     fill_e1ap_bearer_context_setup_request(
         bearer_context_setup, asn1_bearer_context_setup_msg.pdu.init_msg().value.bearer_context_setup_request());
 

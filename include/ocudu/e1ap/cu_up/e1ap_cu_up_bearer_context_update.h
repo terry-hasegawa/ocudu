@@ -12,6 +12,7 @@ namespace ocuup {
 
 /// \brief Request to create a new UE and bearer context.
 struct e1ap_bearer_context_setup_request {
+  cu_up_e1_index_t                                                        e1_index;
   e1ap_security_info                                                      security_info;
   uint64_t                                                                ue_dl_aggregate_maximum_bit_rate;
   std::optional<uint64_t>                                                 ue_dl_maximum_integrity_protected_data_rate;
