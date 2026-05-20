@@ -32,7 +32,7 @@ protected:
     f1u_allocator      = std::make_unique<dummy_gtpu_teid_pool>();
     ngu_session_mngr   = std::make_unique<dummy_ngu_session_manager>();
     cu_up_mngr_pdcp_if = std::make_unique<dummy_cu_up_manager_pdcp_interface>();
-    e1ap               = std::make_unique<dummy_e1ap>();
+    e1ap               = std::make_unique<dummy_e1ap>(cu_up_e1_index_t{0});
 
     // create DUT object
     ue_inactivity_timer = timers_factory.create_timer();
@@ -43,7 +43,7 @@ protected:
     manual_task_worker teid_worker{128};
 
     const uint64_t ue_dl_ambr = 1000000000;
-    pdu_session_mng           = std::make_unique<pdu_session_manager_impl>(MIN_CU_UP_UE_INDEX,
+    pdu_session_mng = std::make_unique<pdu_session_manager_impl>(MIN_CU_UP_UE_INDEX,
                                                                  qos,
                                                                  security_info,
                                                                  n3_config,

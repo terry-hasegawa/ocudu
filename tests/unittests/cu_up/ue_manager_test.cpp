@@ -27,7 +27,8 @@ protected:
     gtpu_f1u_allocator = std::make_unique<dummy_gtpu_teid_pool>();
     gtpu_tx_notifier   = std::make_unique<dummy_gtpu_network_gateway_adapter>();
     f1u_gw             = std::make_unique<dummy_f1u_gateway>(f1u_bearer);
-    e1ap               = std::make_unique<dummy_e1ap>();
+    e1ap1              = std::make_unique<dummy_e1ap>(cu_up_e1_index_t{0});
+    e1ap2              = std::make_unique<dummy_e1ap>(cu_up_e1_index_t{1});
     pdcp_ctrl_handler  = std::make_unique<dummy_cu_up_manager_pdcp_interface>();
     ngu_session_mngr   = std::make_unique<dummy_ngu_session_manager>();
 
@@ -38,7 +39,7 @@ protected:
 
     // create DUT object
     ue_mng = std::make_unique<ue_manager>(ue_manager_config{max_nof_ues, n3_config, test_mode_config},
-                                          ue_manager_dependencies{*e1ap,
+                                          ue_manager_dependencies{*e1ap1,
                                                                   timers,
                                                                   *f1u_gw,
                                                                   *ngu_session_mngr,
@@ -61,7 +62,8 @@ protected:
   std::unique_ptr<gtpu_teid_pool>                             gtpu_n3_allocator;
   std::unique_ptr<gtpu_teid_pool>                             gtpu_f1u_allocator;
   std::unique_ptr<gtpu_tunnel_common_tx_upper_layer_notifier> gtpu_tx_notifier;
-  std::unique_ptr<e1ap_interface>                             e1ap;
+  std::unique_ptr<e1ap_interface>                             e1ap1;
+  std::unique_ptr<e1ap_interface>                             e1ap2;
   std::unique_ptr<cu_up_manager_pdcp_interface>               pdcp_ctrl_handler;
   std::unique_ptr<cu_up_executor_mapper>                      cu_up_exec_mapper;
   dummy_inner_f1u_bearer                                      f1u_bearer;
@@ -85,7 +87,7 @@ protected:
 TEST_F(ue_manager_test, when_ue_db_not_full_new_ue_can_be_added)
 {
   ASSERT_EQ(ue_mng->get_nof_ues(), 0);
-  ue_context* ue = ue_mng->add_ue(ue_cfg);
+  ue_context* ue = ue_mng->add_ue(e1ap1->get_e1_index(), ue_cfg);
   ASSERT_NE(ue, nullptr);
   ASSERT_EQ(ue_mng->get_nof_ues(), 1);
 }
@@ -94,13 +96,13 @@ TEST_F(ue_manager_test, when_ue_db_is_full_new_ue_cannot_be_added)
 {
   // add maximum number of UE objects
   for (uint32_t i = 0; i < max_nof_ues; i++) {
-    ue_context* ue = ue_mng->add_ue(ue_cfg);
+    ue_context* ue = ue_mng->add_ue(e1ap1->get_e1_index(), ue_cfg);
     ASSERT_NE(ue, nullptr);
   }
   ASSERT_EQ(ue_mng->get_nof_ues(), max_nof_ues);
 
   // try to add one more
-  ue_context* ue = ue_mng->add_ue(ue_cfg);
+  ue_context* ue = ue_mng->add_ue(e1ap1->get_e1_index(), ue_cfg);
   ASSERT_EQ(ue, nullptr);
 }
 
@@ -108,7 +110,7 @@ TEST_F(ue_manager_test, when_ue_are_deleted_ue_db_is_empty)
 {
   // add maximum number of UE objects
   for (uint32_t i = 0; i < max_nof_ues; i++) {
-    ue_context* ue = ue_mng->add_ue(ue_cfg);
+    ue_context* ue = ue_mng->add_ue(e1ap1->get_e1_index(), ue_cfg);
     ASSERT_NE(ue, nullptr);
   }
   ASSERT_EQ(ue_mng->get_nof_ues(), max_nof_ues);
@@ -119,4 +121,15 @@ TEST_F(ue_manager_test, when_ue_are_deleted_ue_db_is_empty)
     t_launcher.emplace(t);
   }
   ASSERT_EQ(ue_mng->get_nof_ues(), 0);
+}
+
+TEST_F(ue_manager_test, when_ues_come_from_different_cps_different_e1_indexes_are_used)
+{
+  ue_context* ue1 = ue_mng->add_ue(e1ap1->get_e1_index(), ue_cfg);
+  ASSERT_NE(ue1, nullptr);
+  ASSERT_NE(ue1->get_e1_index(), e1ap1->get_e1_index());
+
+  ue_context* ue2 = ue_mng->add_ue(e1ap2->get_e1_index(), ue_cfg);
+  ASSERT_NE(ue2, nullptr);
+  ASSERT_NE(ue2->get_e1_index(), e1ap2->get_e1_index());
 }

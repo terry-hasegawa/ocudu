@@ -50,7 +50,7 @@ public:
   const ue_db_t& get_ues() const { return ue_db; }
 
   async_task<void> stop() override;
-  ue_context*      add_ue(const ue_context_cfg& cfg) override;
+  ue_context*      add_ue(cu_up_e1_index_t e1_index, const ue_context_cfg& cfg) override;
   async_task<void> remove_all_ues() override;
   async_task<void> remove_ue(cu_up_ue_index_t ue_index) override;
   ue_context*      find_ue(cu_up_ue_index_t ue_index) override;

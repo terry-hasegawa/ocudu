@@ -17,7 +17,8 @@ using namespace ocuup;
 class cu_up_bearer_context_modification_procedure_tester : public ::testing::Test
 {
 public:
-  cu_up_bearer_context_modification_procedure_tester() : task_sched(2048), timers(timer_mng, exec), f1u_gw(f1u_bearer)
+  cu_up_bearer_context_modification_procedure_tester() :
+    e1ap(cu_up_e1_index_t{0}), task_sched(2048), timers(timer_mng, exec), f1u_gw(f1u_bearer)
   {
   }
 

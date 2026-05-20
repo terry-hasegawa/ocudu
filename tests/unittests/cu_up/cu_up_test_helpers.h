@@ -320,7 +320,7 @@ public:
 class dummy_e1ap final : public ocuup::e1ap_interface
 {
 public:
-  explicit dummy_e1ap()  = default;
+  explicit dummy_e1ap(cu_up_e1_index_t e1_index_) : e1_index(e1_index_) {}
   ~dummy_e1ap() override = default;
   void
   handle_bearer_context_inactivity_notification(const ocuup::e1ap_bearer_context_inactivity_notification& msg) override
@@ -337,7 +337,7 @@ public:
 
   async_task<void> handle_cu_up_e1ap_release_request() override { return {}; }
 
-  cu_up_e1_index_t get_e1_index() const override { return cu_up_e1_index_t{0}; }
+  cu_up_e1_index_t get_e1_index() const override { return e1_index; }
 
   size_t get_nof_ues() const override { return 0; }
 
@@ -346,6 +346,8 @@ public:
   void handle_bearer_context_release_request_required(cu_up_ue_index_t ue_index) override {}
 
   void handle_dl_data_notification_required(cu_up_ue_index_t ue_index) override {}
+
+  cu_up_e1_index_t e1_index;
 };
 
 inline e1ap_message generate_bearer_context_setup_request(unsigned cu_cp_ue_e1ap_id)
