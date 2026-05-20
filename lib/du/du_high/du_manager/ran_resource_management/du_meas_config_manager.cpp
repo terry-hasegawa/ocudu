@@ -18,7 +18,7 @@ static bool unpack_meas_cfg(meas_cfg_s& meas_cfg, const byte_buffer& container)
 }
 
 // Creates a measurement gap based on a SSB MTC config.
-static meas_gap_config create_meas_gap(subcarrier_spacing scs, const ssb_mtc_s& smtc1)
+meas_gap_config odu::create_meas_gap(subcarrier_spacing scs, const ssb_mtc_s& smtc1)
 {
   meas_gap_config meas_gap;
 

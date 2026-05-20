@@ -9,7 +9,16 @@
 #include "ocudu/du/du_cell_config.h"
 #include "ocudu/ocudulog/logger.h"
 
+namespace asn1::rrc_nr {
+
+struct ssb_mtc_s;
+
+} // namespace asn1::rrc_nr
+
 namespace ocudu::odu {
+
+/// Creates a measurement gap configuration based on the PCell SCS and the target SSB MTC.
+meas_gap_config create_meas_gap(subcarrier_spacing scs, const asn1::rrc_nr::ssb_mtc_s& smtc1);
 
 /// Class that handles the measConfig of the UE.
 ///

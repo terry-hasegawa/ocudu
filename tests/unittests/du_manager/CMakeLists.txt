@@ -69,7 +69,8 @@ gtest_discover_tests(du_manager_procedure_test)
 add_executable(du_ran_resource_manager_test
         du_ran_resource_manager_test.cpp
         du_drx_resource_manager_test.cpp
-        decode_ue_nr_cap_container_test.cpp)
+        decode_ue_nr_cap_container_test.cpp
+        du_meas_config_manager_test.cpp)
 target_include_directories(du_ran_resource_manager_test PRIVATE ${CMAKE_SOURCE_DIR})
 target_link_libraries(du_ran_resource_manager_test du_manager_test_helpers sched_test_doubles gtest ocudu_gtest_main)
 gtest_discover_tests(du_ran_resource_manager_test)
