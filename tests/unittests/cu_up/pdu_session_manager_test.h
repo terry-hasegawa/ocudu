@@ -43,7 +43,7 @@ protected:
     manual_task_worker teid_worker{128};
 
     const uint64_t ue_dl_ambr = 1000000000;
-    pdu_session_mng = std::make_unique<pdu_session_manager_impl>(MIN_CU_UP_UE_INDEX,
+    pdu_session_mng           = std::make_unique<pdu_session_manager_impl>(MIN_CU_UP_UE_INDEX,
                                                                  qos,
                                                                  security_info,
                                                                  n3_config,
