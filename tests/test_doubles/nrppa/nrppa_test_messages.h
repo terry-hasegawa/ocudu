@@ -15,7 +15,7 @@ namespace ocudu::ocucp {
 byte_buffer generate_valid_nrppa_e_cid_measurement_initiation_request(
     lmf_ue_meas_id_t                               lmf_ue_meas_id,
     const std::vector<nrppa_meas_quantities_item>& meas_quantities = {
-        {nrppa_meas_quantities_item{nrppa_meas_quantities_value::rsrp}}});
+        {nrppa_meas_quantities_item{nrppa_meas_quantities_value::ss_rsrp}}});
 
 /// \brief Generate a valid E-CID measurement initiation request with periodic reports.
 byte_buffer

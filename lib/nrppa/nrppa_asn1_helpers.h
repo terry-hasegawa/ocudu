@@ -158,42 +158,42 @@ fill_meas_results(const nrppa_meas_quantities_item&                             
 {
   nrppa_measured_results_value meas_results_value;
 
-  // Fill RSRP.
-  if (meas_quantity.meas_quantities_value == nrppa_meas_quantities_value::rsrp) {
-    // Fill SS RSRP.
+  // Fill SS RSRP.
+  if (meas_quantity.meas_quantities_value == nrppa_meas_quantities_value::ss_rsrp) {
     if (cell_meas_item.meas_result.cell_results.results_ssb_cell.has_value()) {
       nrppa_result_ss_rsrp_item              meas_result_rsrp_item = fill_meas_result_ss_rsrp_item(cell_meas_item);
       std::vector<nrppa_result_ss_rsrp_item> meas_results_rsrp;
       meas_results_rsrp.push_back(meas_result_rsrp_item);
-
-      return meas_results_rsrp;
-    }
-    // Fill CSI RSRP.
-    if (cell_meas_item.meas_result.cell_results.results_csi_rs_cell.has_value()) {
-      nrppa_result_csi_rsrp_item              meas_result_rsrp_item = fill_meas_result_csi_rsrp_item(cell_meas_item);
-      std::vector<nrppa_result_csi_rsrp_item> meas_results_rsrp;
-      meas_results_rsrp.push_back(meas_result_rsrp_item);
-
       return meas_results_rsrp;
     }
   }
 
-  // Fill RSRQ.
-  if (meas_quantity.meas_quantities_value == nrppa_meas_quantities_value::rsrq) {
-    // Fill SS RSRQ.
+  // Fill CSI RSRP.
+  if (meas_quantity.meas_quantities_value == nrppa_meas_quantities_value::csi_rsrp) {
+    if (cell_meas_item.meas_result.cell_results.results_csi_rs_cell.has_value()) {
+      nrppa_result_csi_rsrp_item              meas_result_rsrp_item = fill_meas_result_csi_rsrp_item(cell_meas_item);
+      std::vector<nrppa_result_csi_rsrp_item> meas_results_rsrp;
+      meas_results_rsrp.push_back(meas_result_rsrp_item);
+      return meas_results_rsrp;
+    }
+  }
+
+  // Fill SSRSRQ.
+  if (meas_quantity.meas_quantities_value == nrppa_meas_quantities_value::ss_rsrq) {
     if (cell_meas_item.meas_result.cell_results.results_ssb_cell.has_value()) {
       nrppa_result_ss_rsrq_item              meas_result_rsrq_item = fill_meas_result_ss_rsrq_item(cell_meas_item);
       std::vector<nrppa_result_ss_rsrq_item> meas_results_rsrq;
       meas_results_rsrq.push_back(meas_result_rsrq_item);
-
       return meas_results_rsrq;
     }
-    // Fill CSI RSRQ.
+  }
+
+  // Fill CSI RSRQ.
+  if (meas_quantity.meas_quantities_value == nrppa_meas_quantities_value::csi_rsrq) {
     if (cell_meas_item.meas_result.cell_results.results_csi_rs_cell.has_value()) {
       nrppa_result_csi_rsrq_item              meas_result_rsrq_item = fill_meas_result_csi_rsrq_item(cell_meas_item);
       std::vector<nrppa_result_csi_rsrq_item> meas_results_rsrq;
       meas_results_rsrq.push_back(meas_result_rsrq_item);
-
       return meas_results_rsrq;
     }
   }
@@ -220,18 +220,44 @@ fill_e_cid_measurement_result(cu_cp_ue_index_t                               ue_
       // If cell id is requested, no measurement results are sent.
       if (meas_quantity.meas_quantities_value != nrppa_meas_quantities_value::cell_id) {
         // For now only RSRP and RSRQ measurements are supported.
-        if (meas_quantity.meas_quantities_value == nrppa_meas_quantities_value::angle_of_arrival ||
-            meas_quantity.meas_quantities_value == nrppa_meas_quantities_value::timing_advance_type1 ||
-            meas_quantity.meas_quantities_value == nrppa_meas_quantities_value::timing_advance_type2) {
-          ocudulog::fetch_basic_logger("NRPPA").debug(
-              "Unsupported measurement quantity requested ({})",
-              meas_quantity.meas_quantities_value == nrppa_meas_quantities_value::angle_of_arrival ? "AoA"
-                                                                                                   : "Timing Advance");
+        if (meas_quantity.meas_quantities_value != nrppa_meas_quantities_value::ss_rsrp &&
+            meas_quantity.meas_quantities_value != nrppa_meas_quantities_value::ss_rsrq &&
+            meas_quantity.meas_quantities_value != nrppa_meas_quantities_value::csi_rsrp &&
+            meas_quantity.meas_quantities_value != nrppa_meas_quantities_value::csi_rsrq) {
+          if (meas_quantity.meas_quantities_value == nrppa_meas_quantities_value::rsrp ||
+              meas_quantity.meas_quantities_value == nrppa_meas_quantities_value::rsrq) {
+            ocudulog::fetch_basic_logger("NRPPA").debug("Unsupported measurement quantity requested ({}). RSRP/RSRQ "
+                                                        "without SS/CSI resource type is not supported",
+                                                        meas_quantity.meas_quantities_value);
+          } else {
+            ocudulog::fetch_basic_logger("NRPPA").debug("Unsupported measurement quantity requested ({})",
+                                                        meas_quantity.meas_quantities_value);
+          }
+
           continue;
         }
 
         nrppa_measured_results_value meas_results_value =
             fill_meas_results(meas_quantity, cell_meas_result_item.second);
+
+        // Don't append empty measurement results (e.g. when RSRP/RSRQ is requested but not available for the cell).
+        if (std::holds_alternative<std::vector<nrppa_result_ss_rsrp_item>>(meas_results_value) &&
+            std::get<std::vector<nrppa_result_ss_rsrp_item>>(meas_results_value).empty()) {
+          continue;
+        }
+        if (std::holds_alternative<std::vector<nrppa_result_ss_rsrq_item>>(meas_results_value) &&
+            std::get<std::vector<nrppa_result_ss_rsrq_item>>(meas_results_value).empty()) {
+          continue;
+        }
+        if (std::holds_alternative<std::vector<nrppa_result_csi_rsrp_item>>(meas_results_value) &&
+            std::get<std::vector<nrppa_result_csi_rsrp_item>>(meas_results_value).empty()) {
+          continue;
+        }
+        if (std::holds_alternative<std::vector<nrppa_result_csi_rsrq_item>>(meas_results_value) &&
+            std::get<std::vector<nrppa_result_csi_rsrq_item>>(meas_results_value).empty()) {
+          continue;
+        }
+
         meas_result.measured_results.push_back(meas_results_value);
       }
     }

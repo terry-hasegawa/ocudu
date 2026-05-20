@@ -56,7 +56,7 @@ byte_buffer ocudu::ocucp::generate_valid_nrppa_e_cid_measurement_initiation_requ
 
   asn1::protocol_ie_single_container_s<asn1::nrppa::meas_quantities_item_ies_o> meas_quantities_item_container;
   asn1::nrppa::meas_quantities_item_s& quantities_item = meas_quantities_item_container->meas_quantities_item();
-  quantities_item.meas_quantities_value                = asn1::nrppa::meas_quantities_value_opts::rsrp;
+  quantities_item.meas_quantities_value                = asn1::nrppa::meas_quantities_value_opts::ss_rsrp;
 
   req->meas_quantities.push_back(meas_quantities_item_container);
 

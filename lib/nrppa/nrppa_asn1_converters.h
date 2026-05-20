@@ -67,6 +67,27 @@ asn1_to_meas_quantities_item(const asn1::nrppa::meas_quantities_item_s& asn1_mea
     case asn1::nrppa::meas_quantities_value_e::rsrq:
       meas_quantities_item.meas_quantities_value = nrppa_meas_quantities_value::rsrq;
       break;
+    case asn1::nrppa::meas_quantities_value_e::ss_rsrp:
+      meas_quantities_item.meas_quantities_value = nrppa_meas_quantities_value::ss_rsrp;
+      break;
+    case asn1::nrppa::meas_quantities_value_e::ss_rsrq:
+      meas_quantities_item.meas_quantities_value = nrppa_meas_quantities_value::ss_rsrq;
+      break;
+    case asn1::nrppa::meas_quantities_value_e::csi_rsrp:
+      meas_quantities_item.meas_quantities_value = nrppa_meas_quantities_value::csi_rsrp;
+      break;
+    case asn1::nrppa::meas_quantities_value_e::csi_rsrq:
+      meas_quantities_item.meas_quantities_value = nrppa_meas_quantities_value::csi_rsrq;
+      break;
+    case asn1::nrppa::meas_quantities_value_e::angle_of_arrival_nr:
+      meas_quantities_item.meas_quantities_value = nrppa_meas_quantities_value::angle_of_arrival_nr;
+      break;
+    case asn1::nrppa::meas_quantities_value_e::timing_advance_nr:
+      meas_quantities_item.meas_quantities_value = nrppa_meas_quantities_value::timing_advance_nr;
+      break;
+    case asn1::nrppa::meas_quantities_value_e::ue_rx_tx_time_diff:
+      meas_quantities_item.meas_quantities_value = nrppa_meas_quantities_value::ue_rx_tx_time_diff;
+      break;
     default:
       report_fatal_error("Unsupported NRPPa meas quantities value. NRPPa meas quantities value={}",
                          asn1_meas_quantities_item.meas_quantities_value.to_number());
@@ -98,6 +119,27 @@ meas_quantities_item_to_asn1(const nrppa_meas_quantities_item& meas_quantities_i
       break;
     case nrppa_meas_quantities_value::rsrq:
       asn1_meas_quantities_item.meas_quantities_value = asn1::nrppa::meas_quantities_value_opts::rsrq;
+      break;
+    case nrppa_meas_quantities_value::ss_rsrp:
+      asn1_meas_quantities_item.meas_quantities_value = asn1::nrppa::meas_quantities_value_opts::ss_rsrp;
+      break;
+    case nrppa_meas_quantities_value::ss_rsrq:
+      asn1_meas_quantities_item.meas_quantities_value = asn1::nrppa::meas_quantities_value_opts::ss_rsrq;
+      break;
+    case nrppa_meas_quantities_value::csi_rsrp:
+      asn1_meas_quantities_item.meas_quantities_value = asn1::nrppa::meas_quantities_value_opts::csi_rsrp;
+      break;
+    case nrppa_meas_quantities_value::csi_rsrq:
+      asn1_meas_quantities_item.meas_quantities_value = asn1::nrppa::meas_quantities_value_opts::csi_rsrq;
+      break;
+    case nrppa_meas_quantities_value::angle_of_arrival_nr:
+      asn1_meas_quantities_item.meas_quantities_value = asn1::nrppa::meas_quantities_value_opts::angle_of_arrival_nr;
+      break;
+    case nrppa_meas_quantities_value::timing_advance_nr:
+      asn1_meas_quantities_item.meas_quantities_value = asn1::nrppa::meas_quantities_value_opts::timing_advance_nr;
+      break;
+    case nrppa_meas_quantities_value::ue_rx_tx_time_diff:
+      asn1_meas_quantities_item.meas_quantities_value = asn1::nrppa::meas_quantities_value_opts::ue_rx_tx_time_diff;
       break;
     default:
       report_fatal_error("Unsupported NRPPa meas quantities value");

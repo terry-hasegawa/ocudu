@@ -16,8 +16,7 @@
 #include <variant>
 #include <vector>
 
-namespace ocudu {
-namespace ocucp {
+namespace ocudu::ocucp {
 
 enum class nrppa_meas_quantities_value {
   cell_id,
@@ -25,7 +24,14 @@ enum class nrppa_meas_quantities_value {
   timing_advance_type1,
   timing_advance_type2,
   rsrp,
-  rsrq
+  rsrq,
+  ss_rsrp,
+  ss_rsrq,
+  csi_rsrp,
+  csi_rsrq,
+  angle_of_arrival_nr,
+  timing_advance_nr,
+  ue_rx_tx_time_diff
 };
 
 struct nrppa_meas_quantities_item {
@@ -146,5 +152,52 @@ struct nrppa_e_cid_meas_termination_command {
   ran_ue_meas_id_t ran_ue_meas_id;
 };
 
-} // namespace ocucp
-} // namespace ocudu
+} // namespace ocudu::ocucp
+
+namespace fmt {
+
+// nrppa_meas_quantities_value formatter.
+template <>
+struct formatter<ocudu::ocucp::nrppa_meas_quantities_value> {
+  template <typename ParseContext>
+  auto parse(ParseContext& ctx)
+  {
+    return ctx.begin();
+  }
+
+  template <typename FormatContext>
+  auto format(const ocudu::ocucp::nrppa_meas_quantities_value& value, FormatContext& ctx) const
+  {
+    switch (value) {
+      case ocudu::ocucp::nrppa_meas_quantities_value::cell_id:
+        return format_to(ctx.out(), "cell_id");
+      case ocudu::ocucp::nrppa_meas_quantities_value::angle_of_arrival:
+        return format_to(ctx.out(), "angle_of_arrival");
+      case ocudu::ocucp::nrppa_meas_quantities_value::timing_advance_type1:
+        return format_to(ctx.out(), "timing_advance_type1");
+      case ocudu::ocucp::nrppa_meas_quantities_value::timing_advance_type2:
+        return format_to(ctx.out(), "timing_advance_type2");
+      case ocudu::ocucp::nrppa_meas_quantities_value::rsrp:
+        return format_to(ctx.out(), "rsrp");
+      case ocudu::ocucp::nrppa_meas_quantities_value::rsrq:
+        return format_to(ctx.out(), "rsrq");
+      case ocudu::ocucp::nrppa_meas_quantities_value::ss_rsrp:
+        return format_to(ctx.out(), "ss_rsrp");
+      case ocudu::ocucp::nrppa_meas_quantities_value::ss_rsrq:
+        return format_to(ctx.out(), "ss_rsrq");
+      case ocudu::ocucp::nrppa_meas_quantities_value::csi_rsrp:
+        return format_to(ctx.out(), "csi_rsrp");
+      case ocudu::ocucp::nrppa_meas_quantities_value::csi_rsrq:
+        return format_to(ctx.out(), "csi_rsrq");
+      case ocudu::ocucp::nrppa_meas_quantities_value::angle_of_arrival_nr:
+        return format_to(ctx.out(), "angle_of_arrival_nr");
+      case ocudu::ocucp::nrppa_meas_quantities_value::timing_advance_nr:
+        return format_to(ctx.out(), "timing_advance_nr");
+      case ocudu::ocucp::nrppa_meas_quantities_value::ue_rx_tx_time_diff:
+        return format_to(ctx.out(), "ue_rx_tx_time_diff");
+    }
+    return format_to(ctx.out(), "unknown");
+  }
+};
+
+} // namespace fmt
