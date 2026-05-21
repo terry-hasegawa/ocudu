@@ -8,6 +8,11 @@
 
 namespace ocudu {
 
+/// \brief Returns the multiplexing index of the PUCCH resource.
+///
+/// Used to determine orthogonality between resources sharing the same time-frequency allocation.
+unsigned pucch_mux_idx(const pucch_resource& res);
+
 /// Checks whether two PUCCH resources collide, i.e., they interfere with each other if allocated in the same slot.
 bool pucch_resources_collide(const pucch_resource& res1, const pucch_resource& res2);
 

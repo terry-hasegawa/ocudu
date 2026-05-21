@@ -132,21 +132,22 @@ get_prach_grant_info(const cell_configuration&                                  
 inline std::pair<grant_info, std::optional<grant_info>> get_pucch_grant_info(const pucch_info& pucch)
 {
   const bwp_configuration& bwp_cfg = *pucch.bwp_cfg;
-  if (pucch.resources.second_hop_prb.has_value()) {
+  if (pucch.res->second_hop_prb.has_value()) {
     // Intra-slot frequency hopping.
-    ofdm_symbol_range first_hop_symbols{pucch.resources.symbols.start(),
-                                        pucch.resources.symbols.start() + pucch.resources.symbols.length() / 2};
-    ofdm_symbol_range second_hop_symbols{pucch.resources.symbols.start() + pucch.resources.symbols.length() / 2,
-                                         pucch.resources.symbols.stop()};
+    ofdm_symbol_range first_hop_symbols{pucch.res->syms.start(),
+                                        pucch.res->syms.start() + pucch.res->syms.length() / 2};
+    ofdm_symbol_range second_hop_symbols{pucch.res->syms.start() + pucch.res->syms.length() / 2,
+                                         pucch.res->syms.stop()};
 
-    crb_interval crbs_first_hop  = prb_to_crb(bwp_cfg, pucch.resources.prbs);
-    crb_interval crbs_second_hop = prb_to_crb(bwp_cfg, pucch.resources.prbs);
+    crb_interval crbs_first_hop = prb_to_crb(bwp_cfg, pucch.grant_prbs());
+    crb_interval crbs_second_hop =
+        prb_to_crb(bwp_cfg, prb_interval::start_and_len(*pucch.res->second_hop_prb, pucch.grant_prbs().length()));
     return {grant_info{bwp_cfg.scs, first_hop_symbols, crbs_first_hop},
             grant_info{bwp_cfg.scs, second_hop_symbols, crbs_second_hop}};
   }
   // No frequency hopping.
-  crb_interval crbs = prb_to_crb(bwp_cfg, pucch.resources.prbs);
-  return {grant_info{bwp_cfg.scs, pucch.resources.symbols, crbs}, std::nullopt};
+  crb_interval crbs = prb_to_crb(bwp_cfg, pucch.grant_prbs());
+  return {grant_info{bwp_cfg.scs, pucch.res->syms, crbs}, std::nullopt};
 }
 
 } // namespace ocudu

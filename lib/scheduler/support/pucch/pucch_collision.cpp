@@ -10,33 +10,6 @@ using namespace ocudu;
 
 namespace {
 
-/// Returns the multiplexing index of the PUCCH resource, used to determine orthogonality between resources sharing
-/// the same time-frequency allocation.
-///  - Format 0: initial cyclic shift.
-///  - Format 1: initial cyclic shift and time domain OCC index.
-///  - Format 2/3: not multiplexed (always 0).
-///  - Format 4: OCC index.
-unsigned mux_idx(const pucch_resource& res)
-{
-  switch (res.format()) {
-    case pucch_format::FORMAT_0:
-      return std::get<pucch_resource::f0_config>(res.format_params).initial_cyclic_shift;
-    case pucch_format::FORMAT_1: {
-      // For Format 1, two sequences are orthogonal unless both the ICS and the time domain OCC are the same.
-      const auto& f1 = std::get<pucch_resource::f1_config>(res.format_params);
-      return f1.initial_cyclic_shift + f1.time_domain_occ * pucch_constants::f1::NOF_ICS;
-    }
-    case pucch_format::FORMAT_4:
-      // For Format 4, the OCC index is mapped to a cyclic shift value, as per Table 6.4.1.3.3.1-1, TS 38.211.
-      // Thus, resources with different OCC indices will never collide, even if they have different OCC lengths.
-      // Therefore, we can use the OCC index directly as the multiplexing index.
-      return static_cast<unsigned>(std::get<pucch_resource::f4_config>(res.format_params).occ_index);
-    default:
-      // Non multiplexed formats.
-      return 0;
-  }
-}
-
 /// Represents the time-frequency grants of a PUCCH resource.
 struct pucch_grants {
   struct hop {
@@ -92,6 +65,27 @@ struct pucch_grants {
 
 } // namespace
 
+unsigned ocudu::pucch_mux_idx(const pucch_resource& res)
+{
+  switch (res.format()) {
+    case pucch_format::FORMAT_0:
+      return std::get<pucch_resource::f0_config>(res.format_params).initial_cyclic_shift;
+    case pucch_format::FORMAT_1: {
+      // For Format 1, two sequences are orthogonal unless both the ICS and the time domain OCC are the same.
+      const auto& f1 = std::get<pucch_resource::f1_config>(res.format_params);
+      return f1.initial_cyclic_shift + f1.time_domain_occ * pucch_constants::f1::NOF_ICS;
+    }
+    case pucch_format::FORMAT_4:
+      // For Format 4, the OCC index is mapped to a cyclic shift value, as per Table 6.4.1.3.3.1-1, TS 38.211.
+      // Thus, resources with different OCC indices will never collide, even if they have different OCC lengths.
+      // Therefore, we can use the OCC index directly as the multiplexing index.
+      return static_cast<unsigned>(std::get<pucch_resource::f4_config>(res.format_params).occ_index);
+    default:
+      // Non multiplexed formats.
+      return 0;
+  }
+}
+
 bool ocudu::pucch_resources_collide(const pucch_resource& res1, const pucch_resource& res2)
 {
   const pucch_grants grants1(res1);
@@ -113,5 +107,5 @@ bool ocudu::pucch_resources_collide(const pucch_resource& res1, const pucch_reso
 
   // Resources with the same format and time/frequency grants only collide if they have the same multiplexing index.
   // Note: resources with Format 2/3 always collide as they are not multiplexed (multiplexing index is always 0).
-  return mux_idx(res1) == mux_idx(res2);
+  return pucch_mux_idx(res1) == pucch_mux_idx(res2);
 }

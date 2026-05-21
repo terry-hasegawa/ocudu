@@ -3,6 +3,7 @@
 // Portions of this file may implement 3GPP specifications, which may be subject to additional licensing requirements.
 
 #include "helpers.h"
+#include "ocudu/ran/pucch/pucch_constants.h"
 #include <random>
 
 using namespace ocudu;
@@ -597,19 +598,24 @@ pucch_info_test_helper unittests::build_valid_pucch_format_1_pdu()
 
   helper.bwp_cfg = {cyclic_prefix::NORMAL, subcarrier_spacing::kHz15, {2, 10}};
 
-  pucch.crnti                      = to_rnti(0x4444);
-  pucch.bwp_cfg                    = &helper.bwp_cfg;
-  auto& format_1                   = pucch.format_params.emplace<pucch_format_1>();
-  pucch.resources.prbs             = {1, 4};
-  pucch.resources.symbols          = {0, 14};
-  pucch.resources.second_hop_prb   = 2;
+  pucch.crnti   = to_rnti(0x4444);
+  pucch.bwp_cfg = &helper.bwp_cfg;
+  pucch.res     = &helper.res;
+
+  helper.res.starting_prb     = 1;
+  helper.res.syms             = {0, pucch_constants::f1::MAX_NOF_SYMS};
+  helper.res.second_hop_prb   = 2;
+  auto& res_f1                = helper.res.format_params.emplace<pucch_resource::f1_config>();
+  res_f1.time_domain_occ      = 3;
+  res_f1.initial_cyclic_shift = 9;
+
+  auto& f1           = pucch.format_params.emplace<pucch_info::f1_config>();
+  f1.n_id_hopping    = 2;
+  f1.group_hopping   = ocudu::pucch_group_hopping::NEITHER;
+  f1.slot_repetition = ocudu::pucch_repetition_tx_slot::no_multi_slot;
+
   pucch.uci_bits.harq_ack_nof_bits = 2;
   pucch.uci_bits.sr_bits           = sr_nof_bits::no_sr;
-  format_1.time_domain_occ         = 3;
-  format_1.initial_cyclic_shift    = 9;
-  format_1.n_id_hopping            = 2;
-  format_1.group_hopping           = ocudu::pucch_group_hopping::NEITHER;
-  format_1.slot_repetition         = ocudu::pucch_repetition_tx_slot::no_multi_slot;
 
   return helper;
 }
@@ -621,17 +627,23 @@ pucch_info_test_helper ocudu::unittests::build_valid_pucch_format_2_pdu()
 
   helper.bwp_cfg = {cyclic_prefix::NORMAL, subcarrier_spacing::kHz15, {2, 10}};
 
-  pucch.crnti                       = to_rnti(0x4444);
-  pucch.bwp_cfg                     = &helper.bwp_cfg;
-  auto& format_2                    = pucch.format_params.emplace<pucch_format_2>();
-  pucch.resources.prbs              = {1, 4};
-  pucch.resources.symbols           = {0, 1};
-  pucch.resources.second_hop_prb    = 1;
+  pucch.crnti   = to_rnti(0x4444);
+  pucch.bwp_cfg = &helper.bwp_cfg;
+  pucch.res     = &helper.res;
+
+  helper.res.starting_prb   = 1;
+  helper.res.syms           = {0, pucch_constants::f2::MAX_NOF_SYMS};
+  helper.res.second_hop_prb = 1;
+  auto& res_f2              = helper.res.format_params.emplace<pucch_resource::f2_config>();
+  res_f2.nof_prbs           = 3;
+
+  auto& f2             = pucch.format_params.emplace<pucch_info::f2_config>();
+  f2.n_id_0_scrambling = 256;
+  f2.n_id_scrambling   = 382;
+
   pucch.uci_bits.csi_part1_nof_bits = 102;
   pucch.uci_bits.harq_ack_nof_bits  = 100;
   pucch.uci_bits.sr_bits            = sr_nof_bits::one;
-  format_2.n_id_0_scrambling        = 256;
-  format_2.n_id_scrambling          = 382;
 
   return helper;
 }
@@ -645,18 +657,21 @@ pucch_info_test_helper ocudu::unittests::build_valid_pucch_format_3_pdu()
 
   pucch.crnti                       = to_rnti(0x4444);
   pucch.bwp_cfg                     = &helper.bwp_cfg;
-  auto& format_3                    = pucch.format_params.emplace<pucch_format_3>();
-  pucch.resources.prbs              = {1, 4};
-  pucch.resources.symbols           = {0, 3};
-  pucch.resources.second_hop_prb    = 1;
+  pucch.res                         = &helper.res;
+  helper.res.starting_prb           = 1;
+  helper.res.syms                   = {0, pucch_constants::f3::MAX_NOF_SYMS};
+  helper.res.second_hop_prb         = 1;
+  auto& res_f3                      = helper.res.format_params.emplace<pucch_resource::f3_config>();
+  res_f3.nof_prbs                   = 3;
+  res_f3.additional_dmrs            = false;
+  res_f3.pi_2_bpsk                  = true;
+  auto& f3                          = pucch.format_params.emplace<pucch_info::f3_config>();
+  f3.n_id_0_scrambling              = 256;
+  f3.n_id_scrambling                = 382;
+  f3.n_id_hopping                   = 180;
   pucch.uci_bits.csi_part1_nof_bits = 102;
   pucch.uci_bits.harq_ack_nof_bits  = 100;
   pucch.uci_bits.sr_bits            = sr_nof_bits::one;
-  format_3.n_id_0_scrambling        = 256;
-  format_3.n_id_scrambling          = 382;
-  format_3.n_id_hopping             = 180;
-  format_3.additional_dmrs          = false;
-  format_3.pi_2_bpsk                = true;
 
   return helper;
 }
@@ -668,22 +683,27 @@ pucch_info_test_helper ocudu::unittests::build_valid_pucch_format_4_pdu()
 
   helper.bwp_cfg = {cyclic_prefix::NORMAL, subcarrier_spacing::kHz15, {2, 10}};
 
-  pucch.crnti                       = to_rnti(0x4444);
-  pucch.bwp_cfg                     = &helper.bwp_cfg;
-  auto& format_4                    = pucch.format_params.emplace<pucch_format_4>();
-  pucch.resources.prbs              = {1, 2};
-  pucch.resources.symbols           = {0, 3};
-  pucch.resources.second_hop_prb    = 10;
+  pucch.crnti   = to_rnti(0x4444);
+  pucch.bwp_cfg = &helper.bwp_cfg;
+  pucch.res     = &helper.res;
+
+  helper.res.starting_prb   = 1;
+  helper.res.syms           = {0, pucch_constants::f4::MAX_NOF_SYMS};
+  helper.res.second_hop_prb = 10;
+  auto& res_f4              = helper.res.format_params.emplace<pucch_resource::f4_config>();
+  res_f4.additional_dmrs    = false;
+  res_f4.pi_2_bpsk          = true;
+  res_f4.occ_length         = pucch_f4_occ_len::n2;
+  res_f4.occ_index          = pucch_f4_occ_idx::n1;
+
+  auto& f4             = pucch.format_params.emplace<pucch_info::f4_config>();
+  f4.n_id_0_scrambling = 256;
+  f4.n_id_scrambling   = 382;
+  f4.n_id_hopping      = 180;
+
   pucch.uci_bits.csi_part1_nof_bits = 102;
   pucch.uci_bits.harq_ack_nof_bits  = 100;
   pucch.uci_bits.sr_bits            = sr_nof_bits::one;
-  format_4.n_id_0_scrambling        = 256;
-  format_4.n_id_scrambling          = 382;
-  format_4.n_id_hopping             = 180;
-  format_4.additional_dmrs          = false;
-  format_4.pi_2_bpsk                = true;
-  format_4.occ_length               = pucch_f4_occ_len::n2;
-  format_4.occ_index                = pucch_f4_occ_idx::n1;
 
   return helper;
 }
@@ -698,9 +718,11 @@ mac_ul_sched_result_test_helper ocudu::unittests::build_valid_mac_ul_sched_resul
   // Add PUCCH PDUs.
   helper.pucch_f1              = build_valid_pucch_format_1_pdu();
   helper.pucch_f1.info.bwp_cfg = &helper.pucch_f1.bwp_cfg;
+  helper.pucch_f1.info.res     = &helper.pucch_f1.res;
   helper.sched_result.pucchs.push_back(helper.pucch_f1.info);
   helper.pucch_f2              = build_valid_pucch_format_2_pdu();
   helper.pucch_f2.info.bwp_cfg = &helper.pucch_f2.bwp_cfg;
+  helper.pucch_f2.info.res     = &helper.pucch_f2.res;
   helper.sched_result.pucchs.push_back(helper.pucch_f2.info);
 
   // Add PUSCH PDU.
@@ -725,6 +747,7 @@ mac_ul_sched_result_test_helper unittests::build_valid_mac_ul_sched_result_with_
   for (unsigned i = 0; i != MAX_PUCCH_PDUS_PER_SLOT; ++i) {
     helper.pucch_f1              = build_valid_pucch_format_1_pdu();
     helper.pucch_f1.info.bwp_cfg = &helper.pucch_f1.bwp_cfg;
+    helper.pucch_f1.info.res     = &helper.pucch_f1.res;
     helper.sched_result.pucchs.push_back(helper.pucch_f1.info);
   }
 

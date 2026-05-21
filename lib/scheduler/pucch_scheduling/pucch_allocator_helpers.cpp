@@ -16,24 +16,22 @@ pucch_existing_pdus_handler::pucch_existing_pdus_handler(rnti_t                 
   pdu_id = 0;
 
   for (auto& pucch : pucchs) {
-    if (pucch.crnti == crnti and pucch.pdu_context.res_id) {
+    if (pucch.crnti == crnti and pucch.res->res_id.is_ded()) {
       pucch.pdu_context.id = MAX_PUCCH_PDUS_PER_SLOT;
       ++pdus_cnt;
 
       if (pucch.uci_bits.harq_ack_nof_bits != 0U) {
         if (pucch.format() == pucch_format::FORMAT_1 and
-            pucch.pdu_context.res_id->ded().ue_res_id ==
-                res_params.sr_res_id(pucch_sr_resource_id(0)).ded().ue_res_id) {
+            pucch.res->res_id.ded().ue_res_id == res_params.sr_res_id(pucch_sr_resource_id(0)).ded().ue_res_id) {
           // For Format 1, the SR resource can carry HARQ-ACK.
           sr_pdu = &pucch;
         } else {
           harq_pdu = &pucch;
         }
       } else {
-        if (pucch.pdu_context.res_id->ded().ue_res_id ==
-            res_params.sr_res_id(pucch_sr_resource_id(0)).ded().ue_res_id) {
+        if (pucch.res->res_id.ded().ue_res_id == res_params.sr_res_id(pucch_sr_resource_id(0)).ded().ue_res_id) {
           sr_pdu = &pucch;
-        } else if (pucch.pdu_context.res_id->ded().ue_res_id ==
+        } else if (pucch.res->res_id.ded().ue_res_id ==
                    res_params.csi_res_id(pucch_csi_resource_id(0)).ded().ue_res_id) {
           csi_pdu = &pucch;
         } else {
@@ -78,7 +76,7 @@ void pucch_existing_pdus_handler::remove_unused_pdus(static_vector<pucch_info, M
   }
   auto* it = pucchs.begin();
   while (it != pucchs.end()) {
-    if (it->crnti == rnti and it->pdu_context.res_id and it->pdu_context.id >= MAX_PUCCH_PDUS_PER_SLOT) {
+    if (it->crnti == rnti and it->res->res_id.is_ded() and it->pdu_context.id >= MAX_PUCCH_PDUS_PER_SLOT) {
       it = pucchs.erase(it);
     } else {
       ++it;
@@ -135,8 +133,7 @@ void pucch_existing_pdus_handler::update_harq_pdu_bits(unsigned                 
                                      res_prbs.length(),
                                      pucch_res_cfg.syms.length(),
                                      to_float(res_params.max_code_rate_234()));
-      harq_pdu->resources.prbs           = {res_prbs.start(), res_prbs.start() + nof_prbs};
-      harq_pdu->resources.second_hop_prb = pucch_res_cfg.second_hop_prb;
+      std::get<pucch_info::f2_config>(harq_pdu->format_params).nof_prbs = nof_prbs;
     } break;
     case pucch_format::FORMAT_3: {
       harq_pdu->uci_bits.csi_part1_nof_bits = csi_part1_bits;
@@ -151,8 +148,7 @@ void pucch_existing_pdus_handler::update_harq_pdu_bits(unsigned                 
                                      pucch_res_cfg.second_hop_prb.has_value(),
                                      f3_cfg.additional_dmrs,
                                      f3_cfg.pi_2_bpsk);
-      harq_pdu->resources.prbs           = {res_prbs.start(), res_prbs.start() + nof_prbs};
-      harq_pdu->resources.second_hop_prb = pucch_res_cfg.second_hop_prb;
+      std::get<pucch_info::f3_config>(harq_pdu->format_params).nof_prbs = nof_prbs;
     } break;
     case pucch_format::FORMAT_4: {
       harq_pdu->uci_bits.csi_part1_nof_bits = csi_part1_bits;

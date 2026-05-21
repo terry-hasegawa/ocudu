@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: BSD-3-Clause-Open-MPI
 // Portions of this file may implement 3GPP specifications, which may be subject to additional licensing requirements.
 
+#include "lib/scheduler/support/pucch/pucch_default_resource.h"
 #include "tests/unittests/scheduler/test_utils/scheduler_test_suite.h"
 #include "uci_test_utils.h"
 #include <gtest/gtest.h>
@@ -10,26 +11,14 @@ using namespace ocudu;
 
 ////////////    Structs with expected parameters and PUCCH sched INPUT     ////////////
 
-static constexpr unsigned NOF_RBS    = 52;
 static constexpr unsigned default_k1 = 4U;
 
 namespace pucch_harq_common_test {
 
 // Parameters to be passed to test for PUCCH output assessment.
 struct pucch_alloc_common_harq_test_params {
-  struct {
-    unsigned pucch_res_common;
-    unsigned n_cces;
-  } input;
-  struct {
-    pucch_format      format;
-    prb_interval      prbs;
-    unsigned          second_hop_prb;
-    ofdm_symbol_range symbols;
-    uint8_t           initial_cyclic_shift;
-    uint8_t           time_domain_occ;
-    unsigned          pri;
-  } output;
+  unsigned pucch_res_common;
+  unsigned n_cces;
 };
 
 // Dummy function overload of template <typename T> void testing::internal::PrintTo(const T& value, ::std::ostream* os).
@@ -52,20 +41,18 @@ public:
     params{GetParam()},
     t_bench(test_bench_params{
         .pucch_ded_params = {.f0_or_f1_params =
-                                 params.input.pucch_res_common <= 2
+                                 params.pucch_res_common <= 2
                                      ? std::variant<pucch_f1_params, pucch_f0_params>{pucch_f0_params{}}
                                      : std::variant<pucch_f1_params, pucch_f0_params>{pucch_f1_params{}}},
-        .pucch_res_common = params.input.pucch_res_common,
-        .n_cces           = params.input.n_cces}),
-    expected_info(
-        test_helpers::make_common_pucch_info(&t_bench.cell_cfg.params.ul_cfg_common.init_ul_bwp.generic_params,
-                                             t_bench.cell_cfg.params.pci,
-                                             params.output.format,
-                                             params.output.prbs,
-                                             params.output.second_hop_prb,
-                                             params.output.symbols,
-                                             params.output.initial_cyclic_shift,
-                                             params.output.time_domain_occ))
+        .pucch_res_common = params.pucch_res_common,
+        .n_cces           = params.n_cces}),
+    expected_info(test_helpers::make_pucch_info(
+        t_bench.cell_cfg,
+        t_bench.cell_cfg.bwp_res[to_bwp_id(0)].ul().pucch.get_cmn(get_pucch_default_resource_index(
+            params.n_cces,
+            t_bench.cell_cfg.params.dl_cfg_common.init_dl_bwp.pdcch_common.coreset0.value().get_nof_cces(),
+            0U)),
+        {.harq_ack_nof_bits = 1U}))
   {
   }
 
@@ -83,94 +70,28 @@ TEST_P(pucch_alloc_common_harq_test, test_pucch_output_info)
       t_bench.res_grid, t_bench.get_main_ue().crnti, t_bench.k0, default_k1, t_bench.dci_info);
 
   ASSERT_TRUE(pucch_res_indicator.has_value());
-  ASSERT_EQ(params.output.pri, pucch_res_indicator.value());
+  ASSERT_EQ(0, pucch_res_indicator.value());
 
   ASSERT_FALSE(t_bench.res_grid[t_bench.k0 + default_k1].result.ul.pucchs.empty());
   ASSERT_TRUE(find_pucch_pdu(t_bench.res_grid[t_bench.k0 + default_k1].result.ul.pucchs,
                              [&expected = expected_info](const auto& pdu) { return pucch_info_match(expected, pdu); }));
 }
 
-INSTANTIATE_TEST_SUITE_P(
-    ,
-    pucch_alloc_common_harq_test,
-    testing::Values(pucch_alloc_common_harq_test_params{.input = {.pucch_res_common = 0, .n_cces = 1},
-                                                        .output =
-                                                            {
-                                                                .format               = pucch_format::FORMAT_0,
-                                                                .prbs                 = prb_interval{0, 1},
-                                                                .second_hop_prb       = NOF_RBS - 1,
-                                                                .symbols              = ofdm_symbol_range{12, 14},
-                                                                .initial_cyclic_shift = 0,
-                                                                .time_domain_occ      = 0,
-                                                                .pri                  = 0,
-                                                            }},
-                    pucch_alloc_common_harq_test_params{.input  = {.pucch_res_common = 2, .n_cces = 1},
-                                                        .output = {.format               = pucch_format::FORMAT_0,
-                                                                   .prbs                 = prb_interval{3, 4},
-                                                                   .second_hop_prb       = NOF_RBS - 4,
-                                                                   .symbols              = ofdm_symbol_range{12, 14},
-                                                                   .initial_cyclic_shift = 0,
-                                                                   .time_domain_occ      = 0,
-                                                                   .pri                  = 0}},
-                    pucch_alloc_common_harq_test_params{.input  = {.pucch_res_common = 2, .n_cces = 8},
-                                                        .output = {.format               = pucch_format::FORMAT_0,
-                                                                   .prbs                 = prb_interval{3, 4},
-                                                                   .second_hop_prb       = NOF_RBS - 4,
-                                                                   .symbols              = ofdm_symbol_range{12, 14},
-                                                                   .initial_cyclic_shift = 8,
-                                                                   .time_domain_occ      = 0,
-                                                                   .pri                  = 0}},
-                    pucch_alloc_common_harq_test_params{.input  = {.pucch_res_common = 10, .n_cces = 0},
-                                                        .output = {.format               = pucch_format::FORMAT_1,
-                                                                   .prbs                 = prb_interval{4, 5},
-                                                                   .second_hop_prb       = NOF_RBS - 5,
-                                                                   .symbols              = ofdm_symbol_range{4, 14},
-                                                                   .initial_cyclic_shift = 0,
-                                                                   .time_domain_occ      = 0,
-                                                                   .pri                  = 0}},
-                    pucch_alloc_common_harq_test_params{.input  = {.pucch_res_common = 10, .n_cces = 8},
-                                                        .output = {.format               = pucch_format::FORMAT_1,
-                                                                   .prbs                 = prb_interval{4, 5},
-                                                                   .second_hop_prb       = NOF_RBS - 5,
-                                                                   .symbols              = ofdm_symbol_range{4, 14},
-                                                                   .initial_cyclic_shift = 6,
-                                                                   .time_domain_occ      = 0,
-                                                                   .pri                  = 0}},
-                    pucch_alloc_common_harq_test_params{.input  = {.pucch_res_common = 11, .n_cces = 0},
-                                                        .output = {.format               = pucch_format::FORMAT_1,
-                                                                   .prbs                 = prb_interval{0, 1},
-                                                                   .second_hop_prb       = NOF_RBS - 1,
-                                                                   .symbols              = ofdm_symbol_range{0, 14},
-                                                                   .initial_cyclic_shift = 0,
-                                                                   .time_domain_occ      = 0,
-                                                                   .pri                  = 0}},
-                    pucch_alloc_common_harq_test_params{.input  = {.pucch_res_common = 11, .n_cces = 8},
-                                                        .output = {.format               = pucch_format::FORMAT_1,
-                                                                   .prbs                 = prb_interval{1, 2},
-                                                                   .second_hop_prb       = NOF_RBS - 2,
-                                                                   .symbols              = ofdm_symbol_range{0, 14},
-                                                                   .initial_cyclic_shift = 0,
-                                                                   .time_domain_occ      = 0,
-                                                                   .pri                  = 0}},
-                    pucch_alloc_common_harq_test_params{.input  = {.pucch_res_common = 15, .n_cces = 0},
-                                                        .output = {.format               = pucch_format::FORMAT_1,
-                                                                   .prbs                 = prb_interval{13, 14},
-                                                                   .second_hop_prb       = NOF_RBS - 14,
-                                                                   .symbols              = ofdm_symbol_range{0, 14},
-                                                                   .initial_cyclic_shift = 0,
-                                                                   .time_domain_occ      = 0,
-                                                                   .pri                  = 0}},
-                    pucch_alloc_common_harq_test_params{.input  = {.pucch_res_common = 15, .n_cces = 8},
-                                                        .output = {.format               = pucch_format::FORMAT_1,
-                                                                   .prbs                 = prb_interval{13, 14},
-                                                                   .second_hop_prb       = NOF_RBS - 14,
-                                                                   .symbols              = ofdm_symbol_range{0, 14},
-                                                                   .initial_cyclic_shift = 6,
-                                                                   .time_domain_occ      = 0,
-                                                                   .pri                  = 0}}),
-    [](const ::testing::TestParamInfo<pucch_alloc_common_harq_test::ParamType>& info_) {
-      return fmt::format("pucch_res_common_{}_n_cces_{}", info_.param.input.pucch_res_common, info_.param.input.n_cces);
-    });
+INSTANTIATE_TEST_SUITE_P(,
+                         pucch_alloc_common_harq_test,
+                         testing::Values(pucch_alloc_common_harq_test_params{.pucch_res_common = 0, .n_cces = 1},
+                                         pucch_alloc_common_harq_test_params{.pucch_res_common = 2, .n_cces = 1},
+                                         pucch_alloc_common_harq_test_params{.pucch_res_common = 2, .n_cces = 8},
+                                         pucch_alloc_common_harq_test_params{.pucch_res_common = 10, .n_cces = 0},
+                                         pucch_alloc_common_harq_test_params{.pucch_res_common = 10, .n_cces = 8},
+                                         pucch_alloc_common_harq_test_params{.pucch_res_common = 11, .n_cces = 0},
+                                         pucch_alloc_common_harq_test_params{.pucch_res_common = 11, .n_cces = 8},
+                                         pucch_alloc_common_harq_test_params{.pucch_res_common = 15, .n_cces = 0},
+                                         pucch_alloc_common_harq_test_params{.pucch_res_common = 15, .n_cces = 8}),
+                         [](const ::testing::TestParamInfo<pucch_alloc_common_harq_test::ParamType>& info_) {
+                           return fmt::format(
+                               "pucch_res_common_{}_n_cces_{}", info_.param.pucch_res_common, info_.param.n_cces);
+                         });
 
 ///////   Test multiple allocation of common PUCCH resources    ///////
 

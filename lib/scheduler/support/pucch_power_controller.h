@@ -98,12 +98,11 @@ private:
                        pucch_format    format_,
                        pucch_uci_bits& uci_bits_,
                        float           delta_tf_) :
-      slot_rx(sl), nof_prbs(nof_prbs_), format(format_), uci_bits(uci_bits_), delta_tf(delta_tf_)
+      slot_rx(sl), format(format_), uci_bits(uci_bits_), delta_tf(delta_tf_)
     {
     }
 
     slot_point     slot_rx  = slot_point{};
-    unsigned       nof_prbs = 0U;
     pucch_format   format   = pucch_format::NOF_FORMATS;
     pucch_uci_bits uci_bits = {};
     float          delta_tf = 0.0f;

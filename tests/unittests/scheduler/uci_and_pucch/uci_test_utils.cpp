@@ -14,103 +14,50 @@
 
 using namespace ocudu;
 
-pucch_info test_helpers::make_common_pucch_info(const bwp_configuration* bwp_cfg,
-                                                unsigned                 pci,
-                                                pucch_format             format,
-                                                prb_interval             prbs,
-                                                std::optional<unsigned>  second_hop_prb,
-                                                ofdm_symbol_range        symbols,
-                                                uint8_t                  initial_cyclic_shift,
-                                                uint8_t                  time_domain_occ)
-{
-  pucch_info pucch_test{
-      .crnti     = to_rnti(0x4601),
-      .bwp_cfg   = bwp_cfg,
-      .resources = {.prbs = prbs, .symbols = symbols, .second_hop_prb = second_hop_prb},
-      .uci_bits  = {.harq_ack_nof_bits = 1U},
-  };
-
-  if (format == pucch_format::FORMAT_0) {
-    auto& format_0                = pucch_test.format_params.emplace<pucch_format_0>();
-    format_0.initial_cyclic_shift = initial_cyclic_shift;
-    format_0.group_hopping        = pucch_group_hopping::NEITHER;
-    format_0.n_id_hopping         = pci;
-  } else if (format == pucch_format::FORMAT_1) {
-    auto& format_1                = pucch_test.format_params.emplace<pucch_format_1>();
-    format_1.initial_cyclic_shift = initial_cyclic_shift;
-    format_1.time_domain_occ      = time_domain_occ;
-    format_1.group_hopping        = pucch_group_hopping::NEITHER;
-    format_1.n_id_hopping         = pci;
-    format_1.slot_repetition      = pucch_repetition_tx_slot::no_multi_slot;
-  } else {
-    ocudu_assertion_failure("Invalid PUCCH format");
-  }
-
-  return pucch_test;
-}
-
-pucch_info test_helpers::make_ded_pucch_info(const cell_configuration& cell_cfg,
-                                             const pucch_resource&     res,
-                                             pucch_uci_bits            uci_bits)
+pucch_info
+test_helpers::make_pucch_info(const cell_configuration& cell_cfg, const pucch_resource& res, pucch_uci_bits uci_bits)
 {
   pucch_info info{.crnti    = to_rnti(0x4601),
                   .bwp_cfg  = &cell_cfg.params.ul_cfg_common.init_ul_bwp.generic_params,
+                  .res      = &res,
                   .uci_bits = uci_bits};
-
-  info.resources = pucch_resources{
-      .prbs           = res.prbs(),
-      .symbols        = res.syms,
-      .second_hop_prb = res.second_hop_prb,
-  };
-
   switch (res.format()) {
     case pucch_format::FORMAT_0: {
-      const auto& f0 = std::get<pucch_resource::f0_config>(res.format_params);
-      info.format_params.emplace<pucch_format_0>(pucch_format_0{
-          .group_hopping        = pucch_group_hopping::NEITHER,
-          .n_id_hopping         = cell_cfg.params.pci,
-          .initial_cyclic_shift = f0.initial_cyclic_shift,
+      info.format_params.emplace<pucch_info::f0_config>(pucch_info::f0_config{
+          .group_hopping = pucch_group_hopping::NEITHER,
+          .n_id_hopping  = cell_cfg.params.pci,
       });
     } break;
     case pucch_format::FORMAT_1: {
-      const auto& f1 = std::get<pucch_resource::f1_config>(res.format_params);
-      info.format_params.emplace<pucch_format_1>(pucch_format_1{
-          .group_hopping        = pucch_group_hopping::NEITHER,
-          .n_id_hopping         = cell_cfg.params.pci,
-          .initial_cyclic_shift = f1.initial_cyclic_shift,
-          .time_domain_occ      = f1.time_domain_occ,
-          .slot_repetition      = pucch_repetition_tx_slot::no_multi_slot,
+      info.format_params.emplace<pucch_info::f1_config>(pucch_info::f1_config{
+          .group_hopping   = pucch_group_hopping::NEITHER,
+          .n_id_hopping    = cell_cfg.params.pci,
+          .slot_repetition = pucch_repetition_tx_slot::no_multi_slot,
       });
     } break;
     case pucch_format::FORMAT_2: {
-      info.format_params.emplace<pucch_format_2>(pucch_format_2{
+      info.format_params.emplace<pucch_info::f2_config>(pucch_info::f2_config{
           .n_id_scrambling   = cell_cfg.params.pci,
           .n_id_0_scrambling = cell_cfg.params.pci,
+          .nof_prbs          = std::get<pucch_resource::f2_config>(res.format_params).nof_prbs,
       });
     } break;
     case pucch_format::FORMAT_3: {
-      const auto& f3 = std::get<pucch_resource::f3_config>(res.format_params);
-      info.format_params.emplace<pucch_format_3>(pucch_format_3{
+      info.format_params.emplace<pucch_info::f3_config>(pucch_info::f3_config{
           .group_hopping     = pucch_group_hopping::NEITHER,
           .n_id_hopping      = cell_cfg.params.pci,
           .slot_repetition   = pucch_repetition_tx_slot::no_multi_slot,
           .n_id_scrambling   = cell_cfg.params.pci,
-          .pi_2_bpsk         = f3.pi_2_bpsk,
-          .additional_dmrs   = f3.additional_dmrs,
           .n_id_0_scrambling = cell_cfg.params.pci,
+          .nof_prbs          = std::get<pucch_resource::f3_config>(res.format_params).nof_prbs,
       });
     } break;
     case pucch_format::FORMAT_4: {
-      const auto& f4 = std::get<pucch_resource::f4_config>(res.format_params);
-      info.format_params.emplace<pucch_format_4>(pucch_format_4{
+      info.format_params.emplace<pucch_info::f4_config>(pucch_info::f4_config{
           .group_hopping     = pucch_group_hopping::NEITHER,
           .n_id_hopping      = cell_cfg.params.pci,
           .slot_repetition   = pucch_repetition_tx_slot::no_multi_slot,
           .n_id_scrambling   = cell_cfg.params.pci,
-          .pi_2_bpsk         = f4.pi_2_bpsk,
-          .occ_index         = f4.occ_index,
-          .occ_length        = f4.occ_length,
-          .additional_dmrs   = f4.additional_dmrs,
           .n_id_0_scrambling = cell_cfg.params.pci,
       });
     } break;
@@ -124,69 +71,58 @@ pucch_info test_helpers::make_ded_pucch_info(const cell_configuration& cell_cfg,
 
 bool ocudu::pucch_info_match(const pucch_info& expected, const pucch_info& test)
 {
-  bool is_equal =
-      expected.crnti == test.crnti && *expected.bwp_cfg == *test.bwp_cfg && expected.format() == test.format();
-  is_equal = is_equal && expected.resources.prbs == test.resources.prbs &&
-             expected.resources.symbols == test.resources.symbols &&
-             expected.resources.second_hop_prb == test.resources.second_hop_prb;
-
+  bool is_equal = expected.crnti == test.crnti && *expected.bwp_cfg == *test.bwp_cfg && *expected.res == *test.res &&
+                  expected.format() == test.format();
   if (not is_equal) {
     return false;
   }
 
   switch (expected.format()) {
     case pucch_format::FORMAT_0: {
-      const auto& expected_f = std::get<pucch_format_0>(expected.format_params);
-      const auto& test_f     = std::get<pucch_format_0>(test.format_params);
+      const auto& expected_f = std::get<pucch_info::f0_config>(expected.format_params);
+      const auto& test_f     = std::get<pucch_info::f0_config>(test.format_params);
       is_equal               = is_equal && expected_f.group_hopping == test_f.group_hopping &&
-                 expected_f.n_id_hopping == test_f.n_id_hopping &&
-                 expected_f.initial_cyclic_shift == test_f.initial_cyclic_shift &&
-                 expected.uci_bits.sr_bits == test.uci_bits.sr_bits &&
+                 expected_f.n_id_hopping == test_f.n_id_hopping && expected.uci_bits.sr_bits == test.uci_bits.sr_bits &&
                  expected.uci_bits.harq_ack_nof_bits == test.uci_bits.harq_ack_nof_bits;
     } break;
     case pucch_format::FORMAT_1: {
-      const auto& expected_f = std::get<pucch_format_1>(expected.format_params);
-      const auto& test_f     = std::get<pucch_format_1>(test.format_params);
+      const auto& expected_f = std::get<pucch_info::f1_config>(expected.format_params);
+      const auto& test_f     = std::get<pucch_info::f1_config>(test.format_params);
       is_equal               = is_equal && expected_f.group_hopping == test_f.group_hopping &&
-                 expected_f.n_id_hopping == test_f.n_id_hopping &&
-                 expected_f.initial_cyclic_shift == test_f.initial_cyclic_shift &&
-                 expected.uci_bits.sr_bits == test.uci_bits.sr_bits &&
+                 expected_f.n_id_hopping == test_f.n_id_hopping && expected.uci_bits.sr_bits == test.uci_bits.sr_bits &&
                  expected.uci_bits.harq_ack_nof_bits == test.uci_bits.harq_ack_nof_bits &&
-                 expected_f.slot_repetition == test_f.slot_repetition &&
-                 expected_f.time_domain_occ == test_f.time_domain_occ;
+                 expected_f.slot_repetition == test_f.slot_repetition;
     } break;
     case pucch_format::FORMAT_2: {
-      const auto& expected_f = std::get<pucch_format_2>(expected.format_params);
-      const auto& test_f     = std::get<pucch_format_2>(test.format_params);
+      const auto& expected_f = std::get<pucch_info::f2_config>(expected.format_params);
+      const auto& test_f     = std::get<pucch_info::f2_config>(test.format_params);
       is_equal               = is_equal && expected_f.n_id_scrambling == test_f.n_id_scrambling &&
-                 expected_f.n_id_0_scrambling == test_f.n_id_0_scrambling &&
+                 expected_f.n_id_0_scrambling == test_f.n_id_0_scrambling && expected_f.nof_prbs == test_f.nof_prbs &&
                  expected.uci_bits.sr_bits == test.uci_bits.sr_bits &&
                  expected.uci_bits.harq_ack_nof_bits == test.uci_bits.harq_ack_nof_bits &&
                  expected.uci_bits.csi_part1_nof_bits == test.uci_bits.csi_part1_nof_bits;
     } break;
     case pucch_format::FORMAT_3: {
-      const auto& expected_f = std::get<pucch_format_3>(expected.format_params);
-      const auto& test_f     = std::get<pucch_format_3>(test.format_params);
+      const auto& expected_f = std::get<pucch_info::f3_config>(expected.format_params);
+      const auto& test_f     = std::get<pucch_info::f3_config>(test.format_params);
       is_equal               = is_equal && expected_f.group_hopping == test_f.group_hopping &&
-                 expected_f.n_id_hopping == test_f.n_id_hopping && expected.uci_bits.sr_bits == test.uci_bits.sr_bits &&
+                 expected_f.n_id_hopping == test_f.n_id_hopping && expected_f.nof_prbs == test_f.nof_prbs &&
+                 expected.uci_bits.sr_bits == test.uci_bits.sr_bits &&
                  expected.uci_bits.harq_ack_nof_bits == test.uci_bits.harq_ack_nof_bits &&
                  expected.uci_bits.csi_part1_nof_bits == test.uci_bits.csi_part1_nof_bits &&
                  expected_f.slot_repetition == test_f.slot_repetition &&
-                 expected_f.n_id_scrambling == test_f.n_id_scrambling && expected_f.pi_2_bpsk == test_f.pi_2_bpsk &&
-                 expected_f.additional_dmrs == test_f.additional_dmrs &&
+                 expected_f.n_id_scrambling == test_f.n_id_scrambling &&
                  expected_f.n_id_0_scrambling == test_f.n_id_0_scrambling;
     } break;
     case pucch_format::FORMAT_4: {
-      const auto& expected_f = std::get<pucch_format_4>(expected.format_params);
-      const auto& test_f     = std::get<pucch_format_4>(test.format_params);
+      const auto& expected_f = std::get<pucch_info::f4_config>(expected.format_params);
+      const auto& test_f     = std::get<pucch_info::f4_config>(test.format_params);
       is_equal               = is_equal && expected_f.group_hopping == test_f.group_hopping &&
                  expected_f.n_id_hopping == test_f.n_id_hopping && expected.uci_bits.sr_bits == test.uci_bits.sr_bits &&
                  expected.uci_bits.harq_ack_nof_bits == test.uci_bits.harq_ack_nof_bits &&
                  expected.uci_bits.csi_part1_nof_bits == test.uci_bits.csi_part1_nof_bits &&
                  expected_f.slot_repetition == test_f.slot_repetition &&
-                 expected_f.n_id_scrambling == test_f.n_id_scrambling && expected_f.pi_2_bpsk == test_f.pi_2_bpsk &&
-                 expected_f.occ_index == test_f.occ_index && expected_f.occ_length == test_f.occ_length &&
-                 expected_f.additional_dmrs == test_f.additional_dmrs &&
+                 expected_f.n_id_scrambling == test_f.n_id_scrambling &&
                  expected_f.n_id_0_scrambling == test_f.n_id_0_scrambling;
     } break;
     default: {

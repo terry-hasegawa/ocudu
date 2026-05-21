@@ -933,6 +933,7 @@ void ue_cell_grid_allocator::post_process_pucch_pw_ctrl_results(slot_point slot)
     }
 
     pucch_uci_bits pucch_uci_bits;
+    unsigned       nof_prbs = 1;
     // pi_2_bpsk, additional_dmrs and intraslot_freq_hopping are only used for PUCCH format 3 and 4.
     bool pi_2_bpsk              = false;
     bool additional_dmrs        = false;
@@ -942,17 +943,21 @@ void ue_cell_grid_allocator::post_process_pucch_pw_ctrl_results(slot_point slot)
     pucch_uci_bits.sr_bits            = pucch.uci_bits.sr_bits;
     pucch_uci_bits.csi_part1_nof_bits = pucch.uci_bits.csi_part1_nof_bits;
     switch (pucch.format()) {
+      case pucch_format::FORMAT_2: {
+        nof_prbs = std::get<pucch_info::f2_config>(pucch.format_params).nof_prbs;
+      } break;
       case pucch_format::FORMAT_3: {
-        const auto& format_3   = std::get<pucch_format_3>(pucch.format_params);
-        pi_2_bpsk              = format_3.pi_2_bpsk;
-        additional_dmrs        = format_3.additional_dmrs;
-        intraslot_freq_hopping = pucch.resources.second_hop_prb.has_value();
+        const auto& f3         = std::get<pucch_resource::f3_config>(pucch.res->format_params);
+        nof_prbs               = std::get<pucch_info::f3_config>(pucch.format_params).nof_prbs;
+        pi_2_bpsk              = f3.pi_2_bpsk;
+        additional_dmrs        = f3.additional_dmrs;
+        intraslot_freq_hopping = pucch.res->second_hop_prb.has_value();
       } break;
       case pucch_format::FORMAT_4: {
-        const auto& format_4   = std::get<pucch_format_4>(pucch.format_params);
-        pi_2_bpsk              = format_4.pi_2_bpsk;
-        additional_dmrs        = format_4.additional_dmrs;
-        intraslot_freq_hopping = pucch.resources.second_hop_prb.has_value();
+        const auto& f4         = std::get<pucch_resource::f4_config>(pucch.res->format_params);
+        pi_2_bpsk              = f4.pi_2_bpsk;
+        additional_dmrs        = f4.additional_dmrs;
+        intraslot_freq_hopping = pucch.res->second_hop_prb.has_value();
       } break;
       default:
         break;
@@ -960,8 +965,8 @@ void ue_cell_grid_allocator::post_process_pucch_pw_ctrl_results(slot_point slot)
 
     user->get_pcell().get_pucch_power_controller().update_pucch_pw_ctrl_state(slot_alloc.slot,
                                                                               pucch.format(),
-                                                                              pucch.resources.prbs.length(),
-                                                                              pucch.resources.symbols.length(),
+                                                                              nof_prbs,
+                                                                              pucch.res->syms.length(),
                                                                               pucch_uci_bits,
                                                                               intraslot_freq_hopping,
                                                                               pi_2_bpsk,

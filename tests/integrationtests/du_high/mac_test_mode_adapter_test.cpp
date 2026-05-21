@@ -231,13 +231,13 @@ TEST_F(mac_test_mode_test, when_test_mode_ue_has_pucch_grants_then_uci_indicatio
 {
   pucch_info pucch_f0{};
   pucch_f0.crnti = this->params.test_ue_cfg.rnti;
-  pucch_f0.format_params.emplace<pucch_format_0>();
+  pucch_f0.format_params.emplace<pucch_info::f0_config>();
   pucch_f0.uci_bits.harq_ack_nof_bits = 1;
   pucch_f0.uci_bits.sr_bits           = sr_nof_bits::no_sr;
 
   pucch_info pucch_f1{};
   pucch_f1.crnti = this->params.test_ue_cfg.rnti;
-  pucch_f1.format_params.emplace<pucch_format_1>();
+  pucch_f1.format_params.emplace<pucch_info::f1_config>();
   pucch_f1.uci_bits.harq_ack_nof_bits = 1;
   pucch_f1.uci_bits.sr_bits           = sr_nof_bits::no_sr;
 
@@ -350,13 +350,13 @@ TEST_P(mac_test_mode_auto_uci_test, when_test_mode_ue_has_pucch_grants_then_uci_
 
   pucch_info& pucch_f0 = ul_res.pucchs.emplace_back();
   pucch_f0.crnti       = this->params.test_ue_cfg.rnti;
-  pucch_f0.format_params.emplace<pucch_format_1>();
+  pucch_f0.format_params.emplace<pucch_info::f0_config>();
   pucch_f0.uci_bits.harq_ack_nof_bits = 1;
   pucch_f0.uci_bits.sr_bits           = sr_nof_bits::no_sr;
 
   pucch_info& pucch_f1 = ul_res.pucchs.emplace_back();
   pucch_f1.crnti       = this->params.test_ue_cfg.rnti;
-  pucch_f1.format_params.emplace<pucch_format_1>();
+  pucch_f1.format_params.emplace<pucch_info::f1_config>();
   pucch_f1.uci_bits.harq_ack_nof_bits = 1;
   pucch_f1.uci_bits.sr_bits           = sr_nof_bits::no_sr;
 
@@ -432,7 +432,7 @@ TEST_P(mac_test_mode_auto_uci_test, when_uci_is_forwarded_to_mac_then_test_mode_
 
   pucch_info& pucch_f2 = ul_res.pucchs.emplace_back();
   pucch_f2.crnti       = this->params.test_ue_cfg.rnti;
-  pucch_f2.format_params.emplace<pucch_format_2>();
+  pucch_f2.format_params.emplace<pucch_info::f2_config>();
   pucch_f2.uci_bits.harq_ack_nof_bits  = 1;
   pucch_f2.uci_bits.sr_bits            = sr_nof_bits::one;
   pucch_f2.uci_bits.csi_part1_nof_bits = 11;
@@ -440,7 +440,7 @@ TEST_P(mac_test_mode_auto_uci_test, when_uci_is_forwarded_to_mac_then_test_mode_
 
   pucch_info& pucch_f3 = ul_res.pucchs.emplace_back();
   pucch_f3.crnti       = this->params.test_ue_cfg.rnti;
-  pucch_f3.format_params.emplace<pucch_format_3>();
+  pucch_f3.format_params.emplace<pucch_info::f3_config>();
   pucch_f3.uci_bits.harq_ack_nof_bits  = 1;
   pucch_f3.uci_bits.sr_bits            = sr_nof_bits::one;
   pucch_f3.uci_bits.csi_part1_nof_bits = 11;
@@ -448,7 +448,7 @@ TEST_P(mac_test_mode_auto_uci_test, when_uci_is_forwarded_to_mac_then_test_mode_
 
   pucch_info& pucch_f4 = ul_res.pucchs.emplace_back();
   pucch_f4.crnti       = this->params.test_ue_cfg.rnti;
-  pucch_f4.format_params.emplace<pucch_format_4>();
+  pucch_f4.format_params.emplace<pucch_info::f4_config>();
   pucch_f4.uci_bits.harq_ack_nof_bits  = 1;
   pucch_f4.uci_bits.sr_bits            = sr_nof_bits::one;
   pucch_f4.uci_bits.csi_part1_nof_bits = 11;

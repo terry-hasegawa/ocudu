@@ -30,19 +30,21 @@ TEST(mac_fapi_ul_pucch_format1_pdu_conversor_test, ul_pucch_format1_pdu_valid_sh
   ASSERT_EQ(mac_pdu.crnti, fapi_pdu.rnti);
 
   // Resources.
-  const pucch_resources& resources = mac_pdu.resources;
-  ASSERT_EQ(resources.prbs, fapi_pdu.prbs);
-  ASSERT_EQ(resources.symbols, fapi_pdu.symbols);
+  ASSERT_EQ(mac_pdu.grant_prbs(), fapi_pdu.prbs);
+  ASSERT_EQ(mac_pdu.res->syms, fapi_pdu.symbols);
   ASSERT_TRUE(fapi_pdu.second_hop_prb.has_value());
-  ASSERT_EQ(*resources.second_hop_prb, *fapi_pdu.second_hop_prb);
+  ASSERT_EQ(*mac_pdu.res->second_hop_prb, *fapi_pdu.second_hop_prb);
 
   // Format 1.
-  const pucch_format_1& f1 = std::get<pucch_format_1>(mac_pdu.format_params);
+  const auto& res_f1 = std::get<pucch_resource::f1_config>(mac_pdu.res->format_params);
+  ASSERT_EQ(res_f1.time_domain_occ, format1->time_domain_occ_index);
+  ASSERT_EQ(res_f1.initial_cyclic_shift, format1->initial_cyclic_shift);
+  const auto& f1 = std::get<pucch_info::f1_config>(mac_pdu.format_params);
   ASSERT_EQ(f1.n_id_hopping, format1->nid_pucch_hopping);
-  ASSERT_EQ(f1.initial_cyclic_shift, format1->initial_cyclic_shift);
+
+  // UCI bits.
   ASSERT_EQ(static_cast<unsigned>(mac_pdu.uci_bits.sr_bits), static_cast<uint8_t>(format1->sr_present));
   ASSERT_EQ(mac_pdu.uci_bits.harq_ack_nof_bits, format1->bit_len_harq.value());
-  ASSERT_EQ(f1.time_domain_occ, format1->time_domain_occ_index);
 }
 
 TEST(mac_fapi_ul_pucch_format2_pdu_conversor_test, ul_pucch_format2_pdu_valid_should_pass)
@@ -65,16 +67,17 @@ TEST(mac_fapi_ul_pucch_format2_pdu_conversor_test, ul_pucch_format2_pdu_valid_sh
   ASSERT_EQ(mac_pdu.crnti, fapi_pdu.rnti);
 
   // Resources.
-  const pucch_resources& resources = mac_pdu.resources;
   ASSERT_TRUE(fapi_pdu.second_hop_prb.has_value());
-  ASSERT_EQ(resources.second_hop_prb.value(), fapi_pdu.second_hop_prb.value());
-  ASSERT_EQ(resources.prbs, fapi_pdu.prbs);
-  ASSERT_EQ(resources.symbols, fapi_pdu.symbols);
+  ASSERT_EQ(mac_pdu.grant_prbs(), fapi_pdu.prbs);
+  ASSERT_EQ(mac_pdu.res->syms, fapi_pdu.symbols);
+  ASSERT_EQ(mac_pdu.res->second_hop_prb.value(), fapi_pdu.second_hop_prb.value());
 
   // Format 2.
-  const pucch_format_2& f2 = std::get<pucch_format_2>(mac_pdu.format_params);
+  const auto& f2 = std::get<pucch_info::f2_config>(mac_pdu.format_params);
   ASSERT_EQ(f2.n_id_0_scrambling, format2->nid0_pucch_dmrs_scrambling);
   ASSERT_EQ(f2.n_id_scrambling, format2->nid_pucch_scrambling);
+
+  // UCI bits.
   ASSERT_EQ(static_cast<unsigned>(mac_pdu.uci_bits.sr_bits), static_cast<uint8_t>(format2->sr_bit_len));
   ASSERT_EQ(mac_pdu.uci_bits.harq_ack_nof_bits, format2->bit_len_harq.value());
   ASSERT_EQ(mac_pdu.uci_bits.csi_part1_nof_bits, format2->csi_part1_bit_length.value());
@@ -100,22 +103,24 @@ TEST(mac_fapi_ul_pucch_format3_pdu_conversor_test, ul_pucch_format3_pdu_valid_sh
   ASSERT_EQ(mac_pdu.crnti, fapi_pdu.rnti);
 
   // Resources.
-  const pucch_resources& resources = mac_pdu.resources;
   ASSERT_TRUE(fapi_pdu.second_hop_prb.has_value());
-  ASSERT_EQ(resources.second_hop_prb.value(), fapi_pdu.second_hop_prb.value());
-  ASSERT_EQ(resources.prbs, fapi_pdu.prbs);
-  ASSERT_EQ(resources.symbols, fapi_pdu.symbols);
+  ASSERT_EQ(mac_pdu.grant_prbs(), fapi_pdu.prbs);
+  ASSERT_EQ(mac_pdu.res->syms, fapi_pdu.symbols);
+  ASSERT_EQ(mac_pdu.res->second_hop_prb.value(), fapi_pdu.second_hop_prb.value());
 
   // Format 3.
-  const pucch_format_3& f3 = std::get<pucch_format_3>(mac_pdu.format_params);
+  const auto& res_f3 = std::get<pucch_resource::f3_config>(mac_pdu.res->format_params);
+  ASSERT_EQ(res_f3.additional_dmrs, format3->add_dmrs_flag);
+  ASSERT_EQ(res_f3.pi_2_bpsk, format3->pi2_bpsk);
+  const auto& f3 = std::get<pucch_info::f3_config>(mac_pdu.format_params);
   ASSERT_EQ(f3.n_id_0_scrambling, format3->nid0_pucch_dmrs_scrambling);
   ASSERT_EQ(f3.n_id_scrambling, format3->nid_pucch_scrambling);
   ASSERT_EQ(f3.n_id_hopping, format3->nid_pucch_hopping);
+
+  // UCI bits.
   ASSERT_EQ(static_cast<unsigned>(mac_pdu.uci_bits.sr_bits), static_cast<uint8_t>(format3->sr_bit_len));
   ASSERT_EQ(mac_pdu.uci_bits.harq_ack_nof_bits, format3->bit_len_harq.value());
   ASSERT_EQ(mac_pdu.uci_bits.csi_part1_nof_bits, format3->csi_part1_bit_length.value());
-  ASSERT_EQ(f3.additional_dmrs, format3->add_dmrs_flag);
-  ASSERT_EQ(f3.pi_2_bpsk, format3->pi2_bpsk);
 }
 
 TEST(mac_fapi_ul_pucch_format4_pdu_conversor_test, ul_pucch_format4_pdu_valid_should_pass)
@@ -138,22 +143,24 @@ TEST(mac_fapi_ul_pucch_format4_pdu_conversor_test, ul_pucch_format4_pdu_valid_sh
   ASSERT_EQ(mac_pdu.crnti, fapi_pdu.rnti);
 
   // Resources.
-  const pucch_resources& resources = mac_pdu.resources;
   ASSERT_TRUE(fapi_pdu.second_hop_prb.has_value());
-  ASSERT_EQ(resources.second_hop_prb.value(), fapi_pdu.second_hop_prb.value());
-  ASSERT_EQ(resources.prbs, fapi_pdu.prbs);
-  ASSERT_EQ(resources.symbols, fapi_pdu.symbols);
+  ASSERT_EQ(mac_pdu.grant_prbs(), fapi_pdu.prbs);
+  ASSERT_EQ(mac_pdu.res->syms, fapi_pdu.symbols);
+  ASSERT_EQ(mac_pdu.res->second_hop_prb.value(), fapi_pdu.second_hop_prb.value());
 
   // Format 4.
-  const pucch_format_4& f4 = std::get<pucch_format_4>(mac_pdu.format_params);
+  const auto& res_f4 = std::get<pucch_resource::f4_config>(mac_pdu.res->format_params);
+  ASSERT_EQ(res_f4.additional_dmrs, format4->add_dmrs_flag);
+  ASSERT_EQ(res_f4.pi_2_bpsk, format4->pi2_bpsk);
+  ASSERT_EQ(static_cast<unsigned>(res_f4.occ_length), format4->pre_dft_occ_len);
+  ASSERT_EQ(static_cast<unsigned>(res_f4.occ_index), format4->pre_dft_occ_idx);
+  const auto& f4 = std::get<pucch_info::f4_config>(mac_pdu.format_params);
   ASSERT_EQ(f4.n_id_0_scrambling, format4->nid0_pucch_dmrs_scrambling);
   ASSERT_EQ(f4.n_id_scrambling, format4->nid_pucch_scrambling);
   ASSERT_EQ(f4.n_id_hopping, format4->nid_pucch_hopping);
+
+  // UCI bits.
   ASSERT_EQ(static_cast<unsigned>(mac_pdu.uci_bits.sr_bits), static_cast<uint8_t>(format4->sr_bit_len));
   ASSERT_EQ(mac_pdu.uci_bits.harq_ack_nof_bits, format4->bit_len_harq.value());
   ASSERT_EQ(mac_pdu.uci_bits.csi_part1_nof_bits, format4->csi_part1_bit_length.value());
-  ASSERT_EQ(f4.additional_dmrs, format4->add_dmrs_flag);
-  ASSERT_EQ(f4.pi_2_bpsk, format4->pi2_bpsk);
-  ASSERT_EQ(static_cast<unsigned>(f4.occ_length), format4->pre_dft_occ_len);
-  ASSERT_EQ(static_cast<unsigned>(f4.occ_index), format4->pre_dft_occ_idx);
 }

@@ -532,9 +532,10 @@ void cell_metrics_handler::handle_slot_result(slot_point_extended       sl_tx,
   prb_bitmap pucch_prbs(cell_cfg.nof_ul_prbs);
   for (const auto& pucch : slot_result.ul.pucchs) {
     // Mark the PRBs used by this PUCCH.
-    pucch_prbs.fill(pucch.resources.prbs.start(), pucch.resources.prbs.stop());
-    if (pucch.resources.second_hop_prb.has_value()) {
-      pucch_prbs.fill(*pucch.resources.second_hop_prb, *pucch.resources.second_hop_prb + pucch.resources.prbs.length());
+    const prb_interval prbs = pucch.grant_prbs();
+    pucch_prbs.fill(prbs.start(), prbs.stop());
+    if (pucch.res->second_hop_prb.has_value()) {
+      pucch_prbs.fill(*pucch.res->second_hop_prb, *pucch.res->second_hop_prb + prbs.length());
     }
   }
   data.pucch_rbs_used += pucch_prbs.count();

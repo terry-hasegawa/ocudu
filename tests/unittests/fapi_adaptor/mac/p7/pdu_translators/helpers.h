@@ -101,6 +101,7 @@ srs_info_helper build_valid_srs_pdu();
 /// Helper struct to manage the pointer life cycle of a PUCCH info.
 struct pucch_info_test_helper {
   bwp_configuration bwp_cfg;
+  pucch_resource    res;
   pucch_info        info;
 };
 
