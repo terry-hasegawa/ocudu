@@ -39,7 +39,7 @@ protected:
                                                               max_csi_symbol,
                                                               default_ssb_period,
                                                               default_ssb_slots,
-                                                              sib1_rtx_periodicity::ms160,
+                                                              1U,
                                                               {}),
                  "Derivation failed");
   }
@@ -117,7 +117,7 @@ TEST(csi_helper_test, ssb_slot_offsets_are_all_avoided)
                                                            max_csi_symbol,
                                                            ssb_period,
                                                            ssb_slots,
-                                                           sib1_rtx_periodicity::ms160,
+                                                           1U,
                                                            {}));
 
   const unsigned ssb_period_slots = ssb_periodicity_to_value(ssb_period) * get_nof_slots_per_subframe(tdd_cfg.ref_scs);

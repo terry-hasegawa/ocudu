@@ -259,8 +259,8 @@ make_default_csi_meas_builder_params(const config_helpers::cell_config_builder_p
                                                       csi_params.csi_params.tracking_csi_ofdm_symbol_indices.end());
 
     const ssb_configuration ssb_cfg = make_default_ssb_config(params);
-    const auto ssb_slots  = ssb_helper::get_occupied_slot_offsets(ssb_cfg, params.dl_carrier.band, tdd_pattern.ref_scs);
-    const auto sib1_slots = sib_helper::get_occupied_slot_offsets(
+    const auto ssb_slots = ssb_helper::get_occupied_slot_offsets(ssb_cfg, params.dl_carrier.band, tdd_pattern.ref_scs);
+    const auto sib1_occ  = sib_helper::get_occupied_slot_offsets(
         ssb_cfg, params.dl_carrier.band, tdd_pattern.ref_scs, params.ss0_index, params.cs0_index->value());
     if (not csi_helper::derive_valid_csi_rs_slot_offsets(csi_params.csi_params,
                                                          std::nullopt,
@@ -270,8 +270,8 @@ make_default_csi_meas_builder_params(const config_helpers::cell_config_builder_p
                                                          max_csi_symbol,
                                                          ssb_cfg.ssb_period,
                                                          ssb_slots,
-                                                         sib1_rtx_periodicity::ms160,
-                                                         sib1_slots)) {
+                                                         sib1_occ.window_period_slots,
+                                                         sib1_occ.slot_offsets)) {
       report_fatal_error("Failed to find valid csi-MeasConfig");
     }
 
