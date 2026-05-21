@@ -134,7 +134,7 @@ protected:
     cu_up_dependencies deps;
     deps.gtpu_pcap          = &dummy_pcap;
     deps.exec_mapper        = exec_pool.get();
-    deps.e1_conn_client     = &e1ap_client;
+    deps.e1_conn_clients    = {&e1ap_client};
     deps.f1u_teid_allocator = f1u_teid_allocator.get();
     deps.f1u_gateway        = f1u_gw.get();
     ngu_gw                  = create_udp_gtpu_gateway(cu_up_udp_cfg, *broker, *executor, *executor);

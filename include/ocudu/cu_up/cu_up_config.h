@@ -103,7 +103,7 @@ struct cu_up_dependencies {
   /// PDCP metrics notifier.
   pdcp_metrics_notifier* pdcp_metric_notifier = nullptr;
   /// E1AP connection client.
-  e1_connection_client* e1_conn_client = nullptr;
+  std::vector<e1_connection_client*> e1_conn_clients;
   /// NG-U gateways
   std::vector<gtpu_gateway*> ngu_gws;
   /// Optional notifier invoked once after a successful E1 Setup.

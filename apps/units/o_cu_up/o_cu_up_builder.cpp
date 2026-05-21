@@ -112,8 +112,8 @@ o_cu_up_unit ocudu::build_o_cu_up(const o_cu_up_unit_config& unit_cfg, const o_c
   config.cu_up_cfg.qos = generate_cu_up_qos_config(unit_cfg.cu_up_cfg);
 
   ocuup::o_cu_up_dependencies ocu_up_dependencies;
-  ocu_up_dependencies.cu_dependencies.exec_mapper        = &dependencies.workers->get_cu_up_executor_mapper();
-  ocu_up_dependencies.cu_dependencies.e1_conn_client     = dependencies.e1ap_conn_client;
+  ocu_up_dependencies.cu_dependencies.exec_mapper     = &dependencies.workers->get_cu_up_executor_mapper();
+  ocu_up_dependencies.cu_dependencies.e1_conn_clients = {dependencies.e1ap_conn_client}; // TODO support multiple E1APs.
   ocu_up_dependencies.cu_dependencies.f1u_teid_allocator = dependencies.f1u_teid_allocator;
   ocu_up_dependencies.cu_dependencies.f1u_gateway        = dependencies.f1u_gateway;
   ocu_up_dependencies.cu_dependencies.gtpu_pcap          = dependencies.gtpu_pcap;

@@ -19,11 +19,14 @@ using namespace ocuup;
 static void assert_cu_up_dependencies_valid(const cu_up_dependencies& dependencies)
 {
   ocudu_assert(dependencies.exec_mapper != nullptr, "Invalid CU-UP UE executor pool");
-  ocudu_assert(dependencies.e1_conn_client != nullptr, "Invalid E1 connection client");
+  ocudu_assert(not dependencies.e1_conn_clients.empty(), "Invalid E1 connection client(s)");
   ocudu_assert(dependencies.f1u_gateway != nullptr, "Invalid F1-U connector");
   ocudu_assert(not dependencies.ngu_gws.empty(), "Invalid N3 gateway list");
   for (auto* gw : dependencies.ngu_gws) {
     ocudu_assert(gw != nullptr, "Invalid N3 gateway");
+  }
+  for (auto* e1 : dependencies.e1_conn_clients) {
+    ocudu_assert(e1 != nullptr, "Invalid E1 gateway");
   }
   ocudu_assert(dependencies.gtpu_pcap != nullptr, "Invalid GTP-U pcap");
 }
@@ -40,16 +43,16 @@ static cu_up_manager_impl_config generate_cu_up_manager_impl_config(const cu_up_
 }
 
 static cu_up_manager_impl_dependencies
-generate_cu_up_manager_impl_dependencies(std::atomic<bool>&         stop_command,
-                                         const cu_up_dependencies&  dependencies,
-                                         e1ap_interface&            e1ap,
-                                         gtpu_demux&                ngu_demux,
-                                         ngu_session_manager&       ngu_session_mngr,
-                                         gtpu_teid_pool&            n3_teid_allocator,
-                                         fifo_async_task_scheduler& main_ctrl_loop)
+generate_cu_up_manager_impl_dependencies(std::atomic<bool>&                                  stop_command,
+                                         const cu_up_dependencies&                           dependencies,
+                                         std::vector<std::reference_wrapper<e1ap_interface>> e1aps,
+                                         gtpu_demux&                                         ngu_demux,
+                                         ngu_session_manager&                                ngu_session_mngr,
+                                         gtpu_teid_pool&                                     n3_teid_allocator,
+                                         fifo_async_task_scheduler&                          main_ctrl_loop)
 {
   return {stop_command,
-          {e1ap}, // TODO: Allow multiple E1APs.
+          e1aps,
           ngu_demux,
           ngu_session_mngr,
           n3_teid_allocator,
@@ -129,21 +132,34 @@ cu_up::cu_up(const cu_up_config& config_, const cu_up_dependencies& dependencies
     }
   }
 
-  /// > Create e1ap
-  e1ap = create_e1ap(cfg.e1ap,
-                     *dependencies.e1_conn_client,
-                     e1ap_cu_up_mng_adapter,
-                     *dependencies.timers,
-                     dependencies.exec_mapper->ctrl_executor());
+  /// > Create E1AP(s).
+  e1ap_cu_up_mng_adapters.reserve(dependencies.e1_conn_clients.size());
+  std::vector<std::reference_wrapper<e1ap_interface>> e1ap_refs;
+  for (uint16_t e1_index = 0; e1_index < dependencies.e1_conn_clients.size(); e1_index++) {
+    auto* e1_gw = dependencies.e1_conn_clients[e1_index];
+    e1ap_cu_up_mng_adapters.emplace_back();
+    e1ap_cu_up_manager_adapter&     e1ap_cu_up_mng_adapter = e1ap_cu_up_mng_adapters.back();
+    std::unique_ptr<e1ap_interface> e1ap                   = create_e1ap(cu_up_e1_index_t{e1_index},
+                                                       cfg.e1ap,
+                                                       *e1_gw,
+                                                       e1ap_cu_up_mng_adapter,
+                                                       *dependencies.timers,
+                                                       dependencies.exec_mapper->ctrl_executor());
+    e1ap_refs.emplace_back(*e1ap);
+    e1aps.push_back(std::move(e1ap));
+  }
 
   /// > Create CU-UP manager
   cu_up_mng = std::make_unique<cu_up_manager_impl>(
       generate_cu_up_manager_impl_config(cfg),
       generate_cu_up_manager_impl_dependencies(
-          stop_command, dependencies, *e1ap, *ngu_demux, *ngu_session_mngr, *n3_teid_allocator, main_ctrl_loop));
+          stop_command, dependencies, e1ap_refs, *ngu_demux, *ngu_session_mngr, *n3_teid_allocator, main_ctrl_loop));
 
-  /// > Connect E1AP to CU-UP manager
-  e1ap_cu_up_mng_adapter.connect_cu_up_manager(*cu_up_mng);
+  /// > Connect E1AP(s) to CU-UP manager.
+  for (auto& e1ap_cu_up_mng_adapter : e1ap_cu_up_mng_adapters) {
+    e1ap_cu_up_mng_adapter.connect_cu_up_manager(*cu_up_mng);
+  }
+
   // Start statistics report timer
   if (cfg.statistics_report_period.count() > 0) {
     statistics_report_timer = dependencies.timers->create_unique_timer(dependencies.exec_mapper->ctrl_executor());
@@ -173,25 +189,28 @@ void cu_up::start()
 
   bool connected = false;
   if (not ctrl_executor.execute([this, &p, &connected]() {
-        main_ctrl_loop.schedule([this, &p, &connected](coro_context<async_task<void>>& ctx) {
-          CORO_BEGIN(ctx);
+        main_ctrl_loop.schedule(
+            [this, &p, &connected, e1ap = e1aps.end()](coro_context<async_task<void>>& ctx) mutable {
+              CORO_BEGIN(ctx);
 
-          // Connect to CU-CP and send E1 Setup Request and await for E1 setup response.
-          CORO_AWAIT_VALUE(
-              connected,
-              launch_async<cu_up_setup_routine>(cfg.cu_up_id, cfg.cu_up_name, cfg.plmn, *e1ap, e1_setup_notifier));
+              // Connect to CU-CP and send E1 Setup Request and await for E1 setup response.
+              for (e1ap = e1aps.begin(); e1ap != e1aps.end(); ++e1ap) {
+                CORO_AWAIT_VALUE(connected,
+                                 launch_async<cu_up_setup_routine>(
+                                     cfg.cu_up_id, cfg.cu_up_name, cfg.plmn, **e1ap, e1_setup_notifier));
+              }
 
-          if (cfg.test_mode_cfg.enabled) {
-            logger.info("enabling test mode...");
-            CORO_AWAIT(cu_up_mng->enable_test_mode());
-            logger.info("test mode enabled");
-          }
+              if (cfg.test_mode_cfg.enabled) {
+                logger.info("enabling test mode...");
+                CORO_AWAIT(cu_up_mng->enable_test_mode());
+                logger.info("test mode enabled");
+              }
 
-          // Signal start() caller thread that the operation is complete.
-          p.set_value();
+              // Signal start() caller thread that the operation is complete.
+              p.set_value();
 
-          CORO_RETURN();
-        });
+              CORO_RETURN();
+            });
       })) {
     report_fatal_error("Unable to initiate CU-UP setup routine");
   }
@@ -217,32 +236,35 @@ void cu_up::stop()
 
   auto stop_cu_up_main_loop = [this, &cvar]() mutable {
     // Dispatch coroutine to stop CU-UP.
-    main_ctrl_loop.schedule(launch_async([this, &cvar](coro_context<async_task<void>>& ctx) mutable {
-      CORO_BEGIN(ctx);
+    main_ctrl_loop.schedule(
+        launch_async([this, &cvar, e1ap = e1aps.end()](coro_context<async_task<void>>& ctx) mutable {
+          CORO_BEGIN(ctx);
 
-      if (not running) {
-        // Already stopped.
-        CORO_EARLY_RETURN();
-      }
+          if (not running) {
+            // Already stopped.
+            CORO_EARLY_RETURN();
+          }
 
-      // Run E1 Release Procedure.
-      CORO_AWAIT(e1ap->handle_cu_up_e1ap_release_request());
+          // Run E1 Release Procedure.
+          for (e1ap = e1aps.begin(); e1ap != e1aps.end(); ++e1ap) {
+            CORO_AWAIT((*e1ap)->handle_cu_up_e1ap_release_request());
+          }
 
-      // CU-UP stops listening to new GTPU Rx PDUs and stops pushing UL PDUs.
-      CORO_AWAIT(handle_stop_command());
+          // CU-UP stops listening to new GTPU Rx PDUs and stops pushing UL PDUs.
+          CORO_AWAIT(handle_stop_command());
 
-      // We defer main ctrl loop stop to let the current coroutine complete successfully.
-      defer_until_success(ctrl_executor, timers, [this, &cvar]() {
-        // Stop main control loop and communicate back with the caller thread.
-        auto main_loop = main_ctrl_loop.request_stop();
+          // We defer main ctrl loop stop to let the current coroutine complete successfully.
+          defer_until_success(ctrl_executor, timers, [this, &cvar]() {
+            // Stop main control loop and communicate back with the caller thread.
+            auto main_loop = main_ctrl_loop.request_stop();
 
-        std::lock_guard<std::mutex> lock2(mutex);
-        running = false;
-        cvar.notify_all();
-      });
+            std::lock_guard<std::mutex> lock2(mutex);
+            running = false;
+            cvar.notify_all();
+          });
 
-      CORO_RETURN();
-    }));
+          CORO_RETURN();
+        }));
   };
 
   // Dispatch task to stop CU-UP main loop.
@@ -265,7 +287,9 @@ async_task<void> cu_up::handle_stop_command()
 
   gtpu_gw_adapter.disconnect();
 
-  e1ap_cu_up_mng_adapter.disconnect();
+  for (auto& e1ap_cu_up_mng_adapter : e1ap_cu_up_mng_adapters) {
+    e1ap_cu_up_mng_adapter.disconnect();
+  }
   // Do not disconnect GTP-U Demux as it is being concurrently accessed from the thread pool.
   // It will be safely stopped from inside the CU-UP manager.
 
@@ -282,7 +306,8 @@ async_task<void> cu_up::handle_stop_command()
 void cu_up::on_statistics_report_timer_expired()
 {
   // Log statistics
-  logger.debug("num_e1ap_ues={} num_cu_up_ues={}", e1ap->get_nof_ues(), cu_up_mng->get_nof_ues());
+  // TODO sum E1AP statistics.
+  logger.debug("num_e1ap_ues={} num_cu_up_ues={}", e1aps[0]->get_nof_ues(), cu_up_mng->get_nof_ues());
 
   // Restart timer
   statistics_report_timer.set(cfg.statistics_report_period,

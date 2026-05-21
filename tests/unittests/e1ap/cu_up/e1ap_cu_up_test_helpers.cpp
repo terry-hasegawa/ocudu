@@ -42,7 +42,7 @@ e1ap_cu_up_test::e1ap_cu_up_test()
   e1ap_cfg.max_nof_ues      = 16384;
   e1ap_cfg.json_log_enabled = true;
 
-  e1ap = create_e1ap(e1ap_cfg, e1ap_gw, cu_up_notifier, timers, cu_up_worker);
+  e1ap = create_e1ap(cu_up_e1_index_t{0}, e1ap_cfg, e1ap_gw, cu_up_notifier, timers, cu_up_worker);
 }
 
 void e1ap_cu_up_test::run_e1_setup_procedure()

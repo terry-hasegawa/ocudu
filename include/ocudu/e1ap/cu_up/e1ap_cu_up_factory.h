@@ -15,7 +15,8 @@ namespace ocudu {
 namespace ocuup {
 
 /// Creates an instance of an E1AP interface, notifying outgoing packets on the specified listener object.
-std::unique_ptr<e1ap_interface> create_e1ap(const e1ap_configuration&    e1ap_cfg_,
+std::unique_ptr<e1ap_interface> create_e1ap(cu_up_e1_index_t             e1_index,
+                                            const e1ap_configuration&    e1ap_cfg_,
                                             e1_connection_client&        e1_client_handler_,
                                             e1ap_cu_up_manager_notifier& cu_up_notifier_,
                                             timer_manager&               timers_,
