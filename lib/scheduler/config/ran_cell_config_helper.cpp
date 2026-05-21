@@ -6,6 +6,7 @@
 #include "ocudu/ran/pdcch/pdcch_candidates.h"
 #include "ocudu/ran/pdcch/pdcch_type0_css_coreset_config.h"
 #include "ocudu/ran/prach/prach_helper.h"
+#include "ocudu/ran/ssb/ssb_helper.h"
 #include "ocudu/ran/ssb/ssb_mapping.h"
 #include "ocudu/scheduler/config/time_domain_resource_helper.h"
 
@@ -253,20 +254,19 @@ make_default_csi_meas_builder_params(const config_helpers::cell_config_builder_p
     // Set a default CSI report slot offset that falls in an UL slot.
     const auto& tdd_pattern = *params.tdd_ul_dl_cfg_common;
 
-    constexpr unsigned default_ssb_period_ms = 10U;
-
     const unsigned max_csi_symbol = *std::max_element(csi_params.csi_params.tracking_csi_ofdm_symbol_indices.begin(),
                                                       csi_params.csi_params.tracking_csi_ofdm_symbol_indices.end());
 
-    static constexpr std::array<unsigned, 1> default_ssb_slots = {0U};
+    const ssb_configuration ssb_cfg = make_default_ssb_config(params);
+    const auto ssb_slots = ssb_helper::get_occupied_slot_offsets(ssb_cfg, params.dl_carrier.band, tdd_pattern.ref_scs);
     if (not csi_helper::derive_valid_csi_rs_slot_offsets(csi_params.csi_params,
                                                          std::nullopt,
                                                          std::nullopt,
                                                          std::nullopt,
                                                          tdd_pattern,
                                                          max_csi_symbol,
-                                                         default_ssb_period_ms,
-                                                         default_ssb_slots)) {
+                                                         ssb_cfg.ssb_period,
+                                                         ssb_slots)) {
       report_fatal_error("Failed to find valid csi-MeasConfig");
     }
 

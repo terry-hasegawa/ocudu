@@ -51,6 +51,7 @@ add_library(ocudu_ran
         ssb/pbch_mib_pack.cpp
         ssb/ssb_freq_position_generator.cpp
         ssb/ssb_gscn.cpp
+        ssb/ssb_helper.cpp
         ssb/ssb_mapping.cpp
         tdd_ul_dl_config.cpp
         drx_config.cpp)

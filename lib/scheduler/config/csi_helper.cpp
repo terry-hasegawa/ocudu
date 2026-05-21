@@ -101,14 +101,14 @@ ocudu::csi_helper::find_valid_csi_rs_period(const tdd_ul_dl_config_common& tdd_c
 static bool is_csi_slot_offset_valid(unsigned                       slot_offset,
                                      const tdd_ul_dl_config_common& tdd_cfg,
                                      unsigned                       max_csi_symbol_index,
-                                     unsigned                       ssb_period_ms,
+                                     ssb_periodicity                ssb_period,
                                      span<const unsigned>           ssb_slot_offsets)
 {
   // TODO: import sib1_period from expert config and SIB1_OFFSET from SIB1 config.
   static constexpr unsigned SIB1_PERIOD_MS = 160;
   static constexpr unsigned SIB1_OFFSET    = 1;
 
-  const unsigned ssb_period_slots  = ssb_period_ms * get_nof_slots_per_subframe(tdd_cfg.ref_scs);
+  const unsigned ssb_period_slots  = ssb_periodicity_to_value(ssb_period) * get_nof_slots_per_subframe(tdd_cfg.ref_scs);
   const unsigned sib1_period_slots = SIB1_PERIOD_MS * get_nof_slots_per_subframe(tdd_cfg.ref_scs);
 
   const unsigned slot_in_ssb_period = slot_offset % ssb_period_slots;
@@ -129,7 +129,7 @@ bool csi_helper::derive_valid_csi_rs_slot_offsets(du_csi_params&                
                                                   const std::optional<unsigned>& zp_csi_slot_offset,
                                                   const tdd_ul_dl_config_common& tdd_cfg,
                                                   unsigned                       max_csi_symbol_index,
-                                                  unsigned                       ssb_period_ms,
+                                                  ssb_periodicity                ssb_period,
                                                   span<const unsigned>           ssb_slot_offsets)
 {
   ocudu_assert(is_csi_rs_period_valid(csi_params.csi_rs_period, tdd_cfg),
@@ -139,7 +139,7 @@ bool csi_helper::derive_valid_csi_rs_slot_offsets(du_csi_params&                
   // Fill the pre-specified parameters and verify if valid.
   if (meas_csi_slot_offset.has_value()) {
     if (not is_csi_slot_offset_valid(
-            *meas_csi_slot_offset, tdd_cfg, max_csi_symbol_index, ssb_period_ms, ssb_slot_offsets)) {
+            *meas_csi_slot_offset, tdd_cfg, max_csi_symbol_index, ssb_period, ssb_slot_offsets)) {
       return false;
     }
     csi_params.meas_csi_slot_offset = *meas_csi_slot_offset;
@@ -147,16 +147,16 @@ bool csi_helper::derive_valid_csi_rs_slot_offsets(du_csi_params&                
   if (tracking_csi_slot_offset.has_value()) {
     // Tracking CSI-RS uses two consecutive slots.
     if (not is_csi_slot_offset_valid(
-            *tracking_csi_slot_offset, tdd_cfg, max_csi_symbol_index, ssb_period_ms, ssb_slot_offsets) or
+            *tracking_csi_slot_offset, tdd_cfg, max_csi_symbol_index, ssb_period, ssb_slot_offsets) or
         not is_csi_slot_offset_valid(
-            *tracking_csi_slot_offset + 1, tdd_cfg, max_csi_symbol_index, ssb_period_ms, ssb_slot_offsets)) {
+            *tracking_csi_slot_offset + 1, tdd_cfg, max_csi_symbol_index, ssb_period, ssb_slot_offsets)) {
       return false;
     }
     csi_params.tracking_csi_slot_offset = *tracking_csi_slot_offset;
   }
   if (zp_csi_slot_offset.has_value()) {
     if (not is_csi_slot_offset_valid(
-            *zp_csi_slot_offset, tdd_cfg, max_csi_symbol_index, ssb_period_ms, ssb_slot_offsets)) {
+            *zp_csi_slot_offset, tdd_cfg, max_csi_symbol_index, ssb_period, ssb_slot_offsets)) {
       return false;
     }
     csi_params.zp_csi_slot_offset = *zp_csi_slot_offset;
@@ -174,12 +174,12 @@ bool csi_helper::derive_valid_csi_rs_slot_offsets(du_csi_params&                
   bool meas_found     = meas_csi_slot_offset.has_value() or zp_csi_slot_offset.has_value();
   for (unsigned i = 0; i < static_cast<unsigned>(csi_params.csi_rs_period) and (not meas_found or not tracking_found);
        ++i) {
-    if (not is_csi_slot_offset_valid(i, tdd_cfg, max_csi_symbol_index, ssb_period_ms, ssb_slot_offsets)) {
+    if (not is_csi_slot_offset_valid(i, tdd_cfg, max_csi_symbol_index, ssb_period, ssb_slot_offsets)) {
       continue;
     }
     // Note: Tracking CSI-RS occupies two consecutive slots.
     if (not tracking_found and
-        is_csi_slot_offset_valid(i + 1, tdd_cfg, max_csi_symbol_index, ssb_period_ms, ssb_slot_offsets) and
+        is_csi_slot_offset_valid(i + 1, tdd_cfg, max_csi_symbol_index, ssb_period, ssb_slot_offsets) and
         (not meas_found or (i != csi_params.meas_csi_slot_offset and (i + 1) != csi_params.meas_csi_slot_offset and
                             i != csi_params.zp_csi_slot_offset and (i + 1) != csi_params.zp_csi_slot_offset))) {
       tracking_found                      = true;

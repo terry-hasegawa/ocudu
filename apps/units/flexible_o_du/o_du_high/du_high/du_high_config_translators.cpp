@@ -17,6 +17,7 @@
 #include "ocudu/ran/pucch/pucch_info.h"
 #include "ocudu/ran/pucch/pucch_mapping.h"
 #include "ocudu/ran/sib/cell_reselection.h"
+#include "ocudu/ran/ssb/ssb_helper.h"
 #include "ocudu/rlc/rlc_srb_config_factory.h"
 #include "ocudu/scheduler/config/cell_config_builder_params.h"
 #include "ocudu/scheduler/config/csi_helper.h"
@@ -288,7 +289,8 @@ static void fill_csi_resources(odu::du_cell_config& out_cell, const du_high_unit
   if (cell_cfg.tdd_ul_dl_cfg.has_value()) {
     const unsigned max_csi_symbol_index = *std::max_element(du_csi.tracking_csi_ofdm_symbol_indices.begin(),
                                                             du_csi.tracking_csi_ofdm_symbol_indices.end());
-    static constexpr std::array<unsigned, 1> ssb_slots = {0U};
+    const auto     ssb_slots =
+        ssb_helper::get_occupied_slot_offsets(out_cell.ran.ssb_cfg, out_cell.ran.dl_carrier.band, cell_cfg.common_scs);
     if (not csi_helper::derive_valid_csi_rs_slot_offsets(
             du_csi,
             csi_cfg.meas_csi_slot_offset,
@@ -296,7 +298,7 @@ static void fill_csi_resources(odu::du_cell_config& out_cell, const du_high_unit
             csi_cfg.zp_csi_slot_offset,
             generate_tdd_pattern(cell_cfg.common_scs, *cell_cfg.tdd_ul_dl_cfg),
             max_csi_symbol_index,
-            cell_cfg.ssb_cfg.ssb_period_msec,
+            static_cast<ssb_periodicity>(cell_cfg.ssb_cfg.ssb_period_msec),
             ssb_slots)) {
       report_error("Unable to derive valid CSI-RS slot offsets and period for cell with pci={}\n", cell_cfg.pci);
     }
