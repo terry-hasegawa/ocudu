@@ -3,6 +3,7 @@
 // Portions of this file may implement 3GPP specifications, which may be subject to additional licensing requirements.
 
 #include "ue_capability_manager.h"
+#include "ocudu/asn1/rrc_nr/rrc_nr.h" // for ho_prep_info_s
 #include "ocudu/asn1/rrc_nr/ul_dcch_msg_ies.h"
 #include "ocudu/du/du_cell_config.h"
 #include "ocudu/du/du_high/du_test_mode_config.h"
@@ -308,4 +309,32 @@ bool ue_capability_manager::update(const byte_buffer& ue_cap_rat_list)
   }
 
   return false;
+}
+
+bool ue_capability_manager::update_from_ho_prep_info(const byte_buffer& ho_prep_info)
+{
+  using namespace asn1::rrc_nr;
+
+  if (ho_prep_info.empty()) {
+    return false;
+  }
+
+  ho_prep_info_s ho_prep;
+  asn1::cbit_ref bref{ho_prep_info};
+  if (ho_prep.unpack(bref) != asn1::OCUDUASN_SUCCESS or
+      ho_prep.crit_exts.type() != ho_prep_info_s::crit_exts_c_::types::c1 or
+      ho_prep.crit_exts.c1().type() != ho_prep_info_s::crit_exts_c_::c1_c_::types::ho_prep_info) {
+    logger.warning("Couldn't unpack HandoverPreparationInformation for UE capability extraction");
+    return false;
+  }
+
+  byte_buffer   packed;
+  asn1::bit_ref bref_out{packed};
+  if (asn1::pack_dyn_seq_of(bref_out, ho_prep.crit_exts.c1().ho_prep_info().ue_cap_rat_list, 0, 8) !=
+      asn1::OCUDUASN_SUCCESS) {
+    logger.warning("Couldn't repack UE-CapabilityRAT-ContainerList from HandoverPreparationInformation");
+    return false;
+  }
+
+  return update(packed);
 }

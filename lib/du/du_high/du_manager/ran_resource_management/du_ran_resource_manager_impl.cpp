@@ -203,7 +203,11 @@ du_ran_resource_manager_impl::update_context(du_ue_index_t                      
     if (reestablished_ue_caps != nullptr) {
       u.ue_cap_manager.update(*reestablished_ue_caps);
     }
-    u.ue_cap_manager.update(upd_req.ue_cap_rat_list);
+    if (not upd_req.ue_cap_rat_list.empty()) {
+      u.ue_cap_manager.update(upd_req.ue_cap_rat_list);
+    } else if (not upd_req.ho_prep_info.empty()) {
+      u.ue_cap_manager.update_from_ho_prep_info(upd_req.ho_prep_info);
+    }
   }
   if (u.ue_cap_manager.summary().has_value()) {
     pdsch_res_mng.update_resources(ue_mcg.cell_group, *u.ue_cap_manager.summary());

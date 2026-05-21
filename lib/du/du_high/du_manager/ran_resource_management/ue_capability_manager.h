@@ -34,6 +34,10 @@ public:
   /// \param[in] ue_cap_rat_list packed UE capability RAT list container.
   bool update(const byte_buffer& ue_cap_rat_list);
 
+  /// \brief Extracts and stores UE capabilities from a packed HandoverPreparationInformation container.
+  /// \param[in] ho_prep_info packed HandoverPreparationInformation.
+  bool update_from_ho_prep_info(const byte_buffer& ho_prep_info);
+
   /// \brief Stores a previously decoded UE capability summary.
   /// \param[in] summary unpacked UE capability summary.
   void update(const ue_capability_summary& summary);
