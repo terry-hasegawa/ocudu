@@ -508,8 +508,8 @@ static void test_ul_pdcch_consistency(const cell_configuration&        cell_cfg,
 {
   const auto& pusch_td_list = cell_cfg.params.ul_cfg_common.init_ul_bwp.pusch_cfg_common->pusch_td_alloc_list;
   for (const pdcch_ul_information& pdcch : ul_pdcchs) {
-    if (pdcch.dci.type == dci_ul_rnti_config_type::tc_rnti_f0_0) {
-      const auto& dci_tc = pdcch.dci.tc_rnti_f0_0;
+    if (pdcch.dci.type() == dci_ul_rnti_config_type::tc_rnti_f0_0) {
+      const auto& dci_tc = pdcch.dci.as_tc_rnti_f0_0();
       // Msg3 reTx.
       ASSERT_LT(dci_tc.time_resource, pusch_td_list.size());
     }
@@ -822,7 +822,7 @@ static bool is_msg3_retx_consistent_with_ul_pdcch(const cell_configuration&   ce
                                                   const ul_sched_info&        ulgrant,
                                                   const pdcch_ul_information& ul_pdcch)
 {
-  if (ul_pdcch.dci.type != dci_ul_rnti_config_type::tc_rnti_f0_0) {
+  if (ul_pdcch.dci.type() != dci_ul_rnti_config_type::tc_rnti_f0_0) {
     // Not Msg3 PDCCH.
     return false;
   }
@@ -834,7 +834,7 @@ static bool is_msg3_retx_consistent_with_ul_pdcch(const cell_configuration&   ce
     return false;
   }
 
-  const auto& dci = ul_pdcch.dci.tc_rnti_f0_0;
+  const auto& dci = ul_pdcch.dci.as_tc_rnti_f0_0();
   const auto& td_list =
       get_pusch_time_domain_resource_table(*cell_cfg.params.ul_cfg_common.init_ul_bwp.pusch_cfg_common);
   if (dci.time_resource >= td_list.size()) {
@@ -1001,7 +1001,7 @@ void test_helper::ra_scheduler_tracker::on_new_result(slot_point sl_tx, const sc
   const auto& pusch_td_list =
       get_pusch_time_domain_resource_table(*cell_cfg.params.ul_cfg_common.init_ul_bwp.pusch_cfg_common);
   for (auto& ul_pdcch : result.dl.ul_pdcchs) {
-    if (ul_pdcch.dci.type != dci_ul_rnti_config_type::tc_rnti_f0_0) {
+    if (ul_pdcch.dci.type() != dci_ul_rnti_config_type::tc_rnti_f0_0) {
       continue;
     }
 
@@ -1012,7 +1012,7 @@ void test_helper::ra_scheduler_tracker::on_new_result(slot_point sl_tx, const sc
     ASSERT_NE(preamble_it, pending_preambles.end()) << "Msg3 reTx UL PDCCH has no associated RACH preamble";
     ASSERT_GT(sl_tx, preamble_it->first_msg3_slot) << "Msg3 reTx UL PDCCH cannot be before Msg3 newTx";
 
-    const auto& dci    = ul_pdcch.dci.tc_rnti_f0_0;
+    const auto& dci    = ul_pdcch.dci.as_tc_rnti_f0_0();
     const auto& td_res = pusch_td_list[dci.time_resource];
 
     const slot_point pusch_slot      = sl_tx + td_res.k2;
@@ -1191,14 +1191,14 @@ void test_helper::harq_tracker::on_new_result(slot_point /*sl_tx*/, const sched_
   for (const pdcch_ul_information& pdcch : result.dl.ul_pdcchs) {
     bool     ndi     = false;
     unsigned harq_id = 0;
-    switch (pdcch.dci.type) {
+    switch (pdcch.dci.type()) {
       case dci_ul_rnti_config_type::c_rnti_f0_0:
-        ndi     = pdcch.dci.c_rnti_f0_0.new_data_indicator != 0;
-        harq_id = pdcch.dci.c_rnti_f0_0.harq_process_number;
+        ndi     = pdcch.dci.as_c_rnti_f0_0().new_data_indicator != 0;
+        harq_id = pdcch.dci.as_c_rnti_f0_0().harq_process_number;
         break;
       case dci_ul_rnti_config_type::c_rnti_f0_1:
-        ndi     = pdcch.dci.c_rnti_f0_1.new_data_indicator != 0;
-        harq_id = pdcch.dci.c_rnti_f0_1.harq_process_number;
+        ndi     = pdcch.dci.as_c_rnti_f0_1().new_data_indicator != 0;
+        harq_id = pdcch.dci.as_c_rnti_f0_1().harq_process_number;
         break;
       default:
         continue;

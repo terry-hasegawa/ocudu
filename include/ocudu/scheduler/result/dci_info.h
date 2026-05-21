@@ -49,49 +49,43 @@ struct dci_dl_info {
                                     dci_1_0_p_rnti_configuration,
                                     dci_1_1_configuration>;
 
-  dci_dl_rnti_config_type type() const { return static_cast<dci_dl_rnti_config_type>(payload_.index()); }
+  dci_dl_rnti_config_type type() const { return static_cast<dci_dl_rnti_config_type>(payload.index()); }
 
   const dci_1_0_si_rnti_configuration& as_si_rnti_f1_0() const
   {
-    return std::get<dci_1_0_si_rnti_configuration>(payload_);
+    return std::get<dci_1_0_si_rnti_configuration>(payload);
   }
-  dci_1_0_si_rnti_configuration& as_si_rnti_f1_0() { return std::get<dci_1_0_si_rnti_configuration>(payload_); }
-  dci_1_0_si_rnti_configuration& set_si_rnti_f1_0() { return payload_.emplace<dci_1_0_si_rnti_configuration>(); }
+  dci_1_0_si_rnti_configuration& as_si_rnti_f1_0() { return std::get<dci_1_0_si_rnti_configuration>(payload); }
+  dci_1_0_si_rnti_configuration& set_si_rnti_f1_0() { return payload.emplace<dci_1_0_si_rnti_configuration>(); }
 
   const dci_1_0_ra_rnti_configuration& as_ra_rnti_f1_0() const
   {
-    return std::get<dci_1_0_ra_rnti_configuration>(payload_);
+    return std::get<dci_1_0_ra_rnti_configuration>(payload);
   }
-  dci_1_0_ra_rnti_configuration& as_ra_rnti_f1_0() { return std::get<dci_1_0_ra_rnti_configuration>(payload_); }
-  dci_1_0_ra_rnti_configuration& set_ra_rnti_f1_0() { return payload_.emplace<dci_1_0_ra_rnti_configuration>(); }
+  dci_1_0_ra_rnti_configuration& as_ra_rnti_f1_0() { return std::get<dci_1_0_ra_rnti_configuration>(payload); }
+  dci_1_0_ra_rnti_configuration& set_ra_rnti_f1_0() { return payload.emplace<dci_1_0_ra_rnti_configuration>(); }
 
-  const dci_1_0_c_rnti_configuration& as_c_rnti_f1_0() const
-  {
-    return std::get<dci_1_0_c_rnti_configuration>(payload_);
-  }
-  dci_1_0_c_rnti_configuration& as_c_rnti_f1_0() { return std::get<dci_1_0_c_rnti_configuration>(payload_); }
-  dci_1_0_c_rnti_configuration& set_c_rnti_f1_0() { return payload_.emplace<dci_1_0_c_rnti_configuration>(); }
+  const dci_1_0_c_rnti_configuration& as_c_rnti_f1_0() const { return std::get<dci_1_0_c_rnti_configuration>(payload); }
+  dci_1_0_c_rnti_configuration&       as_c_rnti_f1_0() { return std::get<dci_1_0_c_rnti_configuration>(payload); }
+  dci_1_0_c_rnti_configuration&       set_c_rnti_f1_0() { return payload.emplace<dci_1_0_c_rnti_configuration>(); }
 
   const dci_1_0_tc_rnti_configuration& as_tc_rnti_f1_0() const
   {
-    return std::get<dci_1_0_tc_rnti_configuration>(payload_);
+    return std::get<dci_1_0_tc_rnti_configuration>(payload);
   }
-  dci_1_0_tc_rnti_configuration& as_tc_rnti_f1_0() { return std::get<dci_1_0_tc_rnti_configuration>(payload_); }
-  dci_1_0_tc_rnti_configuration& set_tc_rnti_f1_0() { return payload_.emplace<dci_1_0_tc_rnti_configuration>(); }
+  dci_1_0_tc_rnti_configuration& as_tc_rnti_f1_0() { return std::get<dci_1_0_tc_rnti_configuration>(payload); }
+  dci_1_0_tc_rnti_configuration& set_tc_rnti_f1_0() { return payload.emplace<dci_1_0_tc_rnti_configuration>(); }
 
-  const dci_1_0_p_rnti_configuration& as_p_rnti_f1_0() const
-  {
-    return std::get<dci_1_0_p_rnti_configuration>(payload_);
-  }
-  dci_1_0_p_rnti_configuration& as_p_rnti_f1_0() { return std::get<dci_1_0_p_rnti_configuration>(payload_); }
-  dci_1_0_p_rnti_configuration& set_p_rnti_f1_0() { return payload_.emplace<dci_1_0_p_rnti_configuration>(); }
+  const dci_1_0_p_rnti_configuration& as_p_rnti_f1_0() const { return std::get<dci_1_0_p_rnti_configuration>(payload); }
+  dci_1_0_p_rnti_configuration&       as_p_rnti_f1_0() { return std::get<dci_1_0_p_rnti_configuration>(payload); }
+  dci_1_0_p_rnti_configuration&       set_p_rnti_f1_0() { return payload.emplace<dci_1_0_p_rnti_configuration>(); }
 
-  const dci_1_1_configuration& as_c_rnti_f1_1() const { return std::get<dci_1_1_configuration>(payload_); }
-  dci_1_1_configuration&       as_c_rnti_f1_1() { return std::get<dci_1_1_configuration>(payload_); }
-  dci_1_1_configuration&       set_c_rnti_f1_1() { return payload_.emplace<dci_1_1_configuration>(); }
+  const dci_1_1_configuration& as_c_rnti_f1_1() const { return std::get<dci_1_1_configuration>(payload); }
+  dci_1_1_configuration&       as_c_rnti_f1_1() { return std::get<dci_1_1_configuration>(payload); }
+  dci_1_1_configuration&       set_c_rnti_f1_1() { return payload.emplace<dci_1_1_configuration>(); }
 
 private:
-  payload_type payload_;
+  payload_type payload;
 };
 
 /// Defines which fields are stored in the DCI payload, based on the chosen DCI format and RNTI type.
@@ -115,14 +109,27 @@ inline const char* dci_ul_rnti_config_format(dci_ul_rnti_config_type type)
 }
 
 struct dci_ul_info {
-  dci_ul_rnti_config_type type;
-  union {
-    dci_0_0_c_rnti_configuration  c_rnti_f0_0;
-    dci_0_0_tc_rnti_configuration tc_rnti_f0_0;
-    dci_0_1_configuration         c_rnti_f0_1;
-  };
+  using payload_type = std::variant<dci_0_0_tc_rnti_configuration, dci_0_0_c_rnti_configuration, dci_0_1_configuration>;
 
-  dci_ul_info() : type(dci_ul_rnti_config_type::c_rnti_f0_0) { new (&c_rnti_f0_0) dci_0_0_c_rnti_configuration(); }
+  dci_ul_rnti_config_type type() const { return static_cast<dci_ul_rnti_config_type>(payload.index()); }
+
+  const dci_0_0_tc_rnti_configuration& as_tc_rnti_f0_0() const
+  {
+    return std::get<dci_0_0_tc_rnti_configuration>(payload);
+  }
+  dci_0_0_tc_rnti_configuration& as_tc_rnti_f0_0() { return std::get<dci_0_0_tc_rnti_configuration>(payload); }
+  dci_0_0_tc_rnti_configuration& set_tc_rnti_f0_0() { return payload.emplace<dci_0_0_tc_rnti_configuration>(); }
+
+  const dci_0_0_c_rnti_configuration& as_c_rnti_f0_0() const { return std::get<dci_0_0_c_rnti_configuration>(payload); }
+  dci_0_0_c_rnti_configuration&       as_c_rnti_f0_0() { return std::get<dci_0_0_c_rnti_configuration>(payload); }
+  dci_0_0_c_rnti_configuration&       set_c_rnti_f0_0() { return payload.emplace<dci_0_0_c_rnti_configuration>(); }
+
+  const dci_0_1_configuration& as_c_rnti_f0_1() const { return std::get<dci_0_1_configuration>(payload); }
+  dci_0_1_configuration&       as_c_rnti_f0_1() { return std::get<dci_0_1_configuration>(payload); }
+  dci_0_1_configuration&       set_c_rnti_f0_1() { return payload.emplace<dci_0_1_configuration>(); }
+
+private:
+  payload_type payload;
 };
 
 } // namespace ocudu

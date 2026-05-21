@@ -307,9 +307,9 @@ TEST_F(scheduler_error_indication_tester,
     return pdcch != nullptr;
   };
   ASSERT_TRUE(this->bench.run_slot_until(pdcch_found, PDCCH_TIMEOUT));
-  ASSERT_EQ(pdcch->dci.type, dci_ul_rnti_config_type::c_rnti_f0_1);
-  harq_id_t h_id = to_harq_id(pdcch->dci.c_rnti_f0_1.harq_process_number);
-  bool      ndi  = pdcch->dci.c_rnti_f0_1.new_data_indicator;
+  ASSERT_EQ(pdcch->dci.type(), dci_ul_rnti_config_type::c_rnti_f0_1);
+  harq_id_t h_id = to_harq_id(pdcch->dci.as_c_rnti_f0_1().harq_process_number);
+  bool      ndi  = pdcch->dci.as_c_rnti_f0_1().new_data_indicator;
 
   // Search for PUSCH.
   const unsigned       PUSCH_TIMEOUT = 10;
@@ -328,8 +328,8 @@ TEST_F(scheduler_error_indication_tester,
 
   // Search for UL PDCCH.
   ASSERT_TRUE(this->bench.run_slot_until(pdcch_found, PDCCH_TIMEOUT));
-  ASSERT_EQ(h_id, to_harq_id(pdcch->dci.c_rnti_f0_1.harq_process_number));
-  ASSERT_NE(pdcch->dci.c_rnti_f0_1.new_data_indicator, ndi) << "UL HARQ should have been newTx";
+  ASSERT_EQ(h_id, to_harq_id(pdcch->dci.as_c_rnti_f0_1().harq_process_number));
+  ASSERT_NE(pdcch->dci.as_c_rnti_f0_1().new_data_indicator, ndi) << "UL HARQ should have been newTx";
 
   // Search for PUSCH.
   ASSERT_TRUE(this->bench.run_slot_until(pusch_found, PUSCH_TIMEOUT));

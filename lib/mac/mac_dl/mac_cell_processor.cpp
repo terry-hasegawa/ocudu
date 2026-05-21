@@ -442,13 +442,13 @@ static dci_payload encode_dci(const pdcch_dl_information& pdcch)
 /// Encodes UL DCI.
 static dci_payload encode_dci(const pdcch_ul_information& pdcch)
 {
-  switch (pdcch.dci.type) {
+  switch (pdcch.dci.type()) {
     case dci_ul_rnti_config_type::c_rnti_f0_0:
-      return dci_0_0_c_rnti_pack(pdcch.dci.c_rnti_f0_0);
+      return dci_0_0_c_rnti_pack(pdcch.dci.as_c_rnti_f0_0());
     case dci_ul_rnti_config_type::tc_rnti_f0_0:
-      return dci_0_0_tc_rnti_pack(pdcch.dci.tc_rnti_f0_0);
+      return dci_0_0_tc_rnti_pack(pdcch.dci.as_tc_rnti_f0_0());
     case dci_ul_rnti_config_type::c_rnti_f0_1:
-      return dci_0_1_pack(pdcch.dci.c_rnti_f0_1);
+      return dci_0_1_pack(pdcch.dci.as_c_rnti_f0_1());
     default:
       ocudu_terminate("Invalid DCI format");
   }

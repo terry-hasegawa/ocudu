@@ -132,7 +132,7 @@ public:
           });
       const bool has_msg3_retx_pdcch =
           std::any_of(dl_res.ul_pdcchs.begin(), dl_res.ul_pdcchs.end(), [](const pdcch_ul_information& pdcch) {
-            return pdcch.dci.type == dci_ul_rnti_config_type::tc_rnti_f0_0;
+            return pdcch.dci.type() == dci_ul_rnti_config_type::tc_rnti_f0_0;
           });
       const bool has_msg3_pusch =
           std::any_of(ul_res.puschs.begin(), ul_res.puschs.end(), [](const ul_sched_info& pusch) {

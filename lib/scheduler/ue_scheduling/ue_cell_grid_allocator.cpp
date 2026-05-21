@@ -797,14 +797,14 @@ void ue_cell_grid_allocator::set_pusch_params(ul_grant_info& grant, const vrb_in
   if (not is_retx and ue_cc.link_adaptation_controller().is_ul_olla_enabled()) {
     msg.context.olla_offset = ue_cc.link_adaptation_controller().ul_snr_offset_db();
   }
-  switch (grant.pdcch->dci.type) {
+  switch (grant.pdcch->dci.type()) {
     case dci_ul_rnti_config_type::tc_rnti_f0_0:
       build_pusch_f0_0_tc_rnti(msg.pusch_cfg,
                                pusch_cfg,
                                mcs_tbs_info.value().tbs,
                                u.crnti,
                                cell_cfg,
-                               grant.pdcch->dci.tc_rnti_f0_0,
+                               grant.pdcch->dci.as_tc_rnti_f0_0(),
                                vrbs,
                                not is_retx);
       break;
@@ -815,7 +815,7 @@ void ue_cell_grid_allocator::set_pusch_params(ul_grant_info& grant, const vrb_in
                               mcs_tbs_info.value().tbs,
                               cell_cfg,
                               bwp_ul_cmn,
-                              grant.pdcch->dci.c_rnti_f0_0,
+                              grant.pdcch->dci.as_c_rnti_f0_0(),
                               vrbs,
                               not is_retx);
       break;
@@ -826,7 +826,7 @@ void ue_cell_grid_allocator::set_pusch_params(ul_grant_info& grant, const vrb_in
                               mcs_tbs_info.value(),
                               ue_cell_cfg,
                               ss_cfg.get_id(),
-                              grant.pdcch->dci.c_rnti_f0_1,
+                              grant.pdcch->dci.as_c_rnti_f0_1(),
                               vrbs,
                               not is_retx);
       break;
@@ -840,7 +840,7 @@ void ue_cell_grid_allocator::set_pusch_params(ul_grant_info& grant, const vrb_in
 
   // Save set PDCCH and PUSCH PDU parameters in HARQ process.
   ul_harq_alloc_context pusch_sched_ctx;
-  pusch_sched_ctx.dci_cfg_type = grant.pdcch->dci.type;
+  pusch_sched_ctx.dci_cfg_type = grant.pdcch->dci.type();
   if (not is_retx) {
     pusch_sched_ctx.olla_mcs =
         ue_cc.link_adaptation_controller().calculate_ul_mcs(pusch_cfg.mcs_table, pusch_cfg.use_transform_precoder);

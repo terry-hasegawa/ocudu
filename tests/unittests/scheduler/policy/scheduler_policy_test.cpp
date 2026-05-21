@@ -281,10 +281,11 @@ TEST_P(scheduler_policy_test, scheduler_allocates_more_than_one_ue_in_case_their
   span<const pusch_time_domain_resource_allocation> pusch_td_res_list =
       u1.get_pcell().cfg().cell_cfg_common.params.ul_cfg_common.init_ul_bwp.pusch_cfg_common->pusch_td_alloc_list;
   // In default UE dedicated configuration, SearchSpace#2 is configured to use DCI format 1_1/0_1.
-  if (this->res_grid[0].result.dl.ul_pdcchs[0].dci.c_rnti_f0_1.time_resource ==
-      this->res_grid[0].result.dl.ul_pdcchs[1].dci.c_rnti_f0_1.time_resource) {
-    const unsigned k2 = pusch_td_res_list[this->res_grid[0].result.dl.ul_pdcchs[0].dci.c_rnti_f0_1.time_resource].k2;
-    const auto&    pusch_res_grid = this->res_grid[k2];
+  if (this->res_grid[0].result.dl.ul_pdcchs[0].dci.as_c_rnti_f0_1().time_resource ==
+      this->res_grid[0].result.dl.ul_pdcchs[1].dci.as_c_rnti_f0_1().time_resource) {
+    const unsigned k2 =
+        pusch_td_res_list[this->res_grid[0].result.dl.ul_pdcchs[0].dci.as_c_rnti_f0_1().time_resource].k2;
+    const auto& pusch_res_grid = this->res_grid[k2];
     ASSERT_EQ(pusch_res_grid.result.ul.puschs.size(), 2);
     ASSERT_FALSE(pusch_res_grid.result.ul.puschs[0].pusch_cfg.rbs.type1().overlaps(
         pusch_res_grid.result.ul.puschs[1].pusch_cfg.rbs.type1()));

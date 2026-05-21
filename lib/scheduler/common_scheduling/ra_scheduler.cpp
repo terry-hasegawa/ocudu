@@ -370,7 +370,7 @@ void ra_scheduler::precompute_msg3_pdus()
                              prbs_tbs.tbs_bytes,
                              to_rnti(0x4601),
                              cell_cfg,
-                             msg3_data[i].dci.tc_rnti_f0_0,
+                             msg3_data[i].dci.as_tc_rnti_f0_0(),
                              vrbs,
                              true);
   }
@@ -1406,7 +1406,7 @@ void ra_scheduler::schedule_msg3_retx(cell_resource_allocator& res_alloc, pendin
     ul_info.pusch_cfg          = msg3_data[pusch_td_res_index].pusch;
     ul_info.pusch_cfg.rnti     = msg3_ctx.preamble.tc_rnti;
     ul_info.pusch_cfg.rbs      = msg3_vrbs;
-    ul_info.pusch_cfg.rv_index = pdcch->dci.tc_rnti_f0_0.redundancy_version;
+    ul_info.pusch_cfg.rv_index = pdcch->dci.as_tc_rnti_f0_0().redundancy_version;
     ul_info.pusch_cfg.new_data = false;
 
     // Store parameters used in HARQ.

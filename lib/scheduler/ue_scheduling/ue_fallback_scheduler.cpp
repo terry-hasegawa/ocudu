@@ -1309,12 +1309,12 @@ void ue_fallback_scheduler::fill_ul_srb_grant(ue&                               
                           tbs_bytes,
                           cell_cfg,
                           cell_cfg.params.ul_cfg_common.init_ul_bwp,
-                          pdcch.dci.c_rnti_f0_0,
+                          pdcch.dci.as_c_rnti_f0_0(),
                           vrbs,
                           not is_retx);
 
   // Save set PDCCH and PUSCH PDU parameters in HARQ process.
-  h_ul->save_grant_params(ul_harq_alloc_context{pdcch.dci.type}, msg.pusch_cfg);
+  h_ul->save_grant_params(ul_harq_alloc_context{pdcch.dci.type()}, msg.pusch_cfg);
 
   // Notify UL TB scheduling.
   u.logical_channels().handle_ul_grant(msg.pusch_cfg.tb_size_bytes);

@@ -90,9 +90,9 @@ static auto make_ul_dci_log_entry(const dci_ul_info& dci)
   int8_t                 ant        = 1;
   std::optional<uint8_t> csi_request;
 
-  switch (dci.type) {
+  switch (dci.type()) {
     case dci_ul_rnti_config_type::c_rnti_f0_0: {
-      const auto& dci0_0 = dci.c_rnti_f0_0;
+      const auto& dci0_0 = dci.as_c_rnti_f0_0();
       h_id               = dci0_0.harq_process_number;
       ndi                = dci0_0.new_data_indicator;
       rv                 = dci0_0.redundancy_version;
@@ -100,7 +100,7 @@ static auto make_ul_dci_log_entry(const dci_ul_info& dci)
       tpc_cmd            = dci0_0.tpc_command;
     } break;
     case dci_ul_rnti_config_type::tc_rnti_f0_0: {
-      const auto& dci0_0 = dci.tc_rnti_f0_0;
+      const auto& dci0_0 = dci.as_tc_rnti_f0_0();
       rv                 = dci0_0.redundancy_version;
       mcs                = dci0_0.modulation_coding_scheme;
       h_id               = 0;
@@ -108,7 +108,7 @@ static auto make_ul_dci_log_entry(const dci_ul_info& dci)
       tpc_cmd            = dci0_0.tpc_command;
     } break;
     case dci_ul_rnti_config_type::c_rnti_f0_1: {
-      const auto& dci0_1 = dci.c_rnti_f0_1;
+      const auto& dci0_1 = dci.as_c_rnti_f0_1();
       h_id               = dci0_1.harq_process_number;
       ndi                = dci0_1.new_data_indicator;
       rv                 = dci0_1.redundancy_version;
@@ -160,7 +160,7 @@ static auto make_dl_pdcch_log_entry(const pdcch_dl_information& pdcch)
 static auto make_ul_pdcch_log_entry(const pdcch_ul_information& pdcch)
 {
   return make_formattable([rnti     = pdcch.ctx.rnti,
-                           dci_type = pdcch.dci.type,
+                           dci_type = pdcch.dci.type(),
                            cid      = pdcch.ctx.coreset_cfg->get_id(),
                            ssid     = pdcch.ctx.context.ss_id,
                            cces     = pdcch.ctx.cces,

@@ -276,9 +276,7 @@ void ocudu::build_dci_f0_0_tc_rnti(dci_ul_info&               dci,
                                    sch_mcs_index              mcs_index,
                                    uint8_t                    rv)
 {
-  dci.type                            = dci_ul_rnti_config_type::tc_rnti_f0_0;
-  dci.tc_rnti_f0_0                    = {};
-  dci_0_0_tc_rnti_configuration& f0_0 = dci.tc_rnti_f0_0;
+  dci_0_0_tc_rnti_configuration& f0_0 = dci.set_tc_rnti_f0_0();
 
   // TODO.
   f0_0.N_ul_hop               = 0;
@@ -322,9 +320,7 @@ void ocudu::build_dci_f0_0_c_rnti(dci_ul_info&                  dci,
 {
   const bwp_configuration& active_ul_bwp = ss_info.bwp->ul.cfg();
 
-  dci.type                           = dci_ul_rnti_config_type::c_rnti_f0_0;
-  dci.c_rnti_f0_0                    = {};
-  dci_0_0_c_rnti_configuration& f0_0 = dci.c_rnti_f0_0;
+  dci_0_0_c_rnti_configuration& f0_0 = dci.set_c_rnti_f0_0();
 
   // TODO.
   f0_0.N_ul_hop               = 0;
@@ -376,9 +372,7 @@ void ocudu::build_dci_f0_1_c_rnti(dci_ul_info&                  dci,
 
   const bwp_configuration& active_ul_bwp = ss_info.bwp->ul.cfg();
 
-  dci.type                    = dci_ul_rnti_config_type::c_rnti_f0_1;
-  dci.c_rnti_f0_1             = {};
-  dci_0_1_configuration& f0_1 = dci.c_rnti_f0_1;
+  dci_0_1_configuration& f0_1 = dci.set_c_rnti_f0_1();
 
   const dci_sizes& dci_sz = ss_info.dci_sz;
 
