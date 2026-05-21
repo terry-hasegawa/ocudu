@@ -263,7 +263,9 @@ async_task<bool> sctp_network_server_impl::connect(std::vector<transport_layer_a
       CORO_EARLY_RETURN(false);
     }
 
-    logger.info("{}: Initiating SCTP connection to [{}]", node_cfg.if_name, fmt::join(dest_addrs, ", "));
+    // fmt::format of fmt::join view is required before passing to the logger, otherwise TSAN may report use-after-free.
+    logger.info(
+        "{}: Initiating SCTP connection to [{}]", node_cfg.if_name, fmt::format("{}", fmt::join(dest_addrs, ", ")));
 
     // Reject if any of the requested addresses already has a pending connect in flight.
     for (const auto& dest_addr : dest_addrs) {
@@ -303,9 +305,10 @@ async_task<bool> sctp_network_server_impl::connect(std::vector<transport_layer_a
                                 static_cast<int>(dest_addrs.size()),
                                 nullptr);
       if (ret == -1 && errno != EINPROGRESS) {
+        // fmt::format of fmt::join view is required, otherwise TSAN may report use-after-free.
         logger.error("{}: sctp_connectx to [{}] failed. errno={}",
                      node_cfg.if_name,
-                     fmt::join(dest_addrs, ", "),
+                     fmt::format("{}", fmt::join(dest_addrs, ", ")),
                      ::strerror(errno));
       } else {
         sctp_connectx_success = true;
