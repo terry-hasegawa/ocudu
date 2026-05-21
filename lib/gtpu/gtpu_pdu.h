@@ -231,6 +231,11 @@ struct gtpu_dissected_pdu {
   bool test_mode = false;
 };
 
+/// Reads the TEID from a GTP-U PDU.
+/// \param[out] teid Reference to a variable where the TEID will be stored.
+/// \param[in] pdu The GTP-U PDU from which the TEID will be read.
+/// \param[in] logger Access to the logger.
+/// \return True if the TEID was successfully read, False otherwise.
 bool gtpu_read_teid(uint32_t& teid, const byte_buffer& pdu, ocudulog::basic_logger& logger);
 
 /// Creates a dissected representation of a raw GTP-U PDU with access to the unpacked header and to the raw content of
