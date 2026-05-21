@@ -17,6 +17,7 @@
 #include "ocudu/ran/pucch/pucch_info.h"
 #include "ocudu/ran/pucch/pucch_mapping.h"
 #include "ocudu/ran/sib/cell_reselection.h"
+#include "ocudu/ran/sib/sib_helper.h"
 #include "ocudu/ran/ssb/ssb_helper.h"
 #include "ocudu/rlc/rlc_srb_config_factory.h"
 #include "ocudu/scheduler/config/cell_config_builder_params.h"
@@ -289,8 +290,14 @@ static void fill_csi_resources(odu::du_cell_config& out_cell, const du_high_unit
   if (cell_cfg.tdd_ul_dl_cfg.has_value()) {
     const unsigned max_csi_symbol_index = *std::max_element(du_csi.tracking_csi_ofdm_symbol_indices.begin(),
                                                             du_csi.tracking_csi_ofdm_symbol_indices.end());
+    const auto&    pdcch_common         = out_cell.ran.dl_cfg_common.init_dl_bwp.pdcch_common;
     const auto     ssb_slots =
         ssb_helper::get_occupied_slot_offsets(out_cell.ran.ssb_cfg, out_cell.ran.dl_carrier.band, cell_cfg.common_scs);
+    const auto sib1_slots = sib_helper::get_occupied_slot_offsets(out_cell.ran.ssb_cfg,
+                                                                  out_cell.ran.dl_carrier.band,
+                                                                  cell_cfg.common_scs,
+                                                                  *pdcch_common.get_searchspace0(),
+                                                                  pdcch_common.get_coreset0()->value());
     if (not csi_helper::derive_valid_csi_rs_slot_offsets(
             du_csi,
             csi_cfg.meas_csi_slot_offset,
@@ -299,7 +306,9 @@ static void fill_csi_resources(odu::du_cell_config& out_cell, const du_high_unit
             generate_tdd_pattern(cell_cfg.common_scs, *cell_cfg.tdd_ul_dl_cfg),
             max_csi_symbol_index,
             static_cast<ssb_periodicity>(cell_cfg.ssb_cfg.ssb_period_msec),
-            ssb_slots)) {
+            ssb_slots,
+            sib1_rtx_periodicity::ms160,
+            sib1_slots)) {
       report_error("Unable to derive valid CSI-RS slot offsets and period for cell with pci={}\n", cell_cfg.pci);
     }
   } else {

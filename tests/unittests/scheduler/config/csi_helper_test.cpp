@@ -38,7 +38,9 @@ protected:
                                                               tdd_cfg,
                                                               max_csi_symbol,
                                                               default_ssb_period,
-                                                              default_ssb_slots),
+                                                              default_ssb_slots,
+                                                              sib1_rtx_periodicity::ms160,
+                                                              {}),
                  "Derivation failed");
   }
 
@@ -107,8 +109,16 @@ TEST(csi_helper_test, ssb_slot_offsets_are_all_avoided)
   csi_helper::csi_meas_config_builder_params params{};
   params.csi_params.csi_rs_period = csi_helper::get_max_csi_rs_period(tdd_cfg.ref_scs);
 
-  ASSERT_TRUE(csi_helper::derive_valid_csi_rs_slot_offsets(
-      params.csi_params, std::nullopt, std::nullopt, std::nullopt, tdd_cfg, max_csi_symbol, ssb_period, ssb_slots));
+  ASSERT_TRUE(csi_helper::derive_valid_csi_rs_slot_offsets(params.csi_params,
+                                                           std::nullopt,
+                                                           std::nullopt,
+                                                           std::nullopt,
+                                                           tdd_cfg,
+                                                           max_csi_symbol,
+                                                           ssb_period,
+                                                           ssb_slots,
+                                                           sib1_rtx_periodicity::ms160,
+                                                           {}));
 
   const unsigned ssb_period_slots = ssb_periodicity_to_value(ssb_period) * get_nof_slots_per_subframe(tdd_cfg.ref_scs);
   for (unsigned ssb_slot : ssb_slots) {
