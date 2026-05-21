@@ -61,6 +61,24 @@ async_task<void> ue_manager::remove_all_ues()
   });
 }
 
+async_task<void> ue_manager::remove_e1_ues(cu_up_e1_index_t e1_index)
+{
+  // Routine to stop all UEs
+  auto ue_it = ue_db.begin();
+  return launch_async([this, ue_it, e1_index](coro_context<async_task<void>>& ctx) mutable {
+    CORO_BEGIN(ctx);
+
+    // Remove all UEs.
+    while (ue_it != ue_db.end()) {
+      if (ue_it->second->get_e1_index() == e1_index) {
+        CORO_AWAIT(schedule_and_wait_ue_removal((ue_it++)->first));
+      }
+    }
+
+    CORO_RETURN();
+  });
+}
+
 ue_context* ue_manager::find_ue(cu_up_ue_index_t ue_index)
 {
   ocudu_assert(ue_index < max_nof_ues, "Invalid ue_index={}", fmt::underlying(ue_index));

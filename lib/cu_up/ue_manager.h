@@ -52,6 +52,7 @@ public:
   async_task<void> stop() override;
   ue_context*      add_ue(cu_up_e1_index_t e1_index, const ue_context_cfg& cfg) override;
   async_task<void> remove_all_ues() override;
+  async_task<void> remove_e1_ues(cu_up_e1_index_t e1_index) override;
   async_task<void> remove_ue(cu_up_ue_index_t ue_index) override;
   ue_context*      find_ue(cu_up_ue_index_t ue_index) override;
   size_t           get_nof_ues() const override { return ue_db.size(); }

@@ -13,14 +13,14 @@ namespace ocudu::ocuup {
 class cu_up_e1_connection_loss_routine
 {
 public:
-  cu_up_e1_connection_loss_routine(gnb_cu_up_id_t           cu_up_id_,
-                                   std::string              cu_up_name_,
-                                   std::string              plmn_,
-                                   std::atomic<bool>&       stop_command,
-                                   e1ap_connection_manager& e1ap_conn_mng_,
-                                   ue_manager&              ue_mng_,
-                                   timer_manager&           timers,
-                                   task_executor&           ctrl_exec);
+  cu_up_e1_connection_loss_routine(gnb_cu_up_id_t     cu_up_id_,
+                                   std::string        cu_up_name_,
+                                   std::string        plmn_,
+                                   std::atomic<bool>& stop_command,
+                                   e1ap_interface&    e1ap_,
+                                   ue_manager&        ue_mng_,
+                                   timer_manager&     timers,
+                                   task_executor&     ctrl_exec);
 
   void operator()(coro_context<async_task<void>>& ctx);
 
@@ -32,10 +32,10 @@ private:
   std::string        plmn;
   std::atomic<bool>& stop_command;
 
-  unique_timer             retry_timer;
-  e1ap_connection_manager& e1ap_conn_mng;
-  ue_manager&              ue_mng;
-  ocudulog::basic_logger&  logger;
+  unique_timer            retry_timer;
+  e1ap_interface&         e1ap;
+  ue_manager&             ue_mng;
+  ocudulog::basic_logger& logger;
 
   bool reconnected;
 };
