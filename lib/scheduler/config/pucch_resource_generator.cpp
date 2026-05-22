@@ -398,7 +398,7 @@ config_helpers::generate_cell_common_pucch_res_list(unsigned pucch_res_common, u
   for (unsigned r_pucch = 0; r_pucch != out.size(); ++r_pucch) {
     const auto     prbs = get_pucch_default_prb_index(r_pucch, default_res.rb_bwp_offset, nof_cs, bwp_size_rbs);
     const uint8_t  cs   = default_res.cs_indexes[get_pucch_default_cyclic_shift(r_pucch, nof_cs)];
-    pucch_resource res;
+    pucch_resource res{};
     res.res_id         = pucch_res_id_t::make_cmn(r_pucch);
     res.starting_prb   = prbs.first;
     res.second_hop_prb = prbs.second;
