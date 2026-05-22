@@ -6,8 +6,9 @@
 
 cu_up:
   e1ap:
-    addrs: 127.0.20.1
-    bind_addrs: 127.0.20.2
+    gateways:
+      - bind_addrs: 127.0.20.2
+        addrs: 127.0.20.1
   ngu:
     socket:
       - bind_addr: 127.0.0.1
