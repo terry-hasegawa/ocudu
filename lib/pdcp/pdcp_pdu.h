@@ -41,9 +41,10 @@ constexpr pdcp_dc_field pdcp_pdu_get_dc(uint8_t first_byte)
 /// PDCP Control PDU type
 /// Ref: TS 38.323 Sec. 6.3.8
 enum class pdcp_control_pdu_type : unsigned {
-  status_report              = 0b000, ///< PDCP status report
-  interspersed_rohc_feedback = 0b001, ///< Interspersed ROHC feedback
-  ehc_feedback               = 0b010  ///< EHC feedback
+  status_report              = 0b000, ///< PDCP status report.
+  interspersed_rohc_feedback = 0b001, ///< Interspersed ROHC feedback.
+  ehc_feedback               = 0b010, ///< EHC feedback.
+  udc_feedback               = 0b011  ///< UDC feedback.
 };
 constexpr uint16_t to_number(pdcp_control_pdu_type type)
 {
@@ -101,8 +102,9 @@ struct formatter<ocudu::pdcp_control_pdu_type> {
   template <typename FormatContext>
   auto format(ocudu::pdcp_control_pdu_type cpt, FormatContext& ctx) const
   {
-    static constexpr const char* options[] = {"status_report", "rohc_feedback", "ehc_feedback"};
-    return format_to(ctx.out(), "{}", options[to_number(cpt)]);
+    static constexpr const char* options[] = {"status_report", "rohc_feedback", "ehc_feedback", "udc_feedback"};
+    auto                         idx       = to_number(cpt);
+    return format_to(ctx.out(), "{}", (idx < std::size(options)) ? options[idx] : "invalid");
   }
 };
 
