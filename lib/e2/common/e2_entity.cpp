@@ -3,10 +3,14 @@
 // Portions of this file may implement 3GPP specifications, which may be subject to additional licensing requirements.
 
 #include "e2_entity.h"
-#include "../procedures/e2_setup_routine.h"
+#include "../procedures/ric_connection_loss_routine.h"
+#include "../procedures/ric_connection_setup_routine.h"
+#include "../procedures/ric_reconnection_routine.h"
 #include "e2_impl.h"
 #include "e2_subscription_manager_impl.h"
 #include "ocudu/e2/e2.h"
+#include "ocudu/support/synchronization/baton.h"
+#include <thread>
 
 using namespace ocudu;
 using namespace asn1::e2ap;
@@ -41,9 +45,6 @@ e2_entity::e2_entity(e2_agent_dependencies&& dependencies) :
 
 void e2_entity::start()
 {
-  // Create e2ap (sctp) connection to RIC.
-  e2ap->handle_e2_tnl_connection_request();
-
   // Start a 5-second timeout so that the setup coroutine is not blocked indefinitely waiting for
   // interface-setup bytes that may never arrive (e.g. if no F1/NG/E1 setup is performed).
   // Dispatch the callback body to task_exec so the aggregator event is only accessed on the E2 thread.
@@ -57,8 +58,8 @@ void e2_entity::start()
   if (not task_exec.execute([this]() {
         main_ctrl_loop.schedule([this](coro_context<async_task<void>>& ctx) {
           CORO_BEGIN(ctx);
-          CORO_AWAIT(
-              launch_async<e2_setup_routine>(cfg, *node_component_config_provider, *e2sm_mngr, *e2ap, timers, logger));
+          CORO_AWAIT(launch_async<ric_connection_setup_routine>(
+              cfg, *node_component_config_provider, *e2sm_mngr, *e2ap, timers, logger, stopped));
           CORO_RETURN();
         });
       })) {
@@ -68,22 +69,66 @@ void e2_entity::start()
 
 void e2_entity::stop()
 {
-  if (not task_exec.execute([this]() {
-        main_ctrl_loop.schedule([this](coro_context<async_task<void>>& ctx) {
-          CORO_BEGIN(ctx);
+  baton               stop_baton;
+  scoped_baton_sender signal_stop{stop_baton};
 
-          CORO_AWAIT(e2ap->handle_e2_disconnection_request());
+  stopped = true;
 
-          CORO_RETURN();
-        });
-      })) {
-    report_fatal_error("Unable to dispatch E2AP teardown");
+  // Stop and delete RIC connection.
+  while (not task_exec.defer([this, signal_stop = std::move(signal_stop)]() mutable {
+    main_ctrl_loop.schedule([this, signal_stop = std::move(signal_stop)](coro_context<async_task<void>>& ctx) mutable {
+      CORO_BEGIN(ctx);
+      // Disconnect RIC connection.
+      CORO_AWAIT(e2ap->handle_e2_disconnection_request());
+
+      // RIC disconnection successfully finished. Stop the main task loop.
+      // Dispatch main async task loop destruction via defer so that the current coroutine ends successfully.
+      while (not task_exec.defer([signal_stop = std::move(signal_stop)]() mutable { signal_stop.post(); })) {
+        logger.warning("Unable to stop E2 Agent. Retrying...");
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+      }
+      CORO_RETURN();
+    });
+  })) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
   }
+
+  stop_baton.wait();
 }
 
 void e2_entity::on_e2_disconnection()
 {
-  logger.info("E2 connection was closed.");
-  // TODO: notify all components about the E2 disconnection (e.g., stop running indication procedures).
-  subscription_mngr->stop();
+  if (stopped) {
+    return;
+  }
+  if (not main_ctrl_loop.schedule([this](coro_context<async_task<void>>& ctx) {
+        CORO_BEGIN(ctx);
+        CORO_AWAIT(launch_async<ric_connection_loss_routine>(*subscription_mngr, logger));
+        reconnect_to_ric();
+        CORO_RETURN();
+      })) {
+    logger.error("Failed to schedule RIC connection loss handling. Stopping subscriptions.");
+    subscription_mngr->stop();
+  }
+}
+
+void e2_entity::reconnect_to_ric()
+{
+  if (stopped) {
+    return;
+  }
+  if (not main_ctrl_loop.schedule([this, success = false](coro_context<async_task<void>>& ctx) mutable {
+        CORO_BEGIN(ctx);
+        CORO_AWAIT_VALUE(
+            success,
+            start_ric_reconnection(cfg, *node_component_config_provider, *e2sm_mngr, *e2ap, timers, logger, stopped));
+        if (success) {
+          logger.info("RIC reconnection successful.");
+        } else {
+          logger.info("RIC reconnection failed - E2 Setup rejected.");
+        }
+        CORO_RETURN();
+      })) {
+    logger.error("Failed to schedule RIC reconnection.");
+  }
 }

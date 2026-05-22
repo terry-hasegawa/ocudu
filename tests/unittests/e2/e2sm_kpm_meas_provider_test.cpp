@@ -294,7 +294,6 @@ TEST_P(e2_entity_test_with_pcap, e2sm_kpm_generates_ran_func_desc)
       .ran_function_id = e2sm_kpm_asn1_packer::ran_func_id;
   test_logger.info("Injecting E2SetupResponse");
   e2agent->get_e2_interface().handle_message(e2_setup_response);
-  e2agent->stop();
 }
 
 TEST_P(e2sm_kpm_du_meas_provider_test, e2sm_kpm_ind_three_drb_rlc_metrics)

@@ -91,11 +91,6 @@ e2_connection_handler::~e2_connection_handler()
 
 std::unique_ptr<e2_message_notifier> e2_connection_handler::connect_to_ric()
 {
-  if (is_connected()) {
-    logger.warning("Reconnections to RIC not supported");
-    return nullptr;
-  }
-
   // Create E2AP Rx PDU notifier.
   rx_path_disconnected.reset();
   auto rx_notifier = std::make_unique<e2_rx_channel>(rx_pdu_handler, [this]() { handle_connection_loss(); });

@@ -120,7 +120,6 @@ TEST_P(e2_agent_test_with_pcap, e2_connection_update_failure)
   ASSERT_EQ(msg.pdu.type().value, asn1::e2ap::e2ap_pdu_c::types_opts::unsuccessful_outcome);
   ASSERT_EQ(msg.pdu.unsuccessful_outcome().value.type().value,
             asn1::e2ap::e2ap_elem_procs_o::unsuccessful_outcome_c::types_opts::e2conn_upd_fail);
-  e2agent->stop();
 }
 
 INSTANTIATE_TEST_SUITE_P(e2_agent_test_with_pcap, e2_agent_test_with_pcap, testing::Values(g_pcap));

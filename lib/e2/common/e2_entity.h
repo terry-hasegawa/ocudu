@@ -12,6 +12,7 @@
 #include "ocudu/support/async/fifo_async_task_scheduler.h"
 #include "ocudu/support/async/manual_event.h"
 #include "ocudu/support/timers.h"
+#include <atomic>
 
 namespace ocudu {
 
@@ -29,6 +30,8 @@ public:
   void on_e2_disconnection() override;
 
 private:
+  void reconnect_to_ric();
+
   ocudulog::basic_logger&  logger;
   const e2ap_configuration cfg;
 
@@ -46,6 +49,11 @@ private:
   std::unique_ptr<e2_subscription_manager>   subscription_mngr = nullptr;
   std::unique_ptr<e2_interface>              e2ap              = nullptr;
   std::vector<std::unique_ptr<e2sm_handler>> e2sm_handlers;
+
+  // Set to true by stop() before the disconnect coroutine is dispatched.
+  // Both ric_connection_setup_routine and ric_reconnection_routine check this flag at
+  // each loop iteration to exit promptly when stop() is called.
+  std::atomic<bool> stopped{false};
 };
 
 } // namespace ocudu

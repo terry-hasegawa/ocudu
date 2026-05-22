@@ -35,7 +35,6 @@ TEST_F(e2_entity_test, on_start_send_e2ap_setup_request)
       .ran_function_id = e2sm_kpm_asn1_packer::ran_func_id;
   test_logger.info("Injecting E2SetupResponse");
   e2agent->get_e2_interface().handle_message(e2_setup_response);
-  e2agent->stop();
 }
 
 TEST_F(e2_entity_test, e2ap_setup_request_du_global_node_id_is_correct)

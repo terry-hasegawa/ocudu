@@ -31,6 +31,9 @@ e2_impl::e2_impl(ocudulog::basic_logger&  logger_,
 
 bool e2_impl::handle_e2_tnl_connection_request()
 {
+  // Reset the old channel first so its destructor does not clobber the new connection's
+  // internal notifier inside e2_connection_handler.
+  tx_pdu_notifier.reset();
   tx_pdu_notifier = connection_handler.connect_to_ric();
   return tx_pdu_notifier != nullptr;
 }
