@@ -164,8 +164,8 @@ static ocudu_ntn::ntn_configuration_manager_config
 generate_ntn_configuration_manager_config(const gnb_id_t& gnb_id, span<const du_high_unit_cell_config> du_hi_cells)
 {
   ocudu_ntn::ntn_configuration_manager_config out_cfg = {};
-  for (const auto& cell : du_hi_cells) {
-    const auto& cell_cfg = cell.cell;
+  for (unsigned phy_sector_idx = 0; phy_sector_idx != du_hi_cells.size(); ++phy_sector_idx) {
+    const auto& cell_cfg = du_hi_cells[phy_sector_idx].cell;
     if (cell_cfg.ntn_cfg.has_value()) {
       auto&                      out_cell = out_cfg.cells.emplace_back();
       expected<plmn_identity>    plmn     = plmn_identity::parse(cell_cfg.plmn);
@@ -176,7 +176,7 @@ generate_ntn_configuration_manager_config(const gnb_id_t& gnb_id, span<const du_
       if (not nci.has_value()) {
         report_error("Invalid NR-NCI");
       }
-      out_cell.sector_id       = cell_cfg.sector_id;
+      out_cell.sector_id       = phy_sector_idx;
       out_cell.nr_cgi.plmn_id  = plmn.value();
       out_cell.nr_cgi.nci      = nci.value();
       out_cell.assistance_info = convert_ntn_config_to_assistance_info(*cell_cfg.ntn_cfg);
