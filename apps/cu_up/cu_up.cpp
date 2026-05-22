@@ -163,6 +163,12 @@ static void autoderive_cu_up_parameters_after_parsing(cu_up_appconfig& cu_up_con
     f1u_socket_appconfig sock_cfg;
     cu_up_config.f1u_cfg.f1u_socket_cfg.push_back(sock_cfg);
   }
+
+  // If no E1AP socket configuration is derived, we set a default configuration.
+  if (cu_up_config.e1ap_cfg.e1ap_cfgs.empty()) {
+    ocuup::e1ap_appconfig sock_cfg;
+    cu_up_config.e1ap_cfg.e1ap_cfgs.push_back(sock_cfg);
+  }
 }
 
 int main(int argc, char** argv)
