@@ -24,7 +24,7 @@ struct sib1_sched_occations {
 /// \brief Returns the slots occupied by SIB1 PDSCH within one Type0-CSS monitoring window, together with the window
 /// period.
 ///
-/// [Implementation-defined] Only k0 is used, so the slot of the PDCCH and PDSCH for SIB1 match.
+/// [Implementation-defined] Only k0==0 is used, so the slot of the PDCCH and PDSCH for SIB1 match.
 ///
 /// [Implementation-defined] For multiplexing pattern 1 (FR1), SIB1 is scheduled in slot n0+1 of each active SSB beam's
 /// Type0-CSS window (TS 38.213 Section 13).

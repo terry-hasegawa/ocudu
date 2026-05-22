@@ -7,6 +7,7 @@
 #include "tests/test_doubles/scheduler/scheduler_config_helper.h"
 #include "tests/test_doubles/utils/test_rng.h"
 #include "ocudu/ran/frame_types.h"
+#include "ocudu/support/enum_utils.h"
 #include "fmt/ostream.h"
 #include <gtest/gtest.h>
 
@@ -24,7 +25,7 @@ struct ssb_params {
 
 std::ostream& operator<<(std::ostream& os, const ssb_params& params)
 {
-  os << "p_" << ssb_periodicity_to_value(params.periodicity);
+  os << "p_" << to_value(params.periodicity);
   os << "_n" << fmt::underlying(params.band);
   os << "_arfnc_" << params.freq_arfcn.value();
   // Apply cast to avoid fmt:: complains.
@@ -220,7 +221,7 @@ TEST_P(ssb_scheduler_test, test_time_dom_allocation)
   test_logger.info("{}", GetParam());
 
   // Get the SSB period in half radio frames
-  const unsigned ssb_period_half_sfn = ssb_periodicity_to_value(cell_cfg.params.ssb_cfg.ssb_period) * 2U / 10U;
+  const unsigned ssb_period_half_sfn = to_value(cell_cfg.params.ssb_cfg.ssb_period) * 2U / 10U;
 
   for (unsigned i = 0; i != 1000; ++i) {
     run_slot();

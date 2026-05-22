@@ -8,6 +8,7 @@
 #include "ocudu/scheduler/config/ran_cell_config_helper.h"
 #include "ocudu/scheduler/config/serving_cell_config_factory.h"
 #include "ocudu/scheduler/config/serving_cell_config_validator.h"
+#include "ocudu/support/enum_utils.h"
 #include <gtest/gtest.h>
 
 using namespace ocudu;
@@ -120,7 +121,7 @@ TEST(csi_helper_test, ssb_slot_offsets_are_all_avoided)
                                                            1U,
                                                            {}));
 
-  const unsigned ssb_period_slots = ssb_periodicity_to_value(ssb_period) * get_nof_slots_per_subframe(tdd_cfg.ref_scs);
+  const unsigned ssb_period_slots = to_value(ssb_period) * get_nof_slots_per_subframe(tdd_cfg.ref_scs);
   for (unsigned ssb_slot : ssb_slots) {
     EXPECT_NE(params.csi_params.meas_csi_slot_offset % ssb_period_slots, ssb_slot)
         << "meas_csi_slot_offset collides with SSB slot " << ssb_slot;

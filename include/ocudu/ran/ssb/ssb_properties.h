@@ -20,13 +20,7 @@ constexpr unsigned SSB_BW_RE = NOF_SUBCARRIERS_PER_RB * NOF_SSB_PRBS;
 constexpr unsigned NOF_SSB_SYMB = 4;
 
 /// \brief SSB periodicity in milliseconds as per TS38.331 Section 6.3.2 IE ssb-periodicityServingCell.
-enum class ssb_periodicity { ms5 = 5, ms10 = 10, ms20 = 20, ms40 = 40, ms80 = 80, ms160 = 160 };
-
-/// \brief Converts the SSB periodicity property to its corresponding value in milliseconds.
-inline unsigned ssb_periodicity_to_value(ssb_periodicity periodicity)
-{
-  return static_cast<unsigned>(periodicity);
-}
+enum class ssb_periodicity : uint8_t { ms5 = 5, ms10 = 10, ms20 = 20, ms40 = 40, ms80 = 80, ms160 = 160 };
 
 /// \brief PSS EPRE to SSS EPRE for SSB, as per TS 38.213, Section 4.1.
 enum class ssb_pss_to_sss_epre { dB_0, dB_3 };

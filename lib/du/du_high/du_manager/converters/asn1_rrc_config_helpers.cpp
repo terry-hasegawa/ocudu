@@ -7,6 +7,7 @@
 #include "asn1_ntn_config_helpers.h"
 #include "ocudu/asn1/asn1_diff_utils.h"
 #include "ocudu/ran/band_helper.h"
+#include "ocudu/support/enum_utils.h"
 #include "ocudu/support/error_handling.h"
 #include "ocudu/support/math/math_utils.h"
 
@@ -3472,7 +3473,7 @@ bool ocudu::odu::calculate_reconfig_with_sync_diff(asn1::rrc_nr::recfg_with_sync
 
   out.sp_cell_cfg_common.ssb_periodicity_serving_cell_present = true;
   asn1::number_to_enum(out.sp_cell_cfg_common.ssb_periodicity_serving_cell,
-                       ssb_periodicity_to_value(du_cell_cfg.ran.ssb_cfg.ssb_period));
+                       to_value(du_cell_cfg.ran.ssb_cfg.ssb_period));
 
   out.sp_cell_cfg_common.dmrs_type_a_position.value = du_cell_cfg.ran.dmrs_typeA_pos == dmrs_typeA_position::pos2
                                                           ? serving_cell_cfg_common_s::dmrs_type_a_position_opts::pos2

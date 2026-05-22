@@ -17,7 +17,7 @@ ssb_helper::get_occupied_slot_offsets(const ssb_configuration& ssb_cfg, nr_band 
   const unsigned         nof_common_slots_per_sf = get_nof_slots_per_subframe(common_scs);
 
   std::vector<unsigned> slots;
-  for (unsigned ssb_idx = 0; ssb_idx < ssb_cfg.ssb_bitmap.size(); ++ssb_idx) {
+  for (unsigned ssb_idx = 0, sz = ssb_cfg.ssb_bitmap.size(); ssb_idx != sz; ++ssb_idx) {
     if (!ssb_cfg.ssb_bitmap.test(ssb_idx)) {
       continue;
     }

@@ -6,6 +6,7 @@
 #include "ocudu/ocudulog/ocudulog.h"
 #include "ocudu/ran/frame_types.h"
 #include "ocudu/ran/ssb/ssb_mapping.h"
+#include "ocudu/support/enum_utils.h"
 
 using namespace ocudu;
 
@@ -14,7 +15,7 @@ ssb_scheduler::ssb_scheduler(const cell_configuration& cfg_) :
   cell_cfg(cfg_),
   logger(ocudulog::fetch_basic_logger("SCHED"))
 {
-  ssb_period = ssb_periodicity_to_value(cell_cfg.params.ssb_cfg.ssb_period);
+  ssb_period = to_value(cell_cfg.params.ssb_cfg.ssb_period);
 }
 
 void ssb_scheduler::run_slot(cell_resource_allocator& res_alloc, slot_point sl_point)

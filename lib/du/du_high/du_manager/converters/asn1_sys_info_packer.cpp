@@ -13,6 +13,7 @@
 #include "ocudu/du/du_high/du_manager/cbs/cbs_encoder.h"
 #include "ocudu/ran/band_helper.h"
 #include "ocudu/ran/sib/system_info_config.h"
+#include "ocudu/support/enum_utils.h"
 
 using namespace ocudu;
 using namespace odu;
@@ -272,7 +273,7 @@ static asn1::rrc_nr::serving_cell_cfg_common_sib_s make_asn1_rrc_cell_serving_ce
         << (8U - du_cfg.ran.ssb_cfg.ssb_bitmap.get_L_max()));
   }
 
-  asn1::number_to_enum(cell.ssb_periodicity_serving_cell, ssb_periodicity_to_value(du_cfg.ran.ssb_cfg.ssb_period));
+  asn1::number_to_enum(cell.ssb_periodicity_serving_cell, to_value(du_cfg.ran.ssb_cfg.ssb_period));
   cell.ss_pbch_block_pwr = du_cfg.ran.ssb_cfg.ssb_block_power;
 
   const n_ta_offset ta_offset = band_helper::get_ta_offset(du_cfg.ran.dl_carrier.band);
