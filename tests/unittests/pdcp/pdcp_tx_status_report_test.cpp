@@ -147,6 +147,80 @@ TEST_P(pdcp_tx_status_report_test, handle_status_report_with_bad_fmc)
     FLUSH_AND_ASSERT_TRUE(test_frame.sdu_discard_queue.empty());
 
     // Build status report that confirms RX of SDUs:
+    // Confirm: [tx_next,            tx_next+2,            tx_next+4]
+    // Missing: [         tx_next+1,            tx_next+3,          ]
+    //
+    // Report:            [  FMC  ][    1          0          1     ][  0   0   0   0   0  ][ 0  0  0  0  0  0  0  0 ]
+    //                    |-first-||--------- bitmap ---------------;;-- bitmap padding ---|| --   extra bitmap   -- |
+    byte_buffer buf = {};
+    bit_encoder enc(buf);
+
+    // Pack PDU header
+    enc.pack(to_number(pdcp_dc_field::control), 1);
+    enc.pack(to_number(pdcp_control_pdu_type::status_report), 3);
+    enc.pack(0b0000, 4);
+
+    // Pack tx_next+1 into FMC field
+    enc.pack(tx_next + 1, 32);
+
+    // Pack bitmap
+    enc.pack(0b10100000, 8);
+    enc.pack(0b00000000, 8);
+
+    // Handle this status report
+    pdcp_tx->on_status_report(byte_buffer_chain::create(std::move(buf)).value());
+
+    // Make sure no PDU were discarded as the status report is invalid.
+    FLUSH_AND_ASSERT_TRUE(test_frame.sdu_discard_queue.empty());
+  };
+
+  if (sn_size == pdcp_sn_size::size12bits) {
+    test_with_count(0);
+    test_with_count(2048);
+    test_with_count(4096);
+  } else if (sn_size == pdcp_sn_size::size18bits) {
+    test_with_count(0);
+    test_with_count(131072);
+    test_with_count(262144);
+  } else {
+    FAIL();
+  }
+}
+
+/// Test correct handling of PDCP status report
+TEST_P(pdcp_tx_status_report_test, handle_status_report_with_too_long_bitmap)
+{
+  init(GetParam());
+  auto test_with_count = [this](uint32_t tx_next) {
+    // clear queue from previous runs
+    test_frame.sdu_discard_queue   = {};
+    unsigned                n_sdus = 5;
+    std::queue<byte_buffer> exp_pdu_list;
+    pdcp_tx_state           st = {tx_next, tx_next, 0, tx_next, tx_next};
+    pdcp_tx->set_state(st);
+    pdcp_tx->configure_security(sec_cfg, security::integrity_enabled::off, security::ciphering_enabled::off);
+    ocudu::test_delimit_logger delimiter("Testing data recovery. SN_SIZE={} COUNT={}", sn_size, tx_next);
+    for (uint32_t count = tx_next; count < tx_next + n_sdus; ++count) {
+      // Write SDU
+      byte_buffer sdu = byte_buffer::create(sdu1).value();
+      pdcp_tx->handle_sdu(std::move(sdu));
+
+      // Wait for crypto and reordering
+      wait_pending_crypto();
+      worker.run_pending_tasks();
+
+      pdcp_tx->handle_transmit_notification(pdcp_compute_sn(count, sn_size));
+
+      // Get generated PDU
+      FLUSH_AND_ASSERT_EQ(test_frame.pdu_queue.size(), 1);
+      exp_pdu_list.push(std::move(test_frame.pdu_queue.front()));
+      test_frame.pdu_queue.pop();
+      ASSERT_EQ(test_frame.pdu_queue.size(), 0);
+    }
+
+    FLUSH_AND_ASSERT_TRUE(test_frame.sdu_discard_queue.empty());
+
+    // Build status report that confirms RX of SDUs:
     // Confirm: [tx_next, tx_next+1, tx_next+2, tx_next+3, tx_next+4]
     // Missing: [                                                   ]
     //

@@ -558,8 +558,24 @@ void pdcp_entity_tx::handle_status_report(byte_buffer_chain status)
   dec.unpack(fmc, 32);
   logger.log_info("Status report. fmc={}", fmc);
 
+  // Validate FMC field.
   if (fmc > st.tx_next) {
     logger.log_error("Invalid status report, FMC > TX_NEXT. fmc={} st={}", fmc, st);
+    upper_cn.on_protocol_failure();
+    return;
+  }
+
+  // Validate bitmap length.
+  // > Round the difference between FMC and TX_NEXT to the next multiple of 8,
+  // > that will be the maximum number of bits that can be present in the bitmap.
+  uint32_t delta              = st.tx_next - fmc;
+  uint32_t max_count_possible = ((delta + 7) >> 3) << 3;
+  // > Compare the maximum number of bits in the bitmap with the bitmap length.
+  unsigned bitmap_length    = buf.length() - 5;
+  unsigned max_count_actual = bitmap_length * 8;
+  if (max_count_actual > max_count_possible) {
+    logger.log_error("Invalid status report, FMC > TX_NEXT. fmc={} st={}", fmc, st);
+    upper_cn.on_protocol_failure();
     return;
   }
 
