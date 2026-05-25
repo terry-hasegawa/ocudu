@@ -12,17 +12,17 @@
 
 namespace ocudu {
 
-class e2_connection_update_procedure
+class e2ap_connection_update_procedure
 {
 public:
-  e2_connection_update_procedure(const asn1::e2ap::e2conn_upd_s& request_,
-                                 e2_message_notifier&            ric_notif_,
-                                 timer_factory                   timers_,
-                                 ocudulog::basic_logger&         logger_);
+  e2ap_connection_update_procedure(const asn1::e2ap::e2conn_upd_s& request_,
+                                   e2_message_notifier&            ric_notif_,
+                                   timer_factory                   timers_,
+                                   ocudulog::basic_logger&         logger_);
 
   void operator()(coro_context<async_task<void>>& ctx);
 
-  static const char* name() { return "E2 Connection Update Procedure"; }
+  static const char* name() { return "E2AP Connection Update Procedure"; }
 
 private:
   // results senders

@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "../procedures/e2_indication_procedure.h"
+#include "../procedures/e2ap_indication_procedure.h"
 #include "ocudu/asn1/e2ap/e2ap.h"
 #include "ocudu/asn1/e2sm/e2sm_kpm_ies.h"
 #include "ocudu/e2/e2.h"

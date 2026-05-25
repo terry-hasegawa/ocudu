@@ -4,13 +4,13 @@
 
 
 set(SOURCES
-        procedures/e2_setup_procedure.cpp
+        procedures/e2ap_setup_procedure.cpp
         procedures/e2_setup_routine.cpp
-        procedures/e2_subscription_setup_procedure.cpp
-        procedures/e2_subscription_delete_procedure.cpp
-        procedures/e2_indication_procedure.cpp
-        procedures/e2_ric_control_procedure.cpp
-        procedures/e2_connection_update_procedure.cpp
+        procedures/e2ap_subscription_setup_procedure.cpp
+        procedures/e2ap_subscription_delete_procedure.cpp
+        procedures/e2ap_indication_procedure.cpp
+        procedures/e2ap_ric_control_procedure.cpp
+        procedures/e2ap_connection_update_procedure.cpp
         common/e2_connection_handler.cpp
         common/e2_node_component_config_collector.cpp
         common/e2_cu_cp_factory.cpp

@@ -16,15 +16,17 @@ namespace ocudu {
 
 /// E2 INDICATION procedure will be used to send the measurement data to the RIC in response to the E2 SUBSCRIPTION
 /// REQUEST, it will execute periodically until the E2 SUBSCRIPTION DELETE REQUEST is received.
-class e2_indication_procedure
+class e2ap_indication_procedure
 {
 public:
-  e2_indication_procedure(e2_message_notifier&    notif_,
-                          e2_event_manager&       ev_mng_,
-                          e2_subscription_info_t& subscription_info_,
-                          ocudulog::basic_logger& logger_);
+  e2ap_indication_procedure(e2_message_notifier&    notif_,
+                            e2_event_manager&       ev_mng_,
+                            e2_subscription_info_t& subscription_info_,
+                            ocudulog::basic_logger& logger_);
 
   void operator()(coro_context<eager_async_task<void>>& ctx);
+
+  static const char* name() { return "E2AP Indication Procedure"; }
 
 private:
   /// Send E2 INDICATION message to the RIC.

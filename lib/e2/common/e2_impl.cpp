@@ -3,7 +3,7 @@
 // Portions of this file may implement 3GPP specifications, which may be subject to additional licensing requirements.
 
 #include "e2_impl.h"
-#include "procedures/e2_connection_update_procedure.h"
+#include "procedures/e2ap_connection_update_procedure.h"
 #include "ocudu/asn1/e2ap/e2ap.h"
 #include "ocudu/e2/e2.h"
 #include <memory>
@@ -49,7 +49,7 @@ async_task<e2_setup_response_message> e2_impl::handle_e2_setup_request(const e2_
       CORO_RETURN(e2_setup_response_message{});
     });
   }
-  return launch_async<e2_setup_procedure>(request, *tx_pdu_notifier, *events, timers, logger);
+  return launch_async<e2ap_setup_procedure>(request, *tx_pdu_notifier, *events, timers, logger);
 }
 
 void e2_impl::handle_ric_control_request(const asn1::e2ap::ric_ctrl_request_s msg)
@@ -57,27 +57,27 @@ void e2_impl::handle_ric_control_request(const asn1::e2ap::ric_ctrl_request_s ms
   logger.info("Received RIC Control Request");
   e2_ric_control_request request;
   request.request = msg;
-  async_tasks.schedule<e2_ric_control_procedure>(request, *tx_pdu_notifier, e2sm_mngr, logger);
+  async_tasks.schedule<e2ap_ric_control_procedure>(request, *tx_pdu_notifier, e2sm_mngr, logger);
 }
 
 void e2_impl::handle_ric_subscription_request(const asn1::e2ap::ric_sub_request_s& msg)
 {
   logger.info("Received RIC Subscription Request");
-  async_tasks.schedule(
-      launch_async<e2_subscription_setup_procedure>(msg, *events, *tx_pdu_notifier, subscription_proc, timers, logger));
+  async_tasks.schedule(launch_async<e2ap_subscription_setup_procedure>(
+      msg, *events, *tx_pdu_notifier, subscription_proc, timers, logger));
 }
 
 void e2_impl::handle_ric_subscription_delete_request(const asn1::e2ap::ric_sub_delete_request_s& msg)
 {
   logger.info("Received RIC Subscription Delete Request");
-  async_tasks.schedule(launch_async<e2_subscription_delete_procedure>(
+  async_tasks.schedule(launch_async<e2ap_subscription_delete_procedure>(
       msg, *events, *tx_pdu_notifier, subscription_proc, timers, logger));
 }
 
 void e2_impl::handle_e2_connection_update(const asn1::e2ap::e2conn_upd_s& msg)
 {
   logger.info("Received E2 Connection Update");
-  async_tasks.schedule(launch_async<e2_connection_update_procedure>(msg, *tx_pdu_notifier, timers, logger));
+  async_tasks.schedule(launch_async<e2ap_connection_update_procedure>(msg, *tx_pdu_notifier, timers, logger));
 }
 
 void e2_impl::handle_message(const e2_message& msg)

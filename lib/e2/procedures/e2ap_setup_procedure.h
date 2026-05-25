@@ -10,14 +10,14 @@
 
 namespace ocudu {
 
-class e2_setup_procedure
+class e2ap_setup_procedure
 {
 public:
-  e2_setup_procedure(const e2_setup_request_message& request_,
-                     e2_message_notifier&            notif_,
-                     e2_event_manager&               ev_mng_,
-                     timer_factory                   timers,
-                     ocudulog::basic_logger&         logger);
+  e2ap_setup_procedure(const e2_setup_request_message& request_,
+                       e2_message_notifier&            notif_,
+                       e2_event_manager&               ev_mng_,
+                       timer_factory                   timers,
+                       ocudulog::basic_logger&         logger);
 
   void operator()(coro_context<async_task<e2_setup_response_message>>& ctx);
 

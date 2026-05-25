@@ -15,19 +15,19 @@
 class e2_subsciption_notifier;
 namespace ocudu {
 
-class e2_subscription_delete_procedure
+class e2ap_subscription_delete_procedure
 {
 public:
-  e2_subscription_delete_procedure(const asn1::e2ap::ric_sub_delete_request_s& request_,
-                                   e2_event_manager&                           event_manager_,
-                                   e2_message_notifier&                        ric_notif_,
-                                   e2_subscription_proc&                       subscription_mngr_,
-                                   timer_factory                               timers_,
-                                   ocudulog::basic_logger&                     logger_);
+  e2ap_subscription_delete_procedure(const asn1::e2ap::ric_sub_delete_request_s& request_,
+                                     e2_event_manager&                           event_manager_,
+                                     e2_message_notifier&                        ric_notif_,
+                                     e2_subscription_proc&                       subscription_mngr_,
+                                     timer_factory                               timers_,
+                                     ocudulog::basic_logger&                     logger_);
 
   void operator()(coro_context<async_task<void>>& ctx);
 
-  static const char* name() { return "E2 Subscription Delete Procedure"; }
+  static const char* name() { return "E2AP Subscription Delete Procedure"; }
 
 private:
   // results senders

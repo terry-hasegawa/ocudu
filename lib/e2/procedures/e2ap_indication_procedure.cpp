@@ -2,22 +2,22 @@
 // SPDX-License-Identifier: BSD-3-Clause-Open-MPI
 // Portions of this file may implement 3GPP specifications, which may be subject to additional licensing requirements.
 
-#include "e2_indication_procedure.h"
+#include "e2ap_indication_procedure.h"
 #include "ocudu/asn1/e2ap/e2ap.h"
 #include "ocudu/support/async/async_timer.h"
 
 using namespace ocudu;
 using namespace asn1::e2ap;
 
-e2_indication_procedure::e2_indication_procedure(e2_message_notifier&    notif_,
-                                                 e2_event_manager&       ev_mng_,
-                                                 e2_subscription_info_t& subscription_info_,
-                                                 ocudulog::basic_logger& logger_) :
+e2ap_indication_procedure::e2ap_indication_procedure(e2_message_notifier&    notif_,
+                                                     e2_event_manager&       ev_mng_,
+                                                     e2_subscription_info_t& subscription_info_,
+                                                     ocudulog::basic_logger& logger_) :
   notifier(notif_), ev_mng(ev_mng_), subscription(subscription_info_), logger(logger_)
 {
 }
 
-void e2_indication_procedure::operator()(coro_context<eager_async_task<void>>& ctx)
+void e2ap_indication_procedure::operator()(coro_context<eager_async_task<void>>& ctx)
 {
   CORO_BEGIN(ctx);
   while (running) {
@@ -88,7 +88,7 @@ void e2_indication_procedure::operator()(coro_context<eager_async_task<void>>& c
   CORO_RETURN();
 }
 
-void e2_indication_procedure::send_e2_indication(e2_indication_message& e2_ind)
+void e2ap_indication_procedure::send_e2_indication(e2_indication_message& e2_ind)
 {
   e2_message e2_msg;
   e2_msg.pdu.set_init_msg();

@@ -2,21 +2,21 @@
 // SPDX-License-Identifier: BSD-3-Clause-Open-MPI
 // Portions of this file may implement 3GPP specifications, which may be subject to additional licensing requirements.
 
-#include "e2_ric_control_procedure.h"
+#include "e2ap_ric_control_procedure.h"
 
 using namespace ocudu;
 using namespace asn1::e2ap;
 using namespace asn1::e2sm;
 
-e2_ric_control_procedure::e2_ric_control_procedure(const e2_ric_control_request& request_,
-                                                   e2_message_notifier&          notif_,
-                                                   e2sm_manager&                 e2sm_mng_,
-                                                   ocudulog::basic_logger&       logger_) :
+e2ap_ric_control_procedure::e2ap_ric_control_procedure(const e2_ric_control_request& request_,
+                                                       e2_message_notifier&          notif_,
+                                                       e2sm_manager&                 e2sm_mng_,
+                                                       ocudulog::basic_logger&       logger_) :
   logger(logger_), ric_notif(notif_), e2sm_mng(e2sm_mng_), e2_request(request_)
 {
 }
 
-void e2_ric_control_procedure::operator()(coro_context<async_task<void>>& ctx)
+void e2ap_ric_control_procedure::operator()(coro_context<async_task<void>>& ctx)
 {
   CORO_BEGIN(ctx);
   e2sm_iface = e2sm_mng.get_e2sm_interface(e2_request.request->ran_function_id);
@@ -51,8 +51,8 @@ void e2_ric_control_procedure::operator()(coro_context<async_task<void>>& ctx)
   CORO_RETURN();
 }
 
-void e2_ric_control_procedure::send_e2_ric_control_acknowledge(const e2_ric_control_request&  ctrl_request,
-                                                               const e2_ric_control_response& ctrl_response)
+void e2ap_ric_control_procedure::send_e2_ric_control_acknowledge(const e2_ric_control_request&  ctrl_request,
+                                                                 const e2_ric_control_response& ctrl_response)
 {
   e2_message msg;
   msg.pdu.set_successful_outcome();
@@ -74,8 +74,8 @@ void e2_ric_control_procedure::send_e2_ric_control_acknowledge(const e2_ric_cont
   ric_notif.on_new_message(msg);
 }
 
-void e2_ric_control_procedure::send_e2_ric_control_failure(const e2_ric_control_request&  ctrl_request,
-                                                           const e2_ric_control_response& ctrl_response)
+void e2ap_ric_control_procedure::send_e2_ric_control_failure(const e2_ric_control_request&  ctrl_request,
+                                                             const e2_ric_control_response& ctrl_response)
 {
   e2_message msg;
   msg.pdu.set_unsuccessful_outcome();

@@ -71,7 +71,7 @@ TEST_F(e2_test_subscriber, start_indication_procedure_check_contents)
       {action_def.deep_copy().value(), 1, asn1::e2ap::ric_action_type_e::report, std::move(report_service)});
   std::unique_ptr<e2_event_manager> ev_mng = std::make_unique<e2_event_manager>(factory);
   ev_mng->add_sub_del_req(sub_info.request_id, factory);
-  auto task = launch_async<e2_indication_procedure>(*msg_notifier, *ev_mng, sub_info, test_logger);
+  auto task = launch_async<e2ap_indication_procedure>(*msg_notifier, *ev_mng, sub_info, test_logger);
 
   ASSERT_FALSE(task.ready());
   for (int i = 0; i < 1500; i++) {

@@ -4,10 +4,10 @@
 
 #pragma once
 
-#include "../procedures/e2_ric_control_procedure.h"
-#include "../procedures/e2_setup_procedure.h"
-#include "../procedures/e2_subscription_delete_procedure.h"
-#include "../procedures/e2_subscription_setup_procedure.h"
+#include "../procedures/e2ap_ric_control_procedure.h"
+#include "../procedures/e2ap_setup_procedure.h"
+#include "../procedures/e2ap_subscription_delete_procedure.h"
+#include "../procedures/e2ap_subscription_setup_procedure.h"
 #include "e2_connection_handler.h"
 #include "ocudu/asn1/e2ap/e2ap.h"
 #include "ocudu/e2/e2.h"

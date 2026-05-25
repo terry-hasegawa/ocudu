@@ -2,16 +2,17 @@
 // SPDX-License-Identifier: BSD-3-Clause-Open-MPI
 // Portions of this file may implement 3GPP specifications, which may be subject to additional licensing requirements.
 
-#include "e2_subscription_setup_procedure.h"
+#include "e2ap_subscription_setup_procedure.h"
+
 using namespace ocudu;
 using namespace asn1::e2ap;
 
-e2_subscription_setup_procedure::e2_subscription_setup_procedure(const asn1::e2ap::ric_sub_request_s& request_,
-                                                                 e2_event_manager&                    event_manager_,
-                                                                 e2_message_notifier&                 ric_notif_,
-                                                                 e2_subscription_proc&   subscription_mngr_,
-                                                                 timer_factory           timers_,
-                                                                 ocudulog::basic_logger& logger_) :
+e2ap_subscription_setup_procedure::e2ap_subscription_setup_procedure(const asn1::e2ap::ric_sub_request_s& request_,
+                                                                     e2_event_manager&       event_manager_,
+                                                                     e2_message_notifier&    ric_notif_,
+                                                                     e2_subscription_proc&   subscription_mngr_,
+                                                                     timer_factory           timers_,
+                                                                     ocudulog::basic_logger& logger_) :
   request(request_),
   event_manager(event_manager_),
   logger(logger_),
@@ -21,7 +22,7 @@ e2_subscription_setup_procedure::e2_subscription_setup_procedure(const asn1::e2a
 {
 }
 
-void e2_subscription_setup_procedure::operator()(coro_context<async_task<void>>& ctx)
+void e2ap_subscription_setup_procedure::operator()(coro_context<async_task<void>>& ctx)
 {
   CORO_BEGIN(ctx);
   logger.debug("\"{}\" initialized", name());
@@ -41,7 +42,8 @@ void e2_subscription_setup_procedure::operator()(coro_context<async_task<void>>&
   CORO_RETURN();
 }
 
-void e2_subscription_setup_procedure::send_e2_subscription_setup_response(const e2_subscribe_reponse_message& response)
+void e2ap_subscription_setup_procedure::send_e2_subscription_setup_response(
+    const e2_subscribe_reponse_message& response)
 {
   e2_message msg;
   msg.pdu.set_successful_outcome().load_info_obj(ASN1_E2AP_ID_RIC_SUB);
@@ -59,7 +61,7 @@ void e2_subscription_setup_procedure::send_e2_subscription_setup_response(const 
   ric_notif.on_new_message(msg);
 }
 
-void e2_subscription_setup_procedure::send_e2_subscription_setup_failure(const e2_subscribe_reponse_message& failure)
+void e2ap_subscription_setup_procedure::send_e2_subscription_setup_failure(const e2_subscribe_reponse_message& failure)
 {
   e2_message msg;
   msg.pdu.set_unsuccessful_outcome().load_info_obj(ASN1_E2AP_ID_RIC_SUB);

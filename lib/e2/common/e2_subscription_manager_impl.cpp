@@ -104,7 +104,7 @@ void e2_subscription_manager_impl::start_subscription(const asn1::e2ap::ric_requ
   }
 
   subscriptions[{ric_request_id.ric_requestor_id, ric_request_id.ric_instance_id}].indication_task =
-      launch_async<e2_indication_procedure>(
+      launch_async<e2ap_indication_procedure>(
           tx_pdu_notifier,
           ev_mng,
           subscriptions[{ric_request_id.ric_requestor_id, ric_request_id.ric_instance_id}].subscription_info,

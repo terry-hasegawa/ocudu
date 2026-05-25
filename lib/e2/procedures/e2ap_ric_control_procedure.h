@@ -15,15 +15,17 @@
 
 namespace ocudu {
 
-class e2_ric_control_procedure
+class e2ap_ric_control_procedure
 {
 public:
-  e2_ric_control_procedure(const e2_ric_control_request& request_,
-                           e2_message_notifier&          notif_,
-                           e2sm_manager&                 e2sm_mng_,
-                           ocudulog::basic_logger&       logger);
+  e2ap_ric_control_procedure(const e2_ric_control_request& request_,
+                             e2_message_notifier&          notif_,
+                             e2sm_manager&                 e2sm_mng_,
+                             ocudulog::basic_logger&       logger);
 
   void operator()(coro_context<async_task<void>>& ctx);
+
+  static const char* name() { return "E2AP RIC Control Procedure"; }
 
   void send_e2_ric_control_acknowledge(const e2_ric_control_request&  ctrl_request,
                                        const e2_ric_control_response& ctrl_response);

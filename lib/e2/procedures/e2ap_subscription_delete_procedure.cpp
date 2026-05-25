@@ -2,16 +2,18 @@
 // SPDX-License-Identifier: BSD-3-Clause-Open-MPI
 // Portions of this file may implement 3GPP specifications, which may be subject to additional licensing requirements.
 
-#include "e2_subscription_delete_procedure.h"
+#include "e2ap_subscription_delete_procedure.h"
+
 using namespace ocudu;
 using namespace asn1::e2ap;
 
-e2_subscription_delete_procedure::e2_subscription_delete_procedure(const asn1::e2ap::ric_sub_delete_request_s& request_,
-                                                                   e2_event_manager&       event_manager_,
-                                                                   e2_message_notifier&    ric_notif_,
-                                                                   e2_subscription_proc&   subscription_mngr_,
-                                                                   timer_factory           timers_,
-                                                                   ocudulog::basic_logger& logger_) :
+e2ap_subscription_delete_procedure::e2ap_subscription_delete_procedure(
+    const asn1::e2ap::ric_sub_delete_request_s& request_,
+    e2_event_manager&                           event_manager_,
+    e2_message_notifier&                        ric_notif_,
+    e2_subscription_proc&                       subscription_mngr_,
+    timer_factory                               timers_,
+    ocudulog::basic_logger&                     logger_) :
   request(request_),
   event_manager(event_manager_),
   logger(logger_),
@@ -21,7 +23,7 @@ e2_subscription_delete_procedure::e2_subscription_delete_procedure(const asn1::e
 {
 }
 
-void e2_subscription_delete_procedure::operator()(coro_context<async_task<void>>& ctx)
+void e2ap_subscription_delete_procedure::operator()(coro_context<async_task<void>>& ctx)
 {
   logger.info("E2AP: Received subscription delete request");
   CORO_BEGIN(ctx);
@@ -40,7 +42,7 @@ void e2_subscription_delete_procedure::operator()(coro_context<async_task<void>>
   CORO_RETURN();
 }
 
-void e2_subscription_delete_procedure::send_e2_subscription_delete_response(
+void e2ap_subscription_delete_procedure::send_e2_subscription_delete_response(
     const e2_subscribe_delete_response_message& response)
 {
   e2_message msg;
@@ -50,7 +52,7 @@ void e2_subscription_delete_procedure::send_e2_subscription_delete_response(
   ric_notif.on_new_message(msg);
 }
 
-void e2_subscription_delete_procedure::send_e2_subscription_delete_failure(
+void e2ap_subscription_delete_procedure::send_e2_subscription_delete_failure(
     const e2_subscribe_delete_response_message& failure)
 {
   e2_message msg;

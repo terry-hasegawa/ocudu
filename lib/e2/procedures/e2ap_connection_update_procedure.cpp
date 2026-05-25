@@ -2,19 +2,20 @@
 // SPDX-License-Identifier: BSD-3-Clause-Open-MPI
 // Portions of this file may implement 3GPP specifications, which may be subject to additional licensing requirements.
 
-#include "e2_connection_update_procedure.h"
+#include "e2ap_connection_update_procedure.h"
+
 using namespace ocudu;
 using namespace asn1::e2ap;
 
-e2_connection_update_procedure::e2_connection_update_procedure(const e2conn_upd_s&     request_,
-                                                               e2_message_notifier&    ric_notif_,
-                                                               timer_factory           timers_,
-                                                               ocudulog::basic_logger& logger_) :
+e2ap_connection_update_procedure::e2ap_connection_update_procedure(const e2conn_upd_s&     request_,
+                                                                   e2_message_notifier&    ric_notif_,
+                                                                   timer_factory           timers_,
+                                                                   ocudulog::basic_logger& logger_) :
   request(request_), logger(logger_), ric_notif(ric_notif_), timers(timers_)
 {
 }
 
-void e2_connection_update_procedure::operator()(coro_context<async_task<void>>& ctx)
+void e2ap_connection_update_procedure::operator()(coro_context<async_task<void>>& ctx)
 {
   logger.info("E2AP: Received E2 Connection Update");
   CORO_BEGIN(ctx);
@@ -27,7 +28,7 @@ void e2_connection_update_procedure::operator()(coro_context<async_task<void>>& 
   CORO_RETURN();
 }
 
-void e2_connection_update_procedure::send_e2_connection_update_ack()
+void e2ap_connection_update_procedure::send_e2_connection_update_ack()
 {
   logger.info("E2AP: Sending E2 Connection Update Ack");
   e2_message msg;
@@ -36,7 +37,7 @@ void e2_connection_update_procedure::send_e2_connection_update_ack()
   ric_notif.on_new_message(msg);
 }
 
-void e2_connection_update_procedure::send_e2_connection_update_failure()
+void e2ap_connection_update_procedure::send_e2_connection_update_failure()
 {
   logger.info("E2AP: Sending E2 Connection Update Failure");
   e2_message msg;

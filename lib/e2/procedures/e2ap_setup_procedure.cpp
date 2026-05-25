@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: BSD-3-Clause-Open-MPI
 // Portions of this file may implement 3GPP specifications, which may be subject to additional licensing requirements.
 
-#include "e2_setup_procedure.h"
+#include "e2ap_setup_procedure.h"
 #include "../common/e2ap_asn1_utils.h"
 #include "ocudu/asn1/e2ap/e2ap.h"
 #include "ocudu/support/async/async_timer.h"
@@ -10,16 +10,16 @@
 using namespace ocudu;
 using namespace asn1::e2ap;
 
-e2_setup_procedure::e2_setup_procedure(const e2_setup_request_message& request_,
-                                       e2_message_notifier&            notif_,
-                                       e2_event_manager&               ev_mng_,
-                                       timer_factory                   timers,
-                                       ocudulog::basic_logger&         logger_) :
+e2ap_setup_procedure::e2ap_setup_procedure(const e2_setup_request_message& request_,
+                                           e2_message_notifier&            notif_,
+                                           e2_event_manager&               ev_mng_,
+                                           timer_factory                   timers,
+                                           ocudulog::basic_logger&         logger_) :
   request(request_), notifier(notif_), ev_mng(ev_mng_), logger(logger_), e2_setup_wait_timer(timers.create_timer())
 {
 }
 
-void e2_setup_procedure::operator()(coro_context<async_task<e2_setup_response_message>>& ctx)
+void e2ap_setup_procedure::operator()(coro_context<async_task<e2_setup_response_message>>& ctx)
 {
   CORO_BEGIN(ctx);
 
@@ -45,7 +45,7 @@ void e2_setup_procedure::operator()(coro_context<async_task<e2_setup_response_me
   CORO_RETURN(create_e2_setup_result());
 }
 
-void e2_setup_procedure::send_e2_setup_request()
+void e2ap_setup_procedure::send_e2_setup_request()
 {
   e2_message msg = {};
   msg.pdu.set_init_msg();
@@ -56,7 +56,7 @@ void e2_setup_procedure::send_e2_setup_request()
   notifier.on_new_message(msg);
 }
 
-bool e2_setup_procedure::retry_required()
+bool e2ap_setup_procedure::retry_required()
 {
   if (transaction.aborted()) {
     return false;
@@ -98,7 +98,7 @@ bool e2_setup_procedure::retry_required()
   return true;
 }
 
-e2_setup_response_message e2_setup_procedure::create_e2_setup_result()
+e2_setup_response_message e2ap_setup_procedure::create_e2_setup_result()
 {
   e2_setup_response_message res{};
 
