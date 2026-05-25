@@ -558,6 +558,17 @@ void pdcp_entity_tx::handle_status_report(byte_buffer_chain status)
   dec.unpack(fmc, 32);
   logger.log_info("Status report. fmc={}", fmc);
 
+  if (fmc > st.tx_next) {
+    logger.log_error("Invalid status report, FMC > TX_NEXT. fmc={} st={}", fmc, st);
+    return;
+  }
+
+  if (fmc < st.tx_next_ack) {
+    // Do not return if FMC < TX_NEXT_ACK.
+    // Perhaps the PDCP status PDU arrived out-of-order and PDUs were acked in the meanttime.
+    logger.log_warning("Invalid status report, FMC < TX_NEXT_ACK. fmc={} st={}", fmc, st);
+  }
+
   // Discard any SDU with COUNT < FMC.
   for (uint32_t count = st.tx_next_ack; count < fmc; count++) {
     discard_pdu(count);
@@ -567,6 +578,11 @@ void pdcp_entity_tx::handle_status_report(byte_buffer_chain status)
   unsigned bit = 0;
   while (dec.unpack(bit, 1)) {
     fmc++;
+    if (fmc >= st.tx_next) {
+      logger.log_warning("Invalid status report, bitmap length exceeds TX_NEXT. fmc={} st={}", fmc, st);
+      break;
+    }
+
     // Bit == 0: PDCP SDU with COUNT = (FMC + bit position) modulo 2^32 is missing.
     // Bit == 1: PDCP SDU with COUNT = (FMC + bit position) modulo 2^32 is correctly received.
     if (bit == 1) {
