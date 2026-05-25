@@ -3,6 +3,8 @@
 // Portions of this file may implement 3GPP specifications, which may be subject to additional licensing requirements.
 
 #include "e2_setup_procedure.h"
+#include "../common/e2ap_asn1_utils.h"
+#include "ocudu/asn1/e2ap/e2ap.h"
 #include "ocudu/support/async/async_timer.h"
 
 using namespace ocudu;
@@ -35,11 +37,6 @@ void e2_setup_procedure::operator()(coro_context<async_task<e2_setup_response_me
       break;
     }
 
-    // Await timer.
-    logger.info("Received E2SetupFailure with Time to Wait IE. Reinitiating E2 setup in {}s (retry={}/{}).",
-                time_to_wait.count(),
-                e2_setup_retry_no,
-                request.max_setup_retries);
     CORO_AWAIT(
         async_wait_for(e2_setup_wait_timer, std::chrono::duration_cast<std::chrono::milliseconds>(time_to_wait)));
   }
@@ -62,25 +59,42 @@ void e2_setup_procedure::send_e2_setup_request()
 bool e2_setup_procedure::retry_required()
 {
   if (transaction.aborted()) {
-    // Timeout or cancelled procedure.
     return false;
   }
-  const e2ap_outcome& e2_setup_outcome = transaction.response();
-  if (e2_setup_outcome.has_value()) {
-    // Success case
+  const e2ap_outcome& outcome = transaction.response();
+  if (outcome.has_value()) {
     return false;
   }
 
-  if (e2_setup_outcome.error().value.type() == e2ap_elem_procs_o::unsuccessful_outcome_c::types_opts::e2setup_fail) {
-    // Radio network
+  const auto& fail = outcome.error().value.e2setup_fail();
+  if (not fail->time_to_wait_present) {
+    logger.warning("\"{}\" failed. RIC E2AP cause: \"{}\". RIC did not set a retry waiting time.",
+                   name(),
+                   get_cause_str(fail->cause));
+    fmt::print("\"{}\" failed. RIC E2AP cause: \"{}\"\n", name(), get_cause_str(fail->cause));
     return false;
   }
   if (e2_setup_retry_no++ >= request.max_setup_retries) {
-    // Number of retries exceeded, or there is no time to wait.
-    logger.error("Reached maximum number of E2 Setup connection retries ({}).", request.max_setup_retries);
+    logger.warning("\"{}\" failed. RIC E2AP cause: \"{}\". Reached maximum number of retries ({}).",
+                   name(),
+                   get_cause_str(fail->cause),
+                   request.max_setup_retries);
+    fmt::print("\"{}\" failed. RIC E2AP cause: \"{}\"\n", name(), get_cause_str(fail->cause));
     return false;
   }
-
+  time_to_wait = std::chrono::seconds{fail->time_to_wait.to_number()};
+  logger.info("\"{}\" failed. RIC E2AP cause: \"{}\". Reinitiating in {}s ({}/{}).",
+              name(),
+              get_cause_str(fail->cause),
+              time_to_wait.count(),
+              e2_setup_retry_no,
+              request.max_setup_retries);
+  fmt::print("\"{}\" failed. RIC E2AP cause: \"{}\". Reinitiating in {}s ({}/{}).\n",
+             name(),
+             get_cause_str(fail->cause),
+             time_to_wait.count(),
+             e2_setup_retry_no,
+             request.max_setup_retries);
   return true;
 }
 

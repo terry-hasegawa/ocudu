@@ -242,6 +242,100 @@ TEST_F(e2_entity_test, when_node_cfg_timeout_fires_with_empty_collection_then_no
   ASSERT_NE(e2_client->last_tx_e2_pdu.pdu.type().value, asn1::e2ap::e2ap_pdu_c::types_opts::init_msg);
 }
 
+TEST_F(e2_test, when_e2_setup_failure_with_time_to_wait_received_then_retry_is_sent)
+{
+  report_fatal_error_if_not(e2->handle_e2_tnl_connection_request(), "Unable to establish dummy SCTP connection");
+
+  e2_setup_request_message                      request;
+  async_task<e2_setup_response_message>         t = e2->handle_e2_setup_request(request);
+  lazy_task_launcher<e2_setup_response_message> t_launcher(t);
+
+  ASSERT_EQ(e2_client->last_tx_e2_pdu.pdu.type().value, asn1::e2ap::e2ap_pdu_c::types_opts::init_msg);
+  unsigned initial_transaction_id = get_transaction_id(e2_client->last_tx_e2_pdu.pdu).value();
+
+  // Inject failure with TimeToWait = 1 second.
+  e2_message failure_msg     = generate_e2_setup_failure(initial_transaction_id);
+  auto&      fail            = failure_msg.pdu.unsuccessful_outcome().value.e2setup_fail();
+  fail->time_to_wait_present = true;
+  fail->time_to_wait.value   = asn1::e2ap::time_to_wait_opts::v1s;
+  e2->handle_message(failure_msg);
+
+  // Before the delay expires: task is suspended, no new request sent.
+  ASSERT_FALSE(t.ready());
+  for (unsigned i = 0; i < 999; ++i) {
+    tick();
+  }
+  ASSERT_FALSE(t.ready());
+  ASSERT_EQ(get_transaction_id(e2_client->last_tx_e2_pdu.pdu).value(), initial_transaction_id);
+
+  // After the delay expires: a new E2SetupRequest with a fresh transaction ID is sent.
+  for (unsigned i = 0; i < 2; ++i) {
+    tick();
+  }
+  ASSERT_EQ(e2_client->last_tx_e2_pdu.pdu.type().value, asn1::e2ap::e2ap_pdu_c::types_opts::init_msg);
+  ASSERT_EQ(e2_client->last_tx_e2_pdu.pdu.init_msg().value.type().value,
+            asn1::e2ap::e2ap_elem_procs_o::init_msg_c::types_opts::e2setup_request);
+  ASSERT_NE(get_transaction_id(e2_client->last_tx_e2_pdu.pdu).value(), initial_transaction_id);
+}
+
+TEST_F(e2_test, when_max_e2_setup_retries_exceeded_then_procedure_fails_without_retry)
+{
+  report_fatal_error_if_not(e2->handle_e2_tnl_connection_request(), "Unable to establish dummy SCTP connection");
+
+  e2_setup_request_message request;
+  request.max_setup_retries = 0;
+
+  async_task<e2_setup_response_message>         t = e2->handle_e2_setup_request(request);
+  lazy_task_launcher<e2_setup_response_message> t_launcher(t);
+
+  unsigned   transaction_id  = get_transaction_id(e2_client->last_tx_e2_pdu.pdu).value();
+  e2_message failure_msg     = generate_e2_setup_failure(transaction_id);
+  auto&      fail            = failure_msg.pdu.unsuccessful_outcome().value.e2setup_fail();
+  fail->time_to_wait_present = true;
+  fail->time_to_wait.value   = asn1::e2ap::time_to_wait_opts::v1s;
+  e2->handle_message(failure_msg);
+
+  // With max_setup_retries = 0 the retry guard fires immediately: task completes without waiting.
+  ASSERT_TRUE(t.ready());
+  ASSERT_FALSE(t.get().success);
+}
+
+TEST_F(e2_test, when_e2_setup_succeeds_after_retry_then_result_is_success)
+{
+  report_fatal_error_if_not(e2->handle_e2_tnl_connection_request(), "Unable to establish dummy SCTP connection");
+
+  e2_setup_request_message request;
+  request.max_setup_retries = 1;
+
+  async_task<e2_setup_response_message>         t = e2->handle_e2_setup_request(request);
+  lazy_task_launcher<e2_setup_response_message> t_launcher(t);
+
+  unsigned   initial_transaction_id = get_transaction_id(e2_client->last_tx_e2_pdu.pdu).value();
+  e2_message failure_msg            = generate_e2_setup_failure(initial_transaction_id);
+  auto&      fail                   = failure_msg.pdu.unsuccessful_outcome().value.e2setup_fail();
+  fail->time_to_wait_present        = true;
+  fail->time_to_wait.value          = asn1::e2ap::time_to_wait_opts::v1s;
+  e2->handle_message(failure_msg);
+
+  ASSERT_FALSE(t.ready());
+
+  // Advance past the 1-second retry delay.
+  for (unsigned i = 0; i < 1001; ++i) {
+    tick();
+  }
+
+  // A new E2SetupRequest should have been sent with a fresh transaction ID.
+  unsigned retry_transaction_id = get_transaction_id(e2_client->last_tx_e2_pdu.pdu).value();
+  ASSERT_NE(retry_transaction_id, initial_transaction_id);
+
+  // Inject success on the retry transaction.
+  e2_message e2_setup_response = generate_e2_setup_response(retry_transaction_id);
+  e2->handle_message(e2_setup_response);
+
+  ASSERT_TRUE(t.ready());
+  ASSERT_TRUE(t.get().success);
+}
+
 /// fill_asn1_e2ap_setup_request: with a vector containing a real node_cfg entry the component
 /// bytes in the ASN.1 struct equal those provided; with an empty vector no entries are created.
 TEST_F(e2_test, fill_e2ap_setup_request_uses_real_bytes_when_node_cfg_vector_provided)

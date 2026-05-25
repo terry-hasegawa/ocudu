@@ -21,6 +21,8 @@ public:
 
   void operator()(coro_context<async_task<e2_setup_response_message>>& ctx);
 
+  static const char* name() { return "E2AP Setup Procedure"; }
+
 private:
   /// Send E2 SETUP REQUEST.
   void send_e2_setup_request();
