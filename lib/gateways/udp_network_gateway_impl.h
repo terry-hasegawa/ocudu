@@ -21,6 +21,16 @@ struct udp_tx_pdu_t {
   sockaddr_storage dst_addr;
 };
 
+/// Receive context used by the recvmmsg syscall.
+struct receive_context {
+  explicit receive_context(unsigned rx_max_mmsg);
+
+  std::vector<std::vector<uint8_t>> rx_mem;
+  std::vector<::sockaddr_storage>   rx_srcaddr;
+  std::vector<::mmsghdr>            rx_msghdr;
+  std::vector<::iovec>              rx_iovecs;
+};
+
 /// Transmit context used by the sendmmsg syscall.
 struct transmit_context {
   explicit transmit_context(unsigned tx_max_mmsg, unsigned tx_max_segments)
@@ -84,6 +94,7 @@ private:
   unique_fd             sock_fd;
   io_broker::subscriber io_subcriber;
 
+  receive_context                      rx_context;
   transmit_context                     tx_ctx;
   batched_dispatch_queue<udp_tx_pdu_t> batched_queue;
 

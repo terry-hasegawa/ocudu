@@ -24,6 +24,7 @@ udp_network_gateway_impl::udp_network_gateway_impl(udp_network_gateway_config   
   logger(ocudulog::fetch_basic_logger("UDP-GW")),
   io_tx_executor(io_tx_executor_),
   io_rx_executor(io_rx_executor_),
+  rx_context(config.rx_max_mmsg),
   tx_ctx(config.tx_max_mmsg, config.tx_max_segments),
   batched_queue(
       config.bind_address,
@@ -238,52 +239,11 @@ bool udp_network_gateway_impl::create_and_bind()
   return true;
 }
 
-namespace {
-
-/// Receive context used by the recvmmsg syscall.
-struct receive_context {
-  explicit receive_context(unsigned rx_max_mmsg);
-
-  std::vector<std::vector<uint8_t>> rx_mem;
-  std::vector<::sockaddr_storage>   rx_srcaddr;
-  std::vector<::mmsghdr>            rx_msghdr;
-  std::vector<::iovec>              rx_iovecs;
-};
-
-} // namespace
-
-receive_context::receive_context(unsigned rx_max_mmsg)
-{
-  // Allocate RX buffers.
-  rx_mem.resize(rx_max_mmsg);
-  for (unsigned i = 0; i != rx_max_mmsg; ++i) {
-    rx_mem[i].resize(network_gateway_udp_max_len);
-  }
-
-  // Allocate context for recv_mmsg.
-  rx_srcaddr.resize(rx_max_mmsg);
-  rx_msghdr.resize(rx_max_mmsg);
-  rx_iovecs.resize(rx_max_mmsg);
-
-  for (unsigned i = 0; i != rx_max_mmsg; ++i) {
-    rx_msghdr[i].msg_hdr             = {};
-    rx_msghdr[i].msg_hdr.msg_name    = &rx_srcaddr[i];
-    rx_msghdr[i].msg_hdr.msg_namelen = sizeof(::sockaddr_storage);
-
-    rx_iovecs[i].iov_base           = rx_mem[i].data();
-    rx_iovecs[i].iov_len            = network_gateway_udp_max_len;
-    rx_msghdr[i].msg_hdr.msg_iov    = &rx_iovecs[i];
-    rx_msghdr[i].msg_hdr.msg_iovlen = 1;
-  }
-}
-
 void udp_network_gateway_impl::receive()
 {
   if (!sock_fd.is_open()) {
     logger.error("Cannot receive on UDP gateway: Socket is not initialized.");
   }
-
-  thread_local receive_context rx_context(config.rx_max_mmsg);
 
   int rx_msgs = recvmmsg(sock_fd.value(), rx_context.rx_msghdr.data(), config.rx_max_mmsg, MSG_WAITFORONE, nullptr);
   ocudulog::fetch_basic_logger("IO-EPOLL").info("UDP rx {} packets, max is {}", rx_msgs, config.rx_max_mmsg);
@@ -502,4 +462,29 @@ bool udp_network_gateway_impl::close_socket()
     return false;
   }
   return true;
+}
+
+receive_context::receive_context(unsigned rx_max_mmsg)
+{
+  // Allocate RX buffers.
+  rx_mem.resize(rx_max_mmsg);
+  for (unsigned i = 0; i != rx_max_mmsg; ++i) {
+    rx_mem[i].resize(network_gateway_udp_max_len);
+  }
+
+  // Allocate context for recv_mmsg.
+  rx_srcaddr.resize(rx_max_mmsg);
+  rx_msghdr.resize(rx_max_mmsg);
+  rx_iovecs.resize(rx_max_mmsg);
+
+  for (unsigned i = 0; i != rx_max_mmsg; ++i) {
+    rx_msghdr[i].msg_hdr             = {};
+    rx_msghdr[i].msg_hdr.msg_name    = &rx_srcaddr[i];
+    rx_msghdr[i].msg_hdr.msg_namelen = sizeof(::sockaddr_storage);
+
+    rx_iovecs[i].iov_base           = rx_mem[i].data();
+    rx_iovecs[i].iov_len            = network_gateway_udp_max_len;
+    rx_msghdr[i].msg_hdr.msg_iov    = &rx_iovecs[i];
+    rx_msghdr[i].msg_hdr.msg_iovlen = 1;
+  }
 }
