@@ -1854,6 +1854,10 @@ OCUDUASN_CODE unpack_unconstrained_real(float& n, cbit_ref& bref, bool aligned)
   }
 
   uint8_t buf[10];
+  if (len > sizeof(buf)) {
+    asn1::log_error("REAL length {} exceeds maximum supported size {}", len, sizeof(buf));
+    return OCUDUASN_ERROR_DECODE_FAIL;
+  }
   for (uint32_t i = 0; i < len; i++) {
     HANDLE_CODE(bref.unpack(buf[i], 8));
   }

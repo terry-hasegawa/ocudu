@@ -827,6 +827,25 @@ TEST(asn1_real_test, real_negative_number_pack_unpack)
   }
 }
 
+TEST(asn1_real_test, real_oversized_length_rejected)
+{
+  // Crafted ASN.1 REAL with length=11, exceeding the 10-byte decode buffer — must be rejected.
+  std::vector<uint8_t> raw = {0x0b, 0x80, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09};
+
+  ocudu::byte_buffer buf;
+  for (uint8_t b : raw) {
+    ASSERT_TRUE(buf.append(b));
+  }
+
+  real_s   real_number;
+  cbit_ref cbref(buf);
+  ASSERT_EQ(OCUDUASN_ERROR_DECODE_FAIL, real_number.unpack(cbref));
+
+  ocudulog::flush();
+  ASSERT_EQ(1, test_spy->get_error_counter());
+  test_spy->reset_counters();
+}
+
 TEST(asn1_varlength_field_test, pack)
 {
   ocudu::byte_buffer buffer;
