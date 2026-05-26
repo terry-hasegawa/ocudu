@@ -12,6 +12,7 @@
 #include "ocudu/ran/ssb/ssb_properties.h"
 #include "ocudu/ran/subcarrier_spacing.h"
 #include <array>
+#include <numeric>
 #include <optional>
 #include <vector>
 
@@ -75,9 +76,12 @@ bool meas_gap_collides(const meas_gap_config&          gap,
 {
   const unsigned mgrp_slots = static_cast<unsigned>(gap.mgrp) * get_nof_slots_per_subframe(scs);
   for (const auto& occ : ul_occasions) {
+    // The pattern of MGRP-relative occasion positions repeats every LCM(MGRP, occ.period) slots, one SFN at most.
+    // Checking it covers all phase shifts that occur when MGRP and the occasion period are not multiples of each other.
+    const unsigned check_span_slots = std::lcm(mgrp_slots, occ.period_slots);
     if (mode == collision_check::strict) {
       // `strict` check collides when any periodic UL occasion repetition overlaps the measurement gap.
-      for (unsigned slot = occ.offset_slots; slot < mgrp_slots; slot += occ.period_slots) {
+      for (unsigned slot = occ.offset_slots; slot < check_span_slots; slot += occ.period_slots) {
         if (is_inside_meas_gap(gap, slot_point(scs, slot))) {
           return true;
         }
@@ -85,7 +89,7 @@ bool meas_gap_collides(const meas_gap_config&          gap,
     } else {
       // `loose` check collides when all periodic UL resource repetitions overlap the measurement gap.
       bool all_inside_meas_gap = true;
-      for (unsigned slot = occ.offset_slots; slot < mgrp_slots; slot += occ.period_slots) {
+      for (unsigned slot = occ.offset_slots; slot < check_span_slots; slot += occ.period_slots) {
         if (!is_inside_meas_gap(gap, slot_point(scs, slot))) {
           all_inside_meas_gap = false;
           break;
