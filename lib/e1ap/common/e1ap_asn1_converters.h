@@ -883,6 +883,7 @@ inline e1ap_pdcp_config e1ap_asn1_to_pdcp_config(const asn1::e1ap::pdcp_cfg_s& a
             rohc_config.rohc_params.continue_rohc = false;
           }
         }
+        break;
       default:
         report_fatal_error("Cannot convert E1AP ASN.1 ROHC type {} to common type",
                            fmt::underlying(asn1_pdcp_cfg.rohc_params.type().value));
