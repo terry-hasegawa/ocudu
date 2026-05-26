@@ -4,7 +4,6 @@
 
 #include "du_meas_config_manager.h"
 #include "du_ue_resource_config.h"
-#include "ocudu/adt/static_vector.h"
 #include "ocudu/asn1/rrc_nr/dl_dcch_msg_ies.h"
 #include "ocudu/ocudulog/ocudulog.h"
 #include "ocudu/ran/csi_rs/csi_meas_config.h"
@@ -14,6 +13,7 @@
 #include "ocudu/ran/subcarrier_spacing.h"
 #include <array>
 #include <optional>
+#include <vector>
 
 using namespace ocudu;
 using namespace odu;
@@ -191,10 +191,9 @@ du_meas_config_manager::du_meas_config_manager(span<const du_cell_config> cell_c
 }
 
 // Collects SR and periodic-CSI occasions from the UE's PCell serving cell config.
-static static_vector<periodic_uci_config, MAX_NOF_SR_RESOURCES + MAX_NOF_CSI_REPORT_CONFIGS>
-collect_ul_occasions(const ue_cell_config& pcell_ue_cfg)
+static std::vector<periodic_uci_config> collect_ul_occasions(const ue_cell_config& pcell_ue_cfg)
 {
-  static_vector<periodic_uci_config, MAX_NOF_SR_RESOURCES + MAX_NOF_CSI_REPORT_CONFIGS> out;
+  std::vector<periodic_uci_config> out;
 
   if (pcell_ue_cfg.serv_cell_cfg.ul_config.has_value() &&
       pcell_ue_cfg.serv_cell_cfg.ul_config->init_ul_bwp.pucch_cfg.has_value()) {
