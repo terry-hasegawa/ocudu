@@ -201,7 +201,12 @@ void ocudu::ocucp::generate_report_config(const cell_meas_manager_cfg&  cfg,
                                           rrc_meas_cfg&                 meas_cfg,
                                           cell_meas_manager_ue_context& ue_meas_context)
 {
-  // add report cfg to add mod
+  // Add report cfg to add mod
+  if (cfg.report_config_ids.find(report_cfg_id) == cfg.report_config_ids.end()) {
+    ocudulog::fetch_basic_logger("CU-CP").error("Report config ID {} not found in configuration",
+                                                report_cfg_id_to_uint(report_cfg_id));
+    return;
+  }
   rrc_report_cfg_to_add_mod report_cfg_to_add_mod;
   report_cfg_to_add_mod.report_cfg_id = report_cfg_id;
   report_cfg_to_add_mod.report_cfg    = cfg.report_config_ids.at(report_cfg_id);
@@ -214,7 +219,7 @@ void ocudu::ocucp::generate_report_config(const cell_meas_manager_cfg&  cfg,
   meas_id_to_add_mod.report_cfg_id = report_cfg_id;
   meas_cfg.meas_id_to_add_mod_list.push_back(meas_id_to_add_mod);
 
-  // add meas id to lookup
+  // Add meas id to lookup.
   const auto& serving_cell_cfg = cfg.cells.at(nci).serving_cell_cfg;
   ue_meas_context.meas_id_to_meas_context.emplace(meas_id_to_add_mod.meas_id,
                                                   meas_context_t{meas_id_to_add_mod.meas_obj_id,
