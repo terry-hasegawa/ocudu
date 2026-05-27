@@ -31,6 +31,22 @@ byte_buffer ocudu::test_helpers::create_meas_timing_cfg(uint32_t carrier_freq, s
   return byte_buffer{};
 }
 
+byte_buffer ocudu::test_helpers::create_meas_timing_cfg_no_freq_and_timing()
+{
+  asn1::rrc_nr::meas_timing_cfg_s asn1_meas_timing_cfg;
+  auto&                           meas_timing_conf = asn1_meas_timing_cfg.crit_exts.set_c1().set_meas_timing_conf();
+  asn1::rrc_nr::meas_timing_s     meas_timing_item;
+  meas_timing_item.freq_and_timing_present = false; // omit freq-and-timing
+  meas_timing_conf.meas_timing.push_back(meas_timing_item);
+
+  byte_buffer   pdu;
+  asn1::bit_ref bref{pdu};
+  if (asn1_meas_timing_cfg.pack(bref) == asn1::OCUDUASN_SUCCESS) {
+    return pdu;
+  }
+  return byte_buffer{};
+}
+
 byte_buffer ocudu::test_helpers::create_packed_sib1(const plmn_identity& plmn)
 {
   asn1::rrc_nr::sib1_s sib1 = create_sib1(plmn);

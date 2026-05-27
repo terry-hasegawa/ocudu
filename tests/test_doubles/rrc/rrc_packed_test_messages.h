@@ -21,6 +21,10 @@ byte_buffer create_ho_prep_info();
 /// \brief Generates a dummy Measurement Timing Configuration.
 byte_buffer create_meas_timing_cfg(uint32_t carrier_freq, subcarrier_spacing scs);
 
+/// \brief Generates a Measurement Timing Configuration where freq-and-timing is absent.
+/// Use this to simulate a malformed or minimal MeasTiming element as a DU might advertise.
+byte_buffer create_meas_timing_cfg_no_freq_and_timing();
+
 /// \brief Generates a packed dummy SIB1 message.
 byte_buffer create_packed_sib1(const plmn_identity& plmn = plmn_identity::test_value());
 

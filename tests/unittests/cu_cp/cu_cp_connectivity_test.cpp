@@ -9,6 +9,7 @@
 #include "tests/test_doubles/rrc/rrc_test_messages.h"
 #include "tests/unittests/e1ap/common/e1ap_cu_cp_test_messages.h"
 #include "tests/unittests/ngap/ngap_test_messages.h"
+#include "ocudu/asn1/f1ap/f1ap_pdu_contents.h"
 #include "ocudu/asn1/f1ap/f1ap_pdu_contents_ue.h"
 #include "ocudu/asn1/rrc_nr/dl_ccch_msg.h"
 #include "ocudu/asn1/rrc_nr/dl_dcch_msg_ies.h"
@@ -486,6 +487,33 @@ TEST_F(cu_cp_connectivity_test, when_a_du_with_non_matching_gnb_id_connects_then
   get_du(du_idx).push_ul_pdu(f1ap_pdu);
 
   // Ensure the F1 Setup Failure is received for the DU.
+  ASSERT_TRUE(this->wait_for_f1ap_tx_pdu(du_idx, f1ap_pdu, std::chrono::milliseconds{1000}));
+  ASSERT_EQ(f1ap_pdu.pdu.type().value, asn1::f1ap::f1ap_pdu_c::types_opts::unsuccessful_outcome);
+  ASSERT_EQ(f1ap_pdu.pdu.unsuccessful_outcome().value.type().value,
+            asn1::f1ap::f1ap_elem_procs_o::unsuccessful_outcome_c::types_opts::f1_setup_fail);
+}
+
+TEST_F(cu_cp_connectivity_test, when_f1_setup_request_meas_timing_omits_freq_and_timing_then_f1_setup_is_rejected)
+{
+  // Run NG setup to completion.
+  run_ng_setup();
+
+  auto ret = connect_new_du();
+  ASSERT_TRUE(ret.has_value());
+  unsigned du_idx = *ret;
+
+  // Start from a valid F1 Setup Request and replace its meas_timing_cfg with one that omits
+  // freq-and-timing in every MeasTiming entry.
+  gnb_du_id_t  du_id    = int_to_gnb_du_id(0x55);
+  f1ap_message f1ap_pdu = test_helpers::generate_f1_setup_request(du_id);
+  f1ap_pdu.pdu.init_msg()
+      .value.f1_setup_request()
+      ->gnb_du_served_cells_list[0]
+      ->gnb_du_served_cells_item()
+      .served_cell_info.meas_timing_cfg = test_helpers::create_meas_timing_cfg_no_freq_and_timing();
+  get_du(du_idx).push_ul_pdu(f1ap_pdu);
+
+  // CU-CP must respond with F1 Setup Failure.
   ASSERT_TRUE(this->wait_for_f1ap_tx_pdu(du_idx, f1ap_pdu, std::chrono::milliseconds{1000}));
   ASSERT_EQ(f1ap_pdu.pdu.type().value, asn1::f1ap::f1ap_pdu_c::types_opts::unsuccessful_outcome);
   ASSERT_EQ(f1ap_pdu.pdu.unsuccessful_outcome().value.type().value,
