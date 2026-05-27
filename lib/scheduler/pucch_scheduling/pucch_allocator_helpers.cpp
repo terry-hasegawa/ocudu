@@ -13,11 +13,9 @@ pucch_existing_pdus_handler::pucch_existing_pdus_handler(rnti_t                 
                                                          span<pucch_info>                     pucchs,
                                                          const pucch_resource_builder_params& res_params)
 {
-  pdu_id = 0;
-
   for (auto& pucch : pucchs) {
     if (pucch.crnti == crnti and pucch.res->res_id.is_ded()) {
-      pucch.pdu_context.id = MAX_PUCCH_PDUS_PER_SLOT;
+      pucch.to_be_removed = true;
       ++pdus_cnt;
 
       if (pucch.uci_bits.harq_ack_nof_bits != 0U) {
@@ -46,22 +44,22 @@ pucch_info* pucch_existing_pdus_handler::get_next_pdu(static_vector<pucch_info, 
 {
   if (is_empty()) {
     ocudu_assert(not pucchs.full(), "PUCCH grants list is full");
-    auto* new_pdu           = &pucchs.emplace_back();
-    new_pdu->pdu_context.id = pdu_id++;
+    auto* new_pdu          = &pucchs.emplace_back();
+    new_pdu->to_be_removed = false;
     return new_pdu;
   }
   pucch_info* ret_grant = nullptr;
   if (csi_pdu != nullptr) {
-    ret_grant                 = csi_pdu;
-    ret_grant->pdu_context.id = pdu_id++;
+    ret_grant                = csi_pdu;
+    ret_grant->to_be_removed = false;
     --pdus_cnt;
   } else if (sr_pdu != nullptr) {
-    ret_grant                 = sr_pdu;
-    ret_grant->pdu_context.id = pdu_id++;
+    ret_grant                = sr_pdu;
+    ret_grant->to_be_removed = false;
     --pdus_cnt;
   } else if (harq_pdu != nullptr) {
-    ret_grant                 = harq_pdu;
-    ret_grant->pdu_context.id = pdu_id++;
+    ret_grant                = harq_pdu;
+    ret_grant->to_be_removed = false;
     --pdus_cnt;
   }
   // NOTE: this cannot be nullptr, otherwise the function would have exited at the previous return.
@@ -76,7 +74,7 @@ void pucch_existing_pdus_handler::remove_unused_pdus(static_vector<pucch_info, M
   }
   auto* it = pucchs.begin();
   while (it != pucchs.end()) {
-    if (it->crnti == rnti and it->res->res_id.is_ded() and it->pdu_context.id >= MAX_PUCCH_PDUS_PER_SLOT) {
+    if (it->crnti == rnti and it->res->res_id.is_ded() and it->to_be_removed) {
       it = pucchs.erase(it);
     } else {
       ++it;
@@ -94,7 +92,7 @@ void pucch_existing_pdus_handler::update_sr_pdu_bits(sr_nof_bits sr_bits, unsign
 
   sr_pdu->uci_bits.sr_bits           = sr_bits;
   sr_pdu->uci_bits.harq_ack_nof_bits = harq_ack_bits;
-  sr_pdu->pdu_context.id             = pdu_id++;
+  sr_pdu->to_be_removed              = false;
 
   // Once the grant is updated, set the pointer to null, as we don't want to process this again.
   sr_pdu = nullptr;
@@ -109,7 +107,7 @@ void pucch_existing_pdus_handler::update_csi_pdu_bits(unsigned csi_part1_bits, s
 
   csi_pdu->uci_bits.csi_part1_nof_bits = csi_part1_bits;
   csi_pdu->uci_bits.sr_bits            = sr_bits;
-  csi_pdu->pdu_context.id              = pdu_id++;
+  csi_pdu->to_be_removed               = false;
 
   // Once the grant is updated, set the pointer to null, as we don't want to process this again.
   csi_pdu = nullptr;
@@ -158,7 +156,7 @@ void pucch_existing_pdus_handler::update_harq_pdu_bits(unsigned                 
   }
   harq_pdu->uci_bits.harq_ack_nof_bits = harq_ack_bits;
   harq_pdu->uci_bits.sr_bits           = sr_bits;
-  harq_pdu->pdu_context.id             = pdu_id++;
+  harq_pdu->to_be_removed              = false;
 
   // Once the grant is updated, set the pointer to null, as we don't want to process this again.
   harq_pdu = nullptr;

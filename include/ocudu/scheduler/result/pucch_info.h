@@ -16,13 +16,6 @@ namespace ocudu {
 
 /// Info about PUCCH used resource.
 struct pucch_info {
-  /// This information only is used by the scheduler and not passed to the PHY.
-  struct context {
-    /// Identifier of the PUCCH PDU within the list of PUCCH PDUs for a given slot. The ID is only meaningful for a
-    /// given UE; i.e., different UEs can reuse the same ID, but a UE cannot reuse the same ID for different PDUs.
-    unsigned id = MAX_PUCCH_PDUS_PER_SLOT;
-  };
-
   /// Format 0 specific parameters for a PUCCH transmission.
   struct f0_config {
     /// \c pucch-GroupHopping, as per TS 38.331.
@@ -72,7 +65,8 @@ struct pucch_info {
     uint16_t                 n_id_0_scrambling;
   };
 
-  context                                                             pdu_context;
+  /// Used internally by the scheduler to mark a previously-allocated PDU that must be removed. Not passed to the PHY.
+  bool                                                                to_be_removed = false;
   rnti_t                                                              crnti;
   const bwp_configuration*                                            bwp_cfg;
   const pucch_resource*                                               res;

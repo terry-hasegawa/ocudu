@@ -33,7 +33,6 @@ public:
 
 private:
   unsigned pdus_cnt = 0;
-  unsigned pdu_id   = 0;
 };
 
 } // namespace ocudu
