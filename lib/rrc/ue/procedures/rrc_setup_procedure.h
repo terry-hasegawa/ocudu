@@ -15,8 +15,7 @@
 #include "ocudu/support/async/eager_async_task.h"
 #include <chrono>
 
-namespace ocudu {
-namespace ocucp {
+namespace ocudu::ocucp {
 
 /// \brief Handles the creation of SRBs in the RRC UE.
 ///  \startuml
@@ -99,8 +98,8 @@ private:
   eager_async_task<rrc_outcome> task;
 
   asn1::rrc_nr::rrc_setup_complete_s rrc_setup_complete_msg;
+  uint8_t                            sel_plmn_id   = 0;
   plmn_identity                      selected_plmn = plmn_identity::test_value();
 };
 
-} // namespace ocucp
-} // namespace ocudu
+} // namespace ocudu::ocucp

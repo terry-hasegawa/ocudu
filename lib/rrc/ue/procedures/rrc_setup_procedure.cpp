@@ -78,15 +78,14 @@ void rrc_setup_procedure::operator()(coro_context<async_task<void>>& ctx)
 
   // Store selected PLMN in the RRC UE context and in the CU-CP UE.
   // Note: The selected PLMN starts at 1.
-  if (context.cell.plmn_identity_list.size() < rrc_setup_complete_msg.crit_exts.rrc_setup_complete().sel_plmn_id) {
-    logger.log_warning("Invalid selected PLMN id {} in RRC Setup Complete",
-                       rrc_setup_complete_msg.crit_exts.rrc_setup_complete().sel_plmn_id);
+  sel_plmn_id = rrc_setup_complete_msg.crit_exts.rrc_setup_complete().sel_plmn_id;
+  if (sel_plmn_id == 0 || sel_plmn_id > context.cell.plmn_identity_list.size()) {
+    logger.log_warning("Invalid selected PLMN id {} in RRC Setup Complete", sel_plmn_id);
     rrc_ue.on_ue_release_required(ngap_cause_radio_network_t::unspecified);
     CORO_EARLY_RETURN();
   }
 
-  selected_plmn =
-      context.cell.plmn_identity_list[rrc_setup_complete_msg.crit_exts.rrc_setup_complete().sel_plmn_id - 1];
+  selected_plmn = context.cell.plmn_identity_list[sel_plmn_id - 1];
 
   // Notify the CU-CP about the selected PLMN.
   if (!cu_cp_notifier.on_ue_setup_complete_received(selected_plmn)) {
