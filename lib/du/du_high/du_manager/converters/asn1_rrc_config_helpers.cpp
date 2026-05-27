@@ -7,6 +7,7 @@
 #include "asn1_ntn_config_helpers.h"
 #include "ocudu/asn1/asn1_diff_utils.h"
 #include "ocudu/ran/band_helper.h"
+#include "ocudu/ran/frequency_range.h"
 #include "ocudu/support/enum_utils.h"
 #include "ocudu/support/error_handling.h"
 #include "ocudu/support/math/math_utils.h"
@@ -3433,16 +3434,20 @@ bool ocudu::odu::calculate_reconfig_with_sync_diff(asn1::rrc_nr::recfg_with_sync
   out.sp_cell_cfg_common.ul_cfg_common_present = true;
   out.sp_cell_cfg_common.ul_cfg_common         = make_asn1_rrc_ul_cfg_common(du_cell_cfg.ran.ul_cfg_common);
 
-  n_ta_offset ta_offset                                  = band_helper::get_ta_offset(du_cell_cfg.ran.dl_carrier.band);
-  out.sp_cell_cfg_common.n_timing_advance_offset_present = true;
-  if (ta_offset == n_ta_offset::n0) {
-    out.sp_cell_cfg_common.n_timing_advance_offset.value = serving_cell_cfg_common_s::n_timing_advance_offset_opts::n0;
-  } else if (ta_offset == n_ta_offset::n25600) {
-    out.sp_cell_cfg_common.n_timing_advance_offset.value =
-        serving_cell_cfg_common_s::n_timing_advance_offset_opts::n25600;
-  } else if (ta_offset == n_ta_offset::n39936) {
-    out.sp_cell_cfg_common.n_timing_advance_offset.value =
-        serving_cell_cfg_common_s::n_timing_advance_offset_opts::n39936;
+  // n-TimingAdvanceOffset only covers FR1 offsets, FR2 value n13792 is not present in this enum and should be skipped.
+  if (band_helper::get_freq_range(du_cell_cfg.ran.dl_carrier.band) == frequency_range::FR1) {
+    const n_ta_offset ta_offset = band_helper::get_ta_offset(du_cell_cfg.ran.dl_carrier.band);
+    out.sp_cell_cfg_common.n_timing_advance_offset_present = true;
+    if (ta_offset == n_ta_offset::n0) {
+      out.sp_cell_cfg_common.n_timing_advance_offset.value =
+          serving_cell_cfg_common_s::n_timing_advance_offset_opts::n0;
+    } else if (ta_offset == n_ta_offset::n25600) {
+      out.sp_cell_cfg_common.n_timing_advance_offset.value =
+          serving_cell_cfg_common_s::n_timing_advance_offset_opts::n25600;
+    } else if (ta_offset == n_ta_offset::n39936) {
+      out.sp_cell_cfg_common.n_timing_advance_offset.value =
+          serving_cell_cfg_common_s::n_timing_advance_offset_opts::n39936;
+    }
   }
 
   // As per \c ssb-PositionsInBurst, in \c ServingCellConfigCommon, TS 38.331, the length of \c ssb-PositionsInBurst
