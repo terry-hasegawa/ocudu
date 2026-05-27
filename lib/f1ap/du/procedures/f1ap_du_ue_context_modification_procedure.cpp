@@ -136,7 +136,7 @@ void f1ap_du_ue_context_modification_procedure::create_du_request(const asn1::f1
     // the gNB-DU shall, if supported, configure servingCellMO after determining the list of BWPs for the UE and
     // include the list of servingCellMOs that have been encoded in CellGroupConfig IE as ServingCellMO-encoded-in-CGC
     // List IE in the UE CONTEXT MODIFICATION RESPONSE message.
-    auto& list = du_request.serving_cell_mo_list.emplace(msg->serving_cell_mo_list.size());
+    auto& list = du_request.serving_cell_mo_list.emplace();
     for (const auto& item : msg->serving_cell_mo_list) {
       list.emplace_back(f1ap_serving_cell_mo_list_item{item->serving_cell_mo_list_item().serving_cell_mo,
                                                        item->serving_cell_mo_list_item().ssb_freq});

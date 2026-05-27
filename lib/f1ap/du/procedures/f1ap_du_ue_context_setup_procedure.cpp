@@ -264,7 +264,7 @@ async_task<f1ap_ue_context_update_response> f1ap_du_ue_context_setup_procedure::
   // servingCellMOs that have been encoded in CellGroupConfig IE as ServingCellMO-encoded-in-CGC List IE in the UE
   // CONTEXT SETUP RESPONSE message.
   if (msg->serving_cell_mo_list_present) {
-    auto& list = du_request.serving_cell_mo_list.emplace(msg->serving_cell_mo_list.size());
+    auto& list = du_request.serving_cell_mo_list.emplace();
     for (const auto& item : msg->serving_cell_mo_list) {
       list.emplace_back(f1ap_serving_cell_mo_list_item{item->serving_cell_mo_list_item().serving_cell_mo,
                                                        item->serving_cell_mo_list_item().ssb_freq});
