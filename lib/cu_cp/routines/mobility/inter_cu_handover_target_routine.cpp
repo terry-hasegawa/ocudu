@@ -30,7 +30,7 @@ static bool handle_ue_context_setup_response(e1ap_bearer_context_modification_re
 inter_cu_handover_target_routine::inter_cu_handover_target_routine(
     const cu_cp_inter_cu_handover_request& request_,
     e1ap_bearer_context_manager&           e1ap_bearer_ctxt_mng_,
-    f1ap_ue_context_manager&               f1ap_ue_ctxt_mng_,
+    du_processor&                          du_proc_,
     cu_cp_ue_removal_handler&              ue_removal_handler_,
     ue_manager&                            ue_mng_,
     cell_meas_manager&                     cell_meas_mng_,
@@ -38,7 +38,7 @@ inter_cu_handover_target_routine::inter_cu_handover_target_routine(
     ocudulog::basic_logger&                logger_) :
   request(request_),
   e1ap_bearer_ctxt_mng(e1ap_bearer_ctxt_mng_),
-  f1ap_ue_ctxt_mng(f1ap_ue_ctxt_mng_),
+  du_proc(du_proc_),
   ue_removal_handler(ue_removal_handler_),
   ue_mng(ue_mng_),
   cell_meas_mng(cell_meas_mng_),
@@ -130,11 +130,15 @@ void inter_cu_handover_target_routine::operator()(
         ue_context_setup_request.serving_cell_mo = meas_obj_id_to_uint(
             ue_mng.get_measurement_context(request.ue_index).nci_to_meas_obj_id.at(request.target_cell_id.nci));
       }
+      // Forward the MeasConfig to the target DU so it can derive the measurement gap. The RRC UE doesn't exist yet on
+      // this CU, so the packing is delegated to the RRC DU instead of the RRC UE.
+      ue_context_setup_request.cu_to_du_rrc_info.meas_cfg =
+          du_proc.get_rrc_du_handler().pack_meas_config(meas_cfg.value());
     }
 
     // Call F1AP procedure.
     CORO_AWAIT_VALUE(ue_context_setup_response,
-                     f1ap_ue_ctxt_mng.handle_ue_context_setup_request(ue_context_setup_request, rrc_context));
+                     du_proc.get_f1ap_handler().handle_ue_context_setup_request(ue_context_setup_request, rrc_context));
     // Handle UE Context Setup Response.
     if (!handle_ue_context_setup_response(
             bearer_context_modification_request, ue_context_setup_response, next_config, logger)) {

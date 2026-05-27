@@ -5,6 +5,7 @@
 #pragma once
 
 #include "../../cell_meas_manager/cell_meas_manager_impl.h"
+#include "../../du_processor/du_processor.h"
 #include "../../ue_manager/ue_manager_impl.h"
 #include "ocudu/ngap/ngap_handover.h"
 #include "ocudu/support/async/async_task.h"
@@ -99,7 +100,7 @@ class inter_cu_handover_target_routine
 public:
   inter_cu_handover_target_routine(const cu_cp_inter_cu_handover_request& request_,
                                    e1ap_bearer_context_manager&           e1ap_bearer_ctxt_mng_,
-                                   f1ap_ue_context_manager&               f1ap_ue_ctxt_mng_,
+                                   du_processor&                          du_proc_,
                                    cu_cp_ue_removal_handler&              ue_removal_handler_,
                                    ue_manager&                            ue_mng_,
                                    cell_meas_manager&                     cell_meas_mng_,
@@ -119,8 +120,8 @@ private:
   const cu_cp_inter_cu_handover_request request;
 
   e1ap_bearer_context_manager& e1ap_bearer_ctxt_mng; // to trigger bearer context modification at CU-UP.
-  f1ap_ue_context_manager&     f1ap_ue_ctxt_mng;     // to trigger UE context creation.
-  cu_cp_ue_removal_handler&    ue_removal_handler;   // to trigger UE removal if the UE Context Setup fails.
+  du_processor&                du_proc; // to trigger UE context creation and access RRC-DU for measConfig packing.
+  cu_cp_ue_removal_handler&    ue_removal_handler; // to trigger UE removal if the UE Context Setup fails.
   ue_manager&                  ue_mng;
   cell_meas_manager&           cell_meas_mng;
 

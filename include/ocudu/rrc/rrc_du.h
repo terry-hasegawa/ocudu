@@ -69,6 +69,12 @@ public:
   /// \brief Get the RRC Reject message to send to the UE.
   virtual byte_buffer get_rrc_reject() = 0;
 
+  /// \brief Pack the RRC MeasConfig into ASN.1 PDU forwarded to the DU via F1AP CUtoDURRCInformation.
+  ///
+  /// Used on the target node of an inter-CU handover, where the MeasConfig must be delivered before the RRC UE
+  /// context exists. Returns an empty buffer on packing failure.
+  virtual byte_buffer pack_meas_config(const rrc_meas_cfg& meas_cfg) = 0;
+
   /// \brief Get the RRC Resume context containing the resume ID and resume cause from a RRC container.
   /// \param[in] rrc_container The RRC container from the DU.
   /// \param[in] nof_i_rnti_ue_bits Number of bits used for the I-RNTI UE.

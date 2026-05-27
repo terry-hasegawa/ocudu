@@ -176,6 +176,11 @@ byte_buffer rrc_du_impl::get_rrc_reject()
   return pack_into_pdu(dl_ccch_msg, "RRCReject");
 }
 
+byte_buffer rrc_du_impl::pack_meas_config(const rrc_meas_cfg& meas_cfg)
+{
+  return pack_into_pdu(meas_config_to_rrc_asn1(meas_cfg), "RRCMeasConfig");
+}
+
 std::optional<rrc_resume_context_t> rrc_du_impl::get_rrc_resume_context(byte_buffer rrc_container,
                                                                         uint8_t     nof_i_rnti_ue_bits)
 {

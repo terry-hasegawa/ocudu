@@ -105,6 +105,7 @@ public:
 
   // rrc_du_ue_repository.
   byte_buffer                         get_rrc_reject() override;
+  byte_buffer                         pack_meas_config(const rrc_meas_cfg& meas_cfg) override;
   std::optional<rrc_resume_context_t> get_rrc_resume_context(byte_buffer rrc_container,
                                                              uint8_t     nof_i_rnti_ue_bits) override;
   rrc_ue_interface*                   add_ue(const rrc_ue_creation_message& msg) override;

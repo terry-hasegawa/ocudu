@@ -1756,7 +1756,7 @@ cu_cp_impl::handle_inter_cu_handover_request(const cu_cp_inter_cu_handover_reque
   return launch_async<inter_cu_handover_target_routine>(
       request,
       cu_up_db.find_cu_up_processor(ue->get_cu_up_index())->get_e1ap_bearer_context_manager(),
-      du_db.get_du_processor(ue->get_du_index()).get_f1ap_handler(),
+      du_db.get_du_processor(ue->get_du_index()),
       get_cu_cp_ue_removal_handler(),
       ue_mng,
       cell_meas_mng,
