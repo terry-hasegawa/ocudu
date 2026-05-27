@@ -11,6 +11,9 @@
 using namespace ocudu;
 using namespace csi_helper;
 
+/// Number of NZP-CSI-Resources for TRS.
+static const unsigned nof_trs_nzp_csi_resources = 4;
+
 /// Get CRBs across which a CSI resource spans as per TS 38.331, "CSI-FrequencyOccupation".
 ///
 /// \param nof_crbs Number of CRBs used for the CSI-RS.
@@ -423,9 +426,7 @@ static void fill_tracking_nzp_csi_rs_resource(span<nzp_csi_rs_resource>         
                                               const csi_meas_config_builder_params& params,
                                               nzp_csi_rs_res_id_t                   first_csi_res_id)
 {
-  static constexpr size_t NOF_TRACKING_RESOURCES = 4;
-
-  ocudu_assert(tracking_csi_rs.size() == NOF_TRACKING_RESOURCES, "Invalid tracking CSI-RS resource list size");
+  ocudu_assert(tracking_csi_rs.size() == nof_trs_nzp_csi_resources, "Invalid tracking CSI-RS resource list size");
   ocudu_assert(params.csi_params.tracking_csi_slot_offset + 1 <
                    csi_resource_periodicity_to_uint(params.csi_params.csi_rs_period),
                "Invalid CSI slot offset");
@@ -441,7 +442,7 @@ static void fill_tracking_nzp_csi_rs_resource(span<nzp_csi_rs_resource>         
   res.res_mapping.fd_alloc.set(params.pci % res.res_mapping.fd_alloc.size());
 
   static constexpr unsigned rel_slot_offset[] = {0, 0, 1, 1};
-  for (unsigned i = 0; i != NOF_TRACKING_RESOURCES; ++i) {
+  for (unsigned i = 0; i != nof_trs_nzp_csi_resources; ++i) {
     res.res_id                              = static_cast<nzp_csi_rs_res_id_t>(first_csi_res_id + i);
     res.res_mapping.first_ofdm_symbol_in_td = params.csi_params.tracking_csi_ofdm_symbol_indices[i];
     res.csi_res_offset                      = params.csi_params.tracking_csi_slot_offset + rel_slot_offset[i];
@@ -460,7 +461,7 @@ ocudu::csi_helper::make_nzp_csi_rs_resource_list(const csi_meas_config_builder_p
 
   // Beam resources at IDs 0..N-1; TRS at IDs N..N+3.
   const unsigned                   nof_beams = params.csi_params.nof_beams;
-  std::vector<nzp_csi_rs_resource> list(nof_beams + 4);
+  std::vector<nzp_csi_rs_resource> list(nof_beams + nof_trs_nzp_csi_resources);
 
   // Measurement resources.
   for (unsigned i = 0; i < nof_beams; ++i) {
@@ -469,8 +470,9 @@ ocudu::csi_helper::make_nzp_csi_rs_resource_list(const csi_meas_config_builder_p
   }
 
   // Tracking - Resources N..N+3.
-  fill_tracking_nzp_csi_rs_resource(
-      span<nzp_csi_rs_resource>(list).subspan(nof_beams, 4), params, static_cast<nzp_csi_rs_res_id_t>(nof_beams));
+  fill_tracking_nzp_csi_rs_resource(span<nzp_csi_rs_resource>(list).subspan(nof_beams, nof_trs_nzp_csi_resources),
+                                    params,
+                                    static_cast<nzp_csi_rs_res_id_t>(nof_beams));
 
   return list;
 }
@@ -491,7 +493,7 @@ static std::vector<nzp_csi_rs_resource_set> make_nzp_csi_rs_resource_sets(const 
 
   // Resource Set 1 - Tracking: IDs N..N+3.
   sets[1].res_set_id = static_cast<nzp_csi_rs_res_set_id_t>(1);
-  for (unsigned i = 0; i < 4; ++i) {
+  for (unsigned i = 0; i < nof_trs_nzp_csi_resources; ++i) {
     sets[1].nzp_csi_rs_res.push_back(static_cast<nzp_csi_rs_res_id_t>(nof_beams + i));
   }
   sets[1].is_trs_info_present = true;
