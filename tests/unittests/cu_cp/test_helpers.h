@@ -730,7 +730,7 @@ public:
     return meas_config;
   }
 
-  byte_buffer get_packed_meas_config() override
+  byte_buffer get_packed_meas_config(span<const pci_t> /* candidate_pcis */ = {}) override
   {
     logger.info("Received a new request to get packed RRC UE meas config");
     return {};

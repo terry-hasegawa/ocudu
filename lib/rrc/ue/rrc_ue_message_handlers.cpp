@@ -950,11 +950,19 @@ std::optional<rrc_meas_cfg> rrc_ue_impl::generate_meas_config(const std::optiona
   return result;
 }
 
-byte_buffer rrc_ue_impl::get_packed_meas_config()
+byte_buffer rrc_ue_impl::get_packed_meas_config(span<const pci_t> candidate_pcis)
 {
-  // (Re-)generate measurement config.
-  generate_meas_config(context.meas_cfg);
+  if (!candidate_pcis.empty()) {
+    auto cfg = generate_meas_config(context.meas_cfg, true, candidate_pcis);
+    if (!cfg.has_value()) {
+      return {};
+    }
+    // Convert to ASN1, pack and return.
+    return pack_into_pdu(meas_config_to_rrc_asn1(cfg.value()), "RRCMeasConfig");
+  }
 
+  // (Re-)generate regular measurement config and update stored context.
+  generate_meas_config(context.meas_cfg);
   if (context.meas_cfg.has_value()) {
     // Convert to ASN1, pack and return.
     return pack_into_pdu(meas_config_to_rrc_asn1(context.meas_cfg.value()), "RRCMeasConfig");
