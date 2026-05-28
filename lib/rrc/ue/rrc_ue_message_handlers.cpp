@@ -635,6 +635,17 @@ rrc_ue_impl::get_rrc_ue_cond_reconfiguration_context(const rrc_reconfiguration_p
     recfg_ies.meas_cfg_present = true;
     recfg_ies.meas_cfg         = meas_config_to_rrc_asn1(request.meas_cfg.value());
 
+    // Include measurement gap config so the UE can perform inter-frequency measurements
+    // during CHO condition evaluation (before any handover executes).
+    if (!request.meas_gap_cfg.empty()) {
+      recfg_ies.meas_cfg.meas_gap_cfg_present = true;
+      asn1::cbit_ref bref(request.meas_gap_cfg);
+      if (recfg_ies.meas_cfg.meas_gap_cfg.unpack(bref) != asn1::OCUDUASN_SUCCESS) {
+        logger.log_warning("ue={}: Failed to decode measGapConfig for outer CHO RRCReconfiguration", context.ue_index);
+        recfg_ies.meas_cfg.meas_gap_cfg_present = false;
+      }
+    }
+
     logger.log_debug("ue={}: Using CHO-specific measConfig with condTriggerConfig-r16 - {} meas_obj, {} "
                      "report_cfg, {} meas_id",
                      context.ue_index,

@@ -199,8 +199,14 @@ byte_buffer conditional_handover_reconfiguration_routine::build_conditional_reco
     return {};
   }
   cho_meas_id_map_t cho_nci_to_meas_ids = cho_meas_result->nci_to_meas_ids;
-  rrc_request.meas_cfg                  = std::move(cho_meas_result);
-  rrc_request.cho_nci_to_meas_ids       = std::move(cho_nci_to_meas_ids);
+  // When candidates are on different ARFCNs the UE needs measurement gaps to evaluate CHO
+  // conditions. Use the measGapConfig provided by the source DU (gapOffset is relative to the
+  // source PCell SFN per TS 38.331 Section 5.5.2.9 NOTE 2).
+  if (cho_meas_result->meas_obj_to_add_mod_list.size() > 1 && !source_du_meas_gap_cfg.empty()) {
+    rrc_request.meas_gap_cfg = source_du_meas_gap_cfg.copy();
+  }
+  rrc_request.meas_cfg            = std::move(cho_meas_result);
+  rrc_request.cho_nci_to_meas_ids = std::move(cho_nci_to_meas_ids);
 
   // Apply runtime T1 threshold override.
   if (request.t1_thres_override.has_value() && rrc_request.meas_cfg.has_value()) {
