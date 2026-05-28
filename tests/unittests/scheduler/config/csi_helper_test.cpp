@@ -32,17 +32,17 @@ protected:
         *std::max_element(def_track_csi_ofdm_symbol_idx.begin(), def_track_csi_ofdm_symbol_idx.end());
     static constexpr ssb_periodicity         default_ssb_period = ssb_periodicity::ms10;
     static constexpr std::array<unsigned, 1> default_ssb_slots  = {0U};
-    ocudu_assert(csi_helper::derive_valid_csi_rs_slot_offsets(result.csi_params,
-                                                              std::nullopt,
-                                                              std::nullopt,
-                                                              {},
-                                                              tdd_cfg,
-                                                              max_csi_symbol,
-                                                              default_ssb_period,
-                                                              default_ssb_slots,
-                                                              1U,
-                                                              {}),
-                 "Derivation failed");
+    const bool                               ret = csi_helper::derive_valid_csi_rs_slot_offsets(result.csi_params,
+                                                                  std::nullopt,
+                                                                  std::nullopt,
+                                                                                                {},
+                                                                  tdd_cfg,
+                                                                  max_csi_symbol,
+                                                                  default_ssb_period,
+                                                                  default_ssb_slots,
+                                                                  1U,
+                                                                                                {});
+    report_error_if_not(ret, "Derivation failed");
   }
 
   tdd_ul_dl_config_common                    tdd_cfg = GetParam();
