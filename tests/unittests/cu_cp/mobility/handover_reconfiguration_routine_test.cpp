@@ -25,7 +25,7 @@ protected:
     ASSERT_NE(source_ue_index, cu_cp_ue_index_t::invalid);
     ASSERT_FALSE(get_ue_manager()->ue_admission_limit_reached());
     ASSERT_TRUE(get_ue_manager()->update_ue_context(
-        source_ue_index, int_to_gnb_du_id(0), source_pci, source_rnti, cu_cp_du_cell_index_t::min));
+        source_ue_index, int_to_gnb_du_id(0), source_pci, source_rnti, MIN_DU_CELL_INDEX));
     get_ue_manager()->set_plmn(source_ue_index, plmn_identity::test_value());
     source_ue = get_ue_manager()->find_ue(source_ue_index);
     ASSERT_NE(source_ue, nullptr);
@@ -36,7 +36,7 @@ protected:
     ASSERT_NE(target_ue_index, cu_cp_ue_index_t::invalid);
     ASSERT_FALSE(get_ue_manager()->ue_admission_limit_reached());
     ASSERT_TRUE(get_ue_manager()->update_ue_context(
-        target_ue_index, int_to_gnb_du_id(0), target_pci, target_rnti, cu_cp_du_cell_index_t::min));
+        target_ue_index, int_to_gnb_du_id(0), target_pci, target_rnti, MIN_DU_CELL_INDEX));
     get_ue_manager()->set_plmn(target_ue_index, plmn_identity::test_value());
     target_ue = get_ue_manager()->find_ue(target_ue_index);
     ASSERT_NE(target_ue, nullptr);

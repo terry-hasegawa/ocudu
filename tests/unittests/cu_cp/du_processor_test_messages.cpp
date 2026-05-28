@@ -38,7 +38,7 @@ f1ap_message ocudu::ocucp::create_f1_setup_request_with_too_many_cells(const f1a
   msg.pdu.set_init_msg().load_info_obj(ASN1_F1AP_ID_F1_SETUP);
   msg.pdu.init_msg().value.f1_setup_request()->gnb_du_served_cells_list_present = true;
   auto& cells = msg.pdu.init_msg().value.f1_setup_request()->gnb_du_served_cells_list;
-  cells.resize(CU_CP_MAX_NOF_DU_CELLS + 1);
+  cells.resize(MAX_NOF_DU_CELLS + 1);
   for (unsigned i = 0; i != cells.size(); ++i) {
     cells[i].load_info_obj(ASN1_F1AP_ID_GNB_DU_SERVED_CELLS_ITEM);
     cells[i]->gnb_du_served_cells_item() = test_helpers::generate_served_cells_item(
@@ -56,8 +56,7 @@ void ocudu::ocucp::generate_f1_setup_request_with_too_many_cells(du_setup_reques
 
   f1_setup_req->gnb_du_served_cells_list_present = true;
 
-  for (int du_cell_idx_int = cu_cp_du_cell_index_to_uint(cu_cp_du_cell_index_t::min);
-       du_cell_idx_int < CU_CP_MAX_NOF_DU_CELLS + 1;
+  for (int du_cell_idx_int = static_cast<uint16_t>(MIN_DU_CELL_INDEX); du_cell_idx_int < MAX_NOF_DU_CELLS + 1;
        du_cell_idx_int++) {
     f1_setup_req->gnb_du_served_cells_list.push_back({});
     f1_setup_req->gnb_du_served_cells_list.back().load_info_obj(ASN1_F1AP_ID_GNB_DU_SERVED_CELLS_ITEM);

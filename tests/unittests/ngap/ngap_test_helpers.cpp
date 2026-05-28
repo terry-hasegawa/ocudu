@@ -90,12 +90,12 @@ cu_cp_ue_index_t ngap_test::create_ue(rnti_t rnti)
     return cu_cp_ue_index_t::invalid;
   }
 
-  if (not ue_mng.update_ue_context(ue_index, int_to_gnb_du_id(0), MIN_PCI, rnti, cu_cp_du_cell_index_t::min)) {
+  if (not ue_mng.update_ue_context(ue_index, int_to_gnb_du_id(0), MIN_PCI, rnti, MIN_DU_CELL_INDEX)) {
     test_logger.error("ue={}: Failed to update UE context with pci={} rnti={} pcell_index={}",
                       ue_index,
                       MIN_PCI,
                       rnti_t::MIN_CRNTI,
-                      cu_cp_du_cell_index_t::min);
+                      MIN_DU_CELL_INDEX);
     return cu_cp_ue_index_t::invalid;
   }
 
@@ -135,12 +135,12 @@ cu_cp_ue_index_t ngap_test::create_ue_without_init_ue_message(rnti_t rnti)
     return cu_cp_ue_index_t::invalid;
   }
 
-  if (not ue_mng.update_ue_context(ue_index, int_to_gnb_du_id(0), MIN_PCI, rnti, cu_cp_du_cell_index_t::min)) {
+  if (not ue_mng.update_ue_context(ue_index, int_to_gnb_du_id(0), MIN_PCI, rnti, MIN_DU_CELL_INDEX)) {
     test_logger.error("ue={}: Failed to update UE context with pci={} rnti={} pcell_index={}",
                       ue_index,
                       MIN_PCI,
                       rnti_t::MIN_CRNTI,
-                      cu_cp_du_cell_index_t::min);
+                      MIN_DU_CELL_INDEX);
     return cu_cp_ue_index_t::invalid;
   }
   if (!ue_mng.set_plmn(ue_index, plmn_identity::test_value())) {

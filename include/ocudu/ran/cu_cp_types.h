@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include "ocudu/ran/gnb_constants.h"
 #include "fmt/format.h"
 #include <cstdint>
 #include <type_traits>
@@ -73,21 +72,6 @@ constexpr cu_cp_amf_index_t uint_to_cu_cp_amf_index(std::underlying_type_t<cu_cp
 constexpr std::underlying_type_t<cu_cp_amf_index_t> cu_cp_amf_index_to_uint(cu_cp_amf_index_t amf_index)
 {
   return static_cast<std::underlying_type_t<cu_cp_amf_index_t>>(amf_index);
-}
-
-/// Maximum number of cells per DU tracked by CU-CP (implementation-defined).
-constexpr uint16_t CU_CP_MAX_NOF_DU_CELLS = MAX_CELLS_PER_DU;
-
-enum class cu_cp_du_cell_index_t : uint16_t { min = 0, max = MAX_CELLS_PER_DU - 1, invalid = MAX_CELLS_PER_DU };
-
-inline cu_cp_du_cell_index_t uint_to_cu_cp_du_cell_index(std::underlying_type_t<cu_cp_du_cell_index_t> index)
-{
-  return static_cast<cu_cp_du_cell_index_t>(index);
-}
-
-constexpr std::underlying_type_t<cu_cp_du_cell_index_t> cu_cp_du_cell_index_to_uint(cu_cp_du_cell_index_t cell_index)
-{
-  return static_cast<std::underlying_type_t<cu_cp_du_cell_index_t>>(cell_index);
 }
 
 } // namespace ocudu
@@ -160,24 +144,6 @@ struct formatter<ocudu::cu_cp_amf_index_t> {
   auto format(const ocudu::cu_cp_amf_index_t& idx, FormatContext& ctx) const
   {
     if (idx == ocudu::cu_cp_amf_index_t::invalid) {
-      return format_to(ctx.out(), "invalid");
-    }
-    return format_to(ctx.out(), "{}", (unsigned)idx);
-  }
-};
-
-template <>
-struct formatter<ocudu::cu_cp_du_cell_index_t> {
-  template <typename ParseContext>
-  auto parse(ParseContext& ctx)
-  {
-    return ctx.begin();
-  }
-
-  template <typename FormatContext>
-  auto format(const ocudu::cu_cp_du_cell_index_t& idx, FormatContext& ctx) const
-  {
-    if (idx == ocudu::cu_cp_du_cell_index_t::invalid) {
       return format_to(ctx.out(), "invalid");
     }
     return format_to(ctx.out(), "{}", (unsigned)idx);

@@ -30,11 +30,11 @@ protected:
       return cu_cp_ue_index_t::invalid;
     }
     if (not ue_mng.update_ue_context(
-            ue_index, int_to_gnb_du_id(0), MIN_PCI, rnti_t::MIN_CRNTI, ocudu::cu_cp_du_cell_index_t::min)) {
+            ue_index, int_to_gnb_du_id(0), MIN_PCI, rnti_t::MIN_CRNTI, ocudu::MIN_DU_CELL_INDEX)) {
       test_logger.error("Failed to update UE context with pci={} rnti={} pcell_index={}",
                         MIN_PCI,
                         rnti_t::MIN_CRNTI,
-                        cu_cp_du_cell_index_t::min);
+                        MIN_DU_CELL_INDEX);
       return cu_cp_ue_index_t::invalid;
     }
 

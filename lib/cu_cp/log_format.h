@@ -4,7 +4,9 @@
 
 #pragma once
 
-#include "ocudu/cu_cp/cu_cp_types.h"
+#include "ocudu/ocudulog/logger.h"
+#include "ocudu/ran/cu_cp_types.h"
+#include "ocudu/ran/du_cell_index.h"
 #include "ocudu/ran/logical_channel/lcid.h"
 #include "ocudu/ran/rnti.h"
 #include "ocudu/support/format/fmt_to_c_str.h"
@@ -13,19 +15,19 @@
 namespace ocudu::ocucp {
 
 struct ue_event_prefix {
-  const char*           direction;
-  cu_cp_ue_index_t      ue_index;
-  rnti_t                rnti;
-  cu_cp_du_cell_index_t cell_index;
-  const char*           channel = nullptr;
-  lcid_t                lcid;
+  const char*      direction;
+  cu_cp_ue_index_t ue_index;
+  rnti_t           rnti;
+  du_cell_index_t  cell_index;
+  const char*      channel = nullptr;
+  lcid_t           lcid;
 
-  ue_event_prefix(const char*           dir_      = "CTRL",
-                  cu_cp_ue_index_t      ue_index_ = cu_cp_ue_index_t::invalid,
-                  rnti_t                rnti_     = rnti_t::INVALID_RNTI,
-                  cu_cp_du_cell_index_t cell_idx_ = uint_to_cu_cp_du_cell_index(CU_CP_MAX_NOF_DU_CELLS),
-                  const char*           channel_  = nullptr,
-                  lcid_t                lcid_     = INVALID_LCID) :
+  ue_event_prefix(const char*      dir_      = "CTRL",
+                  cu_cp_ue_index_t ue_index_ = cu_cp_ue_index_t::invalid,
+                  rnti_t           rnti_     = rnti_t::INVALID_RNTI,
+                  du_cell_index_t  cell_idx_ = to_du_cell_index(MAX_NOF_DU_CELLS),
+                  const char*      channel_  = nullptr,
+                  lcid_t           lcid_     = INVALID_LCID) :
     direction(dir_), ue_index(ue_index_), rnti(rnti_), cell_index(cell_idx_), channel(channel_), lcid(lcid_)
   {
   }
@@ -53,7 +55,7 @@ struct ue_event_prefix {
     return *this;
   }
 
-  ue_event_prefix& operator|(cu_cp_du_cell_index_t cell_index_)
+  ue_event_prefix& operator|(du_cell_index_t cell_index_)
   {
     cell_index = cell_index_;
     return *this;
@@ -160,7 +162,7 @@ template <typename... Args>
 void log_ul_pdu(ocudulog::basic_logger& logger,
                 cu_cp_ue_index_t        ue_index,
                 rnti_t                  rnti,
-                cu_cp_du_cell_index_t   cell_index,
+                du_cell_index_t         cell_index,
                 const char*             ch,
                 const char*             cause_fmt,
                 Args&&... args)
@@ -169,11 +171,7 @@ void log_ul_pdu(ocudulog::basic_logger& logger,
 }
 
 template <typename... Args>
-void log_ul_pdu(ocudulog::basic_logger& logger,
-                rnti_t                  rnti,
-                cu_cp_du_cell_index_t   cc,
-                const char*             cause_fmt,
-                Args&&... args)
+void log_ul_pdu(ocudulog::basic_logger& logger, rnti_t rnti, du_cell_index_t cc, const char* cause_fmt, Args&&... args)
 {
   log_ue_event(
       logger, ue_event_prefix{"UL", cu_cp_ue_index_t::invalid, rnti, cc}, cause_fmt, std::forward<Args>(args)...);
@@ -207,7 +205,7 @@ struct formatter<ocudu::ocucp::ue_event_prefix> {
     } else {
       ret = format_to(ctx.out(), " {: <6}", "");
     }
-    if (ue_prefix.cell_index != ocudu::cu_cp_du_cell_index_t::invalid) {
+    if (ue_prefix.cell_index != ocudu::INVALID_DU_CELL_INDEX) {
       ret = format_to(ctx.out(), " cell={}", ue_prefix.cell_index);
     }
     if (ue_prefix.channel != nullptr) {

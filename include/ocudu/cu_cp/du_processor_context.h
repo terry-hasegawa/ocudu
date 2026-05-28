@@ -5,7 +5,7 @@
 #pragma once
 
 #include "ocudu/adt/byte_buffer.h"
-#include "ocudu/ran/cu_cp_types.h"
+#include "ocudu/ran/du_cell_index.h"
 #include "ocudu/ran/nr_band.h"
 #include "ocudu/ran/nr_cgi.h"
 #include "ocudu/ran/pci.h"
@@ -21,7 +21,7 @@ struct du_sys_info {
 
 struct du_cell_configuration {
   /// CU-CP specific DU cell identifier.
-  cu_cp_du_cell_index_t cell_index = cu_cp_du_cell_index_t::invalid;
+  du_cell_index_t cell_index = INVALID_DU_CELL_INDEX;
   /// Global cell ID.
   nr_cell_global_id_t cgi;
   /// Tracking Area Code

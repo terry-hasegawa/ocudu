@@ -57,10 +57,10 @@ TEST_F(ue_manager_test, when_more_than_max_ue_created_then_ue_is_not_servable)
 /// Test successful creation of a DU UE.
 TEST_F(ue_manager_test, when_valid_du_context_added_at_creation_then_ue_added)
 {
-  cu_cp_du_index_t      du_index    = cu_cp_du_index_t::min;
-  rnti_t                rnti        = to_rnti(0x4601);
-  cu_cp_du_cell_index_t pcell_index = cu_cp_du_cell_index_t::min;
-  cu_cp_ue_index_t      ue_index    = ue_mng.add_ue(du_index);
+  cu_cp_du_index_t du_index    = cu_cp_du_index_t::min;
+  rnti_t           rnti        = to_rnti(0x4601);
+  du_cell_index_t  pcell_index = MIN_DU_CELL_INDEX;
+  cu_cp_ue_index_t ue_index    = ue_mng.add_ue(du_index);
   ASSERT_NE(ue_index, cu_cp_ue_index_t::invalid);
   ASSERT_FALSE(ue_mng.ue_admission_limit_reached());
   ASSERT_TRUE(ue_mng.update_ue_context(ue_index, gnb_du_id_t::min, MIN_PCI, rnti, pcell_index));
@@ -103,8 +103,8 @@ TEST_F(ue_manager_test, when_du_context_valid_then_ue_updated)
   ASSERT_FALSE(ue_mng.ue_admission_limit_reached());
 
   ASSERT_TRUE(ue_mng.set_plmn(ue_index, plmn_identity::test_value()));
-  rnti_t                rnti        = to_rnti(0x4601);
-  cu_cp_du_cell_index_t pcell_index = cu_cp_du_cell_index_t::min;
+  rnti_t          rnti        = to_rnti(0x4601);
+  du_cell_index_t pcell_index = MIN_DU_CELL_INDEX;
   ASSERT_TRUE(ue_mng.update_ue_context(ue_index, gnb_du_id_t::min, MIN_PCI, rnti, pcell_index));
 
   auto* ue = ue_mng.find_ue(ue_index);
@@ -138,10 +138,10 @@ TEST_F(ue_manager_test, when_du_context_valid_then_ue_updated)
 /// Test finding invalid UE index.
 TEST_F(ue_manager_test, when_ue_index_invalid_then_ue_not_found)
 {
-  cu_cp_du_index_t      du_index    = cu_cp_du_index_t::min;
-  rnti_t                rnti        = to_rnti(0x4601);
-  cu_cp_du_cell_index_t pcell_index = cu_cp_du_cell_index_t::min;
-  cu_cp_ue_index_t      ue_index    = ue_mng.add_ue(du_index);
+  cu_cp_du_index_t du_index    = cu_cp_du_index_t::min;
+  rnti_t           rnti        = to_rnti(0x4601);
+  du_cell_index_t  pcell_index = MIN_DU_CELL_INDEX;
+  cu_cp_ue_index_t ue_index    = ue_mng.add_ue(du_index);
   ASSERT_NE(ue_index, cu_cp_ue_index_t::invalid);
   ASSERT_FALSE(ue_mng.ue_admission_limit_reached());
   ASSERT_TRUE(ue_mng.update_ue_context(ue_index, gnb_du_id_t::min, MIN_PCI, rnti, pcell_index));
@@ -158,10 +158,10 @@ TEST_F(ue_manager_test, when_ue_index_invalid_then_ue_not_found)
 /// Test duplicate UE creation.
 TEST_F(ue_manager_test, when_rnti_already_exits_then_ue_not_added)
 {
-  cu_cp_du_index_t      du_index    = cu_cp_du_index_t::min;
-  rnti_t                rnti        = to_rnti(0x4601);
-  cu_cp_du_cell_index_t pcell_index = cu_cp_du_cell_index_t::min;
-  cu_cp_ue_index_t      ue_index    = ue_mng.add_ue(du_index);
+  cu_cp_du_index_t du_index    = cu_cp_du_index_t::min;
+  rnti_t           rnti        = to_rnti(0x4601);
+  du_cell_index_t  pcell_index = MIN_DU_CELL_INDEX;
+  cu_cp_ue_index_t ue_index    = ue_mng.add_ue(du_index);
   ASSERT_NE(ue_index, cu_cp_ue_index_t::invalid);
   ASSERT_FALSE(ue_mng.ue_admission_limit_reached());
   ASSERT_TRUE(ue_mng.update_ue_context(ue_index, gnb_du_id_t::min, MIN_PCI, rnti, pcell_index));
@@ -180,10 +180,10 @@ TEST_F(ue_manager_test, when_rnti_already_exits_then_ue_not_added)
 /// Test successful removal of a DU UE
 TEST_F(ue_manager_test, when_ue_exists_then_removal_successful)
 {
-  cu_cp_du_index_t      du_index    = cu_cp_du_index_t::min;
-  rnti_t                rnti        = to_rnti(0x4601);
-  cu_cp_du_cell_index_t pcell_index = cu_cp_du_cell_index_t::min;
-  cu_cp_ue_index_t      ue_index    = ue_mng.add_ue(du_index);
+  cu_cp_du_index_t du_index    = cu_cp_du_index_t::min;
+  rnti_t           rnti        = to_rnti(0x4601);
+  du_cell_index_t  pcell_index = MIN_DU_CELL_INDEX;
+  cu_cp_ue_index_t ue_index    = ue_mng.add_ue(du_index);
   ASSERT_NE(ue_index, cu_cp_ue_index_t::invalid);
   ASSERT_FALSE(ue_mng.ue_admission_limit_reached());
   ASSERT_TRUE(ue_mng.update_ue_context(ue_index, gnb_du_id_t::min, MIN_PCI, rnti, pcell_index));
@@ -199,8 +199,8 @@ TEST_F(ue_manager_test, when_ue_exists_then_removal_successful)
 /// Test creation of multiple DU UEs.
 TEST_F(ue_manager_test, when_multiple_ues_added_then_ues_exist)
 {
-  cu_cp_du_index_t      du_index    = cu_cp_du_index_t::min;
-  cu_cp_du_cell_index_t pcell_index = cu_cp_du_cell_index_t::min;
+  cu_cp_du_index_t du_index    = cu_cp_du_index_t::min;
+  du_cell_index_t  pcell_index = MIN_DU_CELL_INDEX;
 
   // Reduce log level to avoid flooding the log.
   ue_mng_logger.set_level(ocudulog::basic_levels::warning);
@@ -247,8 +247,8 @@ TEST_F(ue_manager_test, when_multiple_ues_added_then_ues_exist)
 /// Test creation of an unservable UE once the admission limit is reached.
 TEST_F(ue_manager_test, when_more_than_max_ues_added_then_ue_created_but_not_servable)
 {
-  cu_cp_du_index_t      du_index    = cu_cp_du_index_t::min;
-  cu_cp_du_cell_index_t pcell_index = cu_cp_du_cell_index_t::min;
+  cu_cp_du_index_t du_index    = cu_cp_du_index_t::min;
+  du_cell_index_t  pcell_index = MIN_DU_CELL_INDEX;
 
   // Reduce log level to avoid flooding the log.
   ue_mng_logger.set_level(ocudulog::basic_levels::warning);
@@ -303,10 +303,10 @@ TEST_F(ue_manager_test, when_more_than_max_ues_added_then_ue_created_but_not_ser
 /// Test inactive and i-rnti handling.
 TEST_F(ue_manager_test, when_ue_is_set_inactive_then_i_rnti_returned)
 {
-  cu_cp_du_index_t      du_index    = cu_cp_du_index_t::min;
-  rnti_t                rnti        = to_rnti(0x4601);
-  cu_cp_du_cell_index_t pcell_index = cu_cp_du_cell_index_t::min;
-  cu_cp_ue_index_t      ue_index    = ue_mng.add_ue(du_index);
+  cu_cp_du_index_t du_index    = cu_cp_du_index_t::min;
+  rnti_t           rnti        = to_rnti(0x4601);
+  du_cell_index_t  pcell_index = MIN_DU_CELL_INDEX;
+  cu_cp_ue_index_t ue_index    = ue_mng.add_ue(du_index);
   ASSERT_NE(ue_index, cu_cp_ue_index_t::invalid);
   ASSERT_FALSE(ue_mng.ue_admission_limit_reached());
   ASSERT_TRUE(ue_mng.update_ue_context(ue_index, gnb_du_id_t::min, MIN_PCI, rnti, pcell_index));
@@ -325,10 +325,10 @@ TEST_F(ue_manager_test, when_ue_is_set_inactive_then_i_rnti_returned)
 
 TEST_F(ue_manager_test, when_ue_is_set_inactive_then_its_found_by_i_rnti)
 {
-  cu_cp_du_index_t      du_index    = cu_cp_du_index_t::min;
-  rnti_t                rnti        = to_rnti(0x4601);
-  cu_cp_du_cell_index_t pcell_index = cu_cp_du_cell_index_t::min;
-  cu_cp_ue_index_t      ue_index    = ue_mng.add_ue(du_index);
+  cu_cp_du_index_t du_index    = cu_cp_du_index_t::min;
+  rnti_t           rnti        = to_rnti(0x4601);
+  du_cell_index_t  pcell_index = MIN_DU_CELL_INDEX;
+  cu_cp_ue_index_t ue_index    = ue_mng.add_ue(du_index);
   ASSERT_NE(ue_index, cu_cp_ue_index_t::invalid);
   ASSERT_FALSE(ue_mng.ue_admission_limit_reached());
   ASSERT_TRUE(ue_mng.update_ue_context(ue_index, gnb_du_id_t::min, MIN_PCI, rnti, pcell_index));

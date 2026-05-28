@@ -68,11 +68,11 @@ bool ue_manager::ue_admission_limit_reached() const
   return ues.size() > max_nof_ues;
 }
 
-bool ue_manager::update_ue_context(cu_cp_ue_index_t      ue_index,
-                                   gnb_du_id_t           du_id,
-                                   pci_t                 pci,
-                                   rnti_t                rnti,
-                                   cu_cp_du_cell_index_t pcell_index)
+bool ue_manager::update_ue_context(cu_cp_ue_index_t ue_index,
+                                   gnb_du_id_t      du_id,
+                                   pci_t            pci,
+                                   rnti_t           rnti,
+                                   du_cell_index_t  pcell_index)
 {
   if (ue_index == cu_cp_ue_index_t::invalid) {
     logger.warning("Can't update UE with invalid UE index");
@@ -99,7 +99,7 @@ bool ue_manager::update_ue_context(cu_cp_ue_index_t      ue_index,
     return false;
   }
 
-  if (pcell_index == cu_cp_du_cell_index_t::invalid) {
+  if (pcell_index == INVALID_DU_CELL_INDEX) {
     logger.warning("Invalid pcell_index={}", fmt::underlying(pcell_index));
     return false;
   }

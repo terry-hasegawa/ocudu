@@ -119,11 +119,8 @@ public:
   /// \param[in] rnti The RNTI of the UE.
   /// \param[in] pcell_index The index of the PCell the UE is connected to.
   /// \return True if the update was successful, false otherwise.
-  bool update_ue_context(cu_cp_ue_index_t      ue_index,
-                         gnb_du_id_t           du_id,
-                         pci_t                 pci,
-                         rnti_t                rnti,
-                         cu_cp_du_cell_index_t pcell_index);
+  bool
+  update_ue_context(cu_cp_ue_index_t ue_index, gnb_du_id_t du_id, pci_t pci, rnti_t rnti, du_cell_index_t pcell_index);
 
   /// \brief Find the UE with the given UE index, thats DU context is set up.
   /// \param[in] ue_index Index of the UE to be found.
