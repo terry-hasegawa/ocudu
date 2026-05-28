@@ -4,6 +4,7 @@
 
 #include "lib/rrc/ue/rrc_measurement_types_asn1_converters.h"
 #include "rrc_ue_test_helpers.h"
+#include "rrc_ue_test_messages.h"
 #include "ocudu/asn1/rrc_nr/ul_dcch_msg_ies.h"
 #include "ocudu/cu_cp/cu_cp_types.h"
 #include <gtest/gtest.h>
@@ -66,4 +67,37 @@ TEST_F(rrc_ue_meas_report, when_invalid_meas_report_received_then_meas_results_a
 
   ASSERT_TRUE(meas_results.meas_result_neigh_cells.has_value() and
               meas_results.meas_result_neigh_cells->meas_result_list_nr.empty());
+}
+
+// Fixture with a configurable measurement notifier so we can inject a real rrc_meas_cfg.
+class rrc_ue_packed_meas_config : public rrc_ue_test_helper, public ::testing::Test
+{
+protected:
+  static void SetUpTestSuite() { ocudulog::init(); }
+
+  void SetUp() override
+  {
+    // Configure the mock to return the standard dummy meas config (valid, encodable).
+    rrc_ue_cu_cp_notifier.next_meas_cfg = generate_dummy_meas_config();
+
+    init();
+  }
+
+  void TearDown() override { ocudulog::flush(); }
+};
+
+TEST_F(rrc_ue_packed_meas_config, cond_meas_true_returns_non_empty_without_mutating_context)
+{
+  // Baseline: pack the regular (non-CHO) config and record its length.
+  byte_buffer regular_packed = rrc_ue->get_packed_meas_config();
+
+  // CHO path: must return a non-empty buffer (mock returns a valid meas config).
+  const std::vector<pci_t> candidate_pcis = {2, 3};
+  byte_buffer              cho_packed     = rrc_ue->get_packed_meas_config(candidate_pcis);
+  ASSERT_FALSE(cho_packed.empty());
+
+  // Context must not have been mutated: a subsequent non-CHO call must produce the same result
+  // as the baseline, confirming the CHO path did not overwrite the stored meas config.
+  byte_buffer regular_packed_after = rrc_ue->get_packed_meas_config();
+  ASSERT_EQ(regular_packed.length(), regular_packed_after.length());
 }

@@ -141,11 +141,13 @@ public:
                                 bool                               cond_meas           = false,
                                 span<const pci_t>                  candidate_pcis      = {}) override
   {
-    std::optional<rrc_meas_cfg> meas_cfg;
-    return meas_cfg;
+    return next_meas_cfg;
   }
 
   void on_measurement_report(const rrc_meas_results& meas_results) override {}
+
+  /// If set, on_measurement_config_request() returns this value; allows tests to inject a real config.
+  std::optional<rrc_meas_cfg> next_meas_cfg;
 
   cu_cp_ue_context_release_request last_cu_cp_ue_context_release_request;
 

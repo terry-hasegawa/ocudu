@@ -493,3 +493,22 @@ TEST_F(ue_config_tester,
   req.srbs_to_setup.erase(req.srbs_to_setup.begin()); // Remove SRB1 for the checks.
   ASSERT_NO_FATAL_FAILURE(check_du_to_cu_rrc_container(req, res.cell_group_cfg, nullptr, true));
 }
+
+TEST_F(ue_config_tester, when_meas_cfg_present_without_drbs_then_procedure_is_not_skipped)
+{
+  // Regression test: a UEContextModificationRequest carrying only meas_cfg (e.g. from the CHO
+  // gap request path) used to be silently ignored by changed_detected(), preventing
+  // du_meas_config_manager::update() from computing measurement gaps.
+  // Verify the procedure runs and reaches MAC (not short-circuited).
+  f1ap_ue_context_update_request req = create_f1ap_ue_context_update_request(test_ue->ue_index, {}, {});
+  req.meas_cfg                       = byte_buffer::create({0x01, 0x02}).value();
+
+  start_procedure(req);
+
+  // MAC must receive a reconfiguration — procedure was not short-circuited.
+  ASSERT_TRUE(this->mac.last_ue_reconf_msg.has_value());
+
+  mac_finishes_ue_config(test_ue->ue_index, true);
+  ASSERT_TRUE(proc.ready());
+  ASSERT_TRUE(proc.get().result);
+}
