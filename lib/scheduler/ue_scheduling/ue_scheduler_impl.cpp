@@ -148,11 +148,17 @@ void ue_scheduler_impl::run_slot_impl(slot_point sl_tx)
     // Update intra-slice scheduler context.
     group_cell.intra_slice_sched.slot_indication(sl_tx);
 
+    // Inject synthetic BSR for triggered UL grants due this slot.
+    group_cell.trig_ul_sched.run_slot(sl_tx);
+
     // Run slice scheduler policies.
     run_sched_strategy(cell_index);
 
     // The post processing is done for DL and UL slots.
     group_cell.intra_slice_sched.post_process_results();
+
+    // Record UEs needing triggered UL grants based on the finalized DL grant list.
+    group_cell.trig_ul_sched.process_dl_results(sl_tx, (*group_cell.cell_res_alloc)[0].result);
 
     // Update the UCI indication handler after the slot scheduling.
     group_cell.uci_selector.handle_result(sl_tx, (*group_cell.cell_res_alloc)[0].result);
@@ -184,6 +190,7 @@ ue_scheduler_impl::cell_context::cell_context(ue_scheduler_impl&                
                     *params.cell_metrics,
                     ocudulog::fetch_basic_logger("SCHED")),
   srs_sched(params.cell_res_alloc->cfg, parent.ue_db),
+  trig_ul_sched(parent.ue_db, params.cell_res_alloc->cfg.cell_index),
   uci_selector(*this)
 {
 }

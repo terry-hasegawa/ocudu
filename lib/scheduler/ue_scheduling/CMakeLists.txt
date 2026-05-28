@@ -10,6 +10,7 @@ set(SOURCES
         ue_scheduler_impl.cpp
         grant_params_selector.cpp
         intra_slice_scheduler.cpp
+        triggered_ul_grant_scheduler.cpp
 )
 
 add_library(ue_sched OBJECT ${SOURCES})

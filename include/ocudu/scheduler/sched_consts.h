@@ -32,6 +32,9 @@ constexpr unsigned SCHEDULER_MAX_K1 = 15;
 /// and to reduce BLER, we restrict maximum value of k2 to 11.
 constexpr unsigned SCHEDULER_MAX_K2 = 11;
 
+/// [Implementation defined] Maximum allowed slot delay between PDSCH and BSR injection in triggered UL grant feature.
+constexpr unsigned SCHEDULER_MAX_TRIG_UL_DELAY = 10;
+
 /// Maximum value of NTN Cell-specific K-offset. The field is expressed in slots for a subcarrier spacing of 15 kHz.
 /// See TS 38.331.
 constexpr unsigned NTN_CELL_SPECIFIC_KOFFSET_MAX = 1023;

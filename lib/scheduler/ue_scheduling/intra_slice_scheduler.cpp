@@ -478,6 +478,7 @@ unsigned intra_slice_scheduler::schedule_dl_newtx_candidates(dl_ran_slice_candid
       // Allocation was successful. Move grant builder to list of pending newTx grants.
       auto& grant_builder = result.value();
       rb_count += std::min(grant_builder.context().expected_nof_rbs, max_rbs_per_grant);
+
       pending_dl_newtxs.push_back(std::move(grant_builder));
       if (rb_count >= rbs_to_alloc) {
         // Enough UEs have been allocated to ensure that the grid is filled. Move to stage 2.
@@ -726,7 +727,6 @@ std::optional<ue_newtx_candidate> intra_slice_scheduler::create_newtx_ul_candida
   const ue_cell& ue_cc = u.get_cc();
   ocudu_assert(ue_cc.is_active() and not ue_cc.is_in_fallback_mode(), "Invalid slice UE state");
 
-  // Check if the UE has pending data to transmit.
   units::bytes pending_bytes{u.pending_ul_newtx_bytes()};
   if (pending_bytes.value() == 0) {
     return std::nullopt;

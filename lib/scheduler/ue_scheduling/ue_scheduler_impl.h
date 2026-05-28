@@ -10,6 +10,7 @@
 #include "../uci_scheduling/uci_scheduler_impl.h"
 #include "../ue_context/ue_repository.h"
 #include "intra_slice_scheduler.h"
+#include "triggered_ul_grant_scheduler.h"
 #include "ue_cell_grid_allocator.h"
 #include "ue_event_manager.h"
 #include "ue_fallback_scheduler.h"
@@ -60,6 +61,9 @@ private:
 
     /// SRS scheduler
     srs_scheduler_impl srs_sched;
+
+    /// Triggered UL grant sub-scheduler.
+    triggered_ul_grant_scheduler trig_ul_sched;
 
     /// Handler of UCI indications.
     uci_indication_selector uci_selector;

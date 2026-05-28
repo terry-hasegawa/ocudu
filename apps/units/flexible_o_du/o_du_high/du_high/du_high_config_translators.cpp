@@ -1088,6 +1088,13 @@ static std::map<five_qi_t, odu::du_qos_config> generate_du_qos_config(const du_h
         qos.rlc.mode == "am" ? qos.rlc.am.tx.queue_size_bytes : qos.rlc.um.tx.queue_size_bytes;
     out_f1u.warn_on_drop   = config.warn_on_drop;
     out_f1u.ul_buffer_size = qos.f1u_du.ul_buffer_size;
+
+    // Convert triggered UL grant config (optional - presence enables the feature)
+    if (qos.mac.triggered_ul_grant.has_value()) {
+      auto& out_trig       = out_cfg[qos.five_qi].triggered_ul_grant.emplace();
+      out_trig.delay_slots = qos.mac.triggered_ul_grant->delay_slots;
+      out_trig.grant_size  = units::bytes{qos.mac.triggered_ul_grant->grant_size};
+    }
   }
   return out_cfg;
 }

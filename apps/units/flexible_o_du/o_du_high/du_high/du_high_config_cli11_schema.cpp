@@ -2651,6 +2651,21 @@ static void configure_cli11_qos_args(CLI::App& app, du_high_unit_qos_config& qos
   CLI::App* f1u_du_subcmd = add_subcommand(app, "f1u_du", "F1-U parameters at DU side");
   configure_cli11_f1u_du_args(*f1u_du_subcmd, qos_params.f1u_du);
 
+  // MAC section (scheduler-facing parameters per 5QI).
+  static du_high_unit_triggered_ul_grant_config trig_cfg;
+  CLI::App* mac_subcmd = add_subcommand(app, "mac", "MAC scheduler parameters")->configurable();
+  CLI::App* trig_ul_subcmd =
+      add_subcommand(*mac_subcmd, "triggered_ul_grant", "Proactive UL grant triggered by DL allocation")
+          ->configurable();
+  add_option(
+      *trig_ul_subcmd, "--delay_slots", trig_cfg.delay_slots, "Minimium slots delay between DL PDCCH and UL PDCCH")
+      ->capture_default_str()
+      ->check(CLI::Range(1, 15));
+  add_option(*trig_ul_subcmd, "--grant_size", trig_cfg.grant_size, "Injected UL pending bytes to the BSR")
+      ->capture_default_str()
+      ->check(CLI::PositiveNumber);
+  trig_ul_subcmd->parse_complete_callback([&qos_params]() { qos_params.mac.triggered_ul_grant.emplace(trig_cfg); });
+
   // Mark the application that these subcommands need to be present.
   app.needs(rlc_subcmd);
   app.needs(f1u_du_subcmd);

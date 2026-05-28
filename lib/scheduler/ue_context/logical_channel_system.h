@@ -122,6 +122,11 @@ public:
   units::bytes&       ul_buf_st(soa::row_id lcg_rid) { return ul_fields.at<ul_field_type::buf_st>(lcg_rid); }
   const units::bytes& ul_buf_st(soa::row_id lcg_rid) const { return ul_fields.at<ul_field_type::buf_st>(lcg_rid); }
 
+  const std::optional<mac_lc_config::triggered_ul_grant_cfg>& dl_triggered_ul_grant(soa::row_id lcg_rid) const
+  {
+    return ul_fields.at<ul_field_type::triggered_ul_grant>(lcg_rid);
+  }
+
   /// Returns the RAN DL Slice ID associated with the given LC, or std::nullopt if none is associated.
   std::optional<ran_slice_id_t> dl_slice_id(soa::row_id lc_rid) const
   {
@@ -227,8 +232,15 @@ private:
     slice_id,
     /// In case QoS statistics are being tracked, holds the row in the \c qos_channels table.
     qos_row,
+    /// Optional config for proactive UL grant triggered by DL allocation.
+    triggered_ul_grant,
   };
-  soa::table<ul_field_type, units::bytes, ran_slice_id_t, std::optional<stable_id_t>> ul_fields;
+  soa::table<ul_field_type,
+             units::bytes,
+             ran_slice_id_t,
+             std::optional<stable_id_t>,
+             std::optional<mac_lc_config::triggered_ul_grant_cfg>>
+      ul_fields;
 };
 
 } // namespace logical_channel_system_utils

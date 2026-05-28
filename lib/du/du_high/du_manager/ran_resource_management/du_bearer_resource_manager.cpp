@@ -190,6 +190,7 @@ std::vector<drb_id_t> du_bearer_resource_manager::setup_drbs(du_ue_resource_conf
       // Populate MAC LC configuration for GBR DRB if GBR QoS information is present.
       new_drb.mac_cfg = make_gbr_drb_mac_lc_config(*drb_to_setup.qos_info.drb_qos.gbr_qos_info);
     }
+    new_drb.mac_cfg.triggered_ul_grant = qos.triggered_ul_grant;
 
     // Update pdcp_sn_len in RLC config
     auto& rlc_cfg = new_drb.rlc_cfg;

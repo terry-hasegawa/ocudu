@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "ocudu/mac/mac_lc_config.h"
 #include "ocudu/ran/logical_channel/lcid.h"
 #include "ocudu/ran/qos/arp_prio_level.h"
 #include "ocudu/ran/qos/five_qi_qos_mapping.h"
@@ -43,12 +44,14 @@ struct logical_channel_config {
   std::optional<scheduling_request_id> sr_id;
   bool                                 lc_sr_mask;
   bool                                 lc_sr_delay_timer_applied;
+  // [Implementation defined] Configuration of triggeded UL grant feature.
+  std::optional<mac_lc_config::triggered_ul_grant_cfg> triggered_ul_grant;
 
   bool operator==(const logical_channel_config& rhs) const
   {
     return lcid == rhs.lcid and lc_group == rhs.lc_group and rrm_policy == rhs.rrm_policy and qos == rhs.qos and
            sr_id == rhs.sr_id and lc_sr_mask == rhs.lc_sr_mask and
-           lc_sr_delay_timer_applied == rhs.lc_sr_delay_timer_applied;
+           lc_sr_delay_timer_applied == rhs.lc_sr_delay_timer_applied and triggered_ul_grant == rhs.triggered_ul_grant;
   }
 };
 

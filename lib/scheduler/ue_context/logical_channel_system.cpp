@@ -77,10 +77,11 @@ logical_channel_system_utils::logical_channel_mapper::addmod_lc_and_lcg(du_ue_in
     auto& ul_row = get_row_id_entry(ue_index, lc_cfg.lc_group);
     if (ul_row == invalid_row_id) {
       // New LCG entry.
-      lcg_rid = ul_fields.insert(units::bytes{0}, invalid_slice_id, std::nullopt);
+      lcg_rid = ul_fields.insert(units::bytes{0}, invalid_slice_id, std::nullopt, lc_cfg.triggered_ul_grant);
       ul_row  = static_cast<uint16_t>(lcg_rid.value());
     } else {
-      lcg_rid = soa::row_id{ul_row};
+      lcg_rid                                                  = soa::row_id{ul_row};
+      ul_fields.at<ul_field_type::triggered_ul_grant>(lcg_rid) = lc_cfg.triggered_ul_grant;
     }
   }
 

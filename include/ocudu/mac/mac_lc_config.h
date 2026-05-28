@@ -7,6 +7,7 @@
 #include "ocudu/ran/sr_configuration.h"
 #include "ocudu/scheduler/config/logical_channel_group.h"
 #include "ocudu/support/error_handling.h"
+#include "ocudu/support/units.h"
 
 namespace ocudu {
 
@@ -120,6 +121,23 @@ inline bucket_size_duration to_bucket_size_duration(unsigned bsd)
 
 /// Configurations for MAC logical channel parameters.
 struct mac_lc_config {
+  /// Configuration for proactive UL grant triggered in reaction to a DL allocation on this LC.
+  struct triggered_ul_grant_cfg {
+    /// Number of slots to wait after DL PDCCH before issuing the UL PDCCH.
+    uint8_t delay_slots = 3;
+    /// Number of bytes to inject as pending UL buffer when the grant fires.
+    units::bytes grant_size = units::bytes{512};
+
+    // This user provided constructor is added here to fix a Clang compilation error related to the use of nested types
+    // with std::optional. It must be constexpr so that std::optional<triggered_ul_grant_cfg> remains a literal type.
+    constexpr triggered_ul_grant_cfg() {}
+
+    bool operator==(const triggered_ul_grant_cfg& rhs) const
+    {
+      return delay_slots == rhs.delay_slots && grant_size == rhs.grant_size;
+    }
+  };
+
   /// Logical channel priority, as specified in TS 38.321. An increasing priority value indicates a lower priority
   /// level. Values {1,...,16}.
   uint8_t priority;
@@ -137,11 +155,14 @@ struct mac_lc_config {
   /// Indicates whether to apply the delay timer for SR transmission for this logical channel. Set to FALSE if
   /// logicalChannelSR-DelayTimer is not included in BSR-Config.
   bool lc_sr_delay_applied;
+  /// If set, a proactive UL grant is triggered in reaction to each DL allocation on this LC.
+  std::optional<triggered_ul_grant_cfg> triggered_ul_grant;
 
   bool operator==(const mac_lc_config& rhs) const
   {
     return priority == rhs.priority && pbr == rhs.pbr && bsd == rhs.bsd && lcg_id == rhs.lcg_id &&
-           lc_sr_mask == rhs.lc_sr_mask && sr_id == rhs.sr_id && lc_sr_delay_applied == rhs.lc_sr_delay_applied;
+           lc_sr_mask == rhs.lc_sr_mask && sr_id == rhs.sr_id && lc_sr_delay_applied == rhs.lc_sr_delay_applied &&
+           triggered_ul_grant == rhs.triggered_ul_grant;
   }
   bool operator!=(const mac_lc_config& rhs) const { return !(rhs == *this); }
 };
