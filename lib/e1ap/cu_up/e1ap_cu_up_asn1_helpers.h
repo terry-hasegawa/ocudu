@@ -365,8 +365,11 @@ inline void fill_asn1_bearer_context_setup_response(asn1::e1ap::sys_bearer_conte
 }
 
 inline bool fill_e1ap_bearer_context_modification_request(e1ap_bearer_context_modification_request&       request,
-                                                          const asn1::e1ap::bearer_context_mod_request_s& asn1_request)
+                                                          const asn1::e1ap::bearer_context_mod_request_s& asn1_request,
+                                                          cu_up_ue_index_t                                ue_index)
 {
+  request.ue_index = ue_index;
+
   // Fill security info.
   if (asn1_request->security_info_present) {
     e1ap_security_info security_info;
