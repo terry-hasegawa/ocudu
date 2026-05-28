@@ -153,6 +153,12 @@ void conditional_handover_reconfiguration_routine::operator()(coro_context<async
     CORO_EARLY_RETURN(false);
   }
 
+  // The UE has applied the CHO measConfig to its VarMeasConfig (TS 38.331 Section 5.3.5.3).
+  // Update the stored context so the gNB tracks the correct UE measurement state.
+  if (cho_meas_result.has_value()) {
+    source_ue.get_rrc_ue()->update_meas_config(cho_meas_result.value());
+  }
+
   // Set CHO state to execution.
   {
     auto& cho_ctx = source_ue.get_cho_context();
@@ -191,7 +197,7 @@ byte_buffer conditional_handover_reconfiguration_routine::build_conditional_reco
   rrc_request.cho_candidates = std::vector<cu_cp_ue_cho_candidate>();
 
   // Generate CHO-specific measurement config filtered for candidate targets.
-  auto cho_meas_result =
+  cho_meas_result =
       source_ue.get_rrc_ue()->generate_meas_config(source_rrc_context.meas_cfg, true, candidate_target_pcis);
 
   if (!cho_meas_result.has_value()) {
@@ -205,7 +211,7 @@ byte_buffer conditional_handover_reconfiguration_routine::build_conditional_reco
   if (cho_meas_result->meas_obj_to_add_mod_list.size() > 1 && !source_du_meas_gap_cfg.empty()) {
     rrc_request.meas_gap_cfg = source_du_meas_gap_cfg.copy();
   }
-  rrc_request.meas_cfg            = std::move(cho_meas_result);
+  rrc_request.meas_cfg            = cho_meas_result; // copy; member kept for post-ack context update
   rrc_request.cho_nci_to_meas_ids = std::move(cho_nci_to_meas_ids);
 
   // Apply runtime T1 threshold override.

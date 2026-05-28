@@ -79,8 +79,9 @@ private:
   ocudulog::basic_logger&                logger;
 
   // RRC reconfiguration context
-  uint8_t     transaction_id = 0;
-  byte_buffer rrc_container;
+  uint8_t                     transaction_id = 0;
+  byte_buffer                 rrc_container;
+  std::optional<rrc_meas_cfg> cho_meas_result; ///< CHO measConfig sent to the UE; stored for post-ack context update.
 
   // (sub-)routine requests
   f1ap_ue_context_modification_request ue_context_mod_request;
