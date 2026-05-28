@@ -612,7 +612,7 @@ struct pdcch_common_unit_config {
   std::optional<unsigned> coreset0_index;
   /// Number of PDCCH candidates per aggregation level for SearchSpace#1. The aggregation level for the array element
   /// with index "x" is L=1U << x. The possible values for each element are {0, 1, 2, 3, 4, 5, 6, 8}.
-  std::array<uint8_t, 5> ss1_n_candidates = {0, 0, 1, 0, 0};
+  std::array<uint8_t, 5> ss1_n_candidates = {0, 0, 2, 0, 0};
   /// SearchSpace#0 index as per tables in TS 38.213, clause 13.
   unsigned ss0_index = 0;
   /// Maximum CORESET#0 duration in OFDM symbols to consider when deriving CORESET#0 index.

@@ -160,7 +160,7 @@ static void configure_cli11_pdcch_common_args(CLI::App& app, pdcch_common_unit_c
   add_option(app,
              "--ss1_n_candidates",
              common_params.ss1_n_candidates,
-             "Number of PDCCH candidates per aggregation level for SearchSpace#1. Default: {0, 0, 1, 0, 0}")
+             "Number of PDCCH candidates per aggregation level for SearchSpace#1. Default: {0, 0, 2, 0, 0}")
       ->default_function(get_vector_default_function(span<const uint8_t>(common_params.ss1_n_candidates)))
       ->capture_default_str()
       ->check(CLI::IsMember({0, 1, 2, 3, 4, 5, 6, 8}));
