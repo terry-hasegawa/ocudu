@@ -34,7 +34,7 @@ public:
   static const char* name() { return "Inter CU Handover Execution Target Routine"; }
 
 private:
-  void fill_e1ap_bearer_context_modification_request();
+  void fill_e1ap_bearer_context_modification_request(cu_cp_ue_index_t ue_index);
   void fill_e1ap_bearer_context_tunnel_update_request(const cu_cp_path_switch_request_ack& ack);
   std::vector<async_task<bool>> build_parallel_wait_tasks();
   bool                          initialize_reconfiguration_timeout();

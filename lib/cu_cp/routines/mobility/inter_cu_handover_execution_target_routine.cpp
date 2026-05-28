@@ -140,8 +140,7 @@ std::vector<async_task<bool>> inter_cu_handover_execution_target_routine::build_
       }
 
       // Inform CU-UP of the current PDCP state.
-      bearer_context_modification_request.ue_index = ue->get_ue_index();
-      fill_e1ap_bearer_context_modification_request();
+      fill_e1ap_bearer_context_modification_request(ue->get_ue_index());
       CORO_AWAIT(e1ap.handle_bearer_context_modification_request(bearer_context_modification_request));
 
       CORO_RETURN(true);
@@ -156,8 +155,7 @@ std::vector<async_task<bool>> inter_cu_handover_execution_target_routine::build_
       }
 
       // Inform CU-UP of the current PDCP state.
-      bearer_context_modification_request.ue_index = ue->get_ue_index();
-      fill_e1ap_bearer_context_modification_request();
+      fill_e1ap_bearer_context_modification_request(ue->get_ue_index());
       CORO_AWAIT(e1ap.handle_bearer_context_modification_request(bearer_context_modification_request));
 
       CORO_RETURN(true);
@@ -173,9 +171,11 @@ std::vector<async_task<bool>> inter_cu_handover_execution_target_routine::build_
   return pending_events;
 }
 
-void inter_cu_handover_execution_target_routine::fill_e1ap_bearer_context_modification_request()
+void inter_cu_handover_execution_target_routine::fill_e1ap_bearer_context_modification_request(
+    cu_cp_ue_index_t ue_index)
 {
-  auto& ng_request = bearer_context_modification_request.ng_ran_bearer_context_mod_request;
+  bearer_context_modification_request.ue_index = ue_index;
+  auto& ng_request                             = bearer_context_modification_request.ng_ran_bearer_context_mod_request;
   ng_request.emplace();
   slotted_id_vector<pdu_session_id_t, e1ap_pdu_session_res_to_modify_item>& pdu_sessions =
       ng_request->pdu_session_res_to_modify_list;
