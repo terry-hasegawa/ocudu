@@ -132,12 +132,12 @@ baseband_gateway_receiver::metadata radio_session_realtime_loopback_impl::receiv
       // Otherwise, zero the first samples of the output, and fill the remaining samples from the loopback buffer.
       for (unsigned i_channel = 0, nof_channels = data.get_nof_channels(); i_channel != nof_channels; ++i_channel) {
         ocuduvec::zero(data.get_channel_buffer(i_channel).first(nof_samples_to_skip));
-
-        // Copy the available samples in the same positions as if there had been no overflow.
-        baseband_gateway_buffer_writer_view offset_buffer(
-            data, nof_samples_to_skip, nof_requested_samples - nof_samples_to_skip);
-        buffer.read(offset_buffer, earliest_timestamp_in_rx_buffer);
       }
+
+      // Copy the available samples in the same positions as if there had been no overflow.
+      baseband_gateway_buffer_writer_view offset_buffer(
+          data, nof_samples_to_skip, nof_requested_samples - nof_samples_to_skip);
+      buffer.read(offset_buffer, earliest_timestamp_in_rx_buffer);
     }
 
     // Update the timestamp for the next receive call and return the current timestamp.

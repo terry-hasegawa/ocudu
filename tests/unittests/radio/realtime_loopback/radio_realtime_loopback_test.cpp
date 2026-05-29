@@ -541,6 +541,82 @@ TEST_P(RealtimeLoopbackRadioFixture, RxOverflow)
   session->stop();
 }
 
+TEST_P(RealtimeLoopbackRadioFixture, PartialRxOverflow)
+{
+  // Asynchronous task executor.
+  std::unique_ptr<task_executor> async_task_executor = make_task_executor_ptr(*async_task_worker);
+
+  // Notifier.
+  radio_notifier_spy radio_notifier;
+
+  // Radio configuration.
+  radio_configuration::radio radio_config = create_radio_config();
+
+  // Create a custom current time function for the realtime loopback radio. This function adds a large jump to the RF
+  // timestamp each time it is called.
+  baseband_gateway_timestamp                    current_rf_timestamp                  = 0;
+  unique_function<baseband_gateway_timestamp()> get_current_rf_timestamp_manual_clock = [&current_rf_timestamp]() {
+    return current_rf_timestamp;
+  };
+
+  // Create radio session.
+  std::unique_ptr<radio_session> session = factory->create_with_custom_time(
+      radio_config, *async_task_executor, radio_notifier, get_current_rf_timestamp_manual_clock);
+  ASSERT_NE(session, nullptr);
+
+  // Set starting time.
+  baseband_gateway_timestamp start_time = 0;
+
+  // Start processing.
+  session->start(start_time);
+
+  // Get the transmitter and receiver.
+  baseband_gateway_receiver&    receiver    = session->get_baseband_gateway(0).get_receiver();
+  baseband_gateway_transmitter& transmitter = session->get_baseband_gateway(0).get_transmitter();
+
+  // Prepare buffers.
+  baseband_gateway_buffer_dynamic rx_buffer(nof_channels, rx_block_size);
+  baseband_gateway_buffer_dynamic tx_buffer(nof_channels, tx_block_size);
+  tx_buffer.resize(tx_block_size);
+
+  // Generate transmit random data for each channel.
+  generate_random_samples(tx_buffer.get_writer());
+
+  // Valid transmissions.
+  baseband_gateway_transmitter_metadata tx_md;
+  tx_md.ts = start_time + tx_advance_samples;
+
+  // Fill the radio loopback buffer, so there is enough data for multiple receive calls.
+  for (unsigned i_transmission = 0; i_transmission != 4; ++i_transmission) {
+    transmitter.transmit(tx_buffer.get_reader(), tx_md);
+    current_rf_timestamp += tx_buffer.get_nof_samples();
+    tx_md.ts += tx_buffer.get_nof_samples();
+  }
+
+  // Attempt to receive.
+  rx_buffer.resize(rx_block_size);
+  baseband_gateway_receiver::metadata md = receiver.receive(rx_buffer.get_writer());
+
+  // Advance the RF timestamp to cause a partial RX overflow.
+  current_rf_timestamp += 2000;
+  md = receiver.receive(rx_buffer.get_writer());
+
+  // Check that the timestamp matches the expected value.
+  ASSERT_EQ(md.ts, start_time + rx_buffer.get_nof_samples());
+
+  // Check that the received samples are zero.
+  for (unsigned channel_id = 0; channel_id != nof_channels; ++channel_id) {
+    span<const ci16_t> buffer = rx_buffer[channel_id];
+    for (unsigned i_sample = 0; i_sample != rx_buffer.get_nof_samples(); ++i_sample) {
+      ASSERT_EQ(buffer[i_sample], ci16_t(0, 0))
+          << fmt::format("expected={} sample={} sample_index={}", ci16_t(0, 0), buffer[i_sample], i_sample);
+    }
+  }
+
+  // Stop session.
+  session->stop();
+}
+
 // Creates test suite that combines all possible parameters.
 INSTANTIATE_TEST_SUITE_P(RealtimeLoopbackRadioTest,
                          RealtimeLoopbackRadioFixture,
