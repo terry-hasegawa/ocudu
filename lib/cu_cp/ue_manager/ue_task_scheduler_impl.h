@@ -5,6 +5,7 @@
 #pragma once
 
 #include "ocudu/cu_cp/ue_task_scheduler.h"
+#include "ocudu/ocudulog/logger.h"
 #include "ocudu/support/async/fifo_async_task_scheduler.h"
 #include "ocudu/support/executors/task_executor.h"
 #include "ocudu/support/timers.h"

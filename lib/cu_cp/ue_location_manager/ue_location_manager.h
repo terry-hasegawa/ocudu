@@ -5,6 +5,7 @@
 #pragma once
 
 #include "ocudu/cu_cp/cu_cp_location_reporting_types.h"
+#include "ocudu/ocudulog/logger.h"
 #include <map>
 
 namespace ocudu::ocucp {

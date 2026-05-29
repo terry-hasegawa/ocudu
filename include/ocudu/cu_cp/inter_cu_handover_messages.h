@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "ocudu/adt/slotted_vector.h"
 #include "ocudu/cu_cp/cu_cp_types.h"
 #include "ocudu/ngap/ngap_types.h"
 #include "ocudu/ran/cause/ngap_cause.h"

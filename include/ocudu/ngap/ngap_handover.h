@@ -7,6 +7,7 @@
 #include "ocudu/cu_cp/cu_cp_location_reporting_types.h"
 #include "ocudu/cu_cp/cu_cp_types.h"
 #include "ocudu/ngap/ngap_types.h"
+#include "ocudu/ran/cu_cp_pdu_session.h"
 #include "ocudu/ran/cu_cp_types.h"
 #include "ocudu/ran/guami.h"
 #include "ocudu/ran/plmn_identity.h"

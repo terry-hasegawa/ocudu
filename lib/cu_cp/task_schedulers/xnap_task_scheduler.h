@@ -4,12 +4,12 @@
 
 #pragma once
 
-#include "ocudu/cu_cp/cu_cp_types.h"
+#include "ocudu/ocudulog/logger.h"
+#include "ocudu/ran/cu_cp_types.h"
 #include "ocudu/support/async/fifo_async_task_scheduler.h"
 #include <map>
 
-namespace ocudu {
-namespace ocucp {
+namespace ocudu::ocucp {
 
 /// \brief Service provided by CU-CP to schedule async tasks for a given XN-C peer.
 class xnap_task_scheduler
@@ -29,5 +29,4 @@ private:
   std::map<xnc_peer_index_t, fifo_async_task_scheduler> xnc_ctrl_loop;
 };
 
-} // namespace ocucp
-} // namespace ocudu
+} // namespace ocudu::ocucp

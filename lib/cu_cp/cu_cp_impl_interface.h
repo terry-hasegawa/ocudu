@@ -10,6 +10,7 @@
 #include "ocudu/f1ap/cu_cp/f1ap_cu.h"
 #include "ocudu/ngap/ngap.h"
 #include "ocudu/nrppa/nrppa.h"
+#include "ocudu/ran/cu_cp_pdu_session.h"
 #include "ocudu/ran/plmn_identity.h"
 #include "ocudu/rrc/rrc_du.h"
 #include "ocudu/rrc/rrc_ue.h"

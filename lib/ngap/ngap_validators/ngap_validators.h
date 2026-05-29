@@ -6,7 +6,7 @@
 
 #include "../ue_context/ngap_ue_logger.h"
 #include "ocudu/asn1/ngap/ngap_pdu_contents.h"
-#include "ocudu/cu_cp/cu_cp_types.h"
+#include "ocudu/ran/cu_cp_pdu_session.h"
 
 namespace ocudu {
 namespace ocucp {

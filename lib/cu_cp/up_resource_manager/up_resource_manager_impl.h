@@ -5,6 +5,7 @@
 #pragma once
 
 #include "ocudu/cu_cp/up_context.h"
+#include "ocudu/ran/cu_cp_pdu_session.h"
 #include <map>
 
 namespace ocudu::ocucp {
