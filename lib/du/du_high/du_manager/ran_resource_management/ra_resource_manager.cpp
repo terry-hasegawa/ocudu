@@ -7,6 +7,21 @@
 using namespace ocudu;
 using namespace odu;
 
+namespace {
+
+/// We use bit reversal as a mechanism to move preambles close to each other, in terms of index, far apart in the free
+/// list.
+struct bit_reverse_compare {
+  bool operator()(unsigned lhs, unsigned rhs)
+  {
+    auto lhs_reversed = bit_reverse(lhs);
+    auto rhs_reversed = bit_reverse(rhs);
+    return lhs_reversed < rhs_reversed;
+  }
+};
+
+} // namespace
+
 ra_resource_manager::ra_resource_manager(span<const du_cell_config> cell_cfg_list)
 {
   cells.resize(cell_cfg_list.size());
@@ -23,6 +38,9 @@ ra_resource_manager::ra_resource_manager(span<const du_cell_config> cell_cfg_lis
       for (unsigned j = 0; j != nof_cf_preambles; ++j) {
         cells[i].free_preamble_idx_list.push_back(rach_common.nof_cb_preambles_per_ssb + j);
       }
+
+      // Sort preambles so close ones are far apart in the list.
+      std::sort(cells[i].free_preamble_idx_list.begin(), cells[i].free_preamble_idx_list.end(), bit_reverse_compare{});
     }
   }
 }
@@ -56,7 +74,12 @@ void ra_resource_manager::deallocate_cfra_resources(du_ue_resource_config& ue_re
   if (ue_res_cfg.cfra.has_value()) {
     // Return allocated CFRA preamble to the pool.
     cell_ra_context& cell = cells[ue_res_cfg.cell_group.cells.at(SERVING_PCELL_IDX).serv_cell_cfg.cell_index];
-    cell.free_preamble_idx_list.push_back(ue_res_cfg.cfra.value().preamble_id);
+
+    // Do sorted insertion (close preamble IDs are far apart).
+    auto id  = ue_res_cfg.cfra.value().preamble_id;
+    auto pos = std::upper_bound(
+        cell.free_preamble_idx_list.begin(), cell.free_preamble_idx_list.end(), id, bit_reverse_compare{});
+    cell.free_preamble_idx_list.insert(pos, id);
 
     // Reset CFRA resources.
     ue_res_cfg.cfra.reset();
