@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include "ocudu/adt/bounded_bitset.h"
 #include "ocudu/adt/byte_buffer.h"
 #include "ocudu/pdcp/pdcp_config.h"
 #include "ocudu/ran/cause/common.h"
@@ -14,6 +13,7 @@
 #include "ocudu/ran/crit_diagnostics.h"
 #include "ocudu/ran/cu_cp_types.h"
 #include "ocudu/ran/cu_types.h"
+#include "ocudu/ran/five_g_s_tmsi.h"
 #include "ocudu/ran/gnb_id.h"
 #include "ocudu/ran/i_rnti.h"
 #include "ocudu/ran/nr_cgi.h"
@@ -57,52 +57,13 @@ struct cu_cp_amf_identifier_t {
   uint8_t  amf_pointer   = 0;
 };
 
-struct cu_cp_five_g_s_tmsi {
-  cu_cp_five_g_s_tmsi() = default;
-
-  cu_cp_five_g_s_tmsi(const bounded_bitset<48>& five_g_s_tmsi_) : five_g_s_tmsi(five_g_s_tmsi_)
-  {
-    ocudu_assert(five_g_s_tmsi_.size() == 48, "Invalid size for 5G-S-TMSI ({})", five_g_s_tmsi_.size());
-  }
-
-  cu_cp_five_g_s_tmsi(uint64_t amf_set_id, uint64_t amf_pointer, uint64_t five_g_tmsi)
-  {
-    five_g_s_tmsi.emplace();
-    five_g_s_tmsi->resize(48);
-    five_g_s_tmsi->from_uint64((amf_set_id << 38U) + (amf_pointer << 32U) + five_g_tmsi);
-  }
-
-  uint16_t get_amf_set_id() const
-  {
-    ocudu_assert(five_g_s_tmsi.has_value(), "five_g_s_tmsi is not set");
-    return five_g_s_tmsi.value().to_uint64() >> 38U;
-  }
-
-  uint8_t get_amf_pointer() const
-  {
-    ocudu_assert(five_g_s_tmsi.has_value(), "five_g_s_tmsi is not set");
-    return (five_g_s_tmsi.value().to_uint64() & 0x3f00000000) >> 32U;
-  }
-
-  uint32_t get_five_g_tmsi() const
-  {
-    ocudu_assert(five_g_s_tmsi.has_value(), "five_g_s_tmsi is not set");
-    return (five_g_s_tmsi.value().to_uint64() & 0xffffffff);
-  }
-
-  uint64_t to_number() const { return five_g_s_tmsi->to_uint64(); }
-
-private:
-  std::optional<bounded_bitset<48>> five_g_s_tmsi;
-};
-
 struct cu_cp_initial_ue_message {
-  cu_cp_ue_index_t                   ue_index = cu_cp_ue_index_t::invalid;
-  byte_buffer                        nas_pdu;
-  establishment_cause_t              establishment_cause;
-  cu_cp_user_location_info_nr        user_location_info;
-  std::optional<cu_cp_five_g_s_tmsi> five_g_s_tmsi;
-  std::optional<uint16_t>            amf_set_id;
+  cu_cp_ue_index_t               ue_index = cu_cp_ue_index_t::invalid;
+  byte_buffer                    nas_pdu;
+  establishment_cause_t          establishment_cause;
+  cu_cp_user_location_info_nr    user_location_info;
+  std::optional<five_g_s_tmsi_t> five_g_s_tmsi;
+  std::optional<uint16_t>        amf_set_id;
 };
 
 struct cu_cp_ul_nas_transport {
@@ -308,16 +269,16 @@ struct cu_cp_paging_edrx_info {
 };
 
 struct cu_cp_paging_message {
-  uint64_t                                         ue_id_idx_value = 0;
-  std::variant<cu_cp_five_g_s_tmsi, full_i_rnti_t> ue_paging_id;
-  std::optional<uint16_t>                          paging_drx;
-  std::vector<cu_cp_tai_list_for_paging_item>      tai_list_for_paging;
-  std::optional<uint8_t>                           paging_prio;
-  std::optional<cu_cp_ue_radio_cap_for_paging>     ue_radio_cap_for_paging;
-  std::optional<bool>                              paging_origin;
-  std::optional<cu_cp_assist_data_for_paging>      assist_data_for_paging;
-  std::optional<uint64_t>                          extended_ue_id_idx_value;
-  std::optional<cu_cp_paging_edrx_info>            paging_edrx_info;
+  uint64_t                                     ue_id_idx_value = 0;
+  std::variant<five_g_s_tmsi_t, full_i_rnti_t> ue_paging_id;
+  std::optional<uint16_t>                      paging_drx;
+  std::vector<cu_cp_tai_list_for_paging_item>  tai_list_for_paging;
+  std::optional<uint8_t>                       paging_prio;
+  std::optional<cu_cp_ue_radio_cap_for_paging> ue_radio_cap_for_paging;
+  std::optional<bool>                          paging_origin;
+  std::optional<cu_cp_assist_data_for_paging>  assist_data_for_paging;
+  std::optional<uint64_t>                      extended_ue_id_idx_value;
+  std::optional<cu_cp_paging_edrx_info>        paging_edrx_info;
 };
 
 struct cu_cp_bearer_context_release_request {

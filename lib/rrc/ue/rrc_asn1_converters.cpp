@@ -231,21 +231,21 @@ ocudu::ocucp::integrity_prot_algorithm_to_rrc_asn1(const security::integrity_alg
   return asn1_integrity_prot_algo;
 }
 
-cu_cp_five_g_s_tmsi ocudu::ocucp::asn1_to_five_g_s_tmsi(const asn1::fixed_bitstring<48>& asn1_five_g_s_tmsi)
+five_g_s_tmsi_t ocudu::ocucp::asn1_to_five_g_s_tmsi(const asn1::fixed_bitstring<48>& asn1_five_g_s_tmsi)
 {
   bounded_bitset<48> five_g_s_tmsi(48);
   five_g_s_tmsi.from_uint64(asn1_five_g_s_tmsi.to_number());
 
-  return cu_cp_five_g_s_tmsi{five_g_s_tmsi};
+  return five_g_s_tmsi_t{five_g_s_tmsi};
 }
 
-cu_cp_five_g_s_tmsi ocudu::ocucp::asn1_to_five_g_s_tmsi(const asn1::fixed_bitstring<39>& asn1_five_g_s_tmsi_part1,
-                                                        const asn1::fixed_bitstring<9>&  asn1_five_g_s_tmsi_part2)
+five_g_s_tmsi_t ocudu::ocucp::asn1_to_five_g_s_tmsi(const asn1::fixed_bitstring<39>& asn1_five_g_s_tmsi_part1,
+                                                    const asn1::fixed_bitstring<9>&  asn1_five_g_s_tmsi_part2)
 {
   bounded_bitset<48> five_g_s_tmsi(48);
   five_g_s_tmsi.from_uint64((asn1_five_g_s_tmsi_part2.to_number() << 39) + asn1_five_g_s_tmsi_part1.to_number());
 
-  return cu_cp_five_g_s_tmsi{five_g_s_tmsi};
+  return five_g_s_tmsi_t{five_g_s_tmsi};
 }
 
 cu_cp_amf_identifier_t ocudu::ocucp::asn1_to_amf_identifier(const asn1::fixed_bitstring<24>& asn1_amf_id)

@@ -34,7 +34,7 @@ protected:
     paging_msg.ue_id_idx_value = five_g_s_tmsi.to_uint64() % 1024;
 
     // Add UE paging ID.
-    paging_msg.ue_paging_id = cu_cp_five_g_s_tmsi{five_g_s_tmsi};
+    paging_msg.ue_paging_id = five_g_s_tmsi_t{five_g_s_tmsi};
 
     // Add paging DRX.
     paging_msg.paging_drx = 64;

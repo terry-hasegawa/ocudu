@@ -5,14 +5,13 @@
 #pragma once
 
 #include "ocudu/asn1/asn1_utils.h"
-#include "ocudu/asn1/f1ap/common.h"
 #include "ocudu/asn1/f1ap/f1ap.h"
 #include "ocudu/asn1/f1ap/f1ap_pdu_contents.h"
-#include "ocudu/cu_cp/cu_cp_types.h"
+#include "ocudu/ran/five_g_s_tmsi.h"
+#include "ocudu/ran/i_rnti.h"
 #include <variant>
 
-namespace ocudu {
-namespace ocucp {
+namespace ocudu::ocucp {
 
 /// \brief Convert the \c cu_cp_paging_message type to ASN.1.
 /// \param[out] asn1_paging The ASN.1 type struct to store the result.
@@ -23,8 +22,8 @@ inline void fill_asn1_paging_message(asn1::f1ap::paging_s& asn1_paging, const cu
   asn1_paging->ue_id_idx_value.set_idx_len10().from_number(paging.ue_id_idx_value);
 
   // Add paging id.
-  if (std::holds_alternative<cu_cp_five_g_s_tmsi>(paging.ue_paging_id)) {
-    cu_cp_five_g_s_tmsi five_g_s_tmsi = std::get<cu_cp_five_g_s_tmsi>(paging.ue_paging_id);
+  if (std::holds_alternative<five_g_s_tmsi_t>(paging.ue_paging_id)) {
+    five_g_s_tmsi_t five_g_s_tmsi = std::get<five_g_s_tmsi_t>(paging.ue_paging_id);
     asn1_paging->paging_id.set_cn_ue_paging_id().set_five_g_s_tmsi().from_number(five_g_s_tmsi.to_number());
   } else {
     asn1_paging->paging_id.set_ran_ue_paging_id().irnti.from_number(
@@ -76,5 +75,4 @@ inline void fill_asn1_paging_message(asn1::f1ap::paging_s& asn1_paging, const cu
   }
 }
 
-} // namespace ocucp
-} // namespace ocudu
+} // namespace ocudu::ocucp

@@ -13,6 +13,7 @@
 #include "ocudu/ocudulog/ocudulog.h"
 #include "ocudu/ran/cause/ngap_cause.h"
 #include "ocudu/ran/cu_types.h"
+#include "ocudu/ran/five_g_s_tmsi.h"
 #include "ocudu/ran/rb_id.h"
 #include "ocudu/ran/tai.h"
 #include "ocudu/ran/up_transport_layer_info.h"
@@ -885,16 +886,16 @@ inline bool target_to_source_transport_container_to_asn1(byte_buffer& asn1_conta
   return true;
 }
 
-/// \brief Convert NGAP ASN.1 to \c cu_cp_five_g_s_tmsi.
+/// \brief Convert NGAP ASN.1 to \c five_g_s_tmsi_t.
 /// \param[in] asn1_ue_id The ASN.1 type ue paging ID.
-/// \return The common type cu_cp_five_g_s_tmsi.
-inline cu_cp_five_g_s_tmsi ngap_asn1_to_ue_paging_id(const asn1::ngap::ue_paging_id_c& asn1_ue_id)
+/// \return The common type five_g_s_tmsi_t.
+inline five_g_s_tmsi_t ngap_asn1_to_ue_paging_id(const asn1::ngap::ue_paging_id_c& asn1_ue_id)
 {
   ocudu_assert(asn1_ue_id.type() == asn1::ngap::ue_paging_id_c::types_opts::five_g_s_tmsi, "Invalid UE paging ID type");
 
-  return cu_cp_five_g_s_tmsi{asn1_ue_id.five_g_s_tmsi().amf_set_id.to_number(),
-                             asn1_ue_id.five_g_s_tmsi().amf_pointer.to_number(),
-                             asn1_ue_id.five_g_s_tmsi().five_g_tmsi.to_number()};
+  return five_g_s_tmsi_t{asn1_ue_id.five_g_s_tmsi().amf_set_id.to_number(),
+                         asn1_ue_id.five_g_s_tmsi().amf_pointer.to_number(),
+                         asn1_ue_id.five_g_s_tmsi().five_g_tmsi.to_number()};
 }
 
 /// \brief Convert NGAP ASN.1 to \c gbr_qos_flow_information.

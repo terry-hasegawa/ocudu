@@ -19,6 +19,7 @@
 #include "ocudu/ngap/ngap_rrc_inactive_transition.h"
 #include "ocudu/ngap/ngap_ue_context_mod.h"
 #include "ocudu/ran/cu_types.h"
+#include "ocudu/ran/five_g_s_tmsi.h"
 #include "ocudu/ran/tac.h"
 #include <string>
 #include <variant>
@@ -798,7 +799,7 @@ inline void fill_cu_cp_paging_message(cu_cp_paging_message& paging, const asn1::
   paging.ue_paging_id = ngap_asn1_to_ue_paging_id(asn1_paging->ue_paging_id);
 
   // UE Identity Index value is defined as: UE_ID 5G-S-TMSI mod 1024 (see TS 38.304 section 7.1).
-  paging.ue_id_idx_value = std::get<cu_cp_five_g_s_tmsi>(paging.ue_paging_id).to_number() % 1024;
+  paging.ue_id_idx_value = std::get<five_g_s_tmsi_t>(paging.ue_paging_id).to_number() % 1024;
 
   // Fill paging DRX.
   if (asn1_paging->paging_drx_present) {

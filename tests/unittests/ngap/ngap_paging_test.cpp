@@ -4,7 +4,7 @@
 
 #include "ngap_test_helpers.h"
 #include "ocudu/asn1/ngap/ngap_pdu_contents.h"
-#include "ocudu/cu_cp/cu_cp_types.h"
+#include "ocudu/ran/five_g_s_tmsi.h"
 #include <gtest/gtest.h>
 
 using namespace ocudu;
@@ -23,12 +23,12 @@ class ngap_paging_test : public ngap_test
 protected:
   bool was_minimal_conversion_successful() const
   {
-    if (!std::holds_alternative<cu_cp_five_g_s_tmsi>(cu_cp_notifier.last_paging_msg.ue_paging_id)) {
+    if (!std::holds_alternative<five_g_s_tmsi_t>(cu_cp_notifier.last_paging_msg.ue_paging_id)) {
       test_logger.error("UE Paging ID type mismatch");
       return false;
     }
 
-    cu_cp_five_g_s_tmsi ue_paging_id = std::get<cu_cp_five_g_s_tmsi>(cu_cp_notifier.last_paging_msg.ue_paging_id);
+    five_g_s_tmsi_t ue_paging_id = std::get<five_g_s_tmsi_t>(cu_cp_notifier.last_paging_msg.ue_paging_id);
 
     // Check UE paging id.
     if (ue_paging_id.get_amf_set_id() != AMF_SET_ID) {

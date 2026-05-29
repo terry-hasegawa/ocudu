@@ -5,7 +5,7 @@
 #include "lib/rrc/ue/rrc_asn1_converters.h"
 #include "ocudu/asn1/asn1_utils.h"
 #include "ocudu/asn1/rrc_nr/ul_dcch_msg_ies.h"
-#include "ocudu/cu_cp/cu_cp_types.h"
+#include "ocudu/ran/five_g_s_tmsi.h"
 #include <gtest/gtest.h>
 
 using namespace ocudu;
@@ -18,7 +18,7 @@ TEST(rrc_asn1_helpers_test, test_five_g_s_tmsi_converter_for_valid_five_g_s_tmsi
   asn1::fixed_bitstring<48> asn1_five_g_s_tmsi;
   asn1_five_g_s_tmsi.from_number(278099133963U);
 
-  ocucp::cu_cp_five_g_s_tmsi five_g_s_tmsi = asn1_to_five_g_s_tmsi(asn1_five_g_s_tmsi);
+  five_g_s_tmsi_t five_g_s_tmsi = asn1_to_five_g_s_tmsi(asn1_five_g_s_tmsi);
 
   ASSERT_EQ(1U, five_g_s_tmsi.get_amf_set_id());
   ASSERT_EQ(0U, five_g_s_tmsi.get_amf_pointer());
@@ -35,7 +35,7 @@ TEST(rrc_asn1_helpers_test, test_five_g_s_tmsi_concatenation_for_valid_five_g_s_
   asn1::fixed_bitstring<9> asn1_five_g_s_tmsi_part_2;
   asn1_five_g_s_tmsi_part_2.from_number(0);
 
-  ocucp::cu_cp_five_g_s_tmsi five_g_s_tmsi = asn1_to_five_g_s_tmsi(asn1_five_g_s_tmsi_part1, asn1_five_g_s_tmsi_part_2);
+  five_g_s_tmsi_t five_g_s_tmsi = asn1_to_five_g_s_tmsi(asn1_five_g_s_tmsi_part1, asn1_five_g_s_tmsi_part_2);
 
   ASSERT_EQ(1U, five_g_s_tmsi.get_amf_set_id());
   ASSERT_EQ(0U, five_g_s_tmsi.get_amf_pointer());

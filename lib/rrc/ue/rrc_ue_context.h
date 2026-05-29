@@ -8,6 +8,7 @@
 #include "rrc_ue_srb_context.h"
 #include "ocudu/asn1/rrc_nr/ul_ccch_msg_ies.h"
 #include "ocudu/asn1/rrc_nr/ul_dcch_msg_ies.h"
+#include "ocudu/ran/five_g_s_tmsi.h"
 #include "ocudu/ran/plmn_identity.h"
 #include "ocudu/rrc/rrc_cell_context.h"
 #include "ocudu/rrc/rrc_ue.h"
@@ -27,15 +28,15 @@ public:
                    std::optional<rrc_ue_transfer_context> rrc_context_,
                    rrc_ue_logger&                         logger_);
 
-  const cu_cp_ue_index_t             ue_index; // UE index assigned by the DU processor
-  rnti_t                             c_rnti;   // current C-RNTI
-  rrc_cell_context                   cell;     // current cell
-  const rrc_ue_cfg_t                 cfg;
-  plmn_identity                      plmn_id = plmn_identity::test_value(); // PLMN identity of the UE
-  rrc_state                          state   = rrc_state::idle;
-  std::optional<rrc_meas_cfg>        meas_cfg;
-  std::optional<uint8_t>             serving_cell_mo;
-  std::optional<cu_cp_five_g_s_tmsi> five_g_s_tmsi;
+  const cu_cp_ue_index_t         ue_index; // UE index assigned by the DU processor
+  rnti_t                         c_rnti;   // current C-RNTI
+  rrc_cell_context               cell;     // current cell
+  const rrc_ue_cfg_t             cfg;
+  plmn_identity                  plmn_id = plmn_identity::test_value(); // PLMN identity of the UE
+  rrc_state                      state   = rrc_state::idle;
+  std::optional<rrc_meas_cfg>    meas_cfg;
+  std::optional<uint8_t>         serving_cell_mo;
+  std::optional<five_g_s_tmsi_t> five_g_s_tmsi;
   std::variant<uint64_t, asn1::fixed_bitstring<39>>
                                      setup_ue_id; ///< this is either a random value or the 5G-S-TMSI-PART1
   establishment_cause_t              connection_cause;

@@ -13,6 +13,7 @@
 #include "ocudu/pdcp/pdcp_config.h"
 #include "ocudu/ran/cause/common.h"
 #include "ocudu/ran/cu_types.h"
+#include "ocudu/ran/five_g_s_tmsi.h"
 #include "ocudu/rrc/rrc_types.h"
 #include "ocudu/security/security.h"
 
@@ -83,14 +84,14 @@ integrity_prot_algorithm_to_rrc_asn1(const security::integrity_algorithm& integr
 /// \brief Converts type \c asn1::fixed_bitstring<48> to an RRC NR ASN.1 type.
 /// \param[in] asn1_five_g_s_tmsi five g s tmsi object.
 /// \return The RRC NR ASN.1 object where the result of the conversion is stored.
-cu_cp_five_g_s_tmsi asn1_to_five_g_s_tmsi(const asn1::fixed_bitstring<48>& asn1_five_g_s_tmsi);
+five_g_s_tmsi_t asn1_to_five_g_s_tmsi(const asn1::fixed_bitstring<48>& asn1_five_g_s_tmsi);
 
 /// \brief Converts type \c asn1::fixed_bitstring<39> and \c asn1::fixed_bitstring<9> to an RRC NR ASN.1 type.
 /// \param[in] asn1_five_g_s_tmsi_part1 five g s tmsi part 1 object.
 /// \param[in] asn1_five_g_s_tmsi_part2 five g s tmsi part 2 object.
 /// \return The RRC NR ASN.1 object where the result of the conversion is stored.
-cu_cp_five_g_s_tmsi asn1_to_five_g_s_tmsi(const asn1::fixed_bitstring<39>& asn1_five_g_s_tmsi_part1,
-                                          const asn1::fixed_bitstring<9>&  asn1_five_g_s_tmsi_part2);
+five_g_s_tmsi_t asn1_to_five_g_s_tmsi(const asn1::fixed_bitstring<39>& asn1_five_g_s_tmsi_part1,
+                                      const asn1::fixed_bitstring<9>&  asn1_five_g_s_tmsi_part2);
 
 /// \brief Converts type \c asn1::fixed_bitstring<24> to an RRC NR ASN.1 type.
 /// \param[in] asn1_amf_id amf id object.
