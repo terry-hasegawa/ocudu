@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: BSD-3-Clause-Open-MPI
 
 
-ARG OS_VERSION=24.04
+ARG OS_VERSION=26.04
 FROM ubuntu:$OS_VERSION AS builder
 
 ENV DEBIAN_FRONTEND=noninteractive
