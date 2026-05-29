@@ -5,9 +5,9 @@
 #pragma once
 
 #include "cu_cp/procedures/f1ap_cu_event_manager.h"
-#include "ocudu/cu_cp/positioning_messages.h"
 #include "ocudu/f1ap/cu_cp/f1ap_configuration.h"
 #include "ocudu/f1ap/f1ap_message_notifier.h"
+#include "ocudu/ran/positioning/positioning_messages.h"
 #include "ocudu/support/async/async_task.h"
 
 namespace ocudu::ocucp {

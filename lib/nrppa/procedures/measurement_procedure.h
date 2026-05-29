@@ -7,11 +7,11 @@
 #include "../du_context/nrppa_du_context.h"
 #include "../meas_context/nrppa_meas_context.h"
 #include "ocudu/asn1/nrppa/nrppa.h"
-#include "ocudu/cu_cp/positioning_messages.h"
 #include "ocudu/nrppa/nrppa.h"
 #include "ocudu/ran/cause/nrppa_cause.h"
 #include "ocudu/ran/cu_cp_types.h"
 #include "ocudu/ran/positioning/positioning_ids.h"
+#include "ocudu/ran/positioning/positioning_messages.h"
 
 namespace ocudu::ocucp {
 

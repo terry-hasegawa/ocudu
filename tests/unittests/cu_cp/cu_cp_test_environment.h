@@ -12,10 +12,9 @@
 #include "tests/test_doubles/f1ap/f1ap_test_messages.h"
 #include "tests/test_doubles/rrc/rrc_test_messages.h"
 #include "tests/unittests/cu_cp/test_doubles/mock_xnc_cu_cp.h"
-#include "tests/unittests/xnap/xnap_test_helpers.h"
 #include "ocudu/cu_cp/cu_cp.h"
 #include "ocudu/cu_cp/cu_cp_configuration.h"
-#include "ocudu/cu_cp/cu_cp_location_reporting_types.h"
+#include "ocudu/ran/cu_cp_location_reporting_types.h"
 #include "ocudu/ran/plmn_identity.h"
 #include <optional>
 #include <unordered_map>

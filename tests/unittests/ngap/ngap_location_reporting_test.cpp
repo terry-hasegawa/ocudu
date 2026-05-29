@@ -6,10 +6,9 @@
 #include "tests/test_doubles/utils/test_rng.h"
 #include "ocudu/asn1/ngap/ngap_ies.h"
 #include "ocudu/asn1/ngap/ngap_pdu_contents.h"
-#include "ocudu/cu_cp/cu_cp_location_reporting_types.h"
 #include "ocudu/ran/cause/ngap_cause.h"
+#include "ocudu/ran/cu_cp_location_reporting_types.h"
 #include "ocudu/ran/cu_types.h"
-#include "ocudu/support/async/async_test_utils.h"
 #include <gtest/gtest.h>
 
 using namespace ocudu;

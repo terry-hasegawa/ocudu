@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "ocudu/cu_cp/mobility_management_metrics.h"
+#include "ocudu/ngap/mobility_management_metrics.h"
 
 namespace ocudu::ocucp {
 

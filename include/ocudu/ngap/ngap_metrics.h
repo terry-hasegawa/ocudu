@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "ocudu/cu_cp/mobility_management_metrics.h"
+#include "ocudu/ngap/mobility_management_metrics.h"
 #include "ocudu/ran/cause/ngap_cause.h"
 #include "ocudu/ran/plmn_identity.h"
 #include "ocudu/ran/s_nssai.h"

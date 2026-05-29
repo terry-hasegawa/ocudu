@@ -13,6 +13,7 @@
 #include "tests/unittests/ngap/ngap_test_messages.h"
 #include "tests/unittests/xnap/xnap_test_messages.h"
 #include "ocudu/asn1/f1ap/f1ap_pdu_contents_ue.h"
+#include "ocudu/asn1/xnap/xnap_pdu_contents.h"
 #include "ocudu/e1ap/common/e1ap_types.h"
 #include "ocudu/f1ap/f1ap_message.h"
 #include "ocudu/f1ap/f1ap_ue_id_types.h"

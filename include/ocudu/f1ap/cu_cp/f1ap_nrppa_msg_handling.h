@@ -4,11 +4,10 @@
 
 #pragma once
 
-#include "ocudu/cu_cp/positioning_messages.h"
+#include "ocudu/ran/positioning/positioning_messages.h"
 #include "ocudu/support/async/async_task.h"
 
-namespace ocudu {
-namespace ocucp {
+namespace ocudu::ocucp {
 
 /// Handles incoming NRPPa messages to be transmitted over the F1 interface.
 class f1ap_nrppa_message_handler
@@ -33,5 +32,4 @@ public:
   handle_positioning_measurement_request(const measurement_request_t& request) = 0;
 };
 
-} // namespace ocucp
-} // namespace ocudu
+} // namespace ocudu::ocucp

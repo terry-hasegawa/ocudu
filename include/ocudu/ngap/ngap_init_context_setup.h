@@ -4,10 +4,11 @@
 
 #pragma once
 
-#include "ocudu/cu_cp/cu_cp_location_reporting_types.h"
 #include "ocudu/ngap/ngap_pdu_session.h"
 #include "ocudu/ngap/ngap_types.h"
+#include "ocudu/ran/aggregate_maximum_bit_rate.h"
 #include "ocudu/ran/crit_diagnostics.h"
+#include "ocudu/ran/cu_cp_location_reporting_types.h"
 #include "ocudu/ran/cu_cp_types.h"
 #include "ocudu/ran/guami.h"
 #include "ocudu/security/security.h"

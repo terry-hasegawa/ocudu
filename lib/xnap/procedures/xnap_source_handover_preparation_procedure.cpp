@@ -7,6 +7,7 @@
 #include "ocudu/adt/byte_buffer.h"
 #include "ocudu/asn1/xnap/common.h"
 #include "ocudu/asn1/xnap/xnap_ies.h"
+#include "ocudu/cu_cp/cu_cp_cho_types.h"
 #include "ocudu/ocudulog/ocudulog.h"
 #include "ocudu/security/security_asn1_utils.h"
 #include "ocudu/xnap/xnap_message.h"
