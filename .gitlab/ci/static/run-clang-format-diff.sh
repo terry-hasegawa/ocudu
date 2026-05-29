@@ -27,6 +27,9 @@ target=$1
 
 echo "Running code format check between current state and ${target}"
 
+echo "Using clang-format version:"
+clang-format --version
+
 # Get modified files (added, removed or changed) compared with target branch
 files=$(git diff --name-only --relative --diff-filter=d "${target}" | grep -E "${FILE_EXTENSION_REGEX}" | tr '\n' ' ')
 
