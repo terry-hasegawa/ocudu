@@ -188,13 +188,13 @@ parse_ntn_gateway_location(const nlohmann::json& json)
 
 static expected<ntn_polarization_t::polarization_type, std::string> parse_polarization_type(const std::string& s)
 {
-  if (s == "rhcp") {
+  if (s == to_string(ntn_polarization_t::polarization_type::rhcp)) {
     return ntn_polarization_t::polarization_type::rhcp;
   }
-  if (s == "lhcp") {
+  if (s == to_string(ntn_polarization_t::polarization_type::lhcp)) {
     return ntn_polarization_t::polarization_type::lhcp;
   }
-  if (s == "linear") {
+  if (s == to_string(ntn_polarization_t::polarization_type::linear)) {
     return ntn_polarization_t::polarization_type::linear;
   }
   return make_unexpected(fmt::format("Invalid polarization type '{}' (expected 'rhcp', 'lhcp', or 'linear')", s));

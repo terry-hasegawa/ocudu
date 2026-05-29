@@ -276,9 +276,9 @@ static void configure_cli11_ntn_polarization(CLI::App& app, ntn_polarization_t& 
       app,
       "--dl",
       [&polarization](const std::string& value) {
-        if (value == "lhcp") {
+        if (value == to_string(ntn_polarization_t::polarization_type::lhcp)) {
           polarization.dl = ntn_polarization_t::polarization_type::lhcp;
-        } else if (value == "rhcp") {
+        } else if (value == to_string(ntn_polarization_t::polarization_type::rhcp)) {
           polarization.dl = ntn_polarization_t::polarization_type::rhcp;
         } else {
           polarization.dl = ntn_polarization_t::polarization_type::linear;
@@ -291,9 +291,9 @@ static void configure_cli11_ntn_polarization(CLI::App& app, ntn_polarization_t& 
       app,
       "--ul",
       [&polarization](const std::string& value) {
-        if (value == "lhcp") {
+        if (value == to_string(ntn_polarization_t::polarization_type::lhcp)) {
           polarization.ul = ntn_polarization_t::polarization_type::lhcp;
-        } else if (value == "rhcp") {
+        } else if (value == to_string(ntn_polarization_t::polarization_type::rhcp)) {
           polarization.ul = ntn_polarization_t::polarization_type::rhcp;
         } else {
           polarization.ul = ntn_polarization_t::polarization_type::linear;

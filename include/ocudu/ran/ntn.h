@@ -98,6 +98,20 @@ struct ntn_polarization_t {
   std::optional<polarization_type> ul;
 };
 
+inline const char* to_string(ntn_polarization_t::polarization_type pt)
+{
+  switch (pt) {
+    case ntn_polarization_t::polarization_type::rhcp:
+      return "rhcp";
+    case ntn_polarization_t::polarization_type::lhcp:
+      return "lhcp";
+    case ntn_polarization_t::polarization_type::linear:
+      return "linear";
+    default:
+      return "invalid";
+  }
+}
+
 /// NTN config parameters.
 struct ntn_config {
   /// Reference epoch time for NTN assistance information.
