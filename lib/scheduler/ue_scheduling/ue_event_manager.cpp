@@ -148,6 +148,29 @@ public:
   {
   }
 
+  /// Returns a human-readable name for a PDU type.
+  template <typename PDUType>
+  static constexpr const char* pdu_type_name()
+  {
+    if constexpr (std::is_same_v<PDUType, uci_indication::uci_pdu>) {
+      return "UCI";
+    } else if constexpr (std::is_same_v<PDUType, ul_phr_indication_message>) {
+      return "PHR";
+    } else if constexpr (std::is_same_v<PDUType, ul_crc_pdu_indication>) {
+      return "CRC";
+    } else if constexpr (std::is_same_v<PDUType, srs_indication::srs_indication_pdu>) {
+      return "SRS";
+    } else if constexpr (std::is_same_v<PDUType, ul_bsr_indication_message>) {
+      return "BSR";
+    } else if constexpr (std::is_same_v<PDUType, positioning_measurement_request::cell_info>) {
+      return "positioning measurement request";
+    } else if constexpr (std::is_same_v<PDUType, du_cell_slice_reconfig_request>) {
+      return "slice reconfiguration request";
+    } else {
+      return "unknown";
+    }
+  }
+
   /// Create a PDU managed by an object pool.
   template <typename PDUType>
   auto create_pdu(const PDUType& pdu)
@@ -157,7 +180,7 @@ public:
     if (ret != nullptr) {
       *ret = pdu;
     } else {
-      logger.warning("Discarding indication PDU. Cause: PDU pool is empty");
+      logger.warning("Discarding {} indication PDU. Cause: PDU pool is empty", pdu_type_name<std::decay_t<PDUType>>());
     }
     return ret;
   }
