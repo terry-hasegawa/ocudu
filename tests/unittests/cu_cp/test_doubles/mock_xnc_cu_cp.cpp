@@ -4,8 +4,8 @@
 
 #include "mock_xnc_cu_cp.h"
 #include "ocudu/adt/mutexed_mpmc_queue.h"
-#include "ocudu/cu_cp/cu_cp_xnc_handler.h"
 #include "ocudu/support/async/async_no_op_task.h"
+#include "ocudu/xnap/cu_cp_xnc_handler.h"
 #include "ocudu/xnap/xnap_message.h"
 
 using namespace ocudu;

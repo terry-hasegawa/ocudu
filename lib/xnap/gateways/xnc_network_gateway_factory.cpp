@@ -4,12 +4,12 @@
 
 #include "ocudu/xnap/gateways/xnc_network_gateway_factory.h"
 #include "ocudu/asn1/xnap/xnap.h"
-#include "ocudu/cu_cp/cu_cp_xnc_handler.h"
 #include "ocudu/gateways/sctp_network_server_factory.h"
 #include "ocudu/pcap/dlt_pcap.h"
 #include "ocudu/support/async/async_task.h"
 #include "ocudu/support/error_handling.h"
 #include "ocudu/support/io/transport_layer_address.h"
+#include "ocudu/xnap/cu_cp_xnc_handler.h"
 #include "ocudu/xnap/xnap_message.h"
 #include <cstdint>
 

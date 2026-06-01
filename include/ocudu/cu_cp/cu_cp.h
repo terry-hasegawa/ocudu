@@ -8,9 +8,9 @@
 #include "ocudu/cu_cp/cu_cp_command_handler.h"
 #include "ocudu/cu_cp/cu_cp_metrics_handler.h"
 #include "ocudu/cu_cp/cu_cp_ng_handler.h"
-#include "ocudu/cu_cp/cu_cp_xnc_handler.h"
 #include "ocudu/e1ap/cu_cp/cu_cp_e1_handler.h"
 #include "ocudu/f1ap/cu_cp/cu_cp_f1c_handler.h"
+#include "ocudu/xnap/cu_cp_xnc_handler.h"
 
 namespace ocudu::ocucp {
 
