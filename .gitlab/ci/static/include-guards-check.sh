@@ -124,8 +124,6 @@ EOF
   die "Pattern contains invalid characters!"
 fi
 
-cd "$GITHUB_WORKSPACE" || die "Internal error: Cannot change to GitHub workspace directory."
-
 echo "Switching to given path '$INPUT_PATH' ..."
 cd "$INPUT_PATH" || die "Cannot change directory"
 
