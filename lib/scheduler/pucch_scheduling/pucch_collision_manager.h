@@ -78,11 +78,11 @@ public:
 
   /// \brief Allocate a PUCCH resource at a given slot.
   /// \return Success if the allocation was successful, otherwise an error indicating the reason of failure.
-  alloc_result_t alloc(cell_slot_resource_grid& ul_res_grid, slot_point sl, const pucch_resource& res);
+  alloc_result_t alloc(cell_slot_resource_allocator& slot_alloc, const pucch_resource& res);
 
   /// Free a common PUCCH resource at the given slot.
   /// \return True if the resource was successfully freed, false if the resource was not allocated.
-  bool free(cell_slot_resource_grid& ul_res_grid, slot_point sl, const pucch_resource& res);
+  bool free(cell_slot_resource_allocator& slot_alloc, const pucch_resource& res);
 
 private:
   using mux_region_lookup_t = slotted_array<size_t, pucch_constants::MAX_NOF_TOT_CELL_RESOURCES>;
@@ -100,18 +100,19 @@ private:
     /// Bitset representing the current usage state of all PUCCH resources (common and dedicated) in this slot.
     ///  - S[i] = 1 if resource i is in use, 0 otherwise.
     bounded_bitset<pucch_constants::MAX_NOF_TOT_CELL_RESOURCES> current_state;
+    /// Map of currently allocated resources to their owners (RNTIs).
+    std::vector<rnti_t> owners;
     /// Resource grid that keeps track of the time-frequency grants of PUCCH resources in this slot.
     cell_slot_resource_grid pucch_res_grid;
 
     /// Default constructor needed by circular_array.
     slot_context() : pucch_res_grid({}) {}
 
-    slot_context(const cell_configuration& cell_cfg) :
-      current_state(pucch_constants::MAX_NOF_CELL_COMMON_PUCCH_RESOURCES +
-                    cell_cfg.bwp_res[to_bwp_id(0)].ul().pucch.dedicated.size()),
-      pucch_res_grid(cell_cfg.params.ul_cfg_common.freq_info_ul.scs_carrier_list)
-    {
-    }
+    /// Construct a slot context from the given cell configuration.
+    slot_context(const cell_configuration& cell_cfg);
+
+    /// Clear the slot context to the default state.
+    void clear();
   };
 
   // Ring buffer of slot contexts to keep track of PUCCH resource usage in recent slots.

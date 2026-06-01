@@ -145,22 +145,19 @@ protected:
 TEST_F(test_pucch_resource_manager, common_res_available_intialization)
 {
   for (unsigned r_pucch = 0; r_pucch != pucch_constants::MAX_NOF_CELL_COMMON_PUCCH_RESOURCES; ++r_pucch) {
-    ASSERT_TRUE(
-        t_bench.res_manager.reserve_harq_common_resource(t_bench.slot_alloc.ul_res_grid, t_bench.sl_tx, r_pucch));
+    ASSERT_TRUE(t_bench.res_manager.reserve_harq_common_resource(t_bench.slot_alloc, r_pucch));
   }
 }
 
 TEST_F(test_pucch_resource_manager, common_res_available_reserve_and_check)
 {
   const unsigned reserved_r_pucch = 13;
-  ASSERT_TRUE(t_bench.res_manager.reserve_harq_common_resource(
-      t_bench.slot_alloc.ul_res_grid, t_bench.sl_tx, reserved_r_pucch));
+  ASSERT_TRUE(t_bench.res_manager.reserve_harq_common_resource(t_bench.slot_alloc, reserved_r_pucch));
   for (unsigned r_pucch = 0; r_pucch != pucch_constants::MAX_NOF_CELL_COMMON_PUCCH_RESOURCES; ++r_pucch) {
     if (r_pucch == reserved_r_pucch) {
       continue;
     }
-    ASSERT_TRUE(
-        t_bench.res_manager.reserve_harq_common_resource(t_bench.slot_alloc.ul_res_grid, t_bench.sl_tx, r_pucch));
+    ASSERT_TRUE(t_bench.res_manager.reserve_harq_common_resource(t_bench.slot_alloc, r_pucch));
   }
 
   // Increment slot point and invoke slot_indication(), which should reset the previous UE's resource allocation.
@@ -168,8 +165,7 @@ TEST_F(test_pucch_resource_manager, common_res_available_reserve_and_check)
   t_bench.res_manager.slot_indication(t_bench.sl_tx);
   t_bench.slot_alloc.slot_indication(t_bench.sl_tx);
   for (unsigned r_pucch_it = 0; r_pucch_it != pucch_constants::MAX_NOF_CELL_COMMON_PUCCH_RESOURCES; ++r_pucch_it) {
-    ASSERT_TRUE(
-        t_bench.res_manager.reserve_harq_common_resource(t_bench.slot_alloc.ul_res_grid, t_bench.sl_tx, r_pucch_it));
+    ASSERT_TRUE(t_bench.res_manager.reserve_harq_common_resource(t_bench.slot_alloc, r_pucch_it));
   }
 }
 

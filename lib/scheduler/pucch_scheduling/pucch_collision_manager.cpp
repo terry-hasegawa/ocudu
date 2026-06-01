@@ -150,8 +150,7 @@ void pucch_collision_manager::slot_indication(slot_point sl_tx)
   ocudu_sanity_check(not last_sl_ind.valid() or sl_tx == last_sl_ind + 1, "Detected a skipped slot");
 
   // Clear previous slot context.
-  slots_ctx[(sl_tx - 1).count()].current_state.reset();
-  slots_ctx[(sl_tx - 1).count()].pucch_res_grid.clear();
+  slots_ctx[(sl_tx - 1).count()].clear();
   // Update last slot indication.
   last_sl_ind = sl_tx;
 }
@@ -160,19 +159,18 @@ void pucch_collision_manager::stop()
 {
   // Clear all slot contexts.
   for (auto& ctx : slots_ctx) {
-    ctx.current_state.reset();
-    ctx.pucch_res_grid.clear();
+    ctx.clear();
   }
   last_sl_ind = {};
 }
 
-pucch_collision_manager::alloc_result_t
-pucch_collision_manager::alloc(cell_slot_resource_grid& ul_res_grid, slot_point sl, const pucch_resource& res)
+pucch_collision_manager::alloc_result_t pucch_collision_manager::alloc(cell_slot_resource_allocator& slot_alloc,
+                                                                       const pucch_resource&         res)
 {
-  ocudu_sanity_check(sl < last_sl_ind + slots_ctx.size(),
+  ocudu_sanity_check(slot_alloc.slot < last_sl_ind + slots_ctx.size(),
                      "PUCCH resource ring-buffer accessed too far into the future");
 
-  auto&          ctx     = slots_ctx[sl.count()];
+  auto&          ctx     = slots_ctx[slot_alloc.slot.count()];
   const auto&    bwp_cfg = cell_cfg.params.ul_cfg_common.init_ul_bwp.generic_params;
   const unsigned res_idx = get_res_idx(cell_cfg.bwp_res[to_bwp_id(0)].ul().pucch, res.res_id);
 
@@ -180,10 +178,10 @@ pucch_collision_manager::alloc(cell_slot_resource_grid& ul_res_grid, slot_point 
   const grant_info                first_hop = pucch_hop_grant(res, bwp_cfg, true);
   const std::optional<grant_info> second_hop =
       res.second_hop_prb.has_value() ? std::optional{pucch_hop_grant(res, bwp_cfg, false)} : std::nullopt;
-  if (ul_res_grid.collides(first_hop, &ctx.pucch_res_grid)) {
+  if (slot_alloc.ul_res_grid.collides(first_hop, &ctx.pucch_res_grid)) {
     return make_unexpected(alloc_failure_reason::UL_GRANT_COLLISION);
   }
-  if (second_hop.has_value() and ul_res_grid.collides(*second_hop, &ctx.pucch_res_grid)) {
+  if (second_hop.has_value() and slot_alloc.ul_res_grid.collides(*second_hop, &ctx.pucch_res_grid)) {
     return make_unexpected(alloc_failure_reason::UL_GRANT_COLLISION);
   }
 
@@ -195,21 +193,21 @@ pucch_collision_manager::alloc(cell_slot_resource_grid& ul_res_grid, slot_point 
 
   // Allocate the resource.
   ctx.current_state.set(res_idx);
-  ul_res_grid.fill(first_hop);
+  slot_alloc.ul_res_grid.fill(first_hop);
   ctx.pucch_res_grid.fill(first_hop);
   if (second_hop.has_value()) {
-    ul_res_grid.fill(*second_hop);
+    slot_alloc.ul_res_grid.fill(*second_hop);
     ctx.pucch_res_grid.fill(*second_hop);
   }
   return default_success_t();
 }
 
-bool pucch_collision_manager::free(cell_slot_resource_grid& ul_res_grid, slot_point sl, const pucch_resource& res)
+bool pucch_collision_manager::free(cell_slot_resource_allocator& slot_alloc, const pucch_resource& res)
 {
-  ocudu_sanity_check(sl < last_sl_ind + slots_ctx.size(),
+  ocudu_sanity_check(slot_alloc.slot < last_sl_ind + slots_ctx.size(),
                      "PUCCH resource ring-buffer accessed too far into the future");
 
-  auto&          ctx     = slots_ctx[sl.count()];
+  auto&          ctx     = slots_ctx[slot_alloc.slot.count()];
   const unsigned res_idx = get_res_idx(cell_cfg.bwp_res[to_bwp_id(0)].ul().pucch, res.res_id);
   if (not ctx.current_state.test(res_idx)) {
     // Resource was not allocated.
@@ -229,11 +227,11 @@ bool pucch_collision_manager::free(cell_slot_resource_grid& ul_res_grid, slot_po
   // Clear grants in ul_res_grid and ctx.pucch_res_grid.
   const auto&      bwp_cfg   = cell_cfg.params.ul_cfg_common.init_ul_bwp.generic_params;
   const grant_info first_hop = pucch_hop_grant(res, bwp_cfg, true);
-  ul_res_grid.clear(first_hop);
+  slot_alloc.ul_res_grid.clear(first_hop);
   ctx.pucch_res_grid.clear(first_hop);
   if (res.second_hop_prb.has_value()) {
     const grant_info second_hop = pucch_hop_grant(res, bwp_cfg, false);
-    ul_res_grid.clear(second_hop);
+    slot_alloc.ul_res_grid.clear(second_hop);
     ctx.pucch_res_grid.clear(second_hop);
   }
   return true;
@@ -255,4 +253,18 @@ pucch_collision_manager::build_mux_region_lookup(const detail::mux_regions_matri
   }
 
   return lookup;
+}
+
+pucch_collision_manager::slot_context::slot_context(const cell_configuration& cell_cfg) :
+  current_state(cell_cfg.bwp_res[to_bwp_id(0)].ul().pucch.nof_total_res()),
+  owners(cell_cfg.bwp_res[to_bwp_id(0)].ul().pucch.nof_total_res(), rnti_t::INVALID_RNTI),
+  pucch_res_grid(cell_cfg.params.ul_cfg_common.freq_info_ul.scs_carrier_list)
+{
+}
+
+void pucch_collision_manager::slot_context::clear()
+{
+  current_state.reset();
+  std::fill(owners.begin(), owners.end(), rnti_t::INVALID_RNTI);
+  pucch_res_grid.clear();
 }

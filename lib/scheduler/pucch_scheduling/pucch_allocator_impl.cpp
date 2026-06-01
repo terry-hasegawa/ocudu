@@ -589,8 +589,7 @@ pucch_allocator_impl::alloc_pucch_common_res_harq(cell_slot_resource_allocator& 
     ocudu_assert(r_pucch < 16, "r_PUCCH must be less than 16");
 
     // Look for an available PUCCH common resource.
-    if (not resource_manager.reserve_harq_common_resource(
-            pucch_slot_alloc.ul_res_grid, pucch_slot_alloc.slot, r_pucch)) {
+    if (not resource_manager.reserve_harq_common_resource(pucch_slot_alloc, r_pucch)) {
       continue;
     }
 
@@ -648,15 +647,14 @@ pucch_allocator_impl::find_common_and_ded_harq_res_available(cell_slot_resource_
 
     // Look for an available PUCCH common resource.
     // TODO: allow collisions between common and dedicated resources for the same UE, since it will never send both.
-    if (not resource_manager.reserve_harq_common_resource(
-            pucch_slot_alloc.ul_res_grid, pucch_slot_alloc.slot, r_pucch)) {
+    if (not resource_manager.reserve_harq_common_resource(pucch_slot_alloc, r_pucch)) {
       continue;
     }
 
     // Look for an available PUCCH dedicated resource with the same PUCCH resource indicator as the common's.
     const pucch_resource* ded_res = guard.reserve_harq_set_0_resource_by_res_indicator(d_pri);
     if (ded_res == nullptr) {
-      resource_manager.release_harq_common_resource(pucch_slot_alloc.ul_res_grid, pucch_slot_alloc.slot, r_pucch);
+      resource_manager.release_harq_common_resource(pucch_slot_alloc, r_pucch);
       continue;
     }
 
@@ -677,7 +675,7 @@ pucch_allocator_impl::find_common_and_ded_harq_res_available(cell_slot_resource_
     // pre-allocated are constrained in the PUCCH resource indicator. Therefore, the \ref multiplex_and_allocate_pucch
     // function might not preserve the requested PUCCH resource indicator \ref d_pri.
     if (not d_pri_ded.has_value() or (cell_cfg.is_pucch_f0_and_f2() and *d_pri_ded != d_pri)) {
-      resource_manager.release_harq_common_resource(pucch_slot_alloc.ul_res_grid, pucch_slot_alloc.slot, r_pucch);
+      resource_manager.release_harq_common_resource(pucch_slot_alloc, r_pucch);
       continue;
     }
     ocudu_assert(*d_pri_ded == d_pri, "The PUCCH resource indicator must match for common and ded. resources");

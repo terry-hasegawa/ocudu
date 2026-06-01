@@ -46,10 +46,10 @@ public:
   void stop();
 
   /// \brief Reserve the common PUCCH resource indexed by r_pucch, if available.
-  bool reserve_harq_common_resource(cell_slot_resource_grid& ul_res_grid, slot_point sl, size_t r_pucch);
+  bool reserve_harq_common_resource(cell_slot_resource_allocator& slot_alloc, size_t r_pucch);
 
   /// \brief Release the common PUCCH resource indexed by r_pucch from being allocated to a given UE.
-  void release_harq_common_resource(cell_slot_resource_grid& ul_res_grid, slot_point sl, size_t r_pucch);
+  void release_harq_common_resource(cell_slot_resource_allocator& slot_alloc, size_t r_pucch);
 
   /// \brief RAII helper class that manages the reservation of dedicated PUCCH resources for a given UE at a given slot.
   /// The reservation is temporary until \c commit() is called, which makes the reservation permanent.
@@ -74,7 +74,7 @@ public:
     ue_reservation_guard& operator=(ue_reservation_guard&&) noexcept = delete;
 
     rnti_t     get_rnti() const { return rnti; }
-    slot_point get_slot() const { return sl; }
+    slot_point get_slot() const { return slot_alloc.slot; }
 
     /// \brief Reserve the next available PUCCH resource in PUCCH Resource Set ID 0.
     /// \return If there is any PUCCH resource available, it returns (i) the pointer to the configuration and (ii) the
@@ -146,11 +146,10 @@ public:
       std::optional<unsigned> cell_res_id;
     };
     pucch_resource_manager*              parent;
-    cell_slot_resource_grid&             ul_res_grid;
+    cell_slot_resource_allocator&        slot_alloc;
     const pucch_resource_builder_params& res_params;
     const cell_pucch_res_config&         cell_resources;
     const rnti_t                         rnti;
-    const slot_point                     sl;
     const ue_uplink_bwp_config&          ue_bwp_cfg;
 
     // Tracks the reservations made for the UE before commit().
