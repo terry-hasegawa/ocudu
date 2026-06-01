@@ -431,7 +431,7 @@ ocucp::cu_cp_configuration ocudu::generate_cu_cp_config(const cu_cp_unit_config&
         xn_config.peer_addrs.push_back(addr);
       }
       out_cfg.xnap.xnaps.push_back(xn_config);
-      out_cfg.xnap.peer_to_gateway[ocucp::uint_to_xnc_peer_index(peer_idx)] = ocucp::uint_to_xnc_gateway_index(gw_idx);
+      out_cfg.xnap.peer_to_gateway[uint_to_xnc_peer_index(peer_idx)] = uint_to_xnc_gateway_index(gw_idx);
       ++peer_idx;
     }
     ++gw_idx;
