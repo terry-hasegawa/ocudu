@@ -49,14 +49,6 @@ struct cu_cp_qos_config {
   pdcp_config pdcp;
 };
 
-// ASN1 types converted to common types
-
-struct cu_cp_user_location_info_nr {
-  nr_cell_global_id_t     nr_cgi;
-  tai_t                   tai;
-  std::optional<uint64_t> time_stamp;
-};
-
 /// <AMF Identifier> = <AMF Region ID><AMF Set ID><AMF Pointer>
 /// with AMF Region ID length is 8 bits, AMF Set ID length is 10 bits and AMF Pointer length is 6 bits
 struct cu_cp_amf_identifier_t {

@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include "ocudu/ran/nr_cgi.h"
+#include "ocudu/ran/tai.h"
 #include "fmt/format.h"
 #include <cstdint>
 #include <type_traits>
@@ -100,6 +102,12 @@ constexpr std::underlying_type_t<xnc_gateway_index_t> xnc_gateway_index_to_uint(
 {
   return static_cast<std::underlying_type_t<xnc_gateway_index_t>>(gw_index);
 }
+
+struct cu_cp_user_location_info_nr {
+  nr_cell_global_id_t     nr_cgi;
+  tai_t                   tai;
+  std::optional<uint64_t> time_stamp;
+};
 
 } // namespace ocudu
 
