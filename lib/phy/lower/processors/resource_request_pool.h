@@ -6,15 +6,27 @@
 
 #include "ocudu/adt/circular_array.h"
 #include "ocudu/ran/slot_point.h"
-#include <mutex>
+#include <atomic>
 #include <utility>
 
 namespace ocudu {
 
-/// \brief Thread-safe resource request pool.
+/// \brief Lock-free resource request pool.
 ///
-/// Contains a pool of requests. A request consist of a slot point and a templated resource. Requests are indexed by
-/// slots. The pool access is thread-safe and it is done by exchange requests.
+/// Stores up to \c requestArraySize requests indexed by slot, each at position
+/// <tt>slot.system_slot() % requestArraySize</tt>. A request pairs a slot point with a templated resource.
+///
+/// Producers push requests and a single consumer pops them. Both operations are implemented by the same \ref exchange
+/// method: a producer passes a valid resource, the consumer an empty one. Access to the slot resource is guarded by
+/// a non-blocking try-lock wrapper. If two threads reach the same slot at once, one proceeds and the other returns
+/// without modifying the stored request.
+///
+/// To allow reporting the slots that are not processed, \ref exchange always returns a request:
+/// - On uncontended access it returns the request previously stored at the slot (empty if there was none). A
+///   producer overwriting a non-empty request can thus report the overwritten slot (report a 'late').
+/// - In the case of a concurrent collision at the exchange, it returns the request that was passed in, so a producer
+///   can report its own dropped slot. The consumer passes an empty request, hence a dropped pop simply yields
+///   "no request for this slot".
 ///
 /// \tparam ResourceType     Resource type.
 /// \tparam requestArraySize Maximum number of requests contained in the array.
@@ -31,36 +43,44 @@ public:
     ResourceType resource;
   };
 
-  /// \brief Exchanges a request from the pool by the given one.
-  /// \param[in] request The given request, it is copied into <tt>request.slot.system_slot() % requestArraySize</tt>.
-  /// \return The previous request at position <tt> request.slot.system_slot() % requestArraySize </tt>.
+  /// \brief Exchanges the request stored at the given request's slot with the given one.
+  ///
+  /// \param[in] request Request to store, placed at index <tt>request.slot.system_slot() % requestArraySize</tt>.
+  /// \return The request previously stored at the calculated index (empty if none), or \c request itself if the slot
+  /// is being accessed concurrently and its request is acquired by another thread.
   request_type exchange(request_type request)
   {
     return requests[request.slot.system_slot()].exchange(std::move(request));
   }
 
 private:
-  /// Wraps the request in a thread-safe access.
+  /// Wraps a request in a lock-free, non-blocking access guard.
   class request_wrapper
   {
   public:
-    /// Default constructor - constructs an empty request.
-    request_wrapper() : request({slot_point(), ResourceType()}) {}
-
-    /// \brief Exchanges the previous request with a new request.
-    /// \param[in] new_request New request.
-    /// \return A copy of the previous request.
+    /// \brief Exchanges the stored request with a new one.
+    ///
+    /// \return The previously stored request, or \c new_request if the slot is accessed concurrently and the exchange
+    /// is dropped.
     request_type exchange(request_type new_request)
     {
-      std::unique_lock<std::mutex> lock(mutex);
-      request_type                 old_request = std::move(request);
-      request                                  = std::move(new_request);
+      // Acquire access. If the slot is already taken, return the request without storing it.
+      if (locked.exchange(true, std::memory_order_acquire)) {
+        return new_request;
+      }
+
+      // Exclusive access acquired.
+      request_type old_request = std::exchange(request, std::move(new_request));
+
+      locked.store(false, std::memory_order_release);
       return old_request;
     }
 
   private:
-    request_type request;
-    std::mutex   mutex;
+    /// Stored request.
+    request_type request{};
+    /// Non-blocking access guard. Acquire-release semantic is used.
+    std::atomic<bool> locked{false};
   };
 
   /// Request storage, indexed by slots.

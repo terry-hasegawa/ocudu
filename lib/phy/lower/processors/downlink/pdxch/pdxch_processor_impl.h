@@ -99,6 +99,12 @@ private:
   /// Buffer request pool alias.
   using buffer_request_pool = resource_request_pool<pdxch_processor_baseband::slot_result>;
 
+  /// The request pool size must be a multiple of the modulation concurrency. This guarantees that any two slots mapping
+  /// to the same pool entry (i.e. equal modulo the pool size) are also mapped to the same modulator. As each modulator
+  /// serialises its completions, no two threads ever write the same \c buffer_request_pool entry concurrently.
+  static_assert(buffer_request_pool::get_request_array_size() % max_slot_modulation_concurrency == 0,
+                "Request pool size must be a multiple of the modulation concurrency to avoid concurrent writes.");
+
   /// Retrieves the PDxCH modulator associated to the given slot.
   pdxch_baseband_modulator& get_modulator(slot_point slot)
   {
