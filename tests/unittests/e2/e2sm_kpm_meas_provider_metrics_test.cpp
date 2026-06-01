@@ -338,6 +338,132 @@ TEST_F(e2sm_kpm_meas_provider_metrics_test, e2sm_kpm_return_e2_level_metric_with
   }
 }
 
+TEST_F(e2sm_kpm_meas_provider_metrics_test, e2sm_kpm_prb_metrics_with_zero_slots_do_not_crash)
+{
+  // Regression test: nof_dl_slots=0 / nof_ul_slots=0 with UEs present triggered SIGFPE.
+  scheduler_cell_metrics sched_metrics;
+  sched_metrics.nof_prbs     = 52;
+  sched_metrics.nof_dl_slots = 0;
+  sched_metrics.nof_ul_slots = 0;
+  scheduler_ue_metrics ue_metrics;
+  ue_metrics.ue_index            = to_du_ue_index(0);
+  ue_metrics.tot_pdsch_prbs_used = 100;
+  ue_metrics.tot_pusch_prbs_used = 100;
+  sched_metrics.ue_metrics.push_back(ue_metrics);
+  metrics->report_metrics(sched_metrics);
+
+  label_info_list_l label_info_list;
+  label_info_item_s label_info_item           = {};
+  label_info_item.meas_label.no_label_present = true;
+  label_info_item.meas_label.no_label         = meas_label_s::no_label_e_::true_value;
+  label_info_list.push_back(label_info_item);
+
+  const std::optional<asn1::e2sm::cgi_c> cell_global_id = {};
+  meas_type_c                            meas_type;
+  std::vector<meas_record_item_c>        meas_records;
+
+  // With zero slots mean PRBs used = 0, so PrbAvail = nof_prbs and PrbUsed/PrbTot = 0.
+  meas_type.set_meas_name().from_string("RRU.PrbAvailDl");
+  du_meas_provider->get_meas_data(meas_type, label_info_list, {}, cell_global_id, meas_records);
+  ASSERT_EQ(meas_records[0].integer(), 52u);
+  meas_records.clear();
+
+  meas_type.set_meas_name().from_string("RRU.PrbAvailUl");
+  du_meas_provider->get_meas_data(meas_type, label_info_list, {}, cell_global_id, meas_records);
+  ASSERT_EQ(meas_records[0].integer(), 52u);
+  meas_records.clear();
+
+  meas_type.set_meas_name().from_string("RRU.PrbUsedDl");
+  du_meas_provider->get_meas_data(meas_type, label_info_list, {}, cell_global_id, meas_records);
+  ASSERT_EQ(meas_records[0].integer(), 0u);
+  meas_records.clear();
+
+  meas_type.set_meas_name().from_string("RRU.PrbUsedUl");
+  du_meas_provider->get_meas_data(meas_type, label_info_list, {}, cell_global_id, meas_records);
+  ASSERT_EQ(meas_records[0].integer(), 0u);
+  meas_records.clear();
+
+  meas_type.set_meas_name().from_string("RRU.PrbTotDl");
+  du_meas_provider->get_meas_data(meas_type, label_info_list, {}, cell_global_id, meas_records);
+  ASSERT_EQ(meas_records[0].integer(), 0u);
+  meas_records.clear();
+
+  meas_type.set_meas_name().from_string("RRU.PrbTotUl");
+  du_meas_provider->get_meas_data(meas_type, label_info_list, {}, cell_global_id, meas_records);
+  ASSERT_EQ(meas_records[0].integer(), 0u);
+}
+
+TEST_F(e2sm_kpm_meas_provider_metrics_test, e2sm_kpm_prb_perc_metrics_with_zero_cell_prbs_return_zero)
+{
+  // Regression test: nof_prbs=0 triggered SIGFPE in PrbTot* percentage calculation.
+  scheduler_cell_metrics sched_metrics;
+  sched_metrics.nof_prbs     = 0;
+  sched_metrics.nof_dl_slots = 14;
+  sched_metrics.nof_ul_slots = 14;
+  scheduler_ue_metrics ue_metrics;
+  ue_metrics.ue_index            = to_du_ue_index(0);
+  ue_metrics.tot_pdsch_prbs_used = 100;
+  ue_metrics.tot_pusch_prbs_used = 100;
+  sched_metrics.ue_metrics.push_back(ue_metrics);
+  metrics->report_metrics(sched_metrics);
+
+  label_info_list_l label_info_list;
+  label_info_item_s label_info_item           = {};
+  label_info_item.meas_label.no_label_present = true;
+  label_info_item.meas_label.no_label         = meas_label_s::no_label_e_::true_value;
+  label_info_list.push_back(label_info_item);
+
+  const std::optional<asn1::e2sm::cgi_c> cell_global_id = {};
+  meas_type_c                            meas_type;
+  std::vector<meas_record_item_c>        meas_records;
+
+  meas_type.set_meas_name().from_string("RRU.PrbTotDl");
+  du_meas_provider->get_meas_data(meas_type, label_info_list, {}, cell_global_id, meas_records);
+  ASSERT_EQ(meas_records[0].integer(), 0u);
+  meas_records.clear();
+
+  meas_type.set_meas_name().from_string("RRU.PrbTotUl");
+  du_meas_provider->get_meas_data(meas_type, label_info_list, {}, cell_global_id, meas_records);
+  ASSERT_EQ(meas_records[0].integer(), 0u);
+}
+
+TEST_F(e2sm_kpm_meas_provider_metrics_test, e2sm_kpm_drb_latency_with_zero_sdus_returns_no_value)
+{
+  // Regression test: non-zero latency sum with zero SDU count produced NaN/Inf (bad guard).
+  rlc_metrics rlc_metric                  = generate_non_zero_rlc_metrics(0, 1);
+  rlc_metric.tx.tx_high.num_sdus          = 0;
+  rlc_metric.tx.tx_low.sum_sdu_latency_us = 1000;
+  rlc_metric.rx.num_sdus                  = 0;
+  rlc_metric.rx.sdu_latency_us            = 1000;
+  metrics->report_metrics(rlc_metric);
+
+  label_info_list_l label_info_list;
+  label_info_item_s label_info_item           = {};
+  label_info_item.meas_label.no_label_present = true;
+  label_info_item.meas_label.no_label         = meas_label_s::no_label_e_::true_value;
+  label_info_list.push_back(label_info_item);
+
+  ue_id_c        ue_id;
+  ue_id_gnb_du_s ueid_gnb_du{};
+  ueid_gnb_du.gnb_cu_ue_f1ap_id = 0;
+  ueid_gnb_du.ran_ue_id_present = false;
+  ue_id.set_gnb_du_ue_id()      = ueid_gnb_du;
+  std::vector<ue_id_c> ues      = {ue_id};
+
+  const std::optional<asn1::e2sm::cgi_c> cell_global_id = {};
+  meas_type_c                            meas_type;
+  std::vector<meas_record_item_c>        meas_records;
+
+  meas_type.set_meas_name().from_string("DRB.RlcSduDelayDl");
+  du_meas_provider->get_meas_data(meas_type, label_info_list, ues, cell_global_id, meas_records);
+  ASSERT_EQ(meas_records[0].type(), meas_record_item_c::types::no_value);
+  meas_records.clear();
+
+  meas_type.set_meas_name().from_string("DRB.RlcDelayUl");
+  du_meas_provider->get_meas_data(meas_type, label_info_list, ues, cell_global_id, meas_records);
+  ASSERT_EQ(meas_records[0].type(), meas_record_item_c::types::no_value);
+}
+
 class e2sm_kpm_cu_cp_meas_provider_metrics_test : public ::testing::Test
 {
 protected:

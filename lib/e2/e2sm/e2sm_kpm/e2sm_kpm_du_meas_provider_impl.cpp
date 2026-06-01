@@ -386,12 +386,11 @@ bool e2sm_kpm_du_meas_provider_impl::get_prb_avail_dl(const asn1::e2sm::label_in
     logger.debug("Metric: RRU.PrbAvailDl supports only NO_LABEL label.");
     return meas_collected;
   }
-  int mean_dl_prbs_used =
-      std::accumulate(last_ue_metrics.begin(),
-                      last_ue_metrics.end(),
-                      0,
-                      [](size_t sum, const scheduler_ue_metrics& metric) { return sum + metric.tot_pdsch_prbs_used; }) /
-      nof_dl_slots;
+  unsigned sum_dl_prbs_used = std::accumulate(
+      last_ue_metrics.begin(), last_ue_metrics.end(), 0u, [](unsigned sum, const scheduler_ue_metrics& metric) {
+        return sum + metric.tot_pdsch_prbs_used;
+      });
+  int mean_dl_prbs_used = nof_dl_slots > 0 ? static_cast<int>(sum_dl_prbs_used / nof_dl_slots) : 0;
 
   for (size_t i = 0; i < std::max(ues.size(), size_t(1)); ++i) {
     meas_record_item_c meas_record_item;
@@ -417,12 +416,11 @@ bool e2sm_kpm_du_meas_provider_impl::get_prb_avail_ul(const asn1::e2sm::label_in
     logger.debug("Metric: RRU.PrbAvailUl supports only NO_LABEL label.");
     return meas_collected;
   }
-  int mean_ul_prbs_used =
-      std::accumulate(last_ue_metrics.begin(),
-                      last_ue_metrics.end(),
-                      0,
-                      [](size_t sum, const scheduler_ue_metrics& metric) { return sum + metric.tot_pusch_prbs_used; }) /
-      nof_ul_slots;
+  unsigned sum_ul_prbs_used = std::accumulate(
+      last_ue_metrics.begin(), last_ue_metrics.end(), 0u, [](unsigned sum, const scheduler_ue_metrics& metric) {
+        return sum + metric.tot_pusch_prbs_used;
+      });
+  int mean_ul_prbs_used = nof_ul_slots > 0 ? static_cast<int>(sum_ul_prbs_used / nof_ul_slots) : 0;
 
   for (size_t i = 0; i < std::max(ues.size(), size_t(1)); ++i) {
     meas_record_item_c meas_record_item;
@@ -450,13 +448,11 @@ bool e2sm_kpm_du_meas_provider_impl::get_prb_used_dl(const asn1::e2sm::label_inf
   }
 
   if (ues.empty()) {
-    double dl_prbs_used = std::accumulate(last_ue_metrics.begin(),
-                                          last_ue_metrics.end(),
-                                          0,
-                                          [](size_t sum, const scheduler_ue_metrics& metric) {
-                                            return sum + metric.tot_pdsch_prbs_used;
-                                          }) /
-                          nof_dl_slots;
+    unsigned sum_dl_prbs = std::accumulate(
+        last_ue_metrics.begin(), last_ue_metrics.end(), 0u, [](unsigned sum, const scheduler_ue_metrics& metric) {
+          return sum + metric.tot_pdsch_prbs_used;
+        });
+    double             dl_prbs_used = nof_dl_slots > 0 ? sum_dl_prbs / nof_dl_slots : 0;
     meas_record_item_c meas_record_item;
     meas_record_item.set_integer() = dl_prbs_used;
     items.push_back(meas_record_item);
@@ -496,13 +492,11 @@ bool e2sm_kpm_du_meas_provider_impl::get_prb_used_ul(const asn1::e2sm::label_inf
   }
 
   if (ues.empty()) {
-    double ul_prbs_used = std::accumulate(last_ue_metrics.begin(),
-                                          last_ue_metrics.end(),
-                                          0,
-                                          [](size_t sum, const scheduler_ue_metrics& metric) {
-                                            return sum + metric.tot_pusch_prbs_used;
-                                          }) /
-                          nof_ul_slots;
+    unsigned sum_ul_prbs = std::accumulate(
+        last_ue_metrics.begin(), last_ue_metrics.end(), 0u, [](unsigned sum, const scheduler_ue_metrics& metric) {
+          return sum + metric.tot_pusch_prbs_used;
+        });
+    double             ul_prbs_used = nof_ul_slots > 0 ? sum_ul_prbs / nof_ul_slots : 0;
     meas_record_item_c meas_record_item;
     meas_record_item.set_integer() = ul_prbs_used;
     items.push_back(meas_record_item);
@@ -542,15 +536,13 @@ bool e2sm_kpm_du_meas_provider_impl::get_prb_use_perc_dl(const asn1::e2sm::label
   }
 
   if (ues.empty()) {
-    double mean_dl_prbs_used = std::accumulate(last_ue_metrics.begin(),
-                                               last_ue_metrics.end(),
-                                               0,
-                                               [](size_t sum, const scheduler_ue_metrics& metric) {
-                                                 return sum + metric.tot_pdsch_prbs_used;
-                                               }) /
-                               nof_dl_slots;
+    unsigned sum_dl_prbs_used = std::accumulate(
+        last_ue_metrics.begin(), last_ue_metrics.end(), 0u, [](unsigned sum, const scheduler_ue_metrics& metric) {
+          return sum + metric.tot_pdsch_prbs_used;
+        });
+    double             mean_dl_prbs_used = nof_dl_slots > 0 ? sum_dl_prbs_used / nof_dl_slots : 0;
     meas_record_item_c meas_record_item;
-    meas_record_item.set_integer() = mean_dl_prbs_used * 100 / nof_cell_prbs;
+    meas_record_item.set_integer() = nof_cell_prbs > 0 ? mean_dl_prbs_used * 100 / nof_cell_prbs : 0;
     items.push_back(meas_record_item);
     meas_collected = true;
   }
@@ -561,7 +553,7 @@ bool e2sm_kpm_du_meas_provider_impl::get_prb_use_perc_dl(const asn1::e2sm::label
     meas_record_item_c  meas_record_item;
     if (ue_idx != du_ue_index_t::INVALID_DU_UE_INDEX && ue_idx < last_ue_metrics.size()) {
       unsigned ue_mean_dl_prbs_used = nof_dl_slots > 0 ? last_ue_metrics[ue_idx].tot_pdsch_prbs_used / nof_dl_slots : 0;
-      meas_record_item.set_integer() = ue_mean_dl_prbs_used * 100 / nof_cell_prbs;
+      meas_record_item.set_integer() = nof_cell_prbs > 0 ? ue_mean_dl_prbs_used * 100 / nof_cell_prbs : 0;
     } else {
       meas_record_item.set_no_value();
     }
@@ -587,15 +579,13 @@ bool e2sm_kpm_du_meas_provider_impl::get_prb_use_perc_ul(const asn1::e2sm::label
     return meas_collected;
   }
   if (ues.empty()) {
-    double mean_ul_prbs_used = std::accumulate(last_ue_metrics.begin(),
-                                               last_ue_metrics.end(),
-                                               0,
-                                               [](size_t sum, const scheduler_ue_metrics& metric) {
-                                                 return sum + metric.tot_pusch_prbs_used;
-                                               }) /
-                               nof_ul_slots;
+    unsigned sum_ul_prbs_used = std::accumulate(
+        last_ue_metrics.begin(), last_ue_metrics.end(), 0u, [](unsigned sum, const scheduler_ue_metrics& metric) {
+          return sum + metric.tot_pusch_prbs_used;
+        });
+    double             mean_ul_prbs_used = nof_ul_slots > 0 ? sum_ul_prbs_used / nof_ul_slots : 0;
     meas_record_item_c meas_record_item;
-    meas_record_item.set_integer() = mean_ul_prbs_used * 100 / nof_cell_prbs;
+    meas_record_item.set_integer() = nof_cell_prbs > 0 ? mean_ul_prbs_used * 100 / nof_cell_prbs : 0;
     items.push_back(meas_record_item);
     meas_collected = true;
   }
@@ -606,7 +596,7 @@ bool e2sm_kpm_du_meas_provider_impl::get_prb_use_perc_ul(const asn1::e2sm::label
     meas_record_item_c  meas_record_item;
     if (ue_idx != du_ue_index_t::INVALID_DU_UE_INDEX && ue_idx < last_ue_metrics.size()) {
       unsigned ue_mean_ul_prbs_used = nof_ul_slots > 0 ? last_ue_metrics[ue_idx].tot_pusch_prbs_used / nof_ul_slots : 0;
-      meas_record_item.set_integer() = ue_mean_ul_prbs_used * 100 / nof_cell_prbs;
+      meas_record_item.set_integer() = nof_cell_prbs > 0 ? ue_mean_ul_prbs_used * 100 / nof_cell_prbs : 0;
     } else {
       meas_record_item.set_no_value();
     }
@@ -633,13 +623,11 @@ bool e2sm_kpm_du_meas_provider_impl::get_delay_ul(const asn1::e2sm::label_info_l
   }
 
   if (ues.empty()) {
-    float mean_ul_delay_ms = std::accumulate(last_ue_metrics.begin(),
-                                             last_ue_metrics.end(),
-                                             0,
-                                             [](size_t sum, const scheduler_ue_metrics& metric) {
-                                               return sum + metric.avg_crc_delay_ms.value_or(0.0f);
-                                             }) /
-                             last_ue_metrics.size();
+    float sum_ul_delay_ms = std::accumulate(
+        last_ue_metrics.begin(), last_ue_metrics.end(), 0.0f, [](float sum, const scheduler_ue_metrics& metric) {
+          return sum + metric.avg_crc_delay_ms.value_or(0.0f);
+        });
+    float              mean_ul_delay_ms = sum_ul_delay_ms / static_cast<float>(last_ue_metrics.size());
     meas_record_item_c meas_record_item;
     if (mean_ul_delay_ms) {
       meas_record_item.set_real().value = mean_ul_delay_ms * 10; // unit is 0.1ms
@@ -1092,7 +1080,7 @@ bool e2sm_kpm_du_meas_provider_impl::get_drb_dl_rlc_sdu_latency(const asn1::e2sm
                           ue_aggr_rlc_metrics[ue_idx].end(),
                           0,
                           [](size_t sum, const rlc_metrics& metric) { return sum + metric.tx.tx_high.num_sdus; });
-      if (tot_sdu_latency_us) {
+      if (tot_sdu_latency_us && tot_num_sdus) {
         float av_ue_sdu_latency_ms = (static_cast<float>(tot_sdu_latency_us) / tot_num_sdus) / 100; // Unit is 0.1 ms.
         av_ue_sdu_latency_ms       = std::round(av_ue_sdu_latency_ms * 10.0f) / 10.0f;
         meas_record_item.set_real();
@@ -1173,7 +1161,7 @@ bool e2sm_kpm_du_meas_provider_impl::get_drb_ul_rlc_sdu_latency(const asn1::e2sm
                           ue_aggr_rlc_metrics[ue_idx].end(),
                           0,
                           [](size_t sum, const rlc_metrics& metric) { return sum + metric.rx.num_sdus; });
-      if (tot_sdu_latency_us) {
+      if (tot_sdu_latency_us && tot_num_sdus) {
         meas_record_item.set_real();
         meas_record_item.real().value = (static_cast<float>(tot_sdu_latency_us) / tot_num_sdus) / 100; // Unit is 0.1ms.
         items.push_back(meas_record_item);

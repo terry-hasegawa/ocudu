@@ -106,10 +106,10 @@ private:
 
   ocudulog::basic_logger&                            logger;
   odu::f1ap_ue_id_translator&                        f1ap_ue_id_provider;
-  unsigned                                           nof_cell_prbs;
-  unsigned                                           nof_dl_slots;
-  unsigned                                           nof_ul_slots;
-  unsigned                                           nof_ded_cell_preambles;
+  unsigned                                           nof_cell_prbs          = 0;
+  unsigned                                           nof_dl_slots           = 0;
+  unsigned                                           nof_ul_slots           = 0;
+  unsigned                                           nof_ded_cell_preambles = 0;
   std::vector<scheduler_ue_metrics>                  last_ue_metrics;
   std::map<uint16_t, std::deque<rlc_metrics>>        ue_aggr_rlc_metrics;
   std::chrono::system_clock::time_point              last_rlc_metrics_clear_time = std::chrono::system_clock::now();

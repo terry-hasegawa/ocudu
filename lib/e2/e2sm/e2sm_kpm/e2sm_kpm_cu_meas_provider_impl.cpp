@@ -306,7 +306,7 @@ bool e2sm_kpm_cu_meas_provider_impl::get_packet_success_rate_ul_gnb_uu(const lab
           });
     }
     if (total_pdus) {
-      success_rate = 1.0 * (total_sdus / total_pdus);
+      success_rate = static_cast<float>(total_sdus) / total_pdus;
     }
     uint32_t success_rate_int      = success_rate * 100;
     meas_record_item.set_integer() = success_rate_int;
