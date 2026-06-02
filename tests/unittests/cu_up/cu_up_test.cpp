@@ -116,6 +116,7 @@ protected:
     // create config
     cu_up_config cfg;
 
+    cfg.plmns                   = {"00101"};
     cfg.qos[uint_to_five_qi(9)] = {};
 
     cfg.n3_cfg.gtpu_reordering_timer     = std::chrono::milliseconds(0);

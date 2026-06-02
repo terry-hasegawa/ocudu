@@ -5,6 +5,7 @@
 #include "cu_up_unit_config_validator.h"
 #include "cu_up_unit_config.h"
 #include "ocudu/adt/span.h"
+#include "ocudu/ran/plmn_identity.h"
 
 using namespace ocudu;
 
@@ -38,6 +39,25 @@ static bool validate_cu_up_test_mode_appconfig(const cu_up_unit_test_mode_config
   return true;
 }
 
+static bool validate_plmn_list(span<const std::string> plmns)
+{
+  if (plmns.empty()) {
+    fmt::println("CU-UP PLMN list must contain at least one entry");
+    return false;
+  }
+  if (plmns.size() > 12) {
+    fmt::println("CU-UP PLMN list exceeds maximum of 12 entries (maxnoofSPLMNs)");
+    return false;
+  }
+  for (const auto& p : plmns) {
+    if (!plmn_identity::parse(p).has_value()) {
+      fmt::println("Invalid PLMN identity: {}", p);
+      return false;
+    }
+  }
+  return true;
+}
+
 bool ocudu::validate_cu_up_unit_config(const cu_up_unit_config& config, bool tracing_enabled)
 {
   if (!validate_qos_appconfig(config.qos_cfg)) {
@@ -49,6 +69,10 @@ bool ocudu::validate_cu_up_unit_config(const cu_up_unit_config& config, bool tra
   }
 
   if (!validate_cu_up_test_mode_appconfig(config.test_mode_cfg)) {
+    return false;
+  }
+
+  if (!validate_plmn_list(config.plmn_list)) {
     return false;
   }
 

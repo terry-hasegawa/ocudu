@@ -160,6 +160,7 @@ o_cu_up_unit ocudu::build_o_cu_up(const o_cu_up_unit_config& unit_cfg, const o_c
   auto e2_metric_connectors = std::make_unique<e2_cu_metrics_connector_manager>();
 
   if (unit_cfg.e2_cfg.base_config.enable_unit_e2) {
+    ocudu_assert(!config.cu_up_cfg.plmns.empty(), "CU-UP PLMN list must not be empty");
     config.e2ap_cfg                        = generate_e2_config(unit_cfg.e2_cfg.base_config,
                                          unit_cfg.cu_up_cfg.gnb_id,
                                          config.cu_up_cfg.plmns.front(),

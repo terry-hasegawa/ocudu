@@ -82,8 +82,8 @@ struct cu_up_config {
   std::string cu_up_name = "ocuup_01";
   /// E1AP configuration.
   e1ap_configuration e1ap;
-  /// List of supported PLMNs (up to 12 PLMNs), e.g. {"00101"}.
-  std::vector<std::string> plmns = {"00101"};
+  /// List of supported PLMNs (1..12). Must be populated before use.
+  std::vector<std::string> plmns;
   /// CU-UP statistics report period in seconds.
   std::chrono::seconds statistics_report_period;
 };

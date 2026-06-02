@@ -50,6 +50,7 @@
 #include "ocudu/support/versioning/build_info.h"
 #include "ocudu/support/versioning/version.h"
 #include "ocudu/xnap/gateways/xnc_network_gateway_factory.h"
+#include <algorithm>
 #include <atomic>
 #ifdef DPDK_FOUND
 #include "ocudu/hal/dpdk/dpdk_eal_factory.h"
@@ -189,6 +190,17 @@ static void autoderive_cu_up_parameters_after_parsing(cu_up_unit_config& cu_up_c
     // If multiple AMF addresses are configured for SCTP multihoming, we use first address from the list.
     sock_cfg.bind_addr = cu_cp_cfg.amf_config.amf.bind_addrs[0];
     cu_up_cfg.ngu_cfg.ngu_socket_cfg.push_back(sock_cfg);
+  }
+  // If no PLMN list is configured, derive it from the CU-CP supported TAs.
+  if (cu_up_cfg.plmn_list.empty()) {
+    for (const auto& ta : cu_cp_cfg.amf_config.amf.supported_tas) {
+      for (const auto& plmn_item : ta.plmn_list) {
+        if (std::find(cu_up_cfg.plmn_list.begin(), cu_up_cfg.plmn_list.end(), plmn_item.plmn_id) ==
+            cu_up_cfg.plmn_list.end()) {
+          cu_up_cfg.plmn_list.push_back(plmn_item.plmn_id);
+        }
+      }
+    }
   }
 }
 

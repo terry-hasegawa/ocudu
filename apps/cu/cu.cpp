@@ -54,6 +54,7 @@
 #include "ocudu/support/versioning/build_info.h"
 #include "ocudu/support/versioning/version.h"
 #include "ocudu/xnap/gateways/xnc_network_gateway_factory.h"
+#include <algorithm>
 #include <atomic>
 #include <thread>
 
@@ -178,6 +179,18 @@ static void autoderive_cu_up_parameters_after_parsing(cu_appconfig&            c
   if (cu_config.f1u_cfg.f1u_socket_cfg.empty()) {
     f1u_socket_appconfig sock_cfg;
     cu_config.f1u_cfg.f1u_socket_cfg.push_back(sock_cfg);
+  }
+  // If no PLMN list is configured, derive it from the CU-CP supported TAs.
+  if (o_cu_up_cfg.cu_up_cfg.plmn_list.empty()) {
+    for (const auto& ta : cu_cp_cfg.amf_config.amf.supported_tas) {
+      for (const auto& plmn_item : ta.plmn_list) {
+        if (std::find(o_cu_up_cfg.cu_up_cfg.plmn_list.begin(),
+                      o_cu_up_cfg.cu_up_cfg.plmn_list.end(),
+                      plmn_item.plmn_id) == o_cu_up_cfg.cu_up_cfg.plmn_list.end()) {
+          o_cu_up_cfg.cu_up_cfg.plmn_list.push_back(plmn_item.plmn_id);
+        }
+      }
+    }
   }
 }
 

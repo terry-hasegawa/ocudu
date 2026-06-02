@@ -93,6 +93,9 @@ static void fill_cu_up_log_section(YAML::Node node, const cu_up_unit_logger_conf
 static void fill_cu_up_section(YAML::Node node, const cu_up_unit_config& config)
 {
   node["warn_on_drop"] = config.warn_on_drop;
+  if (!config.plmn_list.empty()) {
+    node["plmn_list"] = config.plmn_list;
+  }
 }
 
 static void fill_cu_up_f1_qos_section(YAML::Node node, const cu_cp_unit_f1u_config& config)

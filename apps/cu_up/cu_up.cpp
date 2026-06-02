@@ -153,6 +153,10 @@ static void fill_cu_worker_manager_config(worker_manager_config& config, const c
 
 static void autoderive_cu_up_parameters_after_parsing(cu_up_appconfig& cu_up_config, o_cu_up_unit_config& o_cu_up_cfg)
 {
+  // If no PLMN list is configured, use the default.
+  if (o_cu_up_cfg.cu_up_cfg.plmn_list.empty()) {
+    o_cu_up_cfg.cu_up_cfg.plmn_list.push_back("00101");
+  }
   // If no UPF is configured, we set a default configuration.
   if (o_cu_up_cfg.cu_up_cfg.ngu_cfg.ngu_socket_cfg.empty()) {
     cu_up_unit_ngu_socket_config sock_cfg;

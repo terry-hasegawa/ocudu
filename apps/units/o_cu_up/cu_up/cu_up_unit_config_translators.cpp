@@ -37,6 +37,8 @@ ocuup::cu_up_config ocudu::generate_cu_up_config(const cu_up_unit_config& config
                          ? config.metrics.cu_up_report_period
                          : 0};
 
+  out_cfg.plmns = config.plmn_list;
+
   out_cfg.test_mode_cfg.enabled              = config.test_mode_cfg.enabled;
   out_cfg.test_mode_cfg.integrity_enabled    = config.test_mode_cfg.integrity_enabled;
   out_cfg.test_mode_cfg.ciphering_enabled    = config.test_mode_cfg.ciphering_enabled;
