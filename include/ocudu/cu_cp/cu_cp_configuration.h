@@ -16,7 +16,7 @@
 #include "ocudu/e2/gateways/e2_connection_client.h"
 #include "ocudu/f1ap/cu_cp/f1ap_configuration.h"
 #include "ocudu/ran/cu_cp_types.h"
-#include "ocudu/ran/tac.h"
+#include "ocudu/ran/supported_tracking_area.h"
 #include "ocudu/rrc/rrc_ue_config.h"
 #include "ocudu/support/async/async_task.h"
 #include "ocudu/support/executors/task_executor.h"
@@ -31,17 +31,6 @@ namespace ocucp {
 class n2_connection_client;
 class ngap_repository;
 class xnc_connection_gateway;
-
-struct plmn_item {
-  plmn_identity plmn_id;
-  /// Supported Slices by the RAN node.
-  std::vector<s_nssai_t> slice_support_list;
-};
-
-struct supported_tracking_area {
-  tac_t                  tac;
-  std::vector<plmn_item> plmn_list;
-};
 
 /// Parameters of the CU-CP that will reported to the 5G core.
 struct ran_node_configuration {

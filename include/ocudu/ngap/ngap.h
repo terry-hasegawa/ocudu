@@ -15,8 +15,8 @@
 #include "ocudu/ngap/ngap_ue_context_mod.h"
 #include "ocudu/ngap/ngap_ue_radio_capability_management.h"
 #include "ocudu/ran/cu_cp_location_reporting_types.h"
-#include "ocudu/ran/cu_cp_pdu_session.h"
 #include "ocudu/ran/cu_cp_types.h"
+#include "ocudu/ran/cu_cp_ue_context_release.h"
 #include "ocudu/ran/plmn_identity.h"
 #include "ocudu/support/async/async_task.h"
 

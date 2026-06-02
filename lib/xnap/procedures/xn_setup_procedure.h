@@ -8,6 +8,7 @@
 #include "../xnap_tx_pdu_notifier_with_log.h"
 #include "ocudu/asn1/xnap/xnap_pdu_contents.h"
 #include "ocudu/ocudulog/logger.h"
+#include "ocudu/support/async/protocol_transaction_manager.h"
 #include "ocudu/xnap/xnap.h"
 #include "ocudu/xnap/xnap_configuration.h"
 #include "ocudu/xnap/xnap_message.h"

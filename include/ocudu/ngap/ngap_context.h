@@ -4,12 +4,14 @@
 
 #pragma once
 
-#include "ocudu/cu_cp/cu_cp_configuration.h"
+#include "ocudu/ran/cu_cp_types.h"
 #include "ocudu/ran/gnb_id.h"
 #include "ocudu/ran/guami.h"
 #include "ocudu/ran/plmn_identity.h"
+#include "ocudu/ran/supported_tracking_area.h"
 #include <chrono>
 #include <string>
+#include <vector>
 
 namespace ocudu::ocucp {
 
