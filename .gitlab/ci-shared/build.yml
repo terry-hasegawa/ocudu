@@ -132,6 +132,7 @@ include:
     - |
       launch_tests_ocudu() {
         cd ${OCUDU_DIR}/${OCUDU_BUILD_DIR}
+        printf 'set(CTEST_CUSTOM_MAXIMUM_FAILED_TEST_OUTPUT_SIZE 1048576)\nset(CTEST_CUSTOM_MAXIMUM_PASSED_TEST_OUTPUT_SIZE 1048576)\n' > CTestCustom.cmake
         echo "Using LD_LIBRARY_PATH=$LD_LIBRARY_PATH"
         set -x
         ctest -j${CPU_JOBS} --schedule-random --output-on-failure --output-junit xunit.xml $CTEST_ARGS
