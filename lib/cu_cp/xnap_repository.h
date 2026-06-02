@@ -52,6 +52,11 @@ public:
   /// \return A pointer to the interface of the added XNAP object if it was successfully found, a nullptr otherwise.
   xnap_interface* find_xnap(const gnb_id_t& peer_gnb_id);
 
+  /// \brief Find the index of an XNAP object in the repository by gNB ID.
+  /// \param[in] peer_gnb_id GNB ID of the XN-C peer to which the XNAP object is connected.
+  /// \return The index of the XN-C peer if found, std::nullopt otherwise.
+  std::optional<xnc_peer_index_t> find_xnap_index(const gnb_id_t& peer_gnb_id);
+
   /// \brief Get the peer addresses of an XNAP connection.
   /// \param[in] xnc_index Index of the XN-C peer in the XNAP repository.
   /// \return Addresses of the XN-C peer (multiple if SCTP multihoming is used), or std::nullopt if not found.

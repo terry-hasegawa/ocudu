@@ -74,12 +74,22 @@ xnc_peer_index_t xnap_repository::find_xnap(const transport_layer_address& peer_
 
 xnap_interface* xnap_repository::find_xnap(const gnb_id_t& peer_gnb_id)
 {
-  for (const auto& xn : xnap_db) {
-    if (xn.second.xnap->has_peer_gnb_id(peer_gnb_id)) {
-      return xn.second.xnap.get();
+  for (const auto& [idx, xn] : xnap_db) {
+    if (xn.xnap->has_peer_gnb_id(peer_gnb_id)) {
+      return xn.xnap.get();
     }
   }
   return nullptr;
+}
+
+std::optional<xnc_peer_index_t> xnap_repository::find_xnap_index(const gnb_id_t& peer_gnb_id)
+{
+  for (const auto& [idx, xn] : xnap_db) {
+    if (xn.xnap->has_peer_gnb_id(peer_gnb_id)) {
+      return idx;
+    }
+  }
+  return std::nullopt;
 }
 
 std::optional<std::vector<transport_layer_address>> xnap_repository::get_peer_addrs(xnc_peer_index_t xnc_index) const
