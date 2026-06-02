@@ -5,6 +5,9 @@
 # Example config for a locally deployed CU-UP
 
 cu_up:
+  plmn_list:
+    - 00101
+
   e1ap:
     gateways:
       - bind_addrs: 127.0.20.2
