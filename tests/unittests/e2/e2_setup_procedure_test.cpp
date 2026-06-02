@@ -38,6 +38,87 @@ TEST_F(e2_entity_test, on_start_send_e2ap_setup_request)
   e2agent->stop();
 }
 
+TEST_F(e2_entity_test, e2ap_setup_request_du_global_node_id_is_correct)
+{
+  const std::string test_plmn  = "99999";
+  const gnb_du_id_t test_du_id = static_cast<gnb_du_id_t>(42);
+
+  cfg.plmn             = test_plmn;
+  cfg.gnb_du_id        = test_du_id;
+  cfg.e2sm_kpm_enabled = true;
+  auto owned_collector = std::make_unique<e2_node_component_config_collector>(task_worker, 1);
+  owned_collector->deliver(e2_node_component_interface_type::f1, byte_buffer{}, byte_buffer{});
+  e2agent = create_e2_du_agent(cfg,
+                               *e2_client,
+                               &(*du_metrics),
+                               &(*f1ap_ue_id_mapper),
+                               &(*du_rc_param_configurator),
+                               factory,
+                               task_worker,
+                               std::move(owned_collector));
+  task_worker.run_pending_tasks();
+  e2agent->start();
+
+  ASSERT_EQ(e2_client->last_tx_e2_pdu.pdu.type().value, asn1::e2ap::e2ap_pdu_c::types_opts::init_msg);
+  const auto& e2setup       = e2_client->last_tx_e2_pdu.pdu.init_msg().value.e2setup_request();
+  const auto& gnb           = e2setup->global_e2node_id.gnb();
+  uint32_t    expected_plmn = bcd_helper::plmn_string_to_bcd(test_plmn);
+  ASSERT_EQ(gnb.global_gnb_id.plmn_id.to_number(), expected_plmn);
+  ASSERT_TRUE(gnb.gnb_du_id_present);
+  ASSERT_EQ(gnb.gnb_du_id, gnb_du_id_to_int(test_du_id));
+  ASSERT_FALSE(gnb.gnb_cu_up_id_present);
+}
+
+TEST_F(e2_entity_test, e2ap_setup_request_cu_cp_global_node_id_is_correct)
+{
+  const std::string test_plmn = "99999";
+
+  cfg.plmn              = test_plmn;
+  cfg.e2sm_kpm_enabled  = true;
+  auto owned_collector  = std::make_unique<e2_node_component_config_collector>(task_worker, 1);
+  auto cu_metrics       = std::make_unique<dummy_e2_cu_metrics>();
+  auto cu_configurator_ = std::make_unique<dummy_cu_configurator>();
+  owned_collector->deliver(e2_node_component_interface_type::ng, byte_buffer{}, byte_buffer{});
+  e2agent = create_e2_cu_cp_agent(
+      cfg, *e2_client, cu_metrics.get(), cu_configurator_.get(), factory, task_worker, std::move(owned_collector));
+  task_worker.run_pending_tasks();
+  e2agent->start();
+
+  ASSERT_EQ(e2_client->last_tx_e2_pdu.pdu.type().value, asn1::e2ap::e2ap_pdu_c::types_opts::init_msg);
+  const auto& e2setup       = e2_client->last_tx_e2_pdu.pdu.init_msg().value.e2setup_request();
+  const auto& gnb           = e2setup->global_e2node_id.gnb();
+  uint32_t    expected_plmn = bcd_helper::plmn_string_to_bcd(test_plmn);
+  ASSERT_EQ(gnb.global_gnb_id.plmn_id.to_number(), expected_plmn);
+  ASSERT_FALSE(gnb.gnb_du_id_present);
+  ASSERT_FALSE(gnb.gnb_cu_up_id_present);
+}
+
+TEST_F(e2_entity_test, e2ap_setup_request_cu_up_global_node_id_is_correct)
+{
+  const std::string test_plmn = "99999";
+
+  cfg.plmn              = test_plmn;
+  cfg.gnb_cu_up_id      = static_cast<gnb_cu_up_id_t>(1);
+  cfg.e2sm_kpm_enabled  = true;
+  auto owned_collector  = std::make_unique<e2_node_component_config_collector>(task_worker, 1);
+  auto cu_metrics       = std::make_unique<dummy_e2_cu_metrics>();
+  auto cu_configurator_ = std::make_unique<dummy_cu_configurator>();
+  owned_collector->deliver(e2_node_component_interface_type::e1, byte_buffer{}, byte_buffer{});
+  e2agent = create_e2_cu_up_agent(
+      cfg, *e2_client, cu_metrics.get(), cu_configurator_.get(), factory, task_worker, std::move(owned_collector));
+  task_worker.run_pending_tasks();
+  e2agent->start();
+
+  ASSERT_EQ(e2_client->last_tx_e2_pdu.pdu.type().value, asn1::e2ap::e2ap_pdu_c::types_opts::init_msg);
+  const auto& e2setup       = e2_client->last_tx_e2_pdu.pdu.init_msg().value.e2setup_request();
+  const auto& gnb           = e2setup->global_e2node_id.gnb();
+  uint32_t    expected_plmn = bcd_helper::plmn_string_to_bcd(test_plmn);
+  ASSERT_EQ(gnb.global_gnb_id.plmn_id.to_number(), expected_plmn);
+  ASSERT_FALSE(gnb.gnb_du_id_present);
+  ASSERT_TRUE(gnb.gnb_cu_up_id_present);
+  ASSERT_EQ(gnb.gnb_cu_up_id, gnb_cu_up_id_to_uint(static_cast<gnb_cu_up_id_t>(1)));
+}
+
 /// Test successful E2 setup procedure
 TEST_F(e2_test, when_e2_setup_response_received_then_e2_connected)
 {
@@ -282,7 +363,8 @@ TEST_F(e2_test, fill_e2ap_setup_request_uses_real_bytes_when_node_cfg_vector_pro
 {
   using namespace asn1::e2ap;
 
-  cfg = config_helpers::make_default_e2ap_config();
+  cfg           = config_helpers::make_default_e2ap_config();
+  cfg.gnb_du_id = static_cast<gnb_du_id_t>(42);
 
   uint8_t req_bytes[]  = {0xaa, 0xbb, 0xee};
   uint8_t resp_bytes[] = {0xdd, 0xee};
@@ -311,4 +393,13 @@ TEST_F(e2_test, fill_e2ap_setup_request_uses_real_bytes_when_node_cfg_vector_pro
   // Real-bytes path must reproduce the exact sizes supplied.
   ASSERT_EQ(real_comp.e2node_component_request_part.size(), sizeof(req_bytes));
   ASSERT_EQ(real_comp.e2node_component_resp_part.size(), sizeof(resp_bytes));
+
+  // Verify all global_e2node_id fields are correctly encoded from e2ap_configuration.
+  const auto& gnb = setup_real->global_e2node_id.gnb();
+  ASSERT_EQ(gnb.global_gnb_id.plmn_id.to_number(), bcd_helper::plmn_string_to_bcd(cfg.plmn));
+  ASSERT_EQ(gnb.global_gnb_id.gnb_id.gnb_id().to_number(), static_cast<uint64_t>(cfg.gnb_id.id));
+  ASSERT_EQ(gnb.global_gnb_id.gnb_id.gnb_id().length(), static_cast<uint32_t>(cfg.gnb_id.bit_length));
+  ASSERT_TRUE(gnb.gnb_du_id_present);
+  ASSERT_EQ(gnb.gnb_du_id, gnb_du_id_to_int(cfg.gnb_du_id.value()));
+  ASSERT_FALSE(gnb.gnb_cu_up_id_present);
 }
