@@ -8,10 +8,10 @@
 #include "meas_context/nrppa_meas_context.h"
 #include "ue_context/nrppa_ue_context.h"
 #include "ocudu/asn1/nrppa/nrppa.h"
-#include "ocudu/cu_cp/cu_cp_configuration.h"
 #include "ocudu/nrppa/nrppa.h"
 #include "ocudu/ran/plmn_identity.h"
 #include "ocudu/ran/positioning/positioning_ids.h"
+#include "ocudu/ran/supported_tracking_area.h"
 #include "ocudu/support/async/async_task_scheduler.h"
 
 namespace ocudu::ocucp {
@@ -19,9 +19,11 @@ namespace ocudu::ocucp {
 class nrppa_impl : public nrppa_interface, public nrppa_message_handler, public nrppa_ue_context_removal_handler
 {
 public:
-  nrppa_impl(const cu_cp_configuration& cfg,
-             nrppa_cu_cp_notifier&      cu_cp_notifier_,
-             async_task_scheduler&      common_task_sched_);
+  nrppa_impl(const std::vector<supported_tracking_area>& supported_tas_,
+             nrppa_cu_cp_notifier&                       cu_cp_notifier_,
+             async_task_scheduler&                       common_task_sched_,
+             timer_manager&                              timers_,
+             task_executor&                              task_exec_);
   ~nrppa_impl();
 
   // See nrppa_message_handler for documentation.
@@ -94,9 +96,10 @@ private:
   nrppa_ue_context_list   ue_ctxt_list;
   nrppa_du_context_list   du_ctxt_list;
   nrppa_meas_context_list meas_ctxt_list;
-  cu_cp_configuration     cu_cp_cfg;
   nrppa_cu_cp_notifier&   cu_cp_notifier;
   async_task_scheduler&   common_task_sched;
+  timer_manager&          timers;
+  task_executor&          task_exec;
 
   std::map<plmn_identity, tac_t>       plmn_to_tac;
   std::map<trp_id_t, cu_cp_du_index_t> trp_id_to_du_idx;

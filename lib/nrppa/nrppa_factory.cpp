@@ -11,10 +11,12 @@
 using namespace ocudu;
 using namespace ocucp;
 
-std::unique_ptr<nrppa_interface> ocudu::ocucp::create_nrppa(const cu_cp_configuration& cfg,
-                                                            nrppa_cu_cp_notifier&      cu_cp_notifier,
-                                                            async_task_scheduler&      common_task_sched)
+std::unique_ptr<nrppa_interface> ocudu::ocucp::create_nrppa(const std::vector<supported_tracking_area>& supported_tas,
+                                                            nrppa_cu_cp_notifier&                       cu_cp_notifier,
+                                                            async_task_scheduler& common_task_sched,
+                                                            timer_manager&        timers,
+                                                            task_executor&        task_exec)
 {
-  auto nrppa = std::make_unique<nrppa_impl>(cfg, cu_cp_notifier, common_task_sched);
+  auto nrppa = std::make_unique<nrppa_impl>(supported_tas, cu_cp_notifier, common_task_sched, timers, task_exec);
   return nrppa;
 }

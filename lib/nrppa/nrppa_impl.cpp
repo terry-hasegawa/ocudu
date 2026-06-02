@@ -21,30 +21,31 @@ using namespace ocudu;
 using namespace asn1::nrppa;
 using namespace ocucp;
 
-static inline void create_plmn_tac_map(const std::vector<cu_cp_configuration::ngap_config>& ngaps,
-                                       std::map<plmn_identity, tac_t>&                      plmn_tac_map)
+static inline void create_plmn_tac_map(const std::vector<supported_tracking_area>& supported_tas,
+                                       std::map<plmn_identity, tac_t>&             plmn_tac_map)
 {
-  for (const auto& ngap : ngaps) {
-    for (const auto& supported_ta : ngap.supported_tas) {
-      for (const auto& plmn : supported_ta.plmn_list) {
-        plmn_tac_map.emplace(plmn.plmn_id, supported_ta.tac);
-      }
+  for (const auto& supported_ta : supported_tas) {
+    for (const auto& plmn : supported_ta.plmn_list) {
+      plmn_tac_map.emplace(plmn.plmn_id, supported_ta.tac);
     }
   }
 }
 
-nrppa_impl::nrppa_impl(const cu_cp_configuration& cfg,
-                       nrppa_cu_cp_notifier&      cu_cp_notifier_,
-                       async_task_scheduler&      common_task_sched_) :
+nrppa_impl::nrppa_impl(const std::vector<supported_tracking_area>& supported_tas_,
+                       nrppa_cu_cp_notifier&                       cu_cp_notifier_,
+                       async_task_scheduler&                       common_task_sched_,
+                       timer_manager&                              timers_,
+                       task_executor&                              task_exec_) :
   logger(ocudulog::fetch_basic_logger("NRPPA")),
   ue_ctxt_list(logger),
   du_ctxt_list(logger),
   meas_ctxt_list(logger),
-  cu_cp_cfg(cfg),
   cu_cp_notifier(cu_cp_notifier_),
-  common_task_sched(common_task_sched_)
+  common_task_sched(common_task_sched_),
+  timers(timers_),
+  task_exec(task_exec_)
 {
-  create_plmn_tac_map(cfg.ngap.ngaps, plmn_to_tac);
+  create_plmn_tac_map(supported_tas_, plmn_to_tac);
 }
 
 // Note: For fwd declaration of member types, dtor cannot be trivial.
@@ -251,12 +252,8 @@ void nrppa_impl::handle_e_cid_meas_initiation_request(const asn1::nrppa::e_c_id_
 
     // Create UE context and store it.
     nrppa_cu_cp_ue_notifier* ue_notifier = cu_cp_notifier.on_new_nrppa_ue(ue_index);
-    ue_ctxt_list.add_ue(ue_index,
-                        ret.value(),
-                        uint_to_lmf_ue_meas_id(msg->lmf_ue_meas_id),
-                        *ue_notifier,
-                        *cu_cp_cfg.services.timers,
-                        *cu_cp_cfg.services.cu_cp_executor);
+    ue_ctxt_list.add_ue(
+        ue_index, ret.value(), uint_to_lmf_ue_meas_id(msg->lmf_ue_meas_id), *ue_notifier, timers, task_exec);
   }
 
   nrppa_ue_context& ue_ctxt = ue_ctxt_list[ue_index];

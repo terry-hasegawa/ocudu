@@ -66,6 +66,18 @@ static void assert_cu_cp_configuration_valid(const cu_cp_configuration& cfg)
   report_error_if_not(cfg.admission.max_nof_cu_ups <= CU_CP_MAX_NOF_CU_UPS, "Invalid max number of CU-UPs");
 }
 
+static std::vector<supported_tracking_area>
+extract_supported_tas(const std::vector<cu_cp_configuration::ngap_config>& ngap_cfgs)
+{
+  std::vector<supported_tracking_area> supported_tas;
+  for (const auto& ngap_cfg : ngap_cfgs) {
+    for (const auto& supported_ta : ngap_cfg.supported_tas) {
+      supported_tas.push_back(supported_ta);
+    }
+  }
+  return supported_tas;
+}
+
 cu_cp_impl::cu_cp_impl(const cu_cp_configuration& config_) :
   cfg(config_),
   ue_mng(cfg),
@@ -108,7 +120,11 @@ cu_cp_impl::cu_cp_impl(const cu_cp_configuration& config_) :
 {
   assert_cu_cp_configuration_valid(cfg);
 
-  nrppa_entity = create_nrppa(cfg, nrppa_cu_cp_ev_notifier, common_task_sched);
+  nrppa_entity = create_nrppa(extract_supported_tas(cfg.ngap.ngaps),
+                              nrppa_cu_cp_ev_notifier,
+                              common_task_sched,
+                              *cfg.services.timers,
+                              *cfg.services.cu_cp_executor);
 
   // Connect event notifiers to layers.
   ngap_cu_cp_ev_notifier.connect_cu_cp(get_cu_cp_ngap_handler(), paging_handler);
