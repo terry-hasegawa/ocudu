@@ -12,12 +12,12 @@ using namespace ocuup;
 
 cu_up_setup_routine::cu_up_setup_routine(gnb_cu_up_id_t                    cu_up_id_,
                                          std::string                       cu_up_name_,
-                                         std::string                       plmn_,
+                                         std::vector<std::string>          plmns_,
                                          e1ap_connection_manager&          e1ap_conn_mng_,
                                          cu_up_e1_setup_complete_notifier* e1_setup_notifier_) :
   cu_up_id(cu_up_id_),
   cu_up_name(std::move(cu_up_name_)),
-  plmn(std::move(plmn_)),
+  plmns(std::move(plmns_)),
   e1ap_conn_mng(e1ap_conn_mng_),
   e1_setup_notifier(e1_setup_notifier_),
   logger(ocudulog::fetch_basic_logger("CU-UP"))
@@ -61,11 +61,11 @@ async_task<cu_up_e1_setup_response> cu_up_setup_routine::start_cu_up_e1_setup_re
   // We only support 5G
   request_msg.cn_support = cu_up_cn_support_t::c_5gc;
 
-  supported_plmns_item_t plmn_item;
-
-  plmn_item.plmn_id = plmn;
-
-  request_msg.supported_plmns.push_back(plmn_item);
+  for (const auto& plmn_id : plmns) {
+    supported_plmns_item_t plmn_item;
+    plmn_item.plmn_id = plmn_id;
+    request_msg.supported_plmns.push_back(plmn_item);
+  }
 
   // Initiate E1 Setup Request.
   return e1ap_conn_mng.handle_cu_up_e1_setup_request(request_msg);

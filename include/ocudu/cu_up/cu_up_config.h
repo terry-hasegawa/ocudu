@@ -82,8 +82,8 @@ struct cu_up_config {
   std::string cu_up_name = "ocuup_01";
   /// E1AP configuration.
   e1ap_configuration e1ap;
-  /// Full PLMN as string (without possible filler digit) e.g. "00101".
-  std::string plmn = "00101";
+  /// List of supported PLMNs (up to 12 PLMNs), e.g. {"00101"}.
+  std::vector<std::string> plmns = {"00101"};
   /// CU-UP statistics report period in seconds.
   std::chrono::seconds statistics_report_period;
 };

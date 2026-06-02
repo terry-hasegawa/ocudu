@@ -36,7 +36,7 @@ static cu_up_manager_impl_config generate_cu_up_manager_impl_config(const cu_up_
   return {config.cu_up_id,
           config.cu_up_name,
           config.max_nof_ues,
-          config.plmn,
+          config.plmns,
           config.qos,
           config.n3_cfg,
           config.test_mode_cfg};
@@ -197,7 +197,7 @@ void cu_up::start()
               for (e1ap = e1aps.begin(); e1ap != e1aps.end(); ++e1ap) {
                 CORO_AWAIT_VALUE(connected,
                                  launch_async<cu_up_setup_routine>(
-                                     cfg.cu_up_id, cfg.cu_up_name, cfg.plmn, **e1ap, e1_setup_notifier));
+                                     cfg.cu_up_id, cfg.cu_up_name, cfg.plmns, **e1ap, e1_setup_notifier));
               }
 
               if (cfg.test_mode_cfg.enabled) {

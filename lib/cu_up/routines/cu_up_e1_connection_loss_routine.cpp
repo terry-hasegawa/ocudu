@@ -10,17 +10,17 @@
 using namespace ocudu;
 using namespace ocuup;
 
-cu_up_e1_connection_loss_routine::cu_up_e1_connection_loss_routine(gnb_cu_up_id_t     cu_up_id_,
-                                                                   std::string        cu_up_name_,
-                                                                   std::string        plmn_,
-                                                                   std::atomic<bool>& stop_command_,
-                                                                   e1ap_interface&    e1ap_,
-                                                                   ue_manager&        ue_mng_,
-                                                                   timer_manager&     timers,
-                                                                   task_executor&     ctrl_exec) :
+cu_up_e1_connection_loss_routine::cu_up_e1_connection_loss_routine(gnb_cu_up_id_t           cu_up_id_,
+                                                                   std::string              cu_up_name_,
+                                                                   std::vector<std::string> plmns_,
+                                                                   std::atomic<bool>&       stop_command_,
+                                                                   e1ap_interface&          e1ap_,
+                                                                   ue_manager&              ue_mng_,
+                                                                   timer_manager&           timers,
+                                                                   task_executor&           ctrl_exec) :
   cu_up_id(cu_up_id_),
   cu_up_name(std::move(cu_up_name_)),
-  plmn(std::move(plmn_)),
+  plmns(std::move(plmns_)),
   stop_command(stop_command_),
   retry_timer(timers.create_unique_timer(ctrl_exec)),
   e1ap(e1ap_),
@@ -39,7 +39,7 @@ void cu_up_e1_connection_loss_routine::operator()(coro_context<async_task<void>>
 
   // Attempt a new E1 setup connection.
   for (;;) {
-    CORO_AWAIT_VALUE(reconnected, launch_async<cu_up_setup_routine>(cu_up_id, cu_up_name, plmn, e1ap));
+    CORO_AWAIT_VALUE(reconnected, launch_async<cu_up_setup_routine>(cu_up_id, cu_up_name, plmns, e1ap));
     if (reconnected || stop_command) {
       break;
     }

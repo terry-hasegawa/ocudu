@@ -41,7 +41,7 @@ cu_up_manager_impl::cu_up_manager_impl(const cu_up_manager_impl_config&       co
                                        const cu_up_manager_impl_dependencies& dependencies) :
   cu_up_id(config.cu_up_id),
   cu_up_name(config.cu_up_name),
-  plmn(config.plmn),
+  plmns(config.plmns),
   stop_command(dependencies.stop_command),
   e1aps(dependencies.e1aps),
   qos(config.qos),
@@ -159,7 +159,7 @@ void cu_up_manager_impl::handle_e1ap_connection_drop(cu_up_e1_index_t e1_index)
   }
   std::reference_wrapper<e1ap_interface> e1ap = e1aps[cu_up_e1_index_to_uint(e1_index)];
   schedule_cu_up_async_task(launch_async<cu_up_e1_connection_loss_routine>(
-      cu_up_id, cu_up_name, plmn, stop_command, e1ap, *ue_mng, timers, exec_mapper.ctrl_executor()));
+      cu_up_id, cu_up_name, plmns, stop_command, e1ap, *ue_mng, timers, exec_mapper.ctrl_executor()));
 }
 
 async_task<void> cu_up_manager_impl::handle_e1_reset(const e1ap_reset& msg)

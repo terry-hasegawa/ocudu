@@ -17,7 +17,7 @@ class cu_up_setup_routine
 public:
   cu_up_setup_routine(gnb_cu_up_id_t                    cu_up_id_,
                       std::string                       cu_up_name_,
-                      std::string                       plmn_,
+                      std::vector<std::string>          plmns_,
                       e1ap_connection_manager&          e1ap_conn_mng_,
                       cu_up_e1_setup_complete_notifier* e1_setup_notifier_ = nullptr);
 
@@ -31,7 +31,7 @@ private:
 
   gnb_cu_up_id_t                    cu_up_id;
   std::string                       cu_up_name;
-  std::string                       plmn;
+  std::vector<std::string>          plmns;
   e1ap_connection_manager&          e1ap_conn_mng;
   cu_up_e1_setup_complete_notifier* e1_setup_notifier;
 
