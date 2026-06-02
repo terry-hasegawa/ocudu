@@ -18,6 +18,7 @@ inter_cu_conditional_handover_target_execution_routine::inter_cu_conditional_han
     e1ap_bearer_context_manager&                  e1ap_,
     ngap_interface&                               ngap_,
     xnap_interface*                               xnap_,
+    f1ap_ue_context_manager&                      f1ap_,
     cu_cp_ue_context_release_handler&             ue_ctx_release_handler_,
     ocudulog::basic_logger&                       logger_) :
   ue(ue_),
@@ -25,6 +26,7 @@ inter_cu_conditional_handover_target_execution_routine::inter_cu_conditional_han
   e1ap(e1ap_),
   ngap(ngap_),
   xnap(xnap_),
+  f1ap(f1ap_),
   ue_ctx_release_handler(ue_ctx_release_handler_),
   logger(logger_)
 {
@@ -97,13 +99,29 @@ void inter_cu_conditional_handover_target_execution_routine::operator()(coro_con
                    ngap.get_ngap_control_message_handler().handle_path_switch_request_required(path_switch_req));
   if (!std::holds_alternative<cu_cp_path_switch_request_ack>(path_switch_response)) {
     logger.warning("ue={}: \"{}\" failed. Cause: Path Switch Request rejected by AMF", ue->get_ue_index(), name());
+    ue_context_release_request = {.ue_index                         = ue->get_ue_index(),
+                                  .pdu_session_res_list_cxt_rel_req = ue->get_up_resource_manager().get_pdu_sessions(),
+                                  .cause = ngap_cause_radio_network_t::ho_fail_in_target_5_gc_ngran_node_or_target_sys};
+    CORO_AWAIT(ngap.handle_ue_context_release_request(ue_context_release_request));
     CORO_EARLY_RETURN();
   }
 
-  // Step 6: Send UE Context Release to source CU-CP.
+  // Step 6: Inform CU-UP of new UL NG-U tunnel endpoints and any PDU sessions released by the AMF.
+  fill_e1ap_bearer_context_tunnel_update_request(std::get<cu_cp_path_switch_request_ack>(path_switch_response));
+  if (!tunnel_context_modification_request.ng_ran_bearer_context_mod_request->pdu_session_res_to_modify_list.empty() ||
+      !tunnel_context_modification_request.ng_ran_bearer_context_mod_request->pdu_session_res_to_rem_list.empty()) {
+    CORO_AWAIT(e1ap.handle_bearer_context_modification_request(tunnel_context_modification_request));
+  }
+
+  // Step 7: Send UE Context Release to source CU-CP.
   if (!xnap->handle_ue_context_release_required(ue->get_ue_index())) {
     logger.warning("ue={}: \"{}\" failed. Cause: Failed to transmit UE Context Release", ue->get_ue_index(), name());
   }
+
+  // Step 8: Send Reconfiguration Complete Indicator to DU.
+  ue_context_mod_request.ue_index               = ue->get_ue_index();
+  ue_context_mod_request.rrc_recfg_complete_ind = f1ap_rrc_recfg_complete_ind::true_value;
+  CORO_AWAIT(f1ap.handle_ue_context_modification_request(ue_context_mod_request));
 
   CORO_RETURN();
 }
@@ -186,6 +204,28 @@ bool inter_cu_conditional_handover_target_execution_routine::initialize_reconfig
       t304_ms.value() + std::chrono::milliseconds{/*We add 1s of extra time for the UE to reestablish*/ 1000};
 
   return true;
+}
+
+void inter_cu_conditional_handover_target_execution_routine::fill_e1ap_bearer_context_tunnel_update_request(
+    const cu_cp_path_switch_request_ack& ack)
+{
+  tunnel_context_modification_request.ue_index = ue->get_ue_index();
+  auto& ng_request                             = tunnel_context_modification_request.ng_ran_bearer_context_mod_request;
+  ng_request.emplace();
+
+  for (const auto& switched_session : ack.pdu_session_res_switched_list) {
+    if (!switched_session.ul_ngu_up_tnl_info.has_value()) {
+      continue;
+    }
+    e1ap_pdu_session_res_to_modify_item ps_item;
+    ps_item.pdu_session_id    = switched_session.pdu_session_id;
+    ps_item.ng_ul_up_tnl_info = switched_session.ul_ngu_up_tnl_info;
+    ng_request->pdu_session_res_to_modify_list.emplace(ps_item.pdu_session_id, ps_item);
+  }
+
+  for (const auto& released_session : ack.pdu_session_res_released_list) {
+    ng_request->pdu_session_res_to_rem_list.push_back(released_session.pdu_session_id);
+  }
 }
 
 cu_cp_path_switch_request inter_cu_conditional_handover_target_execution_routine::fill_path_switch_request()

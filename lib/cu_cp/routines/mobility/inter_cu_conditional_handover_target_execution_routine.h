@@ -8,6 +8,8 @@
 #include "../../ue_manager/cu_cp_ue_impl.h"
 #include "ocudu/e1ap/cu_cp/e1ap_cu_cp.h"
 #include "ocudu/e1ap/cu_cp/e1ap_cu_cp_bearer_context_update.h"
+#include "ocudu/f1ap/cu_cp/f1ap_cu.h"
+#include "ocudu/f1ap/cu_cp/f1ap_cu_ue_context_update.h"
 #include "ocudu/ngap/ngap.h"
 #include "ocudu/support/async/async_task.h"
 #include "ocudu/xnap/xnap.h"
@@ -30,6 +32,7 @@ public:
                                                          e1ap_bearer_context_manager&                  e1ap_,
                                                          ngap_interface&                               ngap_,
                                                          xnap_interface*                               xnap_,
+                                                         f1ap_ue_context_manager&                      f1ap_,
                                                          cu_cp_ue_context_release_handler& ue_ctx_release_handler_,
                                                          ocudulog::basic_logger&           logger_);
 
@@ -39,6 +42,7 @@ public:
 
 private:
   bool                      fill_e1ap_bearer_context_modification_request();
+  void                      fill_e1ap_bearer_context_tunnel_update_request(const cu_cp_path_switch_request_ack& ack);
   bool                      initialize_reconfiguration_timeout();
   cu_cp_path_switch_request fill_path_switch_request();
 
@@ -47,6 +51,7 @@ private:
   e1ap_bearer_context_manager&                 e1ap;
   ngap_interface&                              ngap;
   xnap_interface*                              xnap;
+  f1ap_ue_context_manager&                     f1ap;
   cu_cp_ue_context_release_handler&            ue_ctx_release_handler;
   ocudulog::basic_logger&                      logger;
 
@@ -54,6 +59,9 @@ private:
   expected<cu_cp_status_transfer>           sn_status;
   e1ap_bearer_context_modification_request  bearer_context_modification_request;
   e1ap_bearer_context_modification_response bearer_context_modification_response;
+  e1ap_bearer_context_modification_request  tunnel_context_modification_request;
+  f1ap_ue_context_modification_request      ue_context_mod_request;
+  cu_cp_ue_context_release_request          ue_context_release_request;
   cu_cp_path_switch_request                 path_switch_req;
   cu_cp_path_switch_response                path_switch_response;
   cu_cp_ue_context_release_command          release_cmd;
