@@ -20,7 +20,8 @@ pucch_resource_manager::pucch_resource_manager(const cell_configuration& cell_cf
   cell_cfg(cell_cfg_),
   cell_resources(cell_cfg_.bwp_res[to_bwp_id(0)].ul().pucch),
   collision_manager(cell_cfg_),
-  slots_ctx(get_allocator_ring_size_gt_min(get_max_slot_ul_alloc_delay(cell_cfg_.ntn_cs_koffset)),
+  // The ring must be at least 1 slot larger than the max. UL allocation delay, to take into account the current slot.
+  slots_ctx(get_allocator_ring_size_gt_min(get_max_slot_ul_alloc_delay(cell_cfg_.ntn_cs_koffset) + 1),
             {static_vector<rnti_t, pucch_constants::MAX_NOF_CELL_DED_RESOURCES>(
                 cell_cfg_.bwp_res[to_bwp_id(0)].ul().pucch.dedicated.size(),
                 rnti_t::INVALID_RNTI)})
