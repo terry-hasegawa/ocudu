@@ -296,7 +296,7 @@ INSTANTIATE_TEST_SUITE_P(RadioZmqE2ETest,
                                             ::testing::Values(61440),
                                             ::testing::Values(false, true)));
 
-TEST(RadioZmqGainTest, SetGainReturnsTrueForValidPort)
+TEST(RadioZmqGainTest, ValidateSetGainReturns)
 {
   task_worker                    async_worker("gain_test_thread", 2 * RADIO_MAX_NOF_PORTS);
   std::unique_ptr<task_executor> async_task_executor = make_task_executor_ptr(async_worker);
@@ -327,13 +327,25 @@ TEST(RadioZmqGainTest, SetGainReturnsTrueForValidPort)
 
   radio_management_plane& mgmt = session->get_management_plane();
 
-  // Valid port - must succeed.
-  EXPECT_TRUE(mgmt.set_tx_gain(0, 10.0));
+  // Valid port and gain - must succeed.
+  EXPECT_TRUE(mgmt.set_tx_gain(0, -10.0));
   EXPECT_TRUE(mgmt.set_rx_gain(0, -3.0));
 
   // Out-of-range port - must fail.
   EXPECT_FALSE(mgmt.set_tx_gain(1, 0.0));
   EXPECT_FALSE(mgmt.set_rx_gain(1, 0.0));
+
+  // Out-of-range gain - must fail.
+  EXPECT_FALSE(mgmt.set_tx_gain(0, +1.0));
+  EXPECT_FALSE(mgmt.set_rx_gain(0, +1.0));
+
+  // NaN gain - must fail.
+  EXPECT_FALSE(mgmt.set_tx_gain(0, std::numeric_limits<float>::quiet_NaN()));
+  EXPECT_FALSE(mgmt.set_rx_gain(0, std::numeric_limits<float>::quiet_NaN()));
+
+  // Infinity gain - must fail.
+  EXPECT_FALSE(mgmt.set_tx_gain(0, -std::numeric_limits<float>::infinity()));
+  EXPECT_FALSE(mgmt.set_rx_gain(0, -std::numeric_limits<float>::infinity()));
 
   session->stop();
   async_worker.stop();

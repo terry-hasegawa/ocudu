@@ -141,7 +141,11 @@ void radio_session_zmq_impl::stop()
 bool radio_session_zmq_impl::set_tx_gain(unsigned port_id, double gain_dB)
 {
   if (port_id >= tx_port_map.size()) {
-    logger.error("Invalid TX port index ({}).", port_id);
+    fmt::println("Invalid TX port index ({}).", port_id);
+    return false;
+  }
+  if ((gain_dB > 0.0) || std::isnan(gain_dB) || std::isinf(gain_dB)) {
+    fmt::println("TX gain must be <= 0.0 dB (got {:+.1f} dB).", gain_dB);
     return false;
   }
   auto [stream_id, channel_id] = tx_port_map[port_id];
@@ -153,7 +157,11 @@ bool radio_session_zmq_impl::set_tx_gain(unsigned port_id, double gain_dB)
 bool radio_session_zmq_impl::set_rx_gain(unsigned port_id, double gain_dB)
 {
   if (port_id >= rx_port_map.size()) {
-    logger.error("Invalid RX port index ({}).", port_id);
+    fmt::println("Invalid RX port index ({}).", port_id);
+    return false;
+  }
+  if ((gain_dB > 0.0) || std::isnan(gain_dB) || std::isinf(gain_dB)) {
+    fmt::println("RX gain must be <= 0.0 dB (got {:+.1f} dB).", gain_dB);
     return false;
   }
   auto [stream_id, channel_id] = rx_port_map[port_id];

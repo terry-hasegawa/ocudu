@@ -58,9 +58,9 @@ const radio_configuration::clock_sources base_clock_sources = {radio_configurati
 
 const radio_configuration::lo_frequency base_lo_frequency = {3.5e9, 0.0};
 
-const radio_configuration::channel base_tx_channel = {base_lo_frequency, 20.0, "tcp://*:1234"};
+const radio_configuration::channel base_tx_channel = {base_lo_frequency, -20.0, "tcp://*:1234"};
 
-const radio_configuration::channel base_rx_channel = {base_lo_frequency, 10.0, "tcp://localhost:1234"};
+const radio_configuration::channel base_rx_channel = {base_lo_frequency, -10.0, "tcp://localhost:1234"};
 
 const radio_configuration::stream base_tx_stream = {{base_tx_channel}, ""};
 
@@ -142,6 +142,12 @@ const std::vector<test_case_t> radio_zmq_validator_test_data = {
        return config;
      },
      "Channel gain must not be NAN nor infinite.\n"},
+    {[] {
+       radio_configuration::radio config                  = radio_base_config;
+       config.tx_streams.front().channels.front().gain_dB = 30;
+       return config;
+     },
+     "Channel gain must be <= 0.0 dB for ZMQ-device.\n"},
     {[] {
        radio_configuration::radio config                  = radio_base_config;
        config.tx_streams.front().channels.front().gain_dB = INFINITY;

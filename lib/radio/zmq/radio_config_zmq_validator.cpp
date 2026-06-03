@@ -62,6 +62,11 @@ static bool validate_channel(const radio_configuration::channel& channel)
     return false;
   }
 
+  if (channel.gain_dB > 0.0) {
+    fmt::print("Channel gain must be <= 0.0 dB for ZMQ-device.\n");
+    return false;
+  }
+
   if (!validate_channel_args(channel.args)) {
     return false;
   }
