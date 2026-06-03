@@ -116,12 +116,12 @@ public:
                    sctp_params.connect_port);
       return nullptr;
     }
-    logger.info("{}: E2 connection to {} accepted (configured addrs {}, port {})",
+    logger.info("{}: Connection to {} on {}:{} established",
                 sctp_params.if_name,
                 sctp_params.dest_name,
                 fmt::join(sctp_params.connect_addresses, ","),
                 sctp_params.connect_port);
-    fmt::print("{}: Connection to {} completed (configured addrs {}, port {})\n",
+    fmt::print("{}: Connection to {} on {}:{} established\n",
                sctp_params.if_name,
                sctp_params.dest_name,
                fmt::join(sctp_params.connect_addresses, ","),

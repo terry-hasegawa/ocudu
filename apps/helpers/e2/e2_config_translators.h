@@ -18,7 +18,7 @@ inline e2_sctp_gateway_config generate_e2_client_gateway_config(const e2_config&
                                                                 uint16_t         ppid)
 {
   sctp_network_connector_config e2ap_sctp{};
-  e2ap_sctp.if_name           = "E2AP";
+  e2ap_sctp.if_name           = "E2";
   e2ap_sctp.dest_name         = "Near-RT-RIC";
   e2ap_sctp.connect_addresses = e2_cfg.ip_addrs;
   e2ap_sctp.connect_port      = e2_cfg.port;
