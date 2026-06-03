@@ -49,12 +49,20 @@ public:
 
   void on_protocol_failure() override
   {
-    ocudulog::fetch_basic_logger("PDCP").warning("Ignoring on_protocol_failure() from PDCP Rx: No E1AP handler.");
+    if (cu_up_mngr == nullptr) {
+      ocudulog::fetch_basic_logger("PDCP").debug("Ignoring on_protocol_failure() from PDCP Rx: No E1AP handler.");
+      return;
+    }
+    cu_up_mngr->handle_pdcp_protocol_failure(ue_index);
   }
 
   void on_integrity_failure() override
   {
-    ocudulog::fetch_basic_logger("PDCP").warning("Ignoring on_integrity_failure() from PDCP Rx: No E1AP handler.");
+    if (cu_up_mngr == nullptr) {
+      ocudulog::fetch_basic_logger("PDCP").debug("Ignoring on_integrity_failure() from PDCP Rx: No E1AP handler.");
+      return;
+    }
+    cu_up_mngr->handle_pdcp_integrity_failure(ue_index);
   }
 
   void on_max_count_reached() override

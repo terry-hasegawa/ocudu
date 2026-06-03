@@ -190,12 +190,46 @@ async_task<void> cu_up_manager_impl::handle_e1_reset(const e1ap_reset& msg)
   });
 }
 
-///
-/// PDCP control events handling.
-///
+//
+// PDCP control events handling.
+//
+
 void cu_up_manager_impl::handle_pdcp_protocol_failure(cu_up_ue_index_t ue_index)
 {
-  /// TODO.
+  ue_context* ue_ctxt = ue_mng->find_ue(ue_index);
+  if (ue_ctxt == nullptr) {
+    logger.error("ue={}: Could not handle PDCP protocol failure. UE context not found", ue_index);
+    return;
+  }
+  cu_up_e1_index_t e1_index = ue_ctxt->get_e1_index();
+  if (cu_up_e1_index_to_uint(e1_index) >= e1aps.size()) {
+    logger.error("e1={} ue={}: Could not handle PDCP protocol failure from unknown E1",
+                 fmt::underlying(e1_index),
+                 fmt::underlying(ue_index));
+    return;
+  }
+
+  std::reference_wrapper<e1ap_interface> e1ap = e1aps[cu_up_e1_index_to_uint(e1_index)];
+  e1ap.get().handle_bearer_context_release_request_required(ue_index);
+}
+
+void cu_up_manager_impl::handle_pdcp_integrity_failure(cu_up_ue_index_t ue_index)
+{
+  ue_context* ue_ctxt = ue_mng->find_ue(ue_index);
+  if (ue_ctxt == nullptr) {
+    logger.error("ue={}: Could not handle PDCP integrity failure. UE context not found", ue_index);
+    return;
+  }
+  cu_up_e1_index_t e1_index = ue_ctxt->get_e1_index();
+  if (cu_up_e1_index_to_uint(e1_index) >= e1aps.size()) {
+    logger.error("e1={} ue={}: Could not handle PDCP integrity failure from unknown E1",
+                 fmt::underlying(e1_index),
+                 fmt::underlying(ue_index));
+    return;
+  }
+
+  std::reference_wrapper<e1ap_interface> e1ap = e1aps[cu_up_e1_index_to_uint(e1_index)];
+  e1ap.get().handle_bearer_context_release_request_required(ue_index);
 }
 
 void cu_up_manager_impl::handle_pdcp_max_count_reached(cu_up_ue_index_t ue_index)

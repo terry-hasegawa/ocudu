@@ -131,7 +131,8 @@ void e1ap_cu_up_impl::handle_bearer_context_inactivity_notification(
 void e1ap_cu_up_impl::handle_bearer_context_release_request_required(cu_up_ue_index_t ue_index)
 {
   if (!ue_ctxt_list.contains(ue_index)) {
-    logger.log_error("ue={}: Dropping PDCP max count reached. UE does not exist.", fmt::underlying(ue_index));
+    logger.log_error("ue={}: Could not initiate BearerContextReleaseRequest. UE does not exist.",
+                     fmt::underlying(ue_index));
     return;
   }
 

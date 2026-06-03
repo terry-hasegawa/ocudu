@@ -56,6 +56,8 @@ public:
 
   virtual void handle_pdcp_protocol_failure(cu_up_ue_index_t ue_index) = 0;
 
+  virtual void handle_pdcp_integrity_failure(cu_up_ue_index_t ue_index) = 0;
+
   virtual void handle_pdcp_max_count_reached(cu_up_ue_index_t ue_index) = 0;
 
   virtual void handle_pdcp_resume_required(cu_up_ue_index_t ue_index) = 0;
