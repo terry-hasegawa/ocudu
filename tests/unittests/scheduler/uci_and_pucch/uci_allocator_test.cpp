@@ -307,6 +307,66 @@ TEST_F(uci_alloc_test, uci_harq_alloc_on_existing_pusch)
   ASSERT_FALSE(slot_grid.result.ul.puschs.back().uci.has_value());
 }
 
+// A PUSCH belonging to a different UE must not block PUCCH allocation for the target UE.
+
+TEST_F(uci_alloc_test, uci_harq_alloc_not_blocked_by_different_ue_pusch)
+{
+  // Place a PUSCH for a different UE in the target HARQ-ACK slot.
+  const rnti_t other_rnti = to_rnti(0x4602);
+  auto&        puschs     = t_bench.res_grid[k2].result.ul.puschs;
+  puschs.emplace_back(ul_sched_info{});
+  puschs.back().pusch_cfg.rnti = other_rnti;
+
+  const std::vector<uint8_t> k1_candidates = {static_cast<uint8_t>(default_k1)};
+  const auto                 result        = t_bench.uci_alloc.alloc_harq_ack(t_bench.res_grid,
+                                                       t_bench.get_main_ue().crnti,
+                                                       t_bench.get_main_ue().get_pcell().cfg(),
+                                                       t_bench.k0,
+                                                       k1_candidates);
+
+  // The other UE's PUSCH must not prevent allocation of UE0's PUCCH HARQ-ACK.
+  ASSERT_TRUE(result.has_value()) << "HARQ-ACK allocation failed: slot has been skipped due to another UE's PUSCH";
+  ASSERT_EQ(default_k1, result->k1);
+
+  auto& slot_grid = t_bench.res_grid[k2];
+  // The other UE's PUSCH is still present.
+  ASSERT_EQ(1, slot_grid.result.ul.puschs.size());
+  ASSERT_EQ(other_rnti, slot_grid.result.ul.puschs.front().pusch_cfg.rnti);
+  // UE0's PUCCH HARQ-ACK is allocated alongside the other UE's PUSCH.
+  ASSERT_EQ(1, slot_grid.result.ul.pucchs.size());
+  ASSERT_EQ(1, slot_grid.result.ul.pucchs.back().uci_bits.harq_ack_nof_bits);
+}
+
+TEST_F(uci_alloc_test, uci_harq_alloc_picks_closest_k1_ignoring_different_ue_pusch)
+{
+  // Place a PUSCH for a different UE at the closest k1=4 slot.
+  const rnti_t other_rnti = to_rnti(0x4602);
+  // near_k1 = 4
+  const auto near_k1 = static_cast<uint8_t>(default_k1);
+  // far_k1 = 8
+  const auto far_k1              = static_cast<uint8_t>(default_k1 + 4U);
+  auto&      puschs_at_near_slot = t_bench.res_grid[t_bench.k0 + near_k1].result.ul.puschs;
+  puschs_at_near_slot.emplace_back(ul_sched_info{});
+  puschs_at_near_slot.back().pusch_cfg.rnti = other_rnti;
+
+  // Prepare k1_candidates with expected one and not expected.
+  const std::vector<uint8_t> k1_candidates = {near_k1, far_k1};
+  const auto                 result        = t_bench.uci_alloc.alloc_harq_ack(t_bench.res_grid,
+                                                       t_bench.get_main_ue().crnti,
+                                                       t_bench.get_main_ue().get_pcell().cfg(),
+                                                       t_bench.k0,
+                                                       k1_candidates);
+
+  ASSERT_TRUE(result.has_value());
+  // Shall use k1=4, not fall back to k1=8.
+  ASSERT_EQ(near_k1, result->k1) << "k1=" << (unsigned)near_k1 << " was skipped due to another UE's PUSCH; "
+                                 << "got k1=" << result->k1 << " instead";
+
+  // PUCCH shall be at the near slot, not the far slot.
+  ASSERT_EQ(1, t_bench.res_grid[t_bench.k0 + near_k1].result.ul.pucchs.size());
+  ASSERT_EQ(0, t_bench.res_grid[t_bench.k0 + far_k1].result.ul.pucchs.size());
+}
+
 ///////   UCI multiplexing on PUSCH    ///////
 
 TEST_F(uci_alloc_test, uci_mplexing_on_pusch_with_no_pucch_grants)

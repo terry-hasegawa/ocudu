@@ -164,16 +164,7 @@ std::optional<uci_allocation> uci_allocator_impl::alloc_harq_ack(cell_resource_a
     cell_slot_resource_allocator& slot_alloc = res_alloc[k0 + k1_candidate + res_alloc.cfg.ntn_cs_koffset];
     const slot_point              uci_slot   = slot_alloc.slot;
 
-    // As per Section 9, TS 38.213:
-    // > A UE does not expect to detect a DCI format scheduling a PDSCH reception or a SPS PDSCH release and indicating
-    // a resource for a PUCCH transmission with corresponding HARQ-ACK information in a slot if the UE previously
-    // detects a DCI format scheduling a PUSCH transmission in the slot and if the UE multiplexes HARQ-ACK information
-    // in the PUSCH transmission.
-    if (not slot_alloc.result.ul.puschs.empty()) {
-      continue;
-    }
-
-    // Check whether UCI slot is UL enabled.
+    // Check whether UCI slot is UL enabled — O(1), runs before the PUSCH scan below.
     if (not cell_cfg.is_fully_ul_enabled(uci_slot)) {
       continue;
     }
@@ -187,6 +178,20 @@ std::optional<uci_allocation> uci_allocator_impl::alloc_harq_ack(cell_resource_a
           "k1 candidate, if any k1 available",
           crnti,
           slot_alloc.slot);
+      continue;
+    }
+
+    // As per Section 9, TS 38.213:
+    // > A UE does not expect to detect a DCI format scheduling a PDSCH reception or a SPS PDSCH release and indicating
+    // a resource for a PUCCH transmission with corresponding HARQ-ACK information in a slot if the UE previously
+    // detects a DCI format scheduling a PUSCH transmission in the slot and if the UE multiplexes HARQ-ACK information
+    // in the PUSCH transmission.
+    // Note: the constraint applies only to the same UE — a PUSCH from a different UE must not block PUCCH placement.
+    const bool ue_has_pusch_in_slot =
+        std::any_of(slot_alloc.result.ul.puschs.begin(),
+                    slot_alloc.result.ul.puschs.end(),
+                    [crnti](const ul_sched_info& p) { return p.pusch_cfg.rnti == crnti; });
+    if (ue_has_pusch_in_slot) {
       continue;
     }
 
