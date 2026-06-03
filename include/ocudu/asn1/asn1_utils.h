@@ -675,6 +675,7 @@ public:
   integer() = default;
   integer(IntType value_) : value(value_) {}
   operator IntType() const { return value; }
+
   OCUDUASN_CODE pack(bit_ref& bref) const { return pack_integer(bref, value, lb, ub, has_ext, is_aligned); }
   OCUDUASN_CODE unpack(cbit_ref& bref) { return unpack_integer(value, bref, lb, ub, has_ext, is_aligned); }
 };

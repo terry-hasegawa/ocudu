@@ -194,16 +194,10 @@ using build_context_type = context<std::decay_t<Ts>...>;
 #define DECLARE_METRIC(_name_rep, _type, _value_type, _units)                                                          \
   namespace metric_info {                                                                                              \
   struct _type##__units {                                                                                              \
-    static const char* units()                                                                                         \
-    {                                                                                                                  \
-      return _units;                                                                                                   \
-    }                                                                                                                  \
+    static const char* units() { return _units; }                                                                      \
   };                                                                                                                   \
   struct _type##__name_rep {                                                                                           \
-    static const char* name()                                                                                          \
-    {                                                                                                                  \
-      return _name_rep;                                                                                                \
-    }                                                                                                                  \
+    static const char* name() { return _name_rep; }                                                                    \
   };                                                                                                                   \
   }                                                                                                                    \
   using _type = ocudulog::                                                                                             \
@@ -224,10 +218,7 @@ using build_context_type = context<std::decay_t<Ts>...>;
 #define DECLARE_METRIC_SET(_name_rep, _type, ...)                                                                      \
   namespace metric_set_info {                                                                                          \
   struct _type##__name_rep {                                                                                           \
-    static const char* name()                                                                                          \
-    {                                                                                                                  \
-      return _name_rep;                                                                                                \
-    }                                                                                                                  \
+    static const char* name() { return _name_rep; }                                                                    \
   };                                                                                                                   \
   }                                                                                                                    \
   using _type = ocudulog::detail::build_metric_set_type<metric_set_info::_type##__name_rep, __VA_ARGS__>
@@ -246,10 +237,7 @@ using build_context_type = context<std::decay_t<Ts>...>;
 #define DECLARE_METRIC_LIST(_name_rep, _type, _list_type)                                                              \
   namespace list_info {                                                                                                \
   struct _type##__name_rep {                                                                                           \
-    static const char* name()                                                                                          \
-    {                                                                                                                  \
-      return _name_rep;                                                                                                \
-    }                                                                                                                  \
+    static const char* name() { return _name_rep; }                                                                    \
   };                                                                                                                   \
   }                                                                                                                    \
   using _type = ocudulog::metric_list<list_info::_type##__name_rep, typename std::decay<_list_type>::type>

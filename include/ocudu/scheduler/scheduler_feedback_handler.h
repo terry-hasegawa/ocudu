@@ -112,8 +112,10 @@ public:
 
   mac_harq_ack_report_status&       operator[](unsigned idx) { return to_span()[idx]; }
   const mac_harq_ack_report_status& operator[](unsigned idx) const { return to_span()[idx]; }
+
   operator span<mac_harq_ack_report_status>() { return to_span(); }
   operator span<const mac_harq_ack_report_status>() const { return to_span(); }
+
   size_t size() const { return to_span().size(); }
   bool   empty() const { return to_span().empty(); }
 
