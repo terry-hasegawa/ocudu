@@ -1215,7 +1215,7 @@ pucch_allocator_impl::merge_pucch_resources(pucch_resource_manager::ue_reservati
       else if (preserve_res_indicator.has_value()) {
         const pucch_resource* harq_res =
             guard.reserve_harq_set_1_resource_by_res_indicator(preserve_res_indicator.value());
-        if (harq_res != nullptr) {
+        if (harq_res == nullptr) {
           return std::nullopt;
         }
         new_resource.harq_id.pucch_set_idx = pucch_res_set_id::set_1;
@@ -1225,7 +1225,7 @@ pucch_allocator_impl::merge_pucch_resources(pucch_resource_manager::ue_reservati
       // Get a new HARQ resource (from PUCCH resource set idx 1) from the resource manager.
       else {
         pucch_harq_resource_alloc_record harq_res = guard.reserve_harq_set_1_resource_next_available();
-        if (harq_res.resource != nullptr) {
+        if (harq_res.resource == nullptr) {
           return std::nullopt;
         }
         new_resource.harq_id.pucch_set_idx = pucch_res_set_id::set_1;
