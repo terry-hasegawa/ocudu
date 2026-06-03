@@ -4,11 +4,13 @@
 
 #pragma once
 
-#include "propagators/rk4_propagator.h"
+#include "orbit_ephemeris_info.h"
+#include "propagators/orbital_propagator_model.h"
 #include "ocudu/adt/ring_buffer.h"
+#include "ocudu/ntn/ntn_configuration_manager_config.h"
 #include "ocudu/ocudulog/ocudulog.h"
-#include "ocudu/ran/ntn.h"
 #include "ocudu/ran/slot_point.h"
+#include <memory>
 #include <variant>
 
 namespace ocudu {
@@ -74,7 +76,7 @@ class ntn_assistance_info_generator
 public:
   using time_point = std::chrono::system_clock::time_point;
 
-  ntn_assistance_info_generator();
+  explicit ntn_assistance_info_generator(orbit_propagator_type type = orbit_propagator_type::rk4);
 
   /// \brief Enqueue new ephemeris information for orbit propagation.
   ///
@@ -111,8 +113,8 @@ private:
 
   /// Logger.
   ocudulog::basic_logger& logger;
-  /// RK4 propagator.
-  rk4_propagator orbit_propagator;
+  /// Orbit propagator (rk4 or keplerian, set at construction).
+  std::unique_ptr<orbital_propagation_model> orbit_propagator;
 
   /// Maximum number of entries that can be stored in the ring buffers.
   static constexpr unsigned max_nof_entries = 64;

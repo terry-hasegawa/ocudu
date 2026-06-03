@@ -53,6 +53,11 @@ private:
 
   /// Per-cell context holding cell-specific NTN assistance info.
   struct per_cell_context {
+    explicit per_cell_context(orbit_propagator_type type = orbit_propagator_type::rk4) :
+      ntn_info_generator(type), sat_switch_info_generator(type)
+    {
+    }
+
     ntn_cell_config               cell_cfg;
     ntn_assistance_info_generator ntn_info_generator;
     bool                          sat_switch_enabled = false;

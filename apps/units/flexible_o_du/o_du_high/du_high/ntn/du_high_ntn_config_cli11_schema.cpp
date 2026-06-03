@@ -384,6 +384,17 @@ static void configure_cli11_ntn_args(CLI::App& app, du_high_unit_cell_ntn_config
       ->capture_default_str()
       ->check(CLI::IsMember({5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 120, 180, 240, 900}));
 
+  add_option_function<std::string>(
+      app,
+      "--propagator_type",
+      [&config](const std::string& value) {
+        config.propagator_type = (value == "keplerian") ? ocudu_ntn::orbit_propagator_type::keplerian
+                                                        : ocudu_ntn::orbit_propagator_type::rk4;
+      },
+      "Orbit propagator for ephemeris propagation. Allowed: rk4, keplerian.")
+      ->default_str("rk4")
+      ->check(CLI::IsMember({"rk4", "keplerian"}));
+
   // Epoch time.
   static epoch_time_t epoch_time;
   CLI::App* epoch_time_subcmd = add_subcommand(app, "epoch_time", "Epoch time for the NTN assistance information");

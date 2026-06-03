@@ -6,6 +6,8 @@
 #include "converters/coordinate_converter.h"
 #include "coordinates_types.h"
 #include "ntn_math_helpers.h"
+#include "propagators/keplerian_propagator.h"
+#include "propagators/rk4_propagator.h"
 #include <chrono>
 #include <vector>
 
@@ -55,7 +57,15 @@ static ta_info_t compute_ta_info(const orbit_ephemeris_info& init_ephemeris_info
   return ta_info;
 }
 
-ntn_assistance_info_generator::ntn_assistance_info_generator() : logger(ocudulog::fetch_basic_logger("NTN")) {}
+ntn_assistance_info_generator::ntn_assistance_info_generator(orbit_propagator_type type) :
+  logger(ocudulog::fetch_basic_logger("NTN"))
+{
+  if (type == orbit_propagator_type::keplerian) {
+    orbit_propagator = std::make_unique<keplerian_propagator>();
+  } else {
+    orbit_propagator = std::make_unique<rk4_propagator>();
+  }
+}
 
 bool ntn_assistance_info_generator::enqueue_ephemeris_info(const ephemeris_info_update& info)
 {
@@ -67,7 +77,7 @@ bool ntn_assistance_info_generator::enqueue_ephemeris_info(const ephemeris_info_
     ecef_rv.velocity.x = pos_vel->velocity_vx;
     ecef_rv.velocity.y = pos_vel->velocity_vy;
     ecef_rv.velocity.z = pos_vel->velocity_vz;
-    orbit_ephemeris_info ephemeris_info{orbit_propagator, info.epoch_time, ecef_rv, false};
+    orbit_ephemeris_info ephemeris_info{*orbit_propagator, info.epoch_time, ecef_rv, false};
     return ephemeris_info_queue.try_push(ephemeris_info);
   }
 
@@ -80,7 +90,7 @@ bool ntn_assistance_info_generator::enqueue_ephemeris_info(const ephemeris_info_
   oe.periapsis       = orbital_coordinates->periapsis;
   oe.mean_anomaly    = orbital_coordinates->mean_anomaly;
 
-  orbit_ephemeris_info ephemeris_info{orbit_propagator, info.epoch_time, oe};
+  orbit_ephemeris_info ephemeris_info{*orbit_propagator, info.epoch_time, oe};
   return ephemeris_info_queue.try_push(ephemeris_info);
 }
 

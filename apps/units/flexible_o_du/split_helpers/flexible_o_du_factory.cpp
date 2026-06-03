@@ -156,6 +156,7 @@ static ocudu_ntn::ntn_assistance_info convert_ntn_config_to_assistance_info(cons
   info.use_state_vector     = cfg.use_state_vector;
   info.feeder_link_info     = cfg.feeder_link_info;
   info.ntn_gateway_location = cfg.ntn_gateway_location;
+  info.propagator_type      = cfg.propagator_type;
 
   return info;
 }

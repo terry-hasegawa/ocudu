@@ -148,7 +148,7 @@ ntn_configuration_manager_impl::ntn_configuration_manager_impl(const ntn_configu
   }
 
   for (const auto& cell_config : config.cells) {
-    auto [it, inserted] = cells.try_emplace(cell_config.nr_cgi);
+    auto [it, inserted] = cells.try_emplace(cell_config.nr_cgi, cell_config.assistance_info.propagator_type);
     if (!inserted) {
       logger.error("Duplicate nr_cgi {} in NTN configuration, skipping", cell_config.nr_cgi.nci);
       continue;

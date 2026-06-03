@@ -4,6 +4,10 @@
 
 #pragma once
 
+#include "ocudu/ntn/orbit_propagator_type.h"
+#include "ocudu/ran/nr_cgi.h"
+#include "ocudu/ran/ntn.h"
+
 namespace ocudu {
 namespace ocudu_ntn {
 
@@ -54,6 +58,8 @@ struct ntn_assistance_info {
   std::optional<feeder_link_info_t> feeder_link_info;
   /// Gateway location (in degrees) for backend processing.
   std::optional<geodetic_coordinates_t> ntn_gateway_location;
+  /// Orbit propagator to use for ephemeris propagation.
+  orbit_propagator_type propagator_type = orbit_propagator_type::rk4;
 };
 
 /// NTN Cell configuration.

@@ -84,6 +84,9 @@ void ocudu::fill_ntn_config_in_yaml_schema(YAML::Node& node, const du_high_unit_
     ntn_node["use_state_vector"] = config.use_state_vector.value();
   }
 
+  ntn_node["propagator_type"] =
+      (config.propagator_type == ocudu_ntn::orbit_propagator_type::keplerian) ? "keplerian" : "rk4";
+
   if (std::holds_alternative<ecef_coordinates_t>(config.ephemeris_info)) {
     YAML::Node  ephemeris_node;
     const auto& ephem       = std::get<ecef_coordinates_t>(config.ephemeris_info);
