@@ -5,8 +5,7 @@
 #pragma once
 
 #include "ocudu/adt/span.h"
-#include "ocudu/ran/pdcch/pdcch_constants.h"
-#include <memory>
+#include "ocudu/ran/rnti.h"
 
 namespace ocudu {
 
@@ -19,7 +18,7 @@ public:
     /// Number of rate-matched bits.
     unsigned E;
     /// RNTI used for CRC bits scrambling according to TS38.212 Section 7.3.2.
-    unsigned rnti;
+    rnti_t rnti;
   };
 
   /// Default destructor.

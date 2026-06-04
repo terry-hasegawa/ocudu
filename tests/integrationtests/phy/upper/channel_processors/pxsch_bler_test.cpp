@@ -27,7 +27,7 @@
 using namespace ocudu;
 
 static constexpr subcarrier_spacing scs                         = subcarrier_spacing::kHz30;
-static constexpr uint16_t           rnti                        = 0x1234;
+static constexpr rnti_t             rnti                        = to_rnti(0x1234);
 static constexpr unsigned           bwp_start_rb                = 0;
 static constexpr unsigned           nof_ofdm_symbols            = 14;
 static const symbol_slot_mask       dmrs_mask                   = {0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0};

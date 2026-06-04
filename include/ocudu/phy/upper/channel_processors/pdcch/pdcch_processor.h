@@ -34,7 +34,7 @@ public:
   /// Describes a DCI transmission.
   struct dci_description {
     /// Parameter \f$x_{rnti, k}\f$ as per TS38.211 Section 7.3.2 {0...65535}.
-    unsigned rnti;
+    rnti_t rnti;
     /// Parameter \f$n_{ID}\f$ used for DMRS scrambling as per TS38.211 Section 7.4.1.3.1 {0...65535}.
     unsigned n_id_pdcch_dmrs;
     /// Parameter \f$n_{ID}\f$ used in data scrambling as per TS38.211 Section 7.3.2.3 {0...65535}.

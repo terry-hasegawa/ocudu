@@ -81,7 +81,7 @@ TEST(rx_buffer_pool, buffer_limit)
   // Create as many buffers as the limit is set.
   std::vector<unique_rx_buffer> buffers;
   for (unsigned rnti = 0; rnti != pool_config.nof_buffers; ++rnti) {
-    trx_buffer_identifier buffer_id(rnti, 0);
+    trx_buffer_identifier buffer_id(to_rnti(rnti), 0);
 
     // Reserve buffer, it shall not fail.
     buffers.emplace_back(pool->get_pool().reserve(slot, buffer_id, 1, true));
@@ -89,7 +89,7 @@ TEST(rx_buffer_pool, buffer_limit)
   }
 
   // Create one more buffer. No buffers are available. It must fail to reserve.
-  trx_buffer_identifier buffer_id(static_cast<uint16_t>(pool_config.nof_buffers), 0);
+  trx_buffer_identifier buffer_id(to_rnti(pool_config.nof_buffers), 0);
   ASSERT_FALSE(pool->get_pool().reserve(slot, buffer_id, 1, true));
 }
 
@@ -112,12 +112,12 @@ TEST(rx_buffer_pool, codeblock_limit)
   ASSERT_TRUE(pool);
 
   // Reserve buffer with all the codeblocks, it shall not fail.
-  trx_buffer_identifier buffer_id0(0x1234, 0x3);
+  trx_buffer_identifier buffer_id0(to_rnti(0x1234), 0x3);
   unique_rx_buffer      buffer = pool->get_pool().reserve(slot, buffer_id0, pool_config.nof_codeblocks, true);
   ASSERT_TRUE(buffer);
 
   // Create one more buffer. No codeblocks are available. It must fail to reserve.
-  trx_buffer_identifier buffer_id1(0x1234, buffer_id0.get_harq() + 1);
+  trx_buffer_identifier buffer_id1(to_rnti(0x1234), buffer_id0.get_harq() + 1);
   ASSERT_FALSE(pool->get_pool().reserve(slot, buffer_id1, pool_config.nof_codeblocks, true));
 }
 
@@ -140,7 +140,7 @@ TEST(rx_buffer_pool, buffer_free)
   ASSERT_TRUE(pool);
 
   // Reserve buffer with all the codeblocks, it shall not fail.
-  trx_buffer_identifier buffer_id0(0x1234, 0x3);
+  trx_buffer_identifier buffer_id0(to_rnti(0x1234), 0x3);
   unique_rx_buffer      buffer = pool->get_pool().reserve(slot, buffer_id0, pool_config.nof_codeblocks, true);
   ASSERT_TRUE(buffer);
 
@@ -161,7 +161,7 @@ TEST(rx_buffer_pool, buffer_free)
   ASSERT_TRUE(buffer);
 
   // Reserve buffer with a different identifier. It shall fail.
-  trx_buffer_identifier buffer_id1(0x1234, buffer_id0.get_harq() + 1);
+  trx_buffer_identifier buffer_id1(to_rnti(0x1234), buffer_id0.get_harq() + 1);
   ASSERT_FALSE(pool->get_pool().reserve(slot, buffer_id1, pool_config.nof_codeblocks, true));
 
   // Extract CRCs.
@@ -205,7 +205,7 @@ TEST(rx_buffer_pool, buffer_expire)
   ASSERT_TRUE(pool);
 
   // Reserve buffer with all the codeblocks, it shall not fail.
-  trx_buffer_identifier buffer_id0(0x1234, 0x3);
+  trx_buffer_identifier buffer_id0(to_rnti(0x1234), 0x3);
   ASSERT_TRUE(pool->get_pool().reserve(slot, buffer_id0, pool_config.nof_codeblocks, true));
 
   // Run slot and reserve the same buffer.
@@ -216,14 +216,14 @@ TEST(rx_buffer_pool, buffer_expire)
   // Run for each slot until it expires.
   do {
     // Try to reserve another buffer. As there are no buffers available it shall fail.
-    trx_buffer_identifier buffer_id1(0x1234, buffer_id0.get_harq() + 1);
+    trx_buffer_identifier buffer_id1(to_rnti(0x1234), buffer_id0.get_harq() + 1);
     ASSERT_FALSE(pool->get_pool().reserve(slot, buffer_id1, pool_config.nof_codeblocks, true));
     ++slot;
     pool->get_pool().run_slot(slot);
   } while (slot.system_slot() < pool_config.expire_timeout_slots + delay);
 
   // After the first buffer expired, buffer reservation shall not fail.
-  trx_buffer_identifier buffer_id2(0x1234, buffer_id0.get_harq() + 2);
+  trx_buffer_identifier buffer_id2(to_rnti(0x1234), buffer_id0.get_harq() + 2);
   ASSERT_TRUE(reserve_buffer_trial(pool->get_pool(), slot, buffer_id2, pool_config.nof_codeblocks, true));
 }
 
@@ -248,7 +248,7 @@ TEST(rx_buffer_pool, buffer_renew_expire)
   ASSERT_TRUE(pool);
 
   // Reserve buffer with all the codeblocks, it shall not fail.
-  trx_buffer_identifier buffer_id0(0x1234, 0x3);
+  trx_buffer_identifier buffer_id0(to_rnti(0x1234), 0x3);
   unique_rx_buffer      buffer = pool->get_pool().reserve(slot, buffer_id0, pool_config.nof_codeblocks, true);
   ASSERT_TRUE(buffer);
 
@@ -266,7 +266,7 @@ TEST(rx_buffer_pool, buffer_renew_expire)
   // Run for each slot until it expires.
   do {
     // Try to reserve another buffer. As there are no buffers available it shall fail.
-    trx_buffer_identifier buffer_id1(0x1234, buffer_id0.get_harq() + 1);
+    trx_buffer_identifier buffer_id1(to_rnti(0x1234), buffer_id0.get_harq() + 1);
     unique_rx_buffer      invalid_buffer = pool->get_pool().reserve(slot, buffer_id1, pool_config.nof_codeblocks, true);
     ASSERT_FALSE(invalid_buffer);
     ++slot;
@@ -274,7 +274,7 @@ TEST(rx_buffer_pool, buffer_renew_expire)
   } while (slot.system_slot() < pool_config.expire_timeout_slots + expire_timeout_slots);
 
   // After the first buffer expired, buffer reservation shall not fail.
-  trx_buffer_identifier buffer_id2(0x1234, buffer_id0.get_harq() + 2);
+  trx_buffer_identifier buffer_id2(to_rnti(0x1234), buffer_id0.get_harq() + 2);
   ASSERT_TRUE(pool->get_pool().reserve(slot, buffer_id2, pool_config.nof_codeblocks, true));
 }
 
@@ -299,7 +299,7 @@ TEST(rx_buffer_pool, buffer_resize)
   ASSERT_TRUE(pool);
 
   // Reserve buffer with max_nof_codeblocks - 1 codeblocks, it shall not fail.
-  trx_buffer_identifier buffer_id0(0x1234, 0x3);
+  trx_buffer_identifier buffer_id0(to_rnti(0x1234), 0x3);
   unique_rx_buffer      buffer = pool->get_pool().reserve(slot, buffer_id0, max_nof_codeblocks, true);
   ASSERT_TRUE(buffer);
 
@@ -345,7 +345,7 @@ TEST(rx_buffer_pool, buffer_resize_false_retransmission)
   ASSERT_TRUE(pool);
 
   // Reserve buffer with nof_codeblocks - 1 codeblocks, it shall not fail.
-  trx_buffer_identifier buffer_id0(0x1234, 0x3);
+  trx_buffer_identifier buffer_id0(to_rnti(0x1234), 0x3);
   unique_rx_buffer      buffer = pool->get_pool().reserve(slot, buffer_id0, nof_codeblocks, true);
   ASSERT_TRUE(buffer);
 
@@ -380,7 +380,7 @@ TEST(rx_buffer_pool, fresh_false_retransmission)
   ASSERT_TRUE(pool);
 
   // Reserve buffer as retransmission without a previous reservation, the buffer shall be invalid.
-  trx_buffer_identifier buffer_id0(0x1234, 0x3);
+  trx_buffer_identifier buffer_id0(to_rnti(0x1234), 0x3);
   unique_rx_buffer      buffer = pool->get_pool().reserve(slot, buffer_id0, nof_codeblocks, false);
   ASSERT_FALSE(buffer);
 }
@@ -409,7 +409,7 @@ TEST(rx_buffer_pool, buffer_contents)
   ASSERT_TRUE(pool);
 
   // Create as many buffers as the limit is set.
-  trx_buffer_identifier buffer_id(0x1234, 0x3);
+  trx_buffer_identifier buffer_id(to_rnti(0x1234), 0x3);
 
   // Temporal storage of buffer codeblock information.
   std::vector<span<log_likelihood_ratio>> cb_soft_bits;
@@ -498,7 +498,7 @@ TEST(rx_buffer_pool, reserve_after_stop)
 
   // Try to reserve a buffer.
   unique_rx_buffer buffer =
-      pool->get_pool().reserve(slot, trx_buffer_identifier(0, 0), pool_config.nof_codeblocks, true);
+      pool->get_pool().reserve(slot, trx_buffer_identifier(to_rnti(0), 0), pool_config.nof_codeblocks, true);
 
   // The buffer must be invalid.
   ASSERT_FALSE(buffer);
@@ -524,7 +524,7 @@ TEST(rx_buffer_pool, wait_to_stop)
 
   // Try to reserve a buffer.
   unique_rx_buffer buffer =
-      pool->get_pool().reserve(slot, trx_buffer_identifier(0, 0), pool_config.nof_codeblocks, true);
+      pool->get_pool().reserve(slot, trx_buffer_identifier(to_rnti(0), 0), pool_config.nof_codeblocks, true);
 
   // Create asynchronous task for unlocking the buffer.
   std::thread async_unlock([&buffer]() {
@@ -572,7 +572,7 @@ TEST(rx_buffer_pool, concurrent)
     for (unsigned i_buffer = 0; i_buffer != max_nof_buffers; ++i_buffer) {
       // Reserve buffer.
       unique_rx_buffer buffer =
-          pool->get_pool().reserve(slot, trx_buffer_identifier(0x1234, i_buffer), nof_cb_x_buffer, true);
+          pool->get_pool().reserve(slot, trx_buffer_identifier(to_rnti(0x1234), i_buffer), nof_cb_x_buffer, true);
 
       // The reservation should be successful for the first time.
       ASSERT_TRUE((i_repetition > 0) || buffer);

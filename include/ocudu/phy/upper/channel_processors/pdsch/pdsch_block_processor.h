@@ -5,7 +5,9 @@
 #pragma once
 
 #include "ocudu/phy/support/resource_grid_mapper.h"
-#include "ocudu/phy/upper/channel_processors/pdsch/pdsch_processor.h"
+#include "ocudu/ran/rnti.h"
+#include "ocudu/ran/sch/ldpc_base_graph.h"
+#include "ocudu/ran/sch/modulation_scheme.h"
 
 namespace ocudu {
 
@@ -24,7 +26,7 @@ public:
   /// PDSCH block processing parameters.
   struct configuration {
     /// Parameter \f$n_{RNTI}\f$ from TS38.211 Section 7.3.1.1 Scrambling.
-    uint16_t rnti;
+    rnti_t rnti;
     /// Modulation scheme.
     modulation_scheme modulation;
     /// Redundancy version index.

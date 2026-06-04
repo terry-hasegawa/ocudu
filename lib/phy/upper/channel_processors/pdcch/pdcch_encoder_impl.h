@@ -51,7 +51,7 @@ private:
   /// \param[in]  rnti  RNTI used for CRC bits scrambling
   ///
   /// \remark CRC attachment follows TS38.212 Section 7.3.2
-  void crc_attach(span<uint8_t>& c, span<const uint8_t> a, unsigned rnti);
+  void crc_attach(span<uint8_t>& c, span<const uint8_t> a, rnti_t rnti);
 
   /// \brief Payload encoding
   ///

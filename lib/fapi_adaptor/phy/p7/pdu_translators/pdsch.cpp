@@ -110,7 +110,7 @@ void ocudu::fapi_adaptor::convert_pdsch_fapi_to_phy(pdsch_processor::pdu_t&     
                                                     const precoding_matrix_repository& pm_repo)
 {
   proc_pdu.slot         = slot;
-  proc_pdu.rnti         = to_value(fapi_pdu.rnti);
+  proc_pdu.rnti         = fapi_pdu.rnti;
   proc_pdu.bwp_size_rb  = fapi_pdu.bwp.length();
   proc_pdu.bwp_start_rb = fapi_pdu.bwp.start();
   proc_pdu.cp           = fapi_pdu.cp;

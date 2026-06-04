@@ -4,15 +4,16 @@
 
 #pragma once
 
+#include "ocudu/ocudulog/logger.h"
 #include "ocudu/phy/support/precoding_formatters.h"
 #include "ocudu/phy/support/support_formatters.h"
 #include "ocudu/phy/upper/channel_processors/pdsch/formatters.h"
 
 namespace ocudu {
 
-inline bool is_broadcast_rnti(uint16_t rnti)
+inline bool is_broadcast_rnti(rnti_t rnti)
 {
-  return ((rnti < to_value(rnti_t::MIN_CRNTI)) || (rnti > to_value(rnti_t::MAX_CRNTI)));
+  return ((rnti < rnti_t::MIN_CRNTI) || (rnti > rnti_t::MAX_CRNTI));
 }
 
 class logging_pdsch_processor_decorator : public pdsch_processor, private pdsch_processor_notifier

@@ -466,7 +466,7 @@ static std::vector<test_case_type> generate_test_cases(const test_profile& profi
         pdsch_processor::pdu_t config = {
             .context                     = std::nullopt,
             .slot                        = slot_point(to_numerology_value(profile.scs), 0),
-            .rnti                        = 1,
+            .rnti                        = to_rnti(1),
             .bwp_size_rb                 = nof_prb,
             .bwp_start_rb                = 0,
             .cp                          = profile.cp,

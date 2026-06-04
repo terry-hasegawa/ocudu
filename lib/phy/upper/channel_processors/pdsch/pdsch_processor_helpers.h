@@ -78,7 +78,7 @@ pdsch_process_ptrs(resource_grid_writer& grid, ptrs_pdsch_generator& ptrs_genera
   // Prepare PT-RS configuration.
   ptrs_pdsch_generator::configuration ptrs_config;
   ptrs_config.slot                 = pdu.slot;
-  ptrs_config.rnti                 = to_rnti(pdu.rnti);
+  ptrs_config.rnti                 = pdu.rnti;
   ptrs_config.dmrs_type            = pdu.dmrs;
   ptrs_config.reference_point_k_rb = ptrs_reference_point_k_rb;
   ptrs_config.scrambling_id        = pdu.scrambling_id;
@@ -133,7 +133,7 @@ inline unsigned pdsch_compute_nof_data_re(const pdsch_processor::pdu_t& pdu)
 
     // Create PT-RS pattern configuration.
     ptrs_pattern_configuration ptrs_pattern_config = {
-        .rnti             = to_rnti(pdu.rnti),
+        .rnti             = pdu.rnti,
         .dmrs_type        = pdu.dmrs,
         .dmrs_symbol_mask = pdu.dmrs_symbol_mask,
         .rb_mask          = crb_mask,

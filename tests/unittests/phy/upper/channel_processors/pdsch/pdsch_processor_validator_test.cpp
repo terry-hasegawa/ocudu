@@ -8,6 +8,7 @@
 #include "ocudu/phy/upper/channel_processors/prach/formatters.h"
 #include "ocudu/ran/dmrs/dmrs.h"
 #include "ocudu/ran/precoding/precoding_codebooks.h"
+#include "ocudu/ran/rnti.h"
 #include "fmt/ostream.h"
 #include "gtest/gtest.h"
 #include <regex>
@@ -19,7 +20,7 @@ namespace {
 // Valid PDSCH configuration used as a base for the test cases.
 const pdsch_processor::pdu_t base_pdu = {.context          = std::nullopt,
                                          .slot             = {0, 19},
-                                         .rnti             = 1,
+                                         .rnti             = to_rnti(1),
                                          .bwp_size_rb      = 52,
                                          .bwp_start_rb     = 0,
                                          .cp               = cyclic_prefix::NORMAL,
@@ -29,7 +30,7 @@ const pdsch_processor::pdu_t base_pdu = {.context          = std::nullopt,
                                          .dmrs_symbol_mask = {0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0},
                                          .dmrs             = dmrs_config_type::type1,
                                          .scrambling_id    = 0,
-                                         .n_scid           = 0,
+                                         .n_scid           = false,
                                          .nof_cdm_groups_without_data = 1,
                                          .freq_alloc                  = rb_allocation::make_type1(0, 52),
                                          .start_symbol_index          = 2,
@@ -62,7 +63,7 @@ const std::vector<test_case_t> pdsch_processor_validator_test_data = {
      R"(Invalid BWP configuration, i\.e\., \[0, 276\) for the given RB allocation, i\.e\., \[0, 52\)\.)"},
     {[] {
        pdsch_processor::pdu_t pdu = base_pdu;
-       pdu.dmrs_symbol_mask       = {1};
+       pdu.dmrs_symbol_mask       = {true};
        return pdu;
      },
      R"(The DM-RS symbol mask size \(i\.e\., 1\) must be equal to the slot size \(i\.e\., 14\)\.)"},

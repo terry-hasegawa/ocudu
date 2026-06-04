@@ -8,6 +8,7 @@
 #include "ocudu/phy/upper/channel_coding/ldpc/ldpc_segmenter_buffer.h"
 #include "ocudu/phy/upper/channel_coding/ldpc/ldpc_segmenter_tx.h"
 #include "ocudu/phy/upper/channel_processors/pdsch/pdsch_block_processor.h"
+#include "ocudu/phy/upper/channel_processors/pdsch/pdsch_processor.h"
 #include "ocudu/phy/upper/signal_processors/pdsch/dmrs_pdsch_processor.h"
 #include "ocudu/phy/upper/signal_processors/ptrs/ptrs_pdsch_generator.h"
 #include "ocudu/support/executors/task_executor.h"

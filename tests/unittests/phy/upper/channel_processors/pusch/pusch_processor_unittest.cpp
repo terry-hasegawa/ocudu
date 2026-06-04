@@ -153,7 +153,7 @@ protected:
 
     // Generate PDU.
     pdu.slot                 = slot_point(numerology, slot_count_dist(rgen) % (10240 * nof_slots_per_subframe));
-    pdu.rnti                 = rnti_dist(rgen);
+    pdu.rnti                 = to_rnti(rnti_dist(rgen));
     pdu.bwp_start_rb         = bwp_start_dist(rgen);
     pdu.bwp_size_rb          = std::min(static_cast<unsigned>(MAX_NOF_PRBS) - pdu.bwp_start_rb, bwp_size_dist(rgen));
     pdu.cp                   = cyclic_prefix_conf;

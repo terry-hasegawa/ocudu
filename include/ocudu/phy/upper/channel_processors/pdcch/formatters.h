@@ -72,7 +72,7 @@ struct formatter<ocudu::pdcch_processor::pdu_t> {
   template <typename FormatContext>
   auto format(const ocudu::pdcch_processor::pdu_t& pdu, FormatContext& ctx) const
   {
-    helper.format_always(ctx, "rnti=0x{:04x}", pdu.dci.rnti);
+    helper.format_always(ctx, "rnti={}", pdu.dci.rnti);
     if (pdu.context.has_value()) {
       helper.format_always(ctx, *pdu.context);
     }

@@ -261,7 +261,7 @@ TEST_P(PxschChainFixture, Ideal)
 
     // Get RM buffer.
     unique_rx_buffer rx_buffer =
-        rx_bufffer_pool_ctrl->get_pool().reserve({}, trx_buffer_identifier(0, 0), info.sch.nof_cb, true);
+        rx_bufffer_pool_ctrl->get_pool().reserve({}, trx_buffer_identifier(to_rnti(0), 0), info.sch.nof_cb, true);
 
     // Encode data.
     encoder->encode(tx_encoded_bits, tx_data.get_buffer(), encoder_config);

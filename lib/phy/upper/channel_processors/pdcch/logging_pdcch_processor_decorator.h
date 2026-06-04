@@ -13,9 +13,9 @@
 
 namespace ocudu {
 
-inline bool is_broadcast_rnti(uint16_t rnti)
+inline bool is_broadcast_rnti(rnti_t rnti)
 {
-  return ((rnti < to_value(rnti_t::MIN_CRNTI)) || (rnti > to_value(rnti_t::MAX_CRNTI)));
+  return ((rnti < rnti_t::MIN_CRNTI) || (rnti > rnti_t::MAX_CRNTI));
 }
 
 template <typename Func>

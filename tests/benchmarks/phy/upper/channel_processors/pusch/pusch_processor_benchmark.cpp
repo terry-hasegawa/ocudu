@@ -374,7 +374,7 @@ static std::vector<test_case_type> generate_test_cases(const test_profile& profi
           // Build the PUSCH PDU configuration.
           pusch_processor::pdu_t config = {};
           config.slot                   = slot_point(to_numerology_value(profile.scs), 0);
-          config.rnti                   = 1;
+          config.rnti                   = to_rnti(1);
           config.bwp_size_rb            = nof_prb;
           config.bwp_start_rb           = 0;
           config.cp                     = profile.cp;

@@ -11,6 +11,7 @@
 #include "ocudu/phy/support/resource_grid_writer.h"
 #include "ocudu/ran/dmrs/dmrs.h"
 #include "ocudu/ran/resource_allocation/ofdm_symbol_range.h"
+#include "ocudu/ran/rnti.h"
 #include "ocudu/ran/sch/modulation_scheme.h"
 
 namespace ocudu {
@@ -29,7 +30,7 @@ public:
   /// Describes the necessary parameters to modulate a PDSCH transmission.
   struct config_t {
     /// Provides \f$n_{RNTI}\f$ from TS38.211 Section 7.3.1.1 Scrambling.
-    uint16_t rnti;
+    rnti_t rnti;
     /// \brief Bandwidth part location within the resource grid.
     ///
     /// The BWP start common resource block index is relative to Point A and must be in the range {0, ..., 274}. The BWP

@@ -85,7 +85,7 @@ protected:
       .tb_size = units::bytes(8),
       .pdu     = {.context       = std::nullopt,
                   .slot          = slot,
-                  .rnti          = 8323,
+                  .rnti          = to_rnti(8323),
                   .bwp_size_rb   = 25,
                   .bwp_start_rb  = 0,
                   .cp            = cyclic_prefix::NORMAL,

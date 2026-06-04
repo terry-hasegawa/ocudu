@@ -114,7 +114,7 @@ struct formatter<ocudu::pusch_processor::pdu_t> {
     if (pdu.context.has_value()) {
       helper.format_always(ctx, *pdu.context);
     } else {
-      helper.format_always(ctx, "rnti=0x{:04x}", pdu.rnti);
+      helper.format_always(ctx, "rnti={}", pdu.rnti);
     }
     helper.format_if_verbose(ctx, "bwp=[{}, {})", pdu.bwp_start_rb, pdu.bwp_start_rb + pdu.bwp_size_rb);
     helper.format_always(ctx, "prb={}", pdu.freq_alloc);

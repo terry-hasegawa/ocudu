@@ -419,7 +419,7 @@ int main(int argc, char** argv)
 
     // Reserve softbuffer.
     unique_rx_buffer softbuffer_hwacc =
-        pool_hwacc->get_pool().reserve({}, trx_buffer_identifier(0, 0), nof_codeblocks, true);
+        pool_hwacc->get_pool().reserve({}, trx_buffer_identifier(to_rnti(0), 0), nof_codeblocks, true);
     TESTASSERT(softbuffer_hwacc.is_valid());
 
     // Force all CRCs to false to test LLR combining.
@@ -460,7 +460,7 @@ int main(int argc, char** argv)
 
     // Reserve softbuffer.
     unique_rx_buffer softbuffer_gen =
-        pool_gen->get_pool().reserve({}, trx_buffer_identifier(0, 0), nof_codeblocks, true);
+        pool_gen->get_pool().reserve({}, trx_buffer_identifier(to_rnti(0), 0), nof_codeblocks, true);
     TESTASSERT(softbuffer_gen.is_valid());
 
     // Force all CRCs to false to test LLR combining.

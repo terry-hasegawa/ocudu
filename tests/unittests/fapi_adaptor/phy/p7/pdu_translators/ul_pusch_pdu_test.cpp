@@ -39,7 +39,7 @@ TEST(fapi_phy_ul_pusch_adaptor_test, valid_pdu_pass)
   ASSERT_EQ(slot, phy_pdu.slot);
   ASSERT_EQ(fapi_pdu.symbols.start(), phy_pdu.start_symbol_index);
   ASSERT_EQ(fapi_pdu.symbols.length(), phy_pdu.nof_symbols);
-  ASSERT_EQ(to_value(fapi_pdu.rnti), phy_pdu.rnti);
+  ASSERT_EQ(fapi_pdu.rnti, phy_pdu.rnti);
   ASSERT_EQ(fapi_pdu.bwp.start(), phy_pdu.bwp_start_rb);
   ASSERT_EQ(fapi_pdu.bwp.length(), phy_pdu.bwp_size_rb);
   ASSERT_EQ(fapi_pdu.cp, phy_pdu.cp);

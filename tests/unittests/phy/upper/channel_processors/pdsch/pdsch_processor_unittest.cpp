@@ -123,7 +123,7 @@ TEST_P(PdschProcessorFixture, UnitTest)
   // Prepare PDSCH PDU.
   pdsch_processor::pdu_t pdu;
   pdu.slot         = {0, 0};
-  pdu.rnti         = 0x1234;
+  pdu.rnti         = to_rnti(0x1234);
   pdu.bwp_size_rb  = 52;
   pdu.bwp_start_rb = 1;
   pdu.cp           = cp;

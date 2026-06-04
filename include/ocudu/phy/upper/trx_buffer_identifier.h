@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "ocudu/ran/rnti.h"
 #include <cstdint>
 #include <fmt/core.h>
 #include <limits>
@@ -22,7 +23,7 @@ class trx_buffer_identifier
   static constexpr id_type unknown_id = invalid_id - 1;
 
   /// Converts RNTI and HARQ identifiers to the internal identifier.
-  static constexpr uint32_t to_id(uint16_t rnti, uint8_t harq)
+  static constexpr uint32_t to_id(rnti_t rnti, uint8_t harq)
   {
     return (static_cast<id_type>(rnti) << 8U) | static_cast<id_type>(harq);
   }
@@ -41,7 +42,7 @@ public:
   explicit trx_buffer_identifier() noexcept : id(invalid_id) {}
 
   /// Constructor from RNTI and HARQ process identifier.
-  explicit constexpr trx_buffer_identifier(uint16_t rnti, uint8_t harq) noexcept : id(to_id(rnti, harq)) {}
+  explicit constexpr trx_buffer_identifier(rnti_t rnti, uint8_t harq) noexcept : id(to_id(rnti, harq)) {}
 
   /// Equal comparison to other identifier.
   constexpr bool operator==(const trx_buffer_identifier& other) const { return other.id == id; }

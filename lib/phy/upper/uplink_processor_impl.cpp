@@ -316,7 +316,7 @@ void uplink_processor_impl::process_pusch(const uplink_pdu_slot_repository::pusc
     // Assume that count_pusch_adaptors will not exceed MAX_PUSCH_PDUS_PER_SLOT.
     unsigned                         notifier_adaptor_id = count_pusch_adaptors.fetch_add(1, std::memory_order_acq_rel);
     pusch_processor_result_notifier& processor_notifier  = pusch_adaptors[notifier_adaptor_id].configure(
-        notifier, to_rnti(pdu.pdu.rnti), pdu.pdu.slot, to_harq_id(pdu.harq_id), data, pdu.pdu.n_rapid, [this]() {
+        notifier, pdu.pdu.rnti, pdu.pdu.slot, to_harq_id(pdu.harq_id), data, pdu.pdu.n_rapid, [this]() {
           state_machine.on_finish_processing_pdu();
         });
 
@@ -482,14 +482,14 @@ void uplink_processor_impl::notify_discard_pusch(const uplink_pdu_slot_repositor
   // Report data-related discarded result if shared channel data is present.
   if (pdu.pdu.codeword.has_value()) {
     ul_pusch_results_data discarded_results =
-        ul_pusch_results_data::create_discarded(to_rnti(pdu.pdu.rnti), pdu.pdu.slot, pdu.harq_id);
+        ul_pusch_results_data::create_discarded(pdu.pdu.rnti, pdu.pdu.slot, pdu.harq_id);
     notifier.on_new_pusch_results_data(discarded_results);
   }
 
   // Report control-related discarded result if HARQ-ACK feedback is present.
   if (pdu.pdu.uci.nof_harq_ack > 0) {
     ul_pusch_results_control discarded_results =
-        ul_pusch_results_control::create_discarded(to_rnti(pdu.pdu.rnti), pdu.pdu.slot, pdu.pdu.uci.nof_harq_ack);
+        ul_pusch_results_control::create_discarded(pdu.pdu.rnti, pdu.pdu.slot, pdu.pdu.uci.nof_harq_ack);
     notifier.on_new_pusch_results_control(discarded_results);
   }
 

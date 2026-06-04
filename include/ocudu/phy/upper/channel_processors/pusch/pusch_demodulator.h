@@ -9,6 +9,7 @@
 
 #include "ocudu/phy/upper/signal_processors/pusch/dmrs_pusch_estimator.h"
 #include "ocudu/ran/dmrs/dmrs.h"
+#include "ocudu/ran/rnti.h"
 #include "ocudu/ran/sch/modulation_scheme.h"
 
 namespace ocudu {
@@ -30,7 +31,7 @@ public:
   /// Parameters defining the demodulation procedure of a PUSCH transmission.
   struct configuration {
     /// Radio Network Temporary Identifier, see parameter \f$n_{RNTI}\f$ in TS38.211 Section 6.3.1.1.
-    uint16_t rnti;
+    rnti_t rnti;
     /// Allocation CRB list: the entries set to true are used for transmission.
     crb_bitmap rb_mask;
     /// Modulation scheme used for transmission.

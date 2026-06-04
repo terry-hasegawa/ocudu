@@ -22,7 +22,7 @@ const symbol_slot_mask dmrs_symbol_mask =
 /// Default valid PUSCH processor configuration.
 const pusch_processor::pdu_t base_pdu = {.context          = std::nullopt,
                                          .slot             = {0, 9},
-                                         .rnti             = 8323,
+                                         .rnti             = to_rnti(8323),
                                          .bwp_size_rb      = 25,
                                          .bwp_start_rb     = 0,
                                          .cp               = cyclic_prefix::NORMAL,

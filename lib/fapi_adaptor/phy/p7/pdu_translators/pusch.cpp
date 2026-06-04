@@ -85,7 +85,7 @@ void ocudu::fapi_adaptor::convert_pusch_fapi_to_phy(uplink_pdu_slot_repository::
   // Fill the PUSCH processor parameters.
   pusch_processor::pdu_t& proc_pdu    = pdu.pdu;
   proc_pdu.slot                       = slot;
-  proc_pdu.rnti                       = to_value(fapi_pdu.rnti);
+  proc_pdu.rnti                       = fapi_pdu.rnti;
   proc_pdu.bwp_start_rb               = fapi_pdu.bwp.start();
   proc_pdu.bwp_size_rb                = fapi_pdu.bwp.length();
   proc_pdu.cp                         = fapi_pdu.cp;

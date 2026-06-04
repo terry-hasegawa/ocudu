@@ -209,7 +209,7 @@ TEST(fapi_to_phy_pdsch_conversion_test, valid_pdu_conversion_success)
                     ASSERT_EQ(slot, proc_pdu.slot);
                     ASSERT_EQ(static_cast<unsigned>(cyclic_p), static_cast<unsigned>(proc_pdu.cp.value));
 
-                    ASSERT_EQ(to_value(rnti), proc_pdu.rnti);
+                    ASSERT_EQ(rnti, proc_pdu.rnti);
                     ASSERT_EQ(bwp_size, proc_pdu.bwp_size_rb);
                     ASSERT_EQ(bwp_start, proc_pdu.bwp_start_rb);
 
