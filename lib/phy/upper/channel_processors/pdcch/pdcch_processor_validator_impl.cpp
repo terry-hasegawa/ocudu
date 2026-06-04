@@ -40,17 +40,21 @@ error_type<std::string> pdcch_processor_validator_impl::is_valid(const pdcch_pro
     return make_unexpected(fmt::format("Invalid interleaver size (i.e., {}).", pdu.coreset.interleaver_size));
   }
 
-  if ((pdu.dci.aggregation_level != 1) && (pdu.dci.aggregation_level != 2) && (pdu.dci.aggregation_level != 4) &&
-      (pdu.dci.aggregation_level != 8) && (pdu.dci.aggregation_level != 16)) {
-    return make_unexpected(fmt::format("Invalid aggregation level (i.e., {}).", pdu.dci.aggregation_level));
+  if ((pdu.dci.dci_aggregation_level != aggregation_level::n1) &&
+      (pdu.dci.dci_aggregation_level != aggregation_level::n2) &&
+      (pdu.dci.dci_aggregation_level != aggregation_level::n4) &&
+      (pdu.dci.dci_aggregation_level != aggregation_level::n8) &&
+      (pdu.dci.dci_aggregation_level != aggregation_level::n16)) {
+    return make_unexpected(
+        fmt::format("Invalid aggregation level (i.e., {}).", to_nof_cces(pdu.dci.dci_aggregation_level)));
   }
 
   unsigned nof_coreset_cce = pdu.coreset.frequency_resources.count() * pdu.coreset.duration;
-  if (pdu.dci.cce_index + pdu.dci.aggregation_level > nof_coreset_cce) {
+  if (pdu.dci.cce_index + to_nof_cces(pdu.dci.dci_aggregation_level) > nof_coreset_cce) {
     return make_unexpected(fmt::format(
         "The CCE index (i.e., {}) plus the aggregation level (i.e., {}) exceeds CORESET capacity (i.e., {}).",
         pdu.dci.cce_index,
-        pdu.dci.aggregation_level,
+        to_nof_cces(pdu.dci.dci_aggregation_level),
         nof_coreset_cce));
   }
 

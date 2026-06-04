@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "ocudu/support/error_handling.h"
+#include <cstddef>
 #include <cstdint>
 
 namespace ocudu {

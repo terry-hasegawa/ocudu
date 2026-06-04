@@ -5,8 +5,6 @@
 #include "pdcch.h"
 #include "ocudu/fapi/p7/builders/dl_pdcch_pdu_builder.h"
 #include "ocudu/fapi_adaptor/precoding_matrix_table_generator.h"
-#include "ocudu/ocuduvec/bit.h"
-#include "ocudu/support/math/math_utils.h"
 #include <gtest/gtest.h>
 #include <random>
 
@@ -139,7 +137,7 @@ TEST(fapi_to_phy_pdcch_conversion_test, valid_pdu_conversion_success)
                   // Test DCI.
                   ASSERT_EQ(n_rnti, proc_pdu.dci.n_rnti);
                   ASSERT_EQ(cce, proc_pdu.dci.cce_index);
-                  ASSERT_EQ(to_nof_cces(aggregation), proc_pdu.dci.aggregation_level);
+                  ASSERT_EQ(aggregation, proc_pdu.dci.dci_aggregation_level);
                   ASSERT_EQ(nid_data, proc_pdu.dci.n_id_pdcch_data);
                   ASSERT_EQ(nid_dmrs, proc_pdu.dci.n_id_pdcch_dmrs);
 

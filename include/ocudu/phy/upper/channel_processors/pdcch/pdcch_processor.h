@@ -8,6 +8,7 @@
 #include "ocudu/adt/static_vector.h"
 #include "ocudu/phy/support/precoding_configuration.h"
 #include "ocudu/ran/cyclic_prefix.h"
+#include "ocudu/ran/pdcch/aggregation_level.h"
 #include "ocudu/ran/pdcch/coreset.h"
 #include "ocudu/ran/pdcch/pdcch_context.h"
 #include "ocudu/ran/slot_point.h"
@@ -44,7 +45,7 @@ public:
     /// CCE start index used to send the DCI {0, 135}.
     unsigned cce_index;
     /// Indicates the number of CCE used by the PDCCH transmission as per TS38.211 Section 7.3.2.1 {1, 2, 4, 8, 16}.
-    unsigned aggregation_level;
+    aggregation_level dci_aggregation_level;
     /// Ratio of PDCCH DM-RS EPRE to SSS EPRE in decibels.
     float dmrs_power_offset_dB;
     /// Ratio of PDCCH Data EPRE to SSS EPRE in decibels.

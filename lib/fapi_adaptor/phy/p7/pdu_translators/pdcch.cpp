@@ -17,12 +17,12 @@ static void fill_dci(pdcch_processor::pdu_t&            proc_pdu,
 
   pdcch_processor::dci_description& dci = proc_pdu.dci;
 
-  dci.rnti              = fapi_dci.rnti;
-  dci.n_id_pdcch_data   = fapi_dci.nid_pdcch_data;
-  dci.n_id_pdcch_dmrs   = fapi_dci.nid_pdcch_dmrs;
-  dci.n_rnti            = fapi_dci.nrnti_pdcch_data;
-  dci.cce_index         = fapi_dci.cce_index;
-  dci.aggregation_level = to_nof_cces(fapi_dci.dci_aggregation_level);
+  dci.rnti                  = fapi_dci.rnti;
+  dci.n_id_pdcch_data       = fapi_dci.nid_pdcch_data;
+  dci.n_id_pdcch_dmrs       = fapi_dci.nid_pdcch_dmrs;
+  dci.n_rnti                = fapi_dci.nrnti_pdcch_data;
+  dci.cce_index             = fapi_dci.cce_index;
+  dci.dci_aggregation_level = fapi_dci.dci_aggregation_level;
 
   if (const auto* profile_nr = std::get_if<fapi::dl_dci_pdu::power_profile_nr>(&fapi_dci.power_config)) {
     dci.dmrs_power_offset_dB = profile_nr->power_control_offset_ss_db;

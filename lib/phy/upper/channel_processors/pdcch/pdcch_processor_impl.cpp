@@ -32,12 +32,15 @@ crb_bitmap pdcch_processor_impl::compute_rb_mask(const coreset_description& core
                                                 coreset.bwp_size_rb,
                                                 coreset.duration,
                                                 coreset.shift_index,
-                                                dci.aggregation_level,
+                                                dci.dci_aggregation_level,
                                                 dci.cce_index);
       break;
     case cce_to_reg_mapping_type::NON_INTERLEAVED:
-      prb_indexes = cce_to_prb_mapping_non_interleaved(
-          coreset.bwp_start_rb, coreset.frequency_resources, coreset.duration, dci.aggregation_level, dci.cce_index);
+      prb_indexes = cce_to_prb_mapping_non_interleaved(coreset.bwp_start_rb,
+                                                       coreset.frequency_resources,
+                                                       coreset.duration,
+                                                       dci.dci_aggregation_level,
+                                                       dci.cce_index);
       break;
     case cce_to_reg_mapping_type::INTERLEAVED:
       prb_indexes = cce_to_prb_mapping_interleaved(coreset.bwp_start_rb,
@@ -46,7 +49,7 @@ crb_bitmap pdcch_processor_impl::compute_rb_mask(const coreset_description& core
                                                    coreset.reg_bundle_size,
                                                    coreset.interleaver_size,
                                                    coreset.shift_index,
-                                                   dci.aggregation_level,
+                                                   dci.dci_aggregation_level,
                                                    dci.cce_index);
       break;
   }
@@ -72,11 +75,11 @@ void pdcch_processor_impl::process(resource_grid_writer& grid, const pdcch_proce
 
   // Populate PDCCH encoder configuration.
   pdcch_encoder::config_t encoder_config;
-  encoder_config.E    = dci.aggregation_level * NOF_REG_PER_CCE * NOF_RE_PDCCH_PER_RB * 2;
+  encoder_config.E    = to_nof_cces(dci.dci_aggregation_level) * NOF_REG_PER_CCE * NOF_RE_PDCCH_PER_RB * 2;
   encoder_config.rnti = dci.rnti;
 
   // Encode.
-  span<uint8_t> encoded = span<uint8_t>(temp_encoded).first(nof_encoded_bits(dci.aggregation_level));
+  span<uint8_t> encoded = span<uint8_t>(temp_encoded).first(nof_encoded_bits(to_nof_cces(dci.dci_aggregation_level)));
   encoder->encode(encoded, dci.payload, encoder_config);
 
   // Populate PDCCH modulator configuration.

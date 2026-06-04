@@ -8,7 +8,6 @@
 #include "ocudu/phy/upper/channel_processors/prach/formatters.h"
 #include "ocudu/ran/dmrs/dmrs.h"
 #include "ocudu/ran/precoding/precoding_codebooks.h"
-#include "ocudu/ran/rnti.h"
 #include "fmt/ostream.h"
 #include "gtest/gtest.h"
 #include <regex>

@@ -80,7 +80,7 @@ struct formatter<ocudu::pdcch_processor::pdu_t> {
     helper.format_if_verbose(ctx, "cp={}", pdu.cp.to_string());
     helper.format_if_verbose(ctx, pdu.coreset);
     helper.format_always(ctx, "cce={}", pdu.dci.cce_index);
-    helper.format_always(ctx, "al={}", pdu.dci.aggregation_level);
+    helper.format_always(ctx, "al={}", ocudu::to_nof_cces(pdu.dci.dci_aggregation_level));
     helper.format_if_verbose(ctx, "size={}", pdu.dci.payload.size());
     helper.format_if_verbose(ctx, "n_id_dmrs={}", pdu.dci.n_id_pdcch_dmrs);
     helper.format_if_verbose(ctx, "n_id_data={}", pdu.dci.n_id_pdcch_data);

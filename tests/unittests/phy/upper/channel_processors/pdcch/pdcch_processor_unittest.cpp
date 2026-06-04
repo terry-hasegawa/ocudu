@@ -68,19 +68,21 @@ int main()
       for (unsigned start_symbol_index : {0, 1}) {
         for (unsigned duration : {1, 2, 3}) {
           for (cyclic_prefix cp : {cyclic_prefix::NORMAL, cyclic_prefix::EXTENDED}) {
-            for (unsigned aggregation_level : {1, 2, 4, 8, 16}) {
+            for (unsigned aggregation_level_index : {0, 1, 2, 3, 4}) {
               for (auto cce_to_reg_mapping : {pdcch_processor::cce_to_reg_mapping_type::CORESET0,
                                               pdcch_processor::cce_to_reg_mapping_type::NON_INTERLEAVED,
                                               pdcch_processor::cce_to_reg_mapping_type::INTERLEAVED}) {
+                aggregation_level dci_aggregation_level = aggregation_index_to_level(aggregation_level_index);
+
+                unsigned nof_cces = to_nof_cces(dci_aggregation_level);
                 // Skip if it cannot fit a candidate.
-                if (duration * (bwp_size_rb / 6) < aggregation_level) {
+                if (duration * (bwp_size_rb / 6) < nof_cces) {
                   continue;
                 }
 
                 unsigned numerology  = dist_numerology(rgen);
                 bool     is_coreset0 = (cce_to_reg_mapping == pdcch_processor::cce_to_reg_mapping_type::CORESET0);
-                unsigned E =
-                    aggregation_level * pdcch_constants::NOF_REG_PER_CCE * pdcch_constants::NOF_RE_PDCCH_PER_RB * 2;
+                unsigned E = nof_cces * pdcch_constants::NOF_REG_PER_CCE * pdcch_constants::NOF_RE_PDCCH_PER_RB * 2;
 
                 bounded_bitset<pdcch_constants::MAX_NOF_FREQ_RESOURCES, true> frequency_resources(
                     pdcch_constants::MAX_NOF_FREQ_RESOURCES);
@@ -106,7 +108,7 @@ int main()
                 dci.n_id_pdcch_data                   = dist_n_id(rgen);
                 dci.n_rnti                            = dist_n_id(rgen);
                 dci.cce_index                         = 0;
-                dci.aggregation_level                 = aggregation_level;
+                dci.dci_aggregation_level             = dci_aggregation_level;
                 dci.dmrs_power_offset_dB              = dist_power_offset(rgen);
                 dci.data_power_offset_dB              = dist_power_offset(rgen);
                 dci.payload.resize(dist_payload_sz(rgen));
