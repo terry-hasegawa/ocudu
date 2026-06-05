@@ -123,6 +123,9 @@ void inter_cu_conditional_handover_target_execution_routine::operator()(coro_con
   ue_context_mod_request.rrc_recfg_complete_ind = f1ap_rrc_recfg_complete_ind::true_value;
   CORO_AWAIT(f1ap.handle_ue_context_modification_request(ue_context_mod_request));
 
+  // Clear the CHO target role context; the UE is now the serving UE on this CU and may become a CHO source.
+  ue->get_cho_context().reset();
+
   CORO_RETURN();
 }
 
