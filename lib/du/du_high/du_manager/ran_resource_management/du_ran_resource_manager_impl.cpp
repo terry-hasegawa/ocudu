@@ -199,9 +199,6 @@ du_ran_resource_manager_impl::update_context(du_ue_index_t                      
     }
   }
 
-  // Update measGaps based on the UE measConfig.
-  meas_cfg_mng.update(ue_mcg, upd_req.meas_cfg);
-
   // > Process UE NR capabilities and update UE dedicated configuration only if test mode is not configured.
   if (not test_cfg.test_ue.has_value() or test_cfg.test_ue->rnti == rnti_t::INVALID_RNTI) {
     if (reestablished_ue_caps != nullptr) {
@@ -213,6 +210,11 @@ du_ran_resource_manager_impl::update_context(du_ue_index_t                      
       u.ue_cap_manager.update_from_ho_prep_info(upd_req.ho_prep_info);
     }
   }
+
+  // Update measGaps based on the UE measConfig and supportedGapPatterns UE capabilities.
+  meas_cfg_mng.update(
+      ue_mcg, upd_req.meas_cfg, u.ue_cap_manager.summary().has_value() ? &*u.ue_cap_manager.summary() : nullptr);
+
   if (u.ue_cap_manager.summary().has_value()) {
     pdsch_res_mng.update_resources(ue_mcg.cell_group, *u.ue_cap_manager.summary());
     pusch_res_mng.update_resources(ue_mcg.cell_group, *u.ue_cap_manager.summary());

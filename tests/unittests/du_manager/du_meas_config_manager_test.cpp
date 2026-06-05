@@ -17,6 +17,16 @@ namespace {
 using smtc_duration = ssb_mtc_s::dur_opts::options;
 using offset_range  = std::pair<uint8_t, uint8_t>;
 
+// Builds a supported_meas_gap_patterns marking the given Gap Pattern Ids as supported (0 and 1 are always added).
+supported_meas_gap_patterns make_supported_gap_patterns(std::initializer_list<unsigned> pattern_ids)
+{
+  supported_meas_gap_patterns patterns;
+  for (unsigned pattern_id : pattern_ids) {
+    patterns.mark_supported(pattern_id);
+  }
+  return patterns;
+}
+
 struct meas_gap_test_params {
   subcarrier_spacing         pcell_scs;
   ssb_periodicity            smtc_period;
@@ -82,7 +92,7 @@ TEST_P(du_meas_config_manager_create_meas_gap_test, gap_matches_expected_mgl_mgr
   for (uint8_t off = p.smtc_offsets.first; off < p.smtc_offsets.second; ++off) {
     SCOPED_TRACE(fmt::format("smtc_offset={}", off));
     const ssb_mtc_s       smtc = make_smtc(p.smtc_period, off, p.smtc_dur);
-    const meas_gap_config gap  = create_meas_gap(p.pcell_scs, smtc, {});
+    const meas_gap_config gap  = create_meas_gap(p.pcell_scs, smtc, {}, supported_meas_gap_patterns::all());
 
     EXPECT_EQ(gap.offset, off);
     EXPECT_EQ(gap.mgl, p.expected_mgl);
@@ -213,7 +223,7 @@ TEST_P(du_meas_config_manager_collision_test, gap_avoids_or_minimises_collisions
 {
   const auto&           p    = GetParam();
   const ssb_mtc_s       smtc = make_smtc(p.smtc_period, p.smtc_offset, p.smtc_dur);
-  const meas_gap_config gap  = create_meas_gap(p.pcell_scs, smtc, p.ul_occasions);
+  const meas_gap_config gap  = create_meas_gap(p.pcell_scs, smtc, p.ul_occasions, supported_meas_gap_patterns::all());
 
   EXPECT_EQ(gap.offset, p.expected.offset);
   EXPECT_EQ(gap.mgl, p.expected.mgl);
@@ -351,5 +361,65 @@ INSTANTIATE_TEST_SUITE_P(
                          {{40, 11}},
                          meas_gap_config{19, meas_gap_length::ms6, meas_gap_repetition_period::ms20}}),
     [](const ::testing::TestParamInfo<collision_params>& test_info) { return std::string{test_info.param.tag}; });
+
+// ---------- UE supported gap pattern restriction ----------
+
+struct gap_pattern_params {
+  const char*                 tag;
+  subcarrier_spacing          pcell_scs;
+  ssb_periodicity             smtc_period;
+  uint8_t                     smtc_offset;
+  smtc_duration               smtc_dur;
+  supported_meas_gap_patterns supported_patterns;
+  meas_gap_config             expected;
+};
+
+class du_meas_config_manager_gap_pattern_test : public ::testing::TestWithParam<gap_pattern_params>
+{};
+
+TEST_P(du_meas_config_manager_gap_pattern_test, gap_respects_supported_patterns)
+{
+  const auto&           p    = GetParam();
+  const ssb_mtc_s       smtc = make_smtc(p.smtc_period, p.smtc_offset, p.smtc_dur);
+  const meas_gap_config gap  = create_meas_gap(p.pcell_scs, smtc, {}, p.supported_patterns);
+
+  EXPECT_EQ(gap.offset, p.expected.offset);
+  EXPECT_EQ(gap.mgl, p.expected.mgl);
+  EXPECT_EQ(gap.mgrp, p.expected.mgrp);
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    supported_gap_patterns,
+    du_meas_config_manager_gap_pattern_test,
+    ::testing::Values(
+        // UE supports only the mandatory gap patterns 0 (MGL=6, MGRP=40) and 1 (MGL=6, MGRP=80). Although MGRP=20 would
+        // suffice for the SMTC period, pattern 4 (MGL=6, MGRP=20) is not supported, so the gap uses MGRP=40 instead.
+        gap_pattern_params{"unsupported_mgrp_is_skipped",
+                           subcarrier_spacing::kHz30,
+                           ssb_periodicity::ms20,
+                           0,
+                           smtc_duration::sf5,
+                           supported_meas_gap_patterns{}, // only the mandatory patterns 0 and 1
+                           meas_gap_config{0, meas_gap_length::ms6, meas_gap_repetition_period::ms40}},
+        // UE does not support the short MGL=1.5ms patterns (20, 21) that the SMTC duration would default to; only gap
+        // pattern 10 (MGL=3ms, MGRP=20ms) is supported, so the MGL is escalated from 1.5ms to 3ms.
+        gap_pattern_params{"mgl_escalated_when_default_unsupported",
+                           subcarrier_spacing::kHz30,
+                           ssb_periodicity::ms20,
+                           0,
+                           smtc_duration::sf1,
+                           make_supported_gap_patterns({10}), // pattern 10
+                           meas_gap_config{0, meas_gap_length::ms3, meas_gap_repetition_period::ms20}},
+        // Best-effort fallback: the SMTC period (160ms) requires MGRP>=160, but the UE only supports the mandatory gap
+        // patterns 0 (MGL=6, MGRP=40) and 1 (MGL=6, MGRP=80). The largest supported SMTC-enclosing pattern (pattern 1)
+        // is returned even though its MGRP is shorter than the SMTC period.
+        gap_pattern_params{"fallback_to_supported_pattern",
+                           subcarrier_spacing::kHz30,
+                           ssb_periodicity::ms160,
+                           0,
+                           smtc_duration::sf5,
+                           supported_meas_gap_patterns{}, // only the mandatory patterns 0 and 1
+                           meas_gap_config{0, meas_gap_length::ms6, meas_gap_repetition_period::ms80}}),
+    [](const ::testing::TestParamInfo<gap_pattern_params>& test_info) { return std::string{test_info.param.tag}; });
 
 } // namespace

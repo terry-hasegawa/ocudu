@@ -4,6 +4,7 @@
 
 #include "du_meas_config_manager.h"
 #include "du_ue_resource_config.h"
+#include "ue_capability_summary.h"
 #include "ocudu/asn1/rrc_nr/dl_dcch_msg_ies.h"
 #include "ocudu/ocudulog/ocudulog.h"
 #include "ocudu/ran/csi_rs/csi_meas_config.h"
@@ -105,23 +106,19 @@ bool meas_gap_collides(const meas_gap_config&          gap,
 
 } // namespace
 
-meas_gap_config
-odu::create_meas_gap(subcarrier_spacing scs, const ssb_mtc_s& smtc1, span<const periodic_uci_config> ul_occasions)
+meas_gap_config odu::create_meas_gap(subcarrier_spacing                 scs,
+                                     const ssb_mtc_s&                   smtc1,
+                                     span<const periodic_uci_config>    ul_occasions,
+                                     const supported_meas_gap_patterns& supported_patterns)
 {
-  const meas_gap_length mgl              = get_default_mgl(scs, smtc1.dur);
+  // Shortest MGL that still encloses the SMTC window. Longer MGLs are only used if no supported gap pattern is found
+  // with this one.
+  const meas_gap_length default_mgl      = get_default_mgl(scs, smtc1.dur);
   const auto            smtc_po          = extract_smtc_period_offset(smtc1);
   const unsigned        smtc_period_ms   = static_cast<unsigned>(smtc_po.first);
   const unsigned        smtc_offset_ms   = smtc_po.second;
   const unsigned        smtc_duration_ms = smtc1.dur.to_number();
   const unsigned        slots_per_ms     = get_nof_slots_per_subframe(scs);
-
-  // Maximum integer ms we can slide the measGap left of an SMTC start while still fully enclosing the
-  // SMTC window.
-  const int offset_slack_ms = static_cast<int>(meas_gap_length_to_msec(mgl)) - static_cast<int>(smtc_duration_ms);
-  ocudu_assert(offset_slack_ms >= 0,
-               "MGL must be >= SMTC duration (got MGL={}ms, SMTC duration={}ms)",
-               meas_gap_length_to_msec(mgl),
-               smtc_duration_ms);
 
   // Measurement Gap Repetition Period must be at least as long as the SMTC period and all UL occasion periods
   // to ensure that one MGRP contains at least one SSB, SR and periodic CSI occasion we have to align it with.
@@ -141,51 +138,99 @@ odu::create_meas_gap(subcarrier_spacing scs, const ssb_mtc_s& smtc1, span<const 
                                                                                 meas_gap_repetition_period::ms80,
                                                                                 meas_gap_repetition_period::ms160};
 
-  // Searches for a gap offset within MGRP that fully encloses some SMTC window and passes the
-  // collision check. Each SMTC repetition offers `offset_slack_ms + 1` candidate offsets — sliding
-  // the gap left by 0..slack ms keeps the SMTC fully inside the gap.
-  auto find_non_colliding_offset = [&](meas_gap_repetition_period mgrp,
-                                       collision_check            mode) -> std::optional<meas_gap_config> {
-    const unsigned mgrp_ms = static_cast<unsigned>(mgrp);
-    // All SSB repetitions in a given MGRP.
-    for (unsigned smtc_start_ms = smtc_offset_ms; smtc_start_ms < mgrp_ms; smtc_start_ms += smtc_period_ms) {
-      // All measGap offsets that still allow to fully catch the SSB.
-      for (int shift_ms = 0; shift_ms <= offset_slack_ms; ++shift_ms) {
-        const unsigned        gap_offset_ms = (smtc_start_ms + mgrp_ms - shift_ms) % mgrp_ms;
-        const meas_gap_config candidate{gap_offset_ms, mgl, mgrp};
-        if (!meas_gap_collides(candidate, scs, ul_occasions, mode)) {
-          return candidate;
+  // Returns true if a (MGL, MGRP) gap pattern can be considered: it must be long enough to fit the SMTC period and all
+  // UL occasions, and it must be one of the gap patterns supported by the UE (TS 38.133 Table 9.1.2-1).
+  auto is_eligible = [&](meas_gap_length mgl, meas_gap_repetition_period mgrp) {
+    return static_cast<unsigned>(mgrp) >= min_mgrp_ms and supported_patterns.is_supported(mgl, mgrp);
+  };
+
+  // Searches for a non-colliding gap config restricted to gap patterns using the given MGL.
+  auto find_for_mgl = [&](meas_gap_length mgl) -> std::optional<meas_gap_config> {
+    // Maximum integer ms we can slide the measGap left of an SMTC start while still fully enclosing the SMTC window.
+    const int offset_slack_ms = static_cast<int>(meas_gap_length_to_msec(mgl)) - static_cast<int>(smtc_duration_ms);
+    ocudu_assert(offset_slack_ms >= 0,
+                 "MGL must be >= SMTC duration (got MGL={}ms, SMTC duration={}ms)",
+                 meas_gap_length_to_msec(mgl),
+                 smtc_duration_ms);
+
+    // Searches for a gap offset within MGRP that fully encloses some SMTC window and passes the
+    // collision check. Each SMTC repetition offers `offset_slack_ms + 1` candidate offsets — sliding
+    // the gap left by 0..slack ms keeps the SMTC fully inside the gap.
+    auto find_non_colliding_offset = [&](meas_gap_repetition_period mgrp,
+                                         collision_check            mode) -> std::optional<meas_gap_config> {
+      const unsigned mgrp_ms = static_cast<unsigned>(mgrp);
+      // All SSB repetitions in a given MGRP.
+      for (unsigned smtc_start_ms = smtc_offset_ms; smtc_start_ms < mgrp_ms; smtc_start_ms += smtc_period_ms) {
+        // All measGap offsets that still allow to fully catch the SSB.
+        for (int shift_ms = 0; shift_ms <= offset_slack_ms; ++shift_ms) {
+          const unsigned        gap_offset_ms = (smtc_start_ms + mgrp_ms - shift_ms) % mgrp_ms;
+          const meas_gap_config candidate{gap_offset_ms, mgl, mgrp};
+          if (!meas_gap_collides(candidate, scs, ul_occasions, mode)) {
+            return candidate;
+          }
         }
       }
+      return std::nullopt;
+    };
+
+    // Search for strictly non-colliding measGap offset at the shortest eligible MGRP.
+    for (auto mgrp : mgrp_candidates) {
+      if (not is_eligible(mgl, mgrp)) {
+        continue;
+      }
+      if (auto candidate = find_non_colliding_offset(mgrp, collision_check::strict)) {
+        return candidate;
+      }
+      break;
     }
+
+    // Search for non-colliding measGap offset that allows all periodic UL occasions to have at least one non-colliding
+    // instance in a given MGRP.
+    for (auto mgrp : mgrp_candidates) {
+      if (not is_eligible(mgl, mgrp)) {
+        continue;
+      }
+      if (auto candidate = find_non_colliding_offset(mgrp, collision_check::loose)) {
+        return candidate;
+      }
+    }
+
     return std::nullopt;
   };
 
-  // Search for strictly non-colliding measGap offset for all possible MGRP values.
-  for (auto mgrp : mgrp_candidates) {
-    if (static_cast<unsigned>(mgrp) < min_mgrp_ms) {
-      continue;
-    }
-    if (auto candidate = find_non_colliding_offset(mgrp, collision_check::strict)) {
-      return *candidate;
-    }
-    break;
-  }
-
-  // Search for non-colliding measGap offset that allows all periodic UL occasions to have at least one non-colliding
-  // instance in a given MGRP.
-  for (auto mgrp : mgrp_candidates) {
-    if (static_cast<unsigned>(mgrp) < min_mgrp_ms) {
-      continue;
-    }
-    if (auto candidate = find_non_colliding_offset(mgrp, collision_check::loose)) {
+  // Prefer the shortest MGL that encloses the SMTC, escalating to longer (still SMTC-enclosing) MGLs only if no
+  // supported gap pattern can be found with the shorter one.
+  for (unsigned mgl_idx = static_cast<unsigned>(default_mgl); mgl_idx <= static_cast<unsigned>(meas_gap_length::ms6);
+       ++mgl_idx) {
+    if (auto candidate = find_for_mgl(static_cast<meas_gap_length>(mgl_idx))) {
       return *candidate;
     }
   }
 
-  // Best-effort fallback: largest MGRP with the offset equal to the SMTC offset.
-  // The gap will align with the SMTC but some UL occasions still collide.
-  return meas_gap_config{smtc_offset_ms, mgl, meas_gap_repetition_period::ms160};
+  // Best-effort fallback: pick the supported, SMTC-enclosing gap pattern with the largest MGRP (fewest gap occurrences,
+  // hence fewest collisions), aligned with the SMTC offset. The gap will align with the SMTC but some UL occasions may
+  // still collide.
+  std::optional<meas_gap_pattern> fallback;
+  for (unsigned mgl_idx = static_cast<unsigned>(default_mgl); mgl_idx <= static_cast<unsigned>(meas_gap_length::ms6);
+       ++mgl_idx) {
+    const auto mgl = static_cast<meas_gap_length>(mgl_idx);
+    for (auto mgrp : mgrp_candidates) {
+      if (not supported_patterns.is_supported(mgl, mgrp)) {
+        continue;
+      }
+      if (not fallback.has_value() or static_cast<unsigned>(mgrp) > static_cast<unsigned>(fallback->mgrp)) {
+        fallback = meas_gap_pattern{mgl, mgrp};
+      }
+    }
+  }
+  if (fallback.has_value()) {
+    const unsigned mgrp_ms = static_cast<unsigned>(fallback->mgrp);
+    return meas_gap_config{smtc_offset_ms % mgrp_ms, fallback->mgl, fallback->mgrp};
+  }
+
+  // The UE does not advertise support for any gap pattern that encloses the SMTC. Return a best-effort gap using the
+  // default MGL at the largest MGRP.
+  return meas_gap_config{smtc_offset_ms, default_mgl, meas_gap_repetition_period::ms160};
 }
 
 du_meas_config_manager::du_meas_config_manager(span<const du_cell_config> cell_cfg_list_) :
@@ -220,11 +265,16 @@ static std::vector<periodic_uci_config> collect_ul_occasions(const ue_cell_confi
   return out;
 }
 
-void du_meas_config_manager::update(du_ue_resource_config& ue_cfg, const byte_buffer& packed_meas_cfg)
+void du_meas_config_manager::update(du_ue_resource_config&       ue_cfg,
+                                    const byte_buffer&           packed_meas_cfg,
+                                    const ue_capability_summary* ue_caps)
 {
   if (packed_meas_cfg.empty()) {
     return;
   }
+
+  const supported_meas_gap_patterns supported_patterns =
+      ue_caps != nullptr ? ue_caps->supported_meas_gaps : supported_meas_gap_patterns{};
 
   meas_cfg_s meas_cfg;
   if (not unpack_meas_cfg(meas_cfg, packed_meas_cfg)) {
@@ -255,7 +305,7 @@ void du_meas_config_manager::update(du_ue_resource_config& ue_cfg, const byte_bu
       continue;
     }
 
-    ue_cfg.meas_gap =
-        create_meas_gap(pcell_common.ran.dl_cfg_common.init_dl_bwp.generic_params.scs, asn1nr.smtc1, ul_occasions);
+    ue_cfg.meas_gap = create_meas_gap(
+        pcell_common.ran.dl_cfg_common.init_dl_bwp.generic_params.scs, asn1nr.smtc1, ul_occasions, supported_patterns);
   }
 }
