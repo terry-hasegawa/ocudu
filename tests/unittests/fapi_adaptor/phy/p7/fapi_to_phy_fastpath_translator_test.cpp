@@ -4,15 +4,16 @@
 
 #include "../../../phy/support/resource_grid_test_doubles.h"
 #include "../../../phy/upper/downlink_processor_test_doubles.h"
-#include "../../../phy/upper/uplink_request_processor_test_doubles.h"
 #include "fapi_to_phy_fastpath_translator.h"
 #include "message_builder_helpers.h"
 #include "ocudu/fapi_adaptor/precoding_matrix_table_generator.h"
 #include "ocudu/fapi_adaptor/uci_part2_correspondence_generator.h"
+#include "ocudu/ocudulog/ocudulog.h"
 #include "ocudu/phy/support/resource_grid_pool.h"
 #include "ocudu/phy/upper/downlink_processor.h"
 #include "ocudu/phy/upper/uplink_pdu_slot_repository.h"
 #include "ocudu/phy/upper/uplink_pdu_validator.h"
+#include "ocudu/phy/upper/uplink_request_processor.h"
 #include "ocudu/support/executors/manual_task_worker.h"
 #include <gtest/gtest.h>
 

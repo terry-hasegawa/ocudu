@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "ocudu/ocudulog/ocudulog.h"
 #include "ocudu/phy/lower/lower_phy_error_notifier.h"
 #include "ocudu/phy/lower/lower_phy_metrics_notifier.h"
 #include "ocudu/phy/lower/lower_phy_rx_symbol_context.h"

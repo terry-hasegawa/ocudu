@@ -6,6 +6,7 @@
 #include "../../phy/support/resource_grid_test_doubles.h"
 #include "ocudu/phy/support/prach_buffer.h"
 #include "ocudu/phy/support/shared_prach_buffer.h"
+#include "ocudu/ran/cyclic_prefix.h"
 #include "ocudu/ran/prach/prach_format_type.h"
 #include "ocudu/ran/resource_block.h"
 #include "ocudu/support/memory_pool/bounded_object_pool.h"

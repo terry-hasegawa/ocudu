@@ -4,6 +4,7 @@
 #include "../../../../lib/ofh/receiver/ofh_data_flow_uplane_uplink_data_impl.h"
 #include "../ofh_uplane_rx_symbol_notifier_test_doubles.h"
 #include "helpers.h"
+#include "ocudu/ocudulog/ocudulog.h"
 #include <gtest/gtest.h>
 
 using namespace ocudu;

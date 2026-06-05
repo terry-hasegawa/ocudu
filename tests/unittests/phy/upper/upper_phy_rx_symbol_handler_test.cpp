@@ -2,11 +2,11 @@
 // SPDX-License-Identifier: BSD-3-Clause-Open-MPI
 // Portions of this file may implement 3GPP specifications, which may be subject to additional licensing requirements.
 
-#include "../../../lib/phy/upper/upper_phy_rx_results_notifier_wrapper.h"
 #include "../../../lib/phy/upper/upper_phy_rx_symbol_handler_impl.h"
 #include "../support/prach_buffer_test_doubles.h"
 #include "../support/resource_grid_test_doubles.h"
 #include "uplink_processor_test_doubles.h"
+#include "ocudu/ocudulog/ocudulog.h"
 #include "ocudu/phy/support/prach_buffer_context.h"
 #include "ocudu/phy/upper/upper_phy_factories.h"
 #include <gtest/gtest.h>

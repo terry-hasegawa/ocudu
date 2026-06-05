@@ -10,6 +10,7 @@
 #include "pusch_demodulator_test_doubles.h"
 #include "pusch_processor_result_test_doubles.h"
 #include "ulsch_demultiplex_test_doubles.h"
+#include "ocudu/ocudulog/ocudulog.h"
 #include "ocudu/ocuduvec/compare.h"
 #include "ocudu/phy/upper/channel_processors/pusch/factories.h"
 #include "ocudu/ran/pusch/ulsch_info.h"

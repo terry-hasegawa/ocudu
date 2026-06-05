@@ -7,6 +7,7 @@
 #include "../../../phy_test_utils.h"
 #include "ocudu/ocuduvec/copy.h"
 #include "ocudu/phy/upper/channel_processors/pdsch/factories.h"
+#include <random>
 
 namespace ocudu {
 

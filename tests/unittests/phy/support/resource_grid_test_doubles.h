@@ -5,25 +5,19 @@
 #pragma once
 
 #include "ocudu/adt/tensor.h"
-#include "ocudu/ocudulog/ocudulog.h"
-#include "ocudu/ocuduvec/copy.h"
 #include "ocudu/ocuduvec/fill.h"
 #include "ocudu/ocuduvec/zero.h"
 #include "ocudu/phy/support/resource_grid.h"
-#include "ocudu/phy/support/resource_grid_mapper.h"
 #include "ocudu/phy/support/resource_grid_reader.h"
 #include "ocudu/phy/support/resource_grid_writer.h"
 #include "ocudu/phy/support/shared_resource_grid.h"
-#include "ocudu/ran/cyclic_prefix.h"
 #include "ocudu/support/error_handling.h"
-#include "ocudu/support/file_vector.h"
 #include "ocudu/support/ocudu_assert.h"
 #include "ocudu/support/ocudu_test.h"
 #include "fmt/std.h"
+#include <algorithm>
 #include <complex>
 #include <map>
-#include <mutex>
-#include <random>
 #include <tuple>
 
 namespace ocudu {
@@ -340,15 +334,9 @@ public:
     unsigned current_max_port = max_ports;
     for (const expected_entry_t& e : entries_) {
       write(e);
-      if (e.subcarrier > current_max_sc) {
-        current_max_sc = e.subcarrier;
-      }
-      if (e.symbol > current_max_symb) {
-        current_max_symb = e.symbol;
-      }
-      if (e.port > current_max_port) {
-        current_max_port = e.port;
-      }
+      current_max_sc   = std::max<unsigned>(e.subcarrier, current_max_sc);
+      current_max_symb = std::max<unsigned>(e.symbol, current_max_symb);
+      current_max_port = std::max<unsigned>(e.port, current_max_port);
     }
     max_prb   = current_max_sc / NOF_SUBCARRIERS_PER_RB + 1;
     max_symb  = current_max_symb + 1;

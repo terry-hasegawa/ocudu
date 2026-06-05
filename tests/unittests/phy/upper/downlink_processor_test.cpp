@@ -11,6 +11,7 @@
 #include "signal_processors/nzp_csi_rs/nzp_csi_rs_generator_test_doubles.h"
 #include "signal_processors/prs/prs_generator_test_doubles.h"
 #include "upper_phy_rg_gateway_test_doubles.h"
+#include "ocudu/ocudulog/ocudulog.h"
 #include "ocudu/ran/precoding/precoding_codebooks.h"
 #include "ocudu/support/executors/manual_task_worker.h"
 #include "gtest/gtest.h"

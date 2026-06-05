@@ -3,7 +3,8 @@
 
 #include "../../../../lib/ofh/receiver/ofh_uplane_rx_symbol_data_flow_writer.h"
 #include "helpers.h"
-#include "ocudu/ofh/serdes/ofh_message_decoder_properties.h"
+#include "ocudu/ocudulog/ocudulog.h"
+#include "ocudu/ofh/serdes/ofh_uplane_message_decoder_properties.h"
 #include <gtest/gtest.h>
 
 using namespace ocudu;
