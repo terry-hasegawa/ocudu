@@ -490,6 +490,33 @@ TEST_F(cu_cp_ue_context_release_test, when_ue_context_release_command_received_t
   ASSERT_EQ(report.ues.size(), 0) << "UE should be removed";
 }
 
+TEST_F(cu_cp_ue_context_release_test,
+       when_ue_context_release_command_with_deregistration_cause_then_no_rrc_release_is_sent)
+{
+  // Attach UE.
+  ASSERT_TRUE(attach_ue());
+
+  report_fatal_error_if_not(not this->get_amf().try_pop_rx_pdu(ngap_pdu),
+                            "there are still NGAP messages to pop from AMF");
+  report_fatal_error_if_not(not this->get_du(du_idx).try_pop_dl_pdu(f1ap_pdu),
+                            "there are still F1AP DL messages to pop from DU");
+
+  // Inject NGAP UE Context Release Command with de-registration cause.
+  get_amf().push_tx_pdu(generate_valid_ue_context_release_command_with_deregistration_cause(ue_ctx->amf_ue_id.value()));
+  ASSERT_TRUE(this->wait_for_f1ap_tx_pdu(du_idx, f1ap_pdu)) << "Failed to receive F1AP UE Context Release Command";
+  ASSERT_TRUE(test_helpers::is_valid_ue_context_release_command(f1ap_pdu)) << "Invalid F1AP UE Context Release Command";
+
+  // Per TS 23.502, no RRC Release shall be sent for de-registration.
+  ASSERT_FALSE(f1ap_pdu.pdu.init_msg().value.ue_context_release_cmd()->rrc_container_present)
+      << "RRC Release must not be sent for de-registration cause";
+
+  // Inject F1AP UE Context Release Complete and await NGAP UE Context Release Complete.
+  ASSERT_TRUE(send_f1ap_ue_context_release_complete_and_await_ngap_ue_context_release_complete());
+
+  auto report = this->get_cu_cp().get_metrics_handler().request_metrics_report();
+  ASSERT_EQ(report.ues.size(), 0) << "UE should be removed";
+}
+
 //----------------------------------------------------------------------------------//
 // DU initiated release                                                             //
 //----------------------------------------------------------------------------------//
