@@ -253,6 +253,13 @@ expected<ue_capability_summary, std::string> odu::decode_ue_nr_cap_container(con
     ue_caps.long_drx_cycle_supported  = ue_cap.mac_params.mac_params_xdd_diff.long_drx_cycle_present;
     ue_caps.short_drx_cycle_supported = ue_cap.mac_params.mac_params_xdd_diff.short_drx_cycle_present;
   }
+  if (ue_cap.meas_and_mob_params_present and ue_cap.meas_and_mob_params.meas_and_mob_params_common_present) {
+    const auto& meas_common = ue_cap.meas_and_mob_params.meas_and_mob_params_common;
+    if (meas_common.supported_gap_pattern_present) {
+      ue_caps.supported_meas_gaps = supported_meas_gap_patterns{meas_common.supported_gap_pattern};
+    }
+    // The R16 gap patterns are ignored.
+  }
 
   // Convert advanced UE NR capabilities.
   if (auto err = decode_advanced_ue_nr_caps(ue_caps, ue_cap); not err.has_value()) {

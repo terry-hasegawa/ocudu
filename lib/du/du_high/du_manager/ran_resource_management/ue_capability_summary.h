@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "ocudu/ran/meas_gap_config.h"
 #include "ocudu/ran/nr_band.h"
 #include "ocudu/ran/pusch/tx_scheme_configuration.h"
 #include <cstdint>
@@ -87,6 +88,8 @@ struct ue_capability_summary {
   bool disabled_dl_harq_feedback_supported = false;
   /// Indicates whether the UE supports HARQ Mode B and the corresponding LCP restrictions for uplink transmission.
   bool ul_harq_mode_b_supported = false;
+  /// Measurement gap patterns supported by the UE, defaults to patterns 0 and 1 supported.
+  supported_meas_gap_patterns supported_meas_gaps;
 
   /// Equality operator.
   bool operator==(const ue_capability_summary& other) const
@@ -99,7 +102,8 @@ struct ue_capability_summary {
         (pdsch_interleaving_vrb_to_prb_supported != other.pdsch_interleaving_vrb_to_prb_supported) ||
         (ntn_supported != other.ntn_supported) ||
         (disabled_dl_harq_feedback_supported != other.disabled_dl_harq_feedback_supported) ||
-        (ul_harq_mode_b_supported != other.ul_harq_mode_b_supported)) {
+        (ul_harq_mode_b_supported != other.ul_harq_mode_b_supported) ||
+        (supported_meas_gaps != other.supported_meas_gaps)) {
       return false;
     }
     return true;

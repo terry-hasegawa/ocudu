@@ -4,8 +4,10 @@
 
 #pragma once
 
+#include "ocudu/adt/bounded_bitset.h"
 #include "ocudu/ran/slot_point.h"
 #include "ocudu/ran/subcarrier_spacing.h"
+#include <array>
 
 namespace ocudu {
 
@@ -37,6 +39,115 @@ inline float meas_gap_length_to_msec(meas_gap_length len)
   static constexpr std::array<float, 6> vals{1.5, 3, 3.5, 4, 5.5, 6};
   return vals[static_cast<unsigned>(len)];
 }
+
+struct meas_gap_pattern {
+  meas_gap_length            mgl;
+  meas_gap_repetition_period mgrp;
+};
+
+static constexpr unsigned nof_meas_gap_patterns = 24;
+
+/// Measurement gap pattern configurations as per TS 38.133, Table 9.1.2-1 - indexed by "Gap Pattern Id".
+/// The supportedGapPattern-r16 extension patterns 24 and 25 are ignored as those use MGL/MGRP values outside the
+/// current range of \ref meas_gap_length and \ref meas_gap_repetition_period enums.
+inline constexpr std::array<meas_gap_pattern, nof_meas_gap_patterns> meas_gap_pattern_list = {{
+    {meas_gap_length::ms6, meas_gap_repetition_period::ms40},
+    {meas_gap_length::ms6, meas_gap_repetition_period::ms80},
+    {meas_gap_length::ms3, meas_gap_repetition_period::ms40},
+    {meas_gap_length::ms3, meas_gap_repetition_period::ms80},
+    {meas_gap_length::ms6, meas_gap_repetition_period::ms20},
+    {meas_gap_length::ms6, meas_gap_repetition_period::ms160},
+    {meas_gap_length::ms4, meas_gap_repetition_period::ms20},
+    {meas_gap_length::ms4, meas_gap_repetition_period::ms40},
+    {meas_gap_length::ms4, meas_gap_repetition_period::ms80},
+    {meas_gap_length::ms4, meas_gap_repetition_period::ms160},
+    {meas_gap_length::ms3, meas_gap_repetition_period::ms20},
+    {meas_gap_length::ms3, meas_gap_repetition_period::ms160},
+    {meas_gap_length::ms5dot5, meas_gap_repetition_period::ms20},
+    {meas_gap_length::ms5dot5, meas_gap_repetition_period::ms40},
+    {meas_gap_length::ms5dot5, meas_gap_repetition_period::ms80},
+    {meas_gap_length::ms5dot5, meas_gap_repetition_period::ms160},
+    {meas_gap_length::ms3dot5, meas_gap_repetition_period::ms20},
+    {meas_gap_length::ms3dot5, meas_gap_repetition_period::ms40},
+    {meas_gap_length::ms3dot5, meas_gap_repetition_period::ms80},
+    {meas_gap_length::ms3dot5, meas_gap_repetition_period::ms160},
+    {meas_gap_length::ms1dot5, meas_gap_repetition_period::ms20},
+    {meas_gap_length::ms1dot5, meas_gap_repetition_period::ms40},
+    {meas_gap_length::ms1dot5, meas_gap_repetition_period::ms80},
+    {meas_gap_length::ms1dot5, meas_gap_repetition_period::ms160},
+}};
+
+/// \brief Set of measurement gap patterns supported by a UE, based on  \c supportedGapPattern UE capability
+/// (TS 38.306, 4.2.9 MeasAndMobParameters). Each bit maps to a Gap Pattern Id as defined in TS 38.133, Table 9.1.2-1.
+///  A default-constructed instance (used when no UE capability information is available) only assumes the always
+///  supported gap patterns of 0 and 1.
+class supported_meas_gap_patterns
+{
+public:
+  /// Bitset of gap pattern Ids (0..23), as per TS 38.133, Table 9.1.2-1.
+  using pattern_bitset = bounded_bitset<nof_meas_gap_patterns>;
+
+  /// Creates a set with only the default always supported gap patterns 0 and 1 marked as supported.
+  supported_meas_gap_patterns()
+  {
+    // Add always supported gap pattern 0 and 1.
+    supported.push_back(true);
+    supported.push_back(true);
+    // Set remaining gap patterns 2..23 default to unsupported.
+    supported.resize(nof_meas_gap_patterns);
+  }
+
+  /// \brief Creates a set from the \c supportedGapPattern ASN.1 bitstring.
+  /// Leading / leftmost bit (bit 0) of supportedGapPattern corresponds to the gap pattern 2, the next bit corresponds
+  /// to the gap pattern 3, and so on. The mandatory gap patterns 0 and 1 are always supported.
+  template <typename Asn1Bitstring>
+  explicit supported_meas_gap_patterns(const Asn1Bitstring& supported_gap_pattern)
+  {
+    ocudu_assert(supported_gap_pattern.length() == nof_meas_gap_patterns - 2,
+                 "Unexpected supportedGapPattern size (got {} bits, expected {})",
+                 supported_gap_pattern.length(),
+                 nof_meas_gap_patterns - 2);
+    // Add always supported gap pattern 0 and 1.
+    supported.push_back(true);
+    supported.push_back(true);
+    // Set remaining gap patterns 2..23.
+    supported.push_back(supported_gap_pattern.to_number(), supported_gap_pattern.length());
+  }
+
+  /// Returns a set where all gap patterns (0..23) are supported.
+  static supported_meas_gap_patterns all()
+  {
+    supported_meas_gap_patterns patterns;
+    patterns.supported.fill();
+    return patterns;
+  }
+
+  /// Marks the gap pattern with the given Gap Pattern Id (0..23) as supported.
+  void mark_supported(unsigned pattern_id) { supported.set(pattern_id); }
+
+  /// Returns true if the gap pattern with the given Gap Pattern Id (0..23) is supported.
+  bool is_supported(unsigned pattern_id) const { return supported.test(pattern_id); }
+
+  /// Returns true if a gap pattern with the given (MGL, MGRP) is supported.
+  bool is_supported(meas_gap_length mgl, meas_gap_repetition_period mgrp) const
+  {
+    for (unsigned i = 0; i != nof_meas_gap_patterns; ++i) {
+      if (meas_gap_pattern_list[i].mgl == mgl and meas_gap_pattern_list[i].mgrp == mgrp) {
+        return is_supported(i);
+      }
+    }
+    return false;
+  }
+
+  /// Returns the underlying bitset, where bit \c i flags support for Gap Pattern Id \c i.
+  const pattern_bitset& bits() const { return supported; }
+
+  bool operator==(const supported_meas_gap_patterns& other) const { return supported == other.supported; }
+  bool operator!=(const supported_meas_gap_patterns& other) const { return !(*this == other); }
+
+private:
+  pattern_bitset supported;
+};
 
 /// Determines whether a slot is inside the measurement gap.
 inline bool is_inside_meas_gap(const meas_gap_config& gap, slot_point sl)

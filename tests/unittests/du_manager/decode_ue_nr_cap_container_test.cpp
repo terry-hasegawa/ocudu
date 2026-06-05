@@ -63,6 +63,16 @@ TEST_P(decode_ue_nr_cap_container_tester, decode_and_compare_with_expected)
   ASSERT_EQ(caps, expected_caps);
 }
 
+// Builds a supported_meas_gap_patterns marking the given gap pattern Ids as supported (0 and 1 are always added).
+static supported_meas_gap_patterns make_supported_gap_patterns(std::initializer_list<unsigned> pattern_ids)
+{
+  supported_meas_gap_patterns patterns;
+  for (unsigned pattern_id : pattern_ids) {
+    patterns.mark_supported(pattern_id);
+  }
+  return patterns;
+}
+
 static constexpr ue_capability_summary::supported_band supported_band_no_ul_mimo = {
     .pusch_qam256_supported         = true,
     .pusch_tx_coherence             = tx_scheme_codebook_subset::non_coherent,
@@ -159,7 +169,10 @@ const auto test_cases = to_array<decode_ue_nr_cap_container_params>(
                                    .pdsch_interleaving_vrb_to_prb_supported = true,
                                    .ntn_supported                           = false,
                                    .disabled_dl_harq_feedback_supported     = false,
-                                   .ul_harq_mode_b_supported                = false}},
+                                   .ul_harq_mode_b_supported                = false,
+                                   // Supports gap patterns 0..11 (TS 38.133 Table 9.1.2-1); 0 and 1 are mandatory.
+                                   .supported_meas_gaps =
+                                       make_supported_gap_patterns({2, 3, 4, 5, 6, 7, 8, 9, 10, 11})}},
      {.model = "Motorola Edge 30 Pro",
       .message =
           {0xe1, 0xa2, 0x53, 0x80, 0x57, 0x4f, 0x7a, 0x03, 0x56, 0x08, 0x03, 0x04, 0x40, 0x0b, 0x04, 0x00, 0x40, 0x60,

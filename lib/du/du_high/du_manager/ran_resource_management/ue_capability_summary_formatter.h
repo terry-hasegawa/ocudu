@@ -73,6 +73,7 @@ struct formatter<ocudu::odu::ue_capability_summary> {
     helper.format_always(ctx, "ntn_supported={}", params.ntn_supported);
     helper.format_always(ctx, "disabled_dl_harq_feedback_supported={}", params.disabled_dl_harq_feedback_supported);
     helper.format_always(ctx, "ul_harq_mode_b_supported={}", params.ul_harq_mode_b_supported);
+    helper.format_always(ctx, "supported_gap_patterns={}", params.supported_meas_gaps.bits());
     return ctx.out();
   }
 };
