@@ -406,6 +406,13 @@ void du_processor_impl::handle_access_success(const f1ap_access_success& msg)
 
   cu_cp_ue* source_ue = ue_mng.find_du_ue(ind.source_ue_index);
   if (source_ue == nullptr) {
+    // For inter-CU CHO the source UE lives on a remote CU-CP; Access Success is not needed locally since
+    // the target execution routine awaits RRCReconfigurationComplete instead.
+    if (ind.source_ue_index == cu_cp_ue_index_t::invalid) {
+      logger.debug("ue={}: Ignoring Access Success notification. No local source UE (inter-CU CHO target)",
+                   msg.ue_index);
+      return;
+    }
     logger.warning("ue={}: Dropping Access Success notification. Source UE does not exist", msg.ue_index);
     return;
   }
