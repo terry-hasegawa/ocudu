@@ -410,10 +410,10 @@ INSTANTIATE_TEST_SUITE_P(
                            smtc_duration::sf1,
                            make_supported_gap_patterns({10}), // pattern 10
                            meas_gap_config{0, meas_gap_length::ms3, meas_gap_repetition_period::ms20}},
-        // Best-effort fallback: the SMTC period (160ms) requires MGRP>=160, but the UE only supports the mandatory gap
-        // patterns 0 (MGL=6, MGRP=40) and 1 (MGL=6, MGRP=80). The largest supported SMTC-enclosing pattern (pattern 1)
-        // is returned even though its MGRP is shorter than the SMTC period.
-        gap_pattern_params{"fallback_to_supported_pattern",
+        // Best-effort fallback: the SMTC period (160ms) requires MGRP>=160, but the UE supports no MGRP=160 pattern
+        // (only the mandatory patterns 0 and 1). The fallback returns the mandatory gap pattern 1 (MGL=6, MGRP=80),
+        // which is always supported and encloses the SMTC, even though its MGRP is shorter than the SMTC period.
+        gap_pattern_params{"fallback_to_mandatory_pattern",
                            subcarrier_spacing::kHz30,
                            ssb_periodicity::ms160,
                            0,

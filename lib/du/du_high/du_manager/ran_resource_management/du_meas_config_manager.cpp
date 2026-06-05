@@ -207,9 +207,9 @@ meas_gap_config odu::create_meas_gap(subcarrier_spacing                 scs,
     }
   }
 
-  // Best-effort fallback: pick the supported, SMTC-enclosing gap pattern with the largest MGRP (fewest gap occurrences,
-  // hence fewest collisions), aligned with the SMTC offset. The gap will align with the SMTC but some UL occasions may
-  // still collide.
+  // Best-effort fallback: no supported gap pattern could be placed without collisions while honoring the SMTC period.
+  // Pick the supported, SMTC-enclosing gap pattern with the largest MGRP (fewest gap occurrences, hence fewest
+  // collisions), aligned with the SMTC offset. Some UL occasions may still collide.
   std::optional<meas_gap_pattern> fallback;
   for (unsigned mgl_idx = static_cast<unsigned>(default_mgl); mgl_idx <= static_cast<unsigned>(meas_gap_length::ms6);
        ++mgl_idx) {
@@ -228,9 +228,10 @@ meas_gap_config odu::create_meas_gap(subcarrier_spacing                 scs,
     return meas_gap_config{smtc_offset_ms % mgrp_ms, fallback->mgl, fallback->mgrp};
   }
 
-  // The UE does not advertise support for any gap pattern that encloses the SMTC. Return a best-effort gap using the
-  // default MGL at the largest MGRP.
-  return meas_gap_config{smtc_offset_ms, default_mgl, meas_gap_repetition_period::ms160};
+  // No supported enclosing pattern was found (should not happen, since gap patterns 0 and 1 are always supported).
+  // Fall back to gap pattern 1 (MGL=6ms, MGRP=80ms), which is always supported and encloses any SMTC window.
+  static constexpr unsigned mandatory_mgrp_ms = static_cast<unsigned>(meas_gap_repetition_period::ms80);
+  return meas_gap_config{smtc_offset_ms % mandatory_mgrp_ms, meas_gap_length::ms6, meas_gap_repetition_period::ms80};
 }
 
 du_meas_config_manager::du_meas_config_manager(span<const du_cell_config> cell_cfg_list_) :
