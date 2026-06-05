@@ -3,18 +3,12 @@
 // Portions of this file may implement 3GPP specifications, which may be subject to additional licensing requirements.
 
 #include "rk4_propagator.h"
+#include "ntn_orbital_constants.h"
 #include "ocudu/support/ocudu_assert.h"
 #include <cmath>
 
 using namespace ocudu;
 using namespace ocudu_ntn;
-
-/// Earth's gravitational constant [m^3/s^2]
-static constexpr double MU_EARTH_M3_S2 = 3.986004418e14;
-/// Earth's radius in meters.
-static constexpr double EARTH_RADIUS_M = 6378137.0;
-/// Earth's J2 coefficient.
-static constexpr double J2 = 1.08262668e-3;
 
 rk4_propagator::rk4_propagator(std::chrono::duration<double> time_step_s) :
   ordinary_differential_equation(time_step_s.count())
