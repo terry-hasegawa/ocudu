@@ -15,6 +15,19 @@
 
 set -e
 
+# Return "name=version" if PKG_VERSIONS contains an entry for the given package name,
+# otherwise return the bare name. PKG_VERSIONS is a space-separated list of "name=version" pairs.
+_pkg_ver() {
+    local name="$1"
+    local pair
+    for pair in $PKG_VERSIONS; do
+        case "$pair" in
+            "${name}="*) echo "${pair}"; return ;;
+        esac
+    done
+    echo "$name"
+}
+
 install_dependencies_debian_ubuntu() {
     local mode="${1:?}"
     local -x DEBIAN_FRONTEND=noninteractive
@@ -22,14 +35,14 @@ install_dependencies_debian_ubuntu() {
     local ARCH=""
 
     local -a build_pkgs=(
-        cmake make gcc g++ pkg-config
-        libfftw3-dev libmbedtls-dev libsctp-dev libyaml-cpp-dev libgtest-dev
+        "$(_pkg_ver cmake)" "$(_pkg_ver make)" "$(_pkg_ver gcc)" "$(_pkg_ver g++)" "$(_pkg_ver pkg-config)"
+        "$(_pkg_ver libfftw3-dev)" "$(_pkg_ver libmbedtls-dev)" "$(_pkg_ver libsctp-dev)" "$(_pkg_ver libyaml-cpp-dev)" "$(_pkg_ver libgtest-dev)"
     )
     local -a run_pkgs=(
-        libfftw3-dev libmbedtls-dev libsctp-dev libyaml-cpp-dev libgtest-dev libcap2-bin
+        "$(_pkg_ver libfftw3-dev)" "$(_pkg_ver libmbedtls-dev)" "$(_pkg_ver libsctp-dev)" "$(_pkg_ver libyaml-cpp-dev)" "$(_pkg_ver libgtest-dev)" "$(_pkg_ver libcap2-bin)"
     )
     local -a extra_pkgs=(
-        libzmq3-dev libuhd-dev uhd-host libboost-program-options-dev libdpdk-dev libelf-dev libdwarf-dev libdw-dev capnproto libcapnp-dev
+        "$(_pkg_ver libzmq3-dev)" "$(_pkg_ver libuhd-dev)" "$(_pkg_ver uhd-host)" "$(_pkg_ver libboost-program-options-dev)" "$(_pkg_ver libdpdk-dev)" "$(_pkg_ver libelf-dev)" "$(_pkg_ver libdwarf-dev)" "$(_pkg_ver libdw-dev)" "$(_pkg_ver capnproto)" "$(_pkg_ver libcapnp-dev)"
     )
 
     case "$mode" in
@@ -98,14 +111,14 @@ install_dependencies_fedora() {
     local -a pkgs=()
 
     local -a build_pkgs=(
-        cmake make libatomic fftw-devel lksctp-tools-devel yaml-cpp-devel mbedtls-devel gtest-devel
+        "$(_pkg_ver cmake)" "$(_pkg_ver make)" "$(_pkg_ver libatomic)" "$(_pkg_ver fftw-devel)" "$(_pkg_ver lksctp-tools-devel)" "$(_pkg_ver yaml-cpp-devel)" "$(_pkg_ver mbedtls-devel)" "$(_pkg_ver gtest-devel)"
     )
     local -a run_pkgs=(
-        fftw-libs-single lksctp-tools yaml-cpp mbedtls
+        "$(_pkg_ver fftw-libs-single)" "$(_pkg_ver lksctp-tools)" "$(_pkg_ver yaml-cpp)" "$(_pkg_ver mbedtls)"
     )
     local -a extra_pkgs=(
-	boost-devel capnproto capnproto-devel cppzmq-devel dpdk-devel elfutils-devel elfutils-libelf-devel 
-	libdwarf-devel libusb1-devel numactl-devel zeromq-devel 
+        "$(_pkg_ver boost-devel)" "$(_pkg_ver capnproto)" "$(_pkg_ver capnproto-devel)" "$(_pkg_ver cppzmq-devel)" "$(_pkg_ver dpdk-devel)" "$(_pkg_ver elfutils-devel)" "$(_pkg_ver elfutils-libelf-devel)"
+        "$(_pkg_ver libdwarf-devel)" "$(_pkg_ver libusb1-devel)" "$(_pkg_ver numactl-devel)" "$(_pkg_ver zeromq-devel)"
     )
 
     case "$mode" in
@@ -139,13 +152,13 @@ install_dependencies_arch() {
     local -a pkgs=()
 
     local -a build_pkgs=(
-        cmake fftw mbedtls yaml-cpp lksctp-tools gtest pkgconf
+        "$(_pkg_ver cmake)" "$(_pkg_ver fftw)" "$(_pkg_ver mbedtls)" "$(_pkg_ver yaml-cpp)" "$(_pkg_ver lksctp-tools)" "$(_pkg_ver gtest)" "$(_pkg_ver pkgconf)"
     )
     local -a run_pkgs=(
-        fftw mbedtls yaml-cpp lksctp-tools gtest libcap
+        "$(_pkg_ver fftw)" "$(_pkg_ver mbedtls)" "$(_pkg_ver yaml-cpp)" "$(_pkg_ver lksctp-tools)" "$(_pkg_ver gtest)" "$(_pkg_ver libcap)"
     )
     local -a extra_pkgs=(
-        zeromq libuhd boost dpdk libelf libdwarf elfutils capnproto
+        "$(_pkg_ver zeromq)" "$(_pkg_ver libuhd)" "$(_pkg_ver boost)" "$(_pkg_ver dpdk)" "$(_pkg_ver libelf)" "$(_pkg_ver libdwarf)" "$(_pkg_ver elfutils)" "$(_pkg_ver capnproto)"
     )
 
     case "$mode" in
@@ -179,14 +192,14 @@ install_dependencies_rhel() {
     local -a pkgs=()
 
     local -a build_pkgs=(
-        cmake which fftw-devel lksctp-tools-devel yaml-cpp-devel mbedtls-devel
-        gcc-toolset-11 gcc-toolset-11-gcc-c++ gcc-toolset-12-libatomic-devel
+        "$(_pkg_ver cmake)" "$(_pkg_ver which)" "$(_pkg_ver fftw-devel)" "$(_pkg_ver lksctp-tools-devel)" "$(_pkg_ver yaml-cpp-devel)" "$(_pkg_ver mbedtls-devel)"
+        "$(_pkg_ver gcc-toolset-11)" "$(_pkg_ver gcc-toolset-11-gcc-c++)" "$(_pkg_ver gcc-toolset-12-libatomic-devel)"
     )
     local -a run_pkgs=(
-        fftw-devel lksctp-tools-devel yaml-cpp-devel mbedtls-devel gcc-toolset-12-libatomic-devel libcap
+        "$(_pkg_ver fftw-devel)" "$(_pkg_ver lksctp-tools-devel)" "$(_pkg_ver yaml-cpp-devel)" "$(_pkg_ver mbedtls-devel)" "$(_pkg_ver gcc-toolset-12-libatomic-devel)" "$(_pkg_ver libcap)"
     )
     local -a extra_pkgs=(
-        cppzmq-devel libusb1-devel boost-devel numactl-devel capnproto capnproto-devel
+        "$(_pkg_ver cppzmq-devel)" "$(_pkg_ver libusb1-devel)" "$(_pkg_ver boost-devel)" "$(_pkg_ver numactl-devel)" "$(_pkg_ver capnproto)" "$(_pkg_ver capnproto-devel)"
     )
 
     case "$mode" in

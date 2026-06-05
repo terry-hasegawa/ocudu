@@ -15,6 +15,7 @@ variables:
     VERSION: ""
     BUILD_ARGS: "" # ; separated
     BUILD_SECRETS: "" # ; separated, format id=secret_name,src=secret_file
+    DOCKER_TARGET: "" # Dockerfile stage to build; empty means last stage
     MODE: "build"
     MULTI_ARCH_BUILD: ""
     PLATFORM_OS: "linux"
@@ -89,6 +90,9 @@ variables:
 
     # Build & publish
     - |
+      TARGET_OPT=""
+      [ -n "${DOCKER_TARGET}" ] && TARGET_OPT="--opt target=${DOCKER_TARGET}"
+    - |
       sh -c "buildctl-daemonless.sh build \
         --progress=plain \
         --opt platform=${PLATFORM_OS}/${PLATFORM} \
@@ -96,6 +100,7 @@ variables:
         --local context="${CONTEXT}" \
         --local dockerfile=${DOCKERFILE} \
         ${BUILD_ARGS} \
+        ${TARGET_OPT} \
         --output ${OUTPUT}"
 
     # Attestation functions

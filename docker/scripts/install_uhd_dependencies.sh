@@ -5,24 +5,37 @@
 
 set -e
 
+# Return "name=version" if PKG_VERSIONS contains an entry for the given package name,
+# otherwise return the bare name. PKG_VERSIONS is a space-separated list of "name=version" pairs.
+_pkg_ver() {
+    local name="$1"
+    local pair
+    for pair in $PKG_VERSIONS; do
+        case "$pair" in
+            "${name}="*) echo "${pair}"; return ;;
+        esac
+    done
+    echo "$name"
+}
+
 install_uhd_dependencies_debian_ubuntu() {
     local mode="${1:?}"
     local -x DEBIAN_FRONTEND=noninteractive
     local -a pkgs=()
 
     local -a build_pkgs=(
-        curl apt-transport-https ca-certificates xz-utils
-        cmake build-essential pkg-config
-        libboost-all-dev libusb-1.0-0-dev
-        python3-mako python3-numpy python3-setuptools python3-requests
+        "$(_pkg_ver curl)" "$(_pkg_ver apt-transport-https)" "$(_pkg_ver ca-certificates)" "$(_pkg_ver xz-utils)"
+        "$(_pkg_ver cmake)" "$(_pkg_ver build-essential)" "$(_pkg_ver pkg-config)"
+        "$(_pkg_ver libboost-all-dev)" "$(_pkg_ver libusb-1.0-0-dev)"
+        "$(_pkg_ver python3-mako)" "$(_pkg_ver python3-numpy)" "$(_pkg_ver python3-setuptools)" "$(_pkg_ver python3-requests)"
     )
     local -a run_pkgs=(
-        inetutils-tools libboost-all-dev libncurses5-dev libusb-1.0-0 libusb-1.0-0-dev
-        libusb-dev python3-dev python3-requests
+        "$(_pkg_ver inetutils-tools)" "$(_pkg_ver libboost-all-dev)" "$(_pkg_ver libncurses5-dev)" "$(_pkg_ver libusb-1.0-0)" "$(_pkg_ver libusb-1.0-0-dev)"
+        "$(_pkg_ver libusb-dev)" "$(_pkg_ver python3-dev)" "$(_pkg_ver python3-requests)"
     )
     local -a extra_pkgs=(
-        inetutils-tools libncurses5-dev libusb-1.0-0 libusb-1.0-0-dev
-        libusb-dev python3-dev
+        "$(_pkg_ver inetutils-tools)" "$(_pkg_ver libncurses5-dev)" "$(_pkg_ver libusb-1.0-0)" "$(_pkg_ver libusb-1.0-0-dev)"
+        "$(_pkg_ver libusb-dev)" "$(_pkg_ver python3-dev)"
     )
     local -a optional_pkgs=()
 
@@ -65,16 +78,16 @@ install_uhd_dependencies_arch() {
     local -a pkgs=()
 
     local -a build_pkgs=(
-        curl ca-certificates xz
-        cmake base-devel pkgconf
-        boost boost-libs libusb
-        python-mako python-numpy python-setuptools python-requests
+        "$(_pkg_ver curl)" "$(_pkg_ver ca-certificates)" "$(_pkg_ver xz)"
+        "$(_pkg_ver cmake)" "$(_pkg_ver base-devel)" "$(_pkg_ver pkgconf)"
+        "$(_pkg_ver boost)" "$(_pkg_ver boost-libs)" "$(_pkg_ver libusb)"
+        "$(_pkg_ver python-mako)" "$(_pkg_ver python-numpy)" "$(_pkg_ver python-setuptools)" "$(_pkg_ver python-requests)"
     )
     local -a run_pkgs=(
-        boost boost-libs libusb python python-requests
+        "$(_pkg_ver boost)" "$(_pkg_ver boost-libs)" "$(_pkg_ver libusb)" "$(_pkg_ver python)" "$(_pkg_ver python-requests)"
     )
     local -a extra_pkgs=(
-        boost boost-libs libusb python
+        "$(_pkg_ver boost)" "$(_pkg_ver boost-libs)" "$(_pkg_ver libusb)" "$(_pkg_ver python)"
     )
 
     case "$mode" in
@@ -108,16 +121,16 @@ install_uhd_dependencies_fedora() {
     local -a pkgs=()
 
     local -a build_pkgs=(
-        curl ca-certificates xz cmake make boost-devel libusb1-devel
-        python3-mako python3-numpy python3-setuptools python3-requests
+        "$(_pkg_ver curl)" "$(_pkg_ver ca-certificates)" "$(_pkg_ver xz)" "$(_pkg_ver cmake)" "$(_pkg_ver make)" "$(_pkg_ver boost-devel)" "$(_pkg_ver libusb1-devel)"
+        "$(_pkg_ver python3-mako)" "$(_pkg_ver python3-numpy)" "$(_pkg_ver python3-setuptools)" "$(_pkg_ver python3-requests)"
     )
     local -a run_pkgs=(
-        boost-atomic boost-chrono boost-container boost-date-time
-        boost-filesystem boost-serialization boost-thread
-        libusb1 python3-requests
+        "$(_pkg_ver boost-atomic)" "$(_pkg_ver boost-chrono)" "$(_pkg_ver boost-container)" "$(_pkg_ver boost-date-time)"
+        "$(_pkg_ver boost-filesystem)" "$(_pkg_ver boost-serialization)" "$(_pkg_ver boost-thread)"
+        "$(_pkg_ver libusb1)" "$(_pkg_ver python3-requests)"
     )
     local -a extra_pkgs=(
-        kernel-tools iputils ncurses-devel libusb1-devel python3-devel
+        "$(_pkg_ver kernel-tools)" "$(_pkg_ver iputils)" "$(_pkg_ver ncurses-devel)" "$(_pkg_ver libusb1-devel)" "$(_pkg_ver python3-devel)"
     )
 
     case "$mode" in

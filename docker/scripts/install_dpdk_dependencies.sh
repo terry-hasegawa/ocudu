@@ -5,6 +5,32 @@
 
 set -e
 
+# Return "name=version" if PKG_VERSIONS contains an entry for the given package name,
+# otherwise return the bare name. PKG_VERSIONS is a space-separated list of "name=version" pairs.
+_pkg_ver() {
+    local name="$1"
+    local pair
+    for pair in $PKG_VERSIONS; do
+        case "$pair" in
+            "${name}="*) echo "${pair}"; return ;;
+        esac
+    done
+    echo "$name"
+}
+
+# Return "name==version" if PKG_VERSIONS contains an entry for the given pip package name,
+# otherwise return the bare name. Uses pip's == version pin syntax.
+_pip_ver() {
+    local name="$1"
+    local pair
+    for pair in $PKG_VERSIONS; do
+        case "$pair" in
+            "${name}="*) echo "${name}==${pair#*=}"; return ;;
+        esac
+    done
+    echo "$name"
+}
+
 install_dpdk_dependencies_debian_ubuntu() {
     local mode="${1:?}"
     local -x DEBIAN_FRONTEND=noninteractive
@@ -12,17 +38,17 @@ install_dpdk_dependencies_debian_ubuntu() {
     local -a pip_pkgs=()
 
     local -a build_pkgs=(
-        curl apt-transport-https ca-certificates xz-utils
-        python3-pip ninja-build g++ build-essential pkg-config libnuma-dev libfdt-dev pciutils
+        "$(_pkg_ver curl)" "$(_pkg_ver apt-transport-https)" "$(_pkg_ver ca-certificates)" "$(_pkg_ver xz-utils)"
+        "$(_pkg_ver python3-pip)" "$(_pkg_ver ninja-build)" "$(_pkg_ver g++)" "$(_pkg_ver build-essential)" "$(_pkg_ver pkg-config)" "$(_pkg_ver libnuma-dev)" "$(_pkg_ver libfdt-dev)" "$(_pkg_ver pciutils)"
     )
     local -a extra_pkgs=(
-        libatomic1 iproute2
+        "$(_pkg_ver libatomic1)" "$(_pkg_ver iproute2)"
     )
     local -a run_pkgs=(
-        python3-pip libnuma-dev pciutils libfdt-dev libatomic1 iproute2
+        "$(_pkg_ver python3-pip)" "$(_pkg_ver libnuma-dev)" "$(_pkg_ver pciutils)" "$(_pkg_ver libfdt-dev)" "$(_pkg_ver libatomic1)" "$(_pkg_ver iproute2)"
     )
-    local -a pip_build_pkgs=(meson pyelftools)
-    local -a pip_run_pkgs=(pyelftools)
+    local -a pip_build_pkgs=("$(_pip_ver meson)" "$(_pip_ver pyelftools)")
+    local -a pip_run_pkgs=("$(_pip_ver pyelftools)")
 
     case "$mode" in
         all)
@@ -60,14 +86,15 @@ install_dpdk_dependencies_fedora() {
     local -a pip_pkgs=()
 
     local -a build_pkgs=(
-        curl ca-certificates xz ninja-build make numactl-devel libfdt-devel pciutils python3-pyelftools meson
+        "$(_pkg_ver curl)" "$(_pkg_ver ca-certificates)" "$(_pkg_ver xz)" "$(_pkg_ver ninja-build)" "$(_pkg_ver make)" "$(_pkg_ver numactl-devel)" "$(_pkg_ver libfdt-devel)" "$(_pkg_ver pciutils)" "$(_pkg_ver python3-pyelftools)" "$(_pkg_ver meson)"
     )
     local -a extra_pkgs=(
-        libatomic iproute
+        "$(_pkg_ver libatomic)" "$(_pkg_ver iproute)"
     )
     local -a run_pkgs=(
-        numactl-libs pciutils libfdt libatomic iproute
+        "$(_pkg_ver numactl-libs)" "$(_pkg_ver pciutils)" "$(_pkg_ver libfdt)" "$(_pkg_ver libatomic)" "$(_pkg_ver iproute)"
     )
+    local -a pip_build_pkgs=()
     local -a pip_run_pkgs=()
 
     case "$mode" in
@@ -102,17 +129,17 @@ install_dpdk_dependencies_arch() {
     local -a pip_pkgs=()
 
     local -a build_pkgs=(
-        curl ca-certificates xz
-        python-pip ninja base-devel pkgconf numactl dtc pciutils
+        "$(_pkg_ver curl)" "$(_pkg_ver ca-certificates)" "$(_pkg_ver xz)"
+        "$(_pkg_ver python-pip)" "$(_pkg_ver ninja)" "$(_pkg_ver base-devel)" "$(_pkg_ver pkgconf)" "$(_pkg_ver numactl)" "$(_pkg_ver dtc)" "$(_pkg_ver pciutils)"
     )
     local -a extra_pkgs=(
-        iproute2
+        "$(_pkg_ver iproute2)"
     )
     local -a run_pkgs=(
-        python-pip numactl dtc pciutils iproute2
+        "$(_pkg_ver python-pip)" "$(_pkg_ver numactl)" "$(_pkg_ver dtc)" "$(_pkg_ver pciutils)" "$(_pkg_ver iproute2)"
     )
-    local -a pip_build_pkgs=(meson pyelftools)
-    local -a pip_run_pkgs=(pyelftools)
+    local -a pip_build_pkgs=("$(_pip_ver meson)" "$(_pip_ver pyelftools)")
+    local -a pip_run_pkgs=("$(_pip_ver pyelftools)")
 
     case "$mode" in
         all)
