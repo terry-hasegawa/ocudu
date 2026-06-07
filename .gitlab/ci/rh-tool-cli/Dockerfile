@@ -1,0 +1,40 @@
+# SPDX-FileCopyrightText: Copyright (C) 2021-2026 Software Radio Systems Limited
+# SPDX-License-Identifier: BSD-3-Clause-Open-MPI
+
+ARG BUILDKIT_CLI_VERSION=0.28.0
+ARG PREFLIGHT_VERSION=1.19.0
+
+FROM moby/buildkit:v${BUILDKIT_CLI_VERSION} AS buildkit
+FROM docker:27 AS docker-cli
+
+FROM registry.access.redhat.com/ubi9/ubi-minimal
+
+ARG BUILDKIT_CLI_VERSION
+ARG PREFLIGHT_VERSION
+
+RUN microdnf install -y ca-certificates curl jq && \
+    microdnf clean all
+
+# BuildKit client
+COPY --from=buildkit /usr/bin/buildctl /usr/local/bin/buildctl
+
+# Docker CLI
+COPY --from=docker-cli /usr/local/bin/docker /usr/local/bin/docker
+
+# buildctl-daemonless wrapper (spawns ephemeral buildkitd)
+COPY buildctl-daemonless.sh /usr/local/bin/buildctl-daemonless.sh
+RUN chmod +x /usr/local/bin/buildctl-daemonless.sh
+
+# preflight — arch-aware download
+RUN ARCH=$(uname -m) && \
+    case "$ARCH" in \
+        x86_64)  PFLT_ARCH=amd64 ;; \
+        aarch64) PFLT_ARCH=arm64 ;; \
+        *) echo "Unsupported arch: $ARCH" && exit 1 ;; \
+    esac && \
+    curl -fsSL \
+      "https://github.com/redhat-openshift-ecosystem/openshift-preflight/releases/download/${PREFLIGHT_VERSION}/preflight-linux-${PFLT_ARCH}" \
+      -o /usr/local/bin/preflight && \
+    chmod +x /usr/local/bin/preflight
+
+RUN mkdir -p /root/.docker
