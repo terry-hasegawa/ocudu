@@ -1387,6 +1387,12 @@ static bool handle_conres_expiry(ue_repository&          ues,
     return false;
   }
 
+  if (not ue_pcell.get_pcell_state().msg3_rx_slot.valid()) {
+    logger.warning("ue={} rnti={}: attempting to compute ra-ContentionResolutionTimer with non-valid msg3 rx slot",
+                   u.ue_index,
+                   u.crnti);
+  }
+
   const auto conres_timer       = ue_pcell.cfg().init_bwp().ul.common().rach_cfg_common->ra_con_res_timer.count();
   const auto conres_timer_slots = conres_timer * sl_tx.nof_slots_per_subframe() + ntn_cs_koffset;
   const auto sl_conres          = ue_pcell.get_pcell_state().msg3_rx_slot + conres_timer_slots;
@@ -1399,14 +1405,16 @@ static bool handle_conres_expiry(ue_repository&          ues,
   if (u.logical_channels().is_con_res_id_pending()) {
     const auto ntn_cs_koffset_ms =
         ntn_cs_koffset ? divide_ceil<uint32_t, uint32_t>(ntn_cs_koffset, sl_tx.nof_slots_per_subframe()) : 0;
-    logger.warning("ue={} rnti={}: ra-ContentionResolutionTimer ({}ms{}) expired before ConRes CE was scheduled. UE "
-                   "will stop being scheduled",
-                   u.ue_index,
-                   u.crnti,
-                   conres_timer,
-                   make_formattable([k = ntn_cs_koffset_ms](auto& ctx) {
-                     return k ? fmt::format_to(ctx.out(), " + RTT: {}ms", k) : ctx.out();
-                   }));
+    logger.warning(
+        "ue={} rnti={}: ra-ContentionResolutionTimer, for msg3 rx at slot={}, expired ({}ms{}) before ConRes "
+        "CE was scheduled. UE will stop being scheduled",
+        u.ue_index,
+        u.crnti,
+        ue_pcell.get_pcell_state().msg3_rx_slot,
+        conres_timer,
+        make_formattable([k = ntn_cs_koffset_ms](auto& ctx) {
+          return k ? fmt::format_to(ctx.out(), " + RTT: {}ms", k) : ctx.out();
+        }));
     ues.handle_conres_ce_outcome(u.ue_index, false);
     return true;
   }
