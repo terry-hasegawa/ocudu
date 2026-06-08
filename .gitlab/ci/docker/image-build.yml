@@ -1,0 +1,390 @@
+# SPDX-FileCopyrightText: Copyright (C) 2021-2026 Software Radio Systems Limited
+# SPDX-License-Identifier: BSD-3-Clause-Open-MPI
+
+# OCUDU component image build pipeline.
+#
+# Trigger: scheduled pipeline with description matching /Nightly/, web UI run,
+#          or manual job trigger.
+# Stages:
+#   build     — parallel matrix jobs, one per component × driver × OS × arch/SIMD
+#   sign-sbom — grype CVE gate per published image (cosign sign + SPDX already
+#               handled by .docker-builder when MODE=publish)
+#
+# To add a driver, OS, or SIMD variant: add a row to the relevant
+# parallel:matrix: block in the build:* job below.
+
+stages:
+  - build
+  - sign-sbom
+
+# ---------------------------------------------------------------------------
+# Derive the SIMD label used in the image tag from the MARCH value.
+#
+#   x86-64-v3                    → avx2
+#   x86-64-v4                    → avx512
+#   neoverse-n1+crc+crypto+ssbs  → neon
+#   <anything else>              → value as-is
+# ---------------------------------------------------------------------------
+.simd-label: &simd-label |
+  case "${MARCH}" in
+    x86-64-v3)                   SIMD=avx2 ;;
+    x86-64-v4)                   SIMD=avx512 ;;
+    neoverse-n1+crc+crypto+ssbs) SIMD=neon ;;
+    *)                           SIMD="${MARCH}" ;;
+  esac
+
+# ---------------------------------------------------------------------------
+# Base job — all build cells extend this
+# ---------------------------------------------------------------------------
+.image-build:
+  extends: .docker-builder
+  stage: build
+  variables:
+    REGISTRY_URI: ${CI_REGISTRY}/${CI_PROJECT_PATH}/images
+    MODE: publish
+    MULTI_ARCH_BUILD: "false"
+    CACHE: "true"
+    CACHE_MODE: "max"
+    # Component, driver, OS, arch, SIMD — set per matrix cell
+    COMPONENT: ""
+    DRIVER: ""
+    OS: ubuntu
+    OS_VERSION: "24.04"
+    TARGETARCH: amd64
+    MARCH: x86-64-v4
+  before_script:
+    - *simd-label
+    - export CONTEXT=${CI_PROJECT_DIR}
+    - export DOCKERFILE=${CI_PROJECT_DIR}/docker
+    # Image name:  <component>  or  <component>-<driver>  when driver is set
+    - |
+      if [ -n "${DRIVER}" ]; then
+        IMAGE_COMPONENT="${COMPONENT}-${DRIVER}"
+      else
+        IMAGE_COMPONENT="${COMPONENT}"
+      fi
+    # Tag: <os>-<os_version>-<simd>-<date>
+    - DATE=$(date +%Y%m%d)
+    - export NAME="${IMAGE_COMPONENT}"
+    - export VERSION="${OS}-${OS_VERSION}-${SIMD}-${DATE}"
+    - export PLATFORM="${TARGETARCH}"
+    # Select Dockerfile target stage: lean path skips UHD/DPDK build stages
+    - |
+      case "${COMPONENT}" in
+        cu|cu-cp|cu-up) DOCKER_TARGET=runtime-lean ;;
+        *)              DOCKER_TARGET=runtime ;;
+      esac
+    - export DOCKER_TARGET
+    # Build args forwarded into the Dockerfile
+    - |
+      ENABLE_UHD=Off
+      ENABLE_DPDK=Off
+      case "${DRIVER}" in
+        uhd)  ENABLE_UHD=On ;;
+        dpdk) ENABLE_DPDK=On ;;
+      esac
+    - |
+      export BUILD_ARGS="\
+      OS=${OS};\
+      OS_VERSION=${OS_VERSION};\
+      UHD_VERSION=${UHD_VERSION};\
+      DPDK_VERSION=${DPDK_VERSION};\
+      ROHC_VERSION=${ROHC_VERSION};\
+      MARCH=${MARCH};\
+      TARGETARCH=${TARGETARCH};\
+      COMPONENT=${COMPONENT};\
+      ENABLE_UHD=${ENABLE_UHD};\
+      ENABLE_DPDK=${ENABLE_DPDK};\
+      EXTRA_CMAKE_ARGS=${EXTRA_CMAKE_ARGS}"
+    # PKG_VERSIONS only passed when non-empty to keep args clean
+    - |
+      if [ -n "${PKG_VERSIONS}" ]; then
+        BUILD_ARGS="${BUILD_ARGS};PKG_VERSIONS=${PKG_VERSIONS}"
+      fi
+    # Write the exact image ref to a dotenv artifact so the grype job
+    # can consume it without recomputing the date.
+    - |
+      IMAGE_REF="${REGISTRY_URI}/${NAME}:${VERSION}"
+      echo "IMAGE_REF=${IMAGE_REF}" > build.env
+  artifacts:
+    reports:
+      dotenv: build.env
+
+# ---------------------------------------------------------------------------
+# Build jobs
+# ---------------------------------------------------------------------------
+
+build-and-publish:gnb:
+  extends: .image-build
+  parallel:
+    matrix:
+      - COMPONENT: gnb
+        DRIVER: uhd
+        OS: ubuntu
+        OS_VERSION: "24.04"
+        TARGETARCH: amd64
+        MARCH: x86-64-v4
+      - COMPONENT: gnb
+        DRIVER: uhd
+        OS: ubuntu
+        OS_VERSION: "24.04"
+        TARGETARCH: amd64
+        MARCH: x86-64-v3
+      - COMPONENT: gnb
+        DRIVER: dpdk
+        OS: ubuntu
+        OS_VERSION: "24.04"
+        TARGETARCH: amd64
+        MARCH: x86-64-v4
+      - COMPONENT: gnb
+        DRIVER: dpdk
+        OS: ubuntu
+        OS_VERSION: "24.04"
+        TARGETARCH: amd64
+        MARCH: x86-64-v3
+      - COMPONENT: gnb
+        DRIVER: uhd
+        OS: ubuntu
+        OS_VERSION: "24.04"
+        TARGETARCH: arm64
+        PLATFORM: arm64
+        MARCH: neoverse-n1+crc+crypto+ssbs
+      - COMPONENT: gnb
+        DRIVER: dpdk
+        OS: ubuntu
+        OS_VERSION: "24.04"
+        TARGETARCH: arm64
+        PLATFORM: arm64
+        MARCH: neoverse-n1+crc+crypto+ssbs
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "parent_pipeline"
+    - if: $CI_PIPELINE_SCHEDULE_DESCRIPTION =~ /Nightly/
+
+build-and-publish:du:
+  extends: .image-build
+  parallel:
+    matrix:
+      - COMPONENT: du
+        DRIVER: uhd
+        OS: ubuntu
+        OS_VERSION: "24.04"
+        TARGETARCH: amd64
+        MARCH: x86-64-v4
+      - COMPONENT: du
+        DRIVER: uhd
+        OS: ubuntu
+        OS_VERSION: "24.04"
+        TARGETARCH: amd64
+        MARCH: x86-64-v3
+      - COMPONENT: du
+        DRIVER: dpdk
+        OS: ubuntu
+        OS_VERSION: "24.04"
+        TARGETARCH: amd64
+        MARCH: x86-64-v4
+      - COMPONENT: du
+        DRIVER: dpdk
+        OS: ubuntu
+        OS_VERSION: "24.04"
+        TARGETARCH: amd64
+        MARCH: x86-64-v3
+      - COMPONENT: du
+        DRIVER: uhd
+        OS: ubuntu
+        OS_VERSION: "24.04"
+        TARGETARCH: arm64
+        PLATFORM: arm64
+        MARCH: neoverse-n1+crc+crypto+ssbs
+      - COMPONENT: du
+        DRIVER: dpdk
+        OS: ubuntu
+        OS_VERSION: "24.04"
+        TARGETARCH: arm64
+        PLATFORM: arm64
+        MARCH: neoverse-n1+crc+crypto+ssbs
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "parent_pipeline"
+    - if: $CI_PIPELINE_SCHEDULE_DESCRIPTION =~ /Nightly/
+
+build-and-publish:cu:
+  extends: .image-build
+  parallel:
+    matrix:
+      - COMPONENT: cu
+        DRIVER: ""
+        OS: ubuntu
+        OS_VERSION: "24.04"
+        TARGETARCH: amd64
+        MARCH: x86-64-v4
+      - COMPONENT: cu
+        DRIVER: ""
+        OS: ubuntu
+        OS_VERSION: "24.04"
+        TARGETARCH: amd64
+        MARCH: x86-64-v3
+      - COMPONENT: cu
+        DRIVER: ""
+        OS: ubuntu
+        OS_VERSION: "24.04"
+        TARGETARCH: arm64
+        PLATFORM: arm64
+        MARCH: neoverse-n1+crc+crypto+ssbs
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "parent_pipeline"
+    - if: $CI_PIPELINE_SCHEDULE_DESCRIPTION =~ /Nightly/
+
+build-and-publish:cu-cp:
+  extends: .image-build
+  parallel:
+    matrix:
+      - COMPONENT: cu-cp
+        DRIVER: ""
+        OS: ubuntu
+        OS_VERSION: "24.04"
+        TARGETARCH: amd64
+        MARCH: x86-64-v4
+      - COMPONENT: cu-cp
+        DRIVER: ""
+        OS: ubuntu
+        OS_VERSION: "24.04"
+        TARGETARCH: amd64
+        MARCH: x86-64-v3
+      - COMPONENT: cu-cp
+        DRIVER: ""
+        OS: ubuntu
+        OS_VERSION: "24.04"
+        TARGETARCH: arm64
+        PLATFORM: arm64
+        MARCH: neoverse-n1+crc+crypto+ssbs
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "parent_pipeline"
+    - if: $CI_PIPELINE_SCHEDULE_DESCRIPTION =~ /Nightly/
+
+build-and-publish:cu-up:
+  extends: .image-build
+  parallel:
+    matrix:
+      - COMPONENT: cu-up
+        DRIVER: ""
+        OS: ubuntu
+        OS_VERSION: "24.04"
+        TARGETARCH: amd64
+        MARCH: x86-64-v4
+      - COMPONENT: cu-up
+        DRIVER: ""
+        OS: ubuntu
+        OS_VERSION: "24.04"
+        TARGETARCH: amd64
+        MARCH: x86-64-v3
+      - COMPONENT: cu-up
+        DRIVER: ""
+        OS: ubuntu
+        OS_VERSION: "24.04"
+        TARGETARCH: arm64
+        PLATFORM: arm64
+        MARCH: neoverse-n1+crc+crypto+ssbs
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "parent_pipeline"
+    - if: $CI_PIPELINE_SCHEDULE_DESCRIPTION =~ /Nightly/
+
+build-and-publish:ru-emulator:
+  extends: .image-build
+  parallel:
+    matrix:
+      - COMPONENT: ru-emulator
+        DRIVER: dpdk
+        OS: ubuntu
+        OS_VERSION: "24.04"
+        TARGETARCH: amd64
+        MARCH: x86-64-v4
+      - COMPONENT: ru-emulator
+        DRIVER: dpdk
+        OS: ubuntu
+        OS_VERSION: "24.04"
+        TARGETARCH: amd64
+        MARCH: x86-64-v3
+      - COMPONENT: ru-emulator
+        DRIVER: dpdk
+        OS: ubuntu
+        OS_VERSION: "24.04"
+        TARGETARCH: arm64
+        PLATFORM: arm64
+        MARCH: neoverse-n1+crc+crypto+ssbs
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "parent_pipeline"
+    - if: $CI_PIPELINE_SCHEDULE_DESCRIPTION =~ /Nightly/
+
+# ---------------------------------------------------------------------------
+# sign-sbom stage — grype CVE gate
+#
+# One concrete job per build:* job. Each needs: its corresponding build job
+# and inherits IMAGE_REF from the dotenv artifact.
+# cosign sign + SPDX attestation are already handled inside .docker-builder.
+# This stage adds the grype CVE gate (fail on CRITICAL) and attaches the
+# grype report as a second cosign attestation.
+# ---------------------------------------------------------------------------
+
+.grype-gate:
+  stage: sign-sbom
+  image: ${OCUDU_REGISTRY_URI}/buildkit-cli:$BUILDKIT_CLI_VERSION
+  variables:
+    COSIGN_YES: "true"
+  id_tokens:
+    SIGSTORE_ID_TOKEN:
+      aud: sigstore
+  before_script:
+    - echo "$CI_REGISTRY_PASSWORD" | docker login $CI_REGISTRY -u $CI_REGISTRY_USER --password-stdin
+  script:
+    - |
+      [ -z "$IMAGE_REF" ] && echo "IMAGE_REF not set — dotenv artifact missing?" && exit 1
+    - |
+      echo "=== Running grype CVE scan on ${IMAGE_REF} ==="
+      grype registry:${IMAGE_REF} --fail-on critical -o json > grype-report.json
+    - |
+      echo "=== Attesting grype report ==="
+      IMAGE_DIGEST="${IMAGE_REF}@$(regctl image digest ${IMAGE_REF})"
+      cosign attest --predicate grype-report.json --type vuln ${IMAGE_DIGEST}
+  artifacts:
+    paths:
+      - grype-report.json
+    expire_in: 7 days
+    when: always
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "parent_pipeline"
+    - if: $CI_PIPELINE_SCHEDULE_DESCRIPTION =~ /Nightly/
+
+sign-sbom:gnb:
+  extends: .grype-gate
+  needs:
+    - job: build-and-publish:gnb
+      artifacts: true
+
+sign-sbom:du:
+  extends: .grype-gate
+  needs:
+    - job: build-and-publish:du
+      artifacts: true
+
+sign-sbom:cu:
+  extends: .grype-gate
+  needs:
+    - job: build-and-publish:cu
+      artifacts: true
+
+sign-sbom:cu-cp:
+  extends: .grype-gate
+  needs:
+    - job: build-and-publish:cu-cp
+      artifacts: true
+
+sign-sbom:cu-up:
+  extends: .grype-gate
+  needs:
+    - job: build-and-publish:cu-up
+      artifacts: true
+
+sign-sbom:ru-emulator:
+  extends: .grype-gate
+  needs:
+    - job: build-and-publish:ru-emulator
+      artifacts: true
