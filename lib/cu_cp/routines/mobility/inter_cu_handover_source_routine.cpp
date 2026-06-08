@@ -42,9 +42,11 @@ void inter_cu_handover_source_routine::operator()(coro_context<async_task<bool>>
   }
 
   // Send RRC Reconfiguration to UE.
-  ue_context_mod_request.ue_index                 = ue_index;
-  ue_context_mod_request.drbs_to_be_released_list = ue_mng.find_du_ue(ue_index)->get_up_resource_manager().get_drbs();
-  ue_context_mod_request.rrc_container            = ho_reconfig_pdu.copy();
+  ue_context_mod_request.ue_index      = ue_index;
+  ue_context_mod_request.rrc_container = ho_reconfig_pdu.copy();
+
+  // Stop data transmission for the UE on the source DU (see TS 38.473 section 8.3.4.2).
+  ue_context_mod_request.tx_action_ind = f1ap_tx_action_ind::stop;
 
   CORO_AWAIT_VALUE(ue_context_mod_response,
                    du_db.get_du_processor(ue_mng.find_du_ue(ue_index)->get_du_index())
