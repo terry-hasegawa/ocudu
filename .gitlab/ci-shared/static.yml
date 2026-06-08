@@ -73,6 +73,7 @@ include:
     AUTOCORRECTION: 1
     PRAGMA: 1
     TARGET_BRANCH: origin/$CI_MERGE_REQUEST_TARGET_BRANCH_NAME
+    INPUT_PATH: .
   script:
     - |
       include-guards-check() {
