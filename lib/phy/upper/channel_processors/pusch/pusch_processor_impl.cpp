@@ -56,7 +56,7 @@ public:
   {
     ocudu_assert(notifier != nullptr, "Notifier not connected.");
 
-    unsigned nof_csi_part_2_bits = uci_part2_get_size(part1, csi_part2_size);
+    unsigned nof_csi_part_2_bits = uci_part2_get_size(part1, csi_part2_size).value();
 
     // Skip if the number of CSI Part 2 bits is zero.
     if (nof_csi_part_2_bits == 0) {

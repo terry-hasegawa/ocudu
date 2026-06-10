@@ -154,7 +154,8 @@ static const auto profile_set = to_array<test_profile>({
                                                                .n_id_0             = 0,
                                                                .nof_harq_ack       = 0,
                                                                .nof_csi_part1      = 4,
-                                                               .nof_csi_part2      = 0}},
+                                                               .csi_part2_size     = {},
+                                                               .max_code_rate = pucch_constants::f2::MAX_CODE_RATE}},
 
     test_profile{
         .name = "Format2_10bit",
@@ -175,7 +176,8 @@ static const auto profile_set = to_array<test_profile>({
                                                                .n_id_0             = 0,
                                                                .nof_harq_ack       = 0,
                                                                .nof_csi_part1      = 11,
-                                                               .nof_csi_part2      = 0}},
+                                                               .csi_part2_size     = {},
+                                                               .max_code_rate = pucch_constants::f2::MAX_CODE_RATE}},
 
     test_profile{
         .name = "Format2_30bit",
@@ -196,7 +198,8 @@ static const auto profile_set = to_array<test_profile>({
                                                                .n_id_0             = 0,
                                                                .nof_harq_ack       = 0,
                                                                .nof_csi_part1      = 30,
-                                                               .nof_csi_part2      = 0}},
+                                                               .csi_part2_size     = {},
+                                                               .max_code_rate = pucch_constants::f2::MAX_CODE_RATE}},
 });
 
 static void usage(const char* prog)

@@ -49,13 +49,16 @@ const pucch_processor::format2_configuration base_format_2_config = {
     0,
     // Number of CSI Part 1 bits.
     0,
-    // Number of CSI Part 2 bits.
-    0};
+    // CSI Part 2 size.
+    {},
+    // Max code rate.
+    pucch_constants::f2::MAX_CODE_RATE};
 
 // Test case parameters structure.
 struct test_params {
   pucch_processor::format2_configuration config;
   std::string                            assert_message;
+  bool                                   is_valid = false;
 };
 
 struct test_case_t {
@@ -173,8 +176,20 @@ static const auto processor_validator_test_data = to_array<test_case_t>(
          [] {
            test_params entry          = {};
            entry.config               = base_format_2_config;
-           entry.config.nof_csi_part2 = 1;
-           entry.assert_message       = R"(CSI Part 2 is not currently supported\.)";
+           entry.config.nof_harq_ack  = 0;
+           entry.config.nof_sr        = 0;
+           entry.config.nof_csi_part1 = 0;
+           entry.assert_message       = R"(The UCI Part 1 payload must not be empty\.)";
+           return entry;
+         },
+     },
+     {
+         [] {
+           test_params entry           = {};
+           entry.config                = base_format_2_config;
+           entry.config.nof_csi_part1  = 0;
+           entry.config.csi_part2_size = uci_part2_size_description(4);
+           entry.assert_message        = R"(CSI Part 2 size description does not match CSI Part 1 payload size\.)";
            return entry;
          },
      },
@@ -185,13 +200,20 @@ static const auto processor_validator_test_data = to_array<test_case_t>(
            entry.config.nof_harq_ack  = pucch_constants::f2::MIN_NOF_DATA_BITS - 1;
            entry.config.nof_sr        = 0;
            entry.config.nof_csi_part1 = 0;
-           entry.config.nof_csi_part2 = 0;
            entry.assert_message       = fmt::format(
                R"(UCI Payload length \(i\.e\.\, {}\) is outside the supported range \(i\.e\.\, \[{}\.\.{}\]\)\.)",
-               entry.config.nof_harq_ack + entry.config.nof_sr + entry.config.nof_csi_part1 +
-                   entry.config.nof_csi_part2,
+               entry.config.nof_harq_ack + entry.config.nof_sr + entry.config.nof_csi_part1,
                pucch_constants::f2::MIN_NOF_DATA_BITS,
                pucch_constants::f2::MAX_NOF_DATA_BITS);
+           return entry;
+         },
+     },
+     {
+         [] {
+           test_params entry          = {};
+           entry.config               = base_format_2_config;
+           entry.config.max_code_rate = pucch_constants::f2::MAX_CODE_RATE + 0.1F;
+           entry.assert_message = R"(The maximum code rate \(i\.e\., .+\) exceeds the format maximum \(i\.e\., .+\)\.)";
            return entry;
          },
      },
@@ -212,16 +234,34 @@ static const auto processor_validator_test_data = to_array<test_case_t>(
            entry.config.nof_harq_ack       = pucch_constants::f2::MAX_NOF_DATA_BITS;
            entry.config.nof_sr             = 1;
            entry.config.nof_csi_part1      = 0;
-           entry.config.nof_csi_part2      = 0;
            entry.config.start_symbol_index = 0;
            entry.config.nof_symbols        = max_dimensions.nof_symbols;
            entry.config.prbs               = {0, entry.config.bwp_size_rb};
            entry.assert_message            = fmt::format(
                R"(UCI Payload length \(i\.e\.\, {}\) is outside the supported range \(i\.e\.\, \[{}\.\.{}\]\)\.)",
-               entry.config.nof_harq_ack + entry.config.nof_sr + entry.config.nof_csi_part1 +
-                   entry.config.nof_csi_part2,
+               entry.config.nof_harq_ack + entry.config.nof_sr + entry.config.nof_csi_part1,
                pucch_constants::f2::MIN_NOF_DATA_BITS,
                pucch_constants::f2::MAX_NOF_DATA_BITS);
+           return entry;
+         },
+     },
+     {
+         [] {
+           test_params entry           = {};
+           entry.config                = base_format_2_config;
+           entry.config.nof_csi_part1  = 113;
+           entry.config.csi_part2_size = uci_part2_size_description(1);
+           entry.assert_message        = R"(There are no rate matching output bits remaining for UCI Part 2\.)";
+           return entry;
+         },
+     },
+     {
+         [] {
+           test_params entry           = {};
+           entry.config                = base_format_2_config;
+           entry.config.nof_csi_part1  = 10;
+           entry.config.csi_part2_size = uci_part2_size_description(4);
+           entry.is_valid              = true;
            return entry;
          },
      }});
@@ -233,8 +273,13 @@ TEST_P(PucchProcessorFormat2Fixture, PucchProcessorValidatortest)
 
   const test_case_t& param = GetParam();
 
-  // Make sure the configuration is invalid.
   error_type<std::string> validator_out = validator->is_valid(param.get_test_params().config);
+  if (param.get_test_params().is_valid) {
+    ASSERT_TRUE(validator_out.has_value()) << "Validation should pass.";
+    return;
+  }
+
+  // Make sure the configuration is invalid.
   ASSERT_FALSE(validator_out.has_value()) << "Validation should fail.";
   ASSERT_TRUE(std::regex_match(validator_out.error(), std::regex(param.get_test_params().assert_message)))
       << "The assertion message doesn't match the expected pattern.";

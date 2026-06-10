@@ -116,11 +116,11 @@ static void fill_format2_parameters(uplink_pdu_slot_repository::pucch_pdu& phy_p
   format2.n_id   = fapi_pdu_format_2->nid_pucch_scrambling;
   format2.n_id_0 = fapi_pdu_format_2->nid0_pucch_dmrs_scrambling;
 
-  format2.nof_harq_ack  = fapi_pdu_format_2->bit_len_harq.value();
-  format2.nof_sr        = static_cast<uint8_t>(fapi_pdu_format_2->sr_bit_len);
-  format2.nof_csi_part1 = fapi_pdu_format_2->csi_part1_bit_length.value();
-  // CSI Part 2 disabled.
-  format2.nof_csi_part2 = 0;
+  format2.nof_harq_ack   = fapi_pdu_format_2->bit_len_harq.value();
+  format2.nof_sr         = static_cast<uint8_t>(fapi_pdu_format_2->sr_bit_len);
+  format2.nof_csi_part1  = fapi_pdu_format_2->csi_part1_bit_length.value();
+  format2.csi_part2_size = {};
+  format2.max_code_rate  = pucch_constants::f2::MAX_CODE_RATE;
 
   // Fill PUCCH context for logging.
   format2.context = pucch_context(fapi_pdu.rnti);
@@ -158,11 +158,11 @@ static void fill_format3_parameters(uplink_pdu_slot_repository::pucch_pdu& phy_p
   format3.n_id_hopping    = fapi_pdu_format_3->nid_pucch_hopping;
   format3.n_id_scrambling = fapi_pdu_format_3->nid_pucch_scrambling;
 
-  format3.nof_harq_ack  = fapi_pdu_format_3->bit_len_harq.value();
-  format3.nof_sr        = static_cast<uint8_t>(fapi_pdu_format_3->sr_bit_len);
-  format3.nof_csi_part1 = fapi_pdu_format_3->csi_part1_bit_length.value();
-  // CSI Part 2 disabled.
-  format3.nof_csi_part2 = 0;
+  format3.nof_harq_ack   = fapi_pdu_format_3->bit_len_harq.value();
+  format3.nof_sr         = static_cast<uint8_t>(fapi_pdu_format_3->sr_bit_len);
+  format3.nof_csi_part1  = fapi_pdu_format_3->csi_part1_bit_length.value();
+  format3.csi_part2_size = {};
+  format3.max_code_rate  = pucch_constants::f3::MAX_CODE_RATE;
 
   format3.additional_dmrs = fapi_pdu_format_3->add_dmrs_flag;
   format3.pi2_bpsk        = fapi_pdu_format_3->pi2_bpsk;
@@ -203,11 +203,11 @@ static void fill_format4_parameters(uplink_pdu_slot_repository::pucch_pdu& phy_p
   format4.n_id_hopping    = fapi_pdu_format_4->nid_pucch_hopping;
   format4.n_id_scrambling = fapi_pdu_format_4->nid_pucch_scrambling;
 
-  format4.nof_harq_ack  = fapi_pdu_format_4->bit_len_harq.value();
-  format4.nof_sr        = static_cast<uint8_t>(fapi_pdu_format_4->sr_bit_len);
-  format4.nof_csi_part1 = fapi_pdu_format_4->csi_part1_bit_length.value();
-  // CSI Part 2 disabled.
-  format4.nof_csi_part2 = 0;
+  format4.nof_harq_ack   = fapi_pdu_format_4->bit_len_harq.value();
+  format4.nof_sr         = static_cast<uint8_t>(fapi_pdu_format_4->sr_bit_len);
+  format4.nof_csi_part1  = fapi_pdu_format_4->csi_part1_bit_length.value();
+  format4.csi_part2_size = {};
+  format4.max_code_rate  = pucch_constants::f4::MAX_CODE_RATE;
 
   format4.additional_dmrs = fapi_pdu_format_4->add_dmrs_flag;
   format4.pi2_bpsk        = fapi_pdu_format_4->pi2_bpsk;

@@ -12,6 +12,7 @@
 #include "ocudu/ran/pucch/pucch_context.h"
 #include "ocudu/ran/resource_allocation/rb_interval.h"
 #include "ocudu/ran/slot_point.h"
+#include "ocudu/ran/uci/uci_part2_size_description.h"
 #include <string>
 
 namespace ocudu {
@@ -247,8 +248,10 @@ public:
     unsigned nof_sr;
     /// Number of expected CSI Part 1 bits {0, ..., 1706} (see also \ref PUCCH_payload_size "here").
     unsigned nof_csi_part1;
-    /// Number of expected CSI Part 2 bits {0, ..., 1706} (see also \ref PUCCH_payload_size "here").
-    unsigned nof_csi_part2;
+    /// CSI Part 1 to Part 2 size correspondence.
+    uci_part2_size_description csi_part2_size;
+    /// Maximum UCI code rate
+    float max_code_rate;
   };
 
   /// Collects specific PUCCH Format 3 parameters.
@@ -298,14 +301,16 @@ public:
     unsigned nof_sr;
     /// Number of expected CSI Part 1 bits {0, ..., 1706} (see also \ref PUCCH_payload_size "here").
     unsigned nof_csi_part1;
-    /// Number of expected CSI Part 2 bits {0, ..., 1706} (see also \ref PUCCH_payload_size "here").
-    unsigned nof_csi_part2;
+    /// CSI Part 1 to Part 2 size correspondence.
+    uci_part2_size_description csi_part2_size;
     /// Set to higher layer parameter \e additionalDMRS described in TS38.331 Section 6.3.2, Information Element \e
     /// PUCCH-FormatConfig.
     bool additional_dmrs;
     /// Set to higher layer parameter \e pi2BPSK described in TS38.331 Section 6.3.2, Information Element \e
     /// PUCCH-FormatConfig.
     bool pi2_bpsk;
+    /// Maximum UCI code rate
+    float max_code_rate;
   };
 
   /// Collects specific PUCCH Format 4 parameters.
@@ -354,8 +359,8 @@ public:
     unsigned nof_sr;
     /// Number of expected CSI Part 1 bits {0, ..., 1706} (see also \ref PUCCH_payload_size "here").
     unsigned nof_csi_part1;
-    /// Number of expected CSI Part 2 bits {0, ..., 1706} (see also \ref PUCCH_payload_size "here").
-    unsigned nof_csi_part2;
+    /// CSI Part 1 to Part 2 size correspondence.
+    uci_part2_size_description csi_part2_size;
     /// Set to higher layer parameter \e additionalDMRS described in TS38.331 Section 6.3.2, Information Element \e
     /// PUCCH-FormatConfig.
     bool additional_dmrs;
@@ -368,6 +373,8 @@ public:
     /// Set to higher layer parameter \e occ-Length described in TS38.331 Section 6.3.2, Information Element \e
     /// PUCCH-format4 {2, 4}.
     unsigned occ_length;
+    /// Maximum UCI code rate
+    float max_code_rate;
   };
 
   /// Default destructor.

@@ -97,3 +97,75 @@ TEST(FAPIPPHYULPUCCHAdaptorTest, ValidFormat1PDUPass)
 
   check_context_f1_parameters(pdu.context, *format1);
 }
+
+TEST(FAPIPPHYULPUCCHAdaptorTest, ValidFormat2PDUPass)
+{
+  fapi::ul_pucch_pdu fapi_pdu = build_valid_ul_pucch_f2_pdu();
+
+  auto     scs             = to_numerology_value(fapi_pdu.scs);
+  unsigned sfn             = 1U;
+  unsigned slot_index      = 2U;
+  auto     slot            = slot_point(scs, sfn, slot_index);
+  unsigned nof_rx_antennas = 1U;
+
+  uplink_pdu_slot_repository::pucch_pdu pdu;
+  convert_pucch_fapi_to_phy(pdu, fapi_pdu, slot, nof_rx_antennas);
+
+  const auto* format2 = std::get_if<fapi::ul_pucch_pdu_format_2>(&fapi_pdu.format);
+  ASSERT_TRUE(format2 != nullptr);
+
+  const auto& phy_pdu = std::get<pucch_processor::format2_configuration>(pdu.config);
+  ASSERT_EQ(format2->csi_part1_bit_length.value(), phy_pdu.nof_csi_part1);
+  ASSERT_TRUE(phy_pdu.csi_part2_size.entries.empty());
+  ASSERT_EQ(format2->bit_len_harq.value(), phy_pdu.nof_harq_ack);
+  ASSERT_EQ(static_cast<unsigned>(format2->sr_bit_len), phy_pdu.nof_sr);
+  check_context_parameters(pdu.context, fapi_pdu, slot);
+}
+
+TEST(FAPIPPHYULPUCCHAdaptorTest, ValidFormat3PDUPass)
+{
+  fapi::ul_pucch_pdu fapi_pdu = build_valid_ul_pucch_f3_pdu();
+
+  auto     scs             = to_numerology_value(fapi_pdu.scs);
+  unsigned sfn             = 1U;
+  unsigned slot_index      = 2U;
+  auto     slot            = slot_point(scs, sfn, slot_index);
+  unsigned nof_rx_antennas = 1U;
+
+  uplink_pdu_slot_repository::pucch_pdu pdu;
+  convert_pucch_fapi_to_phy(pdu, fapi_pdu, slot, nof_rx_antennas);
+
+  const auto* format3 = std::get_if<fapi::ul_pucch_pdu_format_3>(&fapi_pdu.format);
+  ASSERT_TRUE(format3 != nullptr);
+
+  const auto& phy_pdu = std::get<pucch_processor::format3_configuration>(pdu.config);
+  ASSERT_EQ(format3->csi_part1_bit_length.value(), phy_pdu.nof_csi_part1);
+  ASSERT_TRUE(phy_pdu.csi_part2_size.entries.empty());
+  ASSERT_EQ(format3->bit_len_harq.value(), phy_pdu.nof_harq_ack);
+  ASSERT_EQ(static_cast<unsigned>(format3->sr_bit_len), phy_pdu.nof_sr);
+  check_context_parameters(pdu.context, fapi_pdu, slot);
+}
+
+TEST(FAPIPPHYULPUCCHAdaptorTest, ValidFormat4PDUPass)
+{
+  fapi::ul_pucch_pdu fapi_pdu = build_valid_ul_pucch_f4_pdu();
+
+  auto     scs             = to_numerology_value(fapi_pdu.scs);
+  unsigned sfn             = 1U;
+  unsigned slot_index      = 2U;
+  auto     slot            = slot_point(scs, sfn, slot_index);
+  unsigned nof_rx_antennas = 1U;
+
+  uplink_pdu_slot_repository::pucch_pdu pdu;
+  convert_pucch_fapi_to_phy(pdu, fapi_pdu, slot, nof_rx_antennas);
+
+  const auto* format4 = std::get_if<fapi::ul_pucch_pdu_format_4>(&fapi_pdu.format);
+  ASSERT_TRUE(format4 != nullptr);
+
+  const auto& phy_pdu = std::get<pucch_processor::format4_configuration>(pdu.config);
+  ASSERT_EQ(format4->csi_part1_bit_length.value(), phy_pdu.nof_csi_part1);
+  ASSERT_TRUE(phy_pdu.csi_part2_size.entries.empty());
+  ASSERT_EQ(format4->bit_len_harq.value(), phy_pdu.nof_harq_ack);
+  ASSERT_EQ(static_cast<unsigned>(format4->sr_bit_len), phy_pdu.nof_sr);
+  check_context_parameters(pdu.context, fapi_pdu, slot);
+}

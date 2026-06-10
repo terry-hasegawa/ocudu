@@ -417,6 +417,28 @@ static void fill_format_2_3_4_csi_part1(fapi::uci_pucch_pdu_format_2_3_4_builder
       status, csi_len, uci_payload_type(message.get_csi_part1_bits().begin(), message.get_csi_part1_bits().end()));
 }
 
+/// Fills the CSI Part 2 parameters for PUCCH Format 2/3/4 using the given builder and message.
+static void fill_format_2_3_4_csi_part2(fapi::uci_pucch_pdu_format_2_3_4_builder& builder,
+                                        const pucch_uci_message&                  message)
+{
+  units::bits csi_len = units::bits(message.get_expected_nof_csi_part2_bits());
+  if (csi_len.value() == 0) {
+    return;
+  }
+
+  uci_pusch_or_pucch_f2_3_4_detection_status status =
+      to_fapi_uci_detection_status(message.get_status(), message.get_expected_nof_bits_full_payload());
+
+  // Write an empty payload on detection failure.
+  if (!is_fapi_uci_payload_valid(status)) {
+    builder.set_csi_part2_parameters(status, csi_len, {});
+    return;
+  }
+
+  builder.set_csi_part2_parameters(
+      status, csi_len, uci_payload_type(message.get_csi_part2_bits().begin(), message.get_csi_part2_bits().end()));
+}
+
 /// Adds a PUCCH Format 2, Format 3 or Format 4 PDU to the given builder using the data provided by result.
 static void add_format_2_3_4_pucch_pdu(fapi::uci_indication_builder& builder, const ul_pucch_results& result)
 {
@@ -453,6 +475,9 @@ static void add_format_2_3_4_pucch_pdu(fapi::uci_indication_builder& builder, co
 
   // Fill CSI Part 1 parameters.
   fill_format_2_3_4_csi_part1(builder_format234, result.processor_result.message);
+
+  // Fill CSI Part 2 parameters.
+  fill_format_2_3_4_csi_part2(builder_format234, result.processor_result.message);
 }
 
 void phy_to_fapi_results_event_fastpath_translator::on_new_pucch_results(const ul_pucch_results& result)

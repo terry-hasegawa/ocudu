@@ -3,9 +3,13 @@
 // Portions of this file may implement 3GPP specifications, which may be subject to additional licensing requirements.
 
 #include "pucch_processor_impl.h"
+#include "ocudu/ocuduvec/copy.h"
 #include "ocudu/phy/upper/pucch_formats3_4_helpers.h"
 #include "ocudu/ran/pucch/pucch_constants.h"
 #include "ocudu/ran/pucch/pucch_info.h"
+#include "ocudu/ran/uci/uci_info.h"
+#include "ocudu/ran/uci/uci_part2_size_calculator.h"
+#include "ocudu/support/math/math_utils.h"
 #include "ocudu/support/transform_optional.h"
 
 using namespace ocudu;
@@ -20,6 +24,96 @@ using namespace ocudu;
     msg = err.error();
   }
   return is_success;
+}
+
+/// Compute the number of soft bits assigned to UCI Part 1 as per TS38.212 Table 6.3.1.4.1-1.
+static unsigned
+get_nof_uci_part1_softbits(unsigned nof_bits_part1, unsigned nof_softbits, float max_code_rate, unsigned mod_order)
+{
+  ocudu_assert(nof_bits_part1 != 0, "The number of bits of UCI Part 1 cannot be zero.");
+  ocudu_assert(nof_softbits != 0, "The total number of softbits of UCI payload cannot be zero.");
+  ocudu_assert(max_code_rate > 0.0F, "The maximum code rate cannot be zero.");
+  ocudu_assert(mod_order != 0, "The modulation order cannot be zero.");
+
+  // Get the number of bits for UCI Part 1 after codeblock segmentation and CRC attachment.
+  unsigned nof_bits_part1_with_crc = nof_bits_part1 + get_uci_nof_crc_bits(nof_bits_part1, nof_softbits);
+
+  // Get the number of rate matched output bits for UCI Part 1.
+  unsigned result =
+      std::ceil(static_cast<float>(nof_bits_part1_with_crc) / max_code_rate / static_cast<float>(mod_order)) *
+      mod_order;
+
+  return std::min(result, nof_softbits);
+}
+
+/// Return the maximum possible CSI Part 2 payload size described by the size description.
+static unsigned get_max_nof_csi_part2_bits(const uci_part2_size_description& csi_part2_size)
+{
+  unsigned max_nof_bits = 0;
+  for (const uci_part2_size_description::entry& entry : csi_part2_size.entries) {
+    if (!entry.map.empty()) {
+      max_nof_bits += *std::max_element(entry.map.begin(), entry.map.end());
+    }
+  }
+  return max_nof_bits;
+}
+
+/// Decode UCI payloads containing CSI Part 1 and CSI Part 2 reports.
+static uci_status decode_uci_payload(uci_decoder&                      decoder,
+                                     pucch_uci_message&                message,
+                                     span<const log_likelihood_ratio>  llr,
+                                     float                             max_code_rate,
+                                     const uci_decoder::configuration& decoder_config,
+                                     const uci_part2_size_description& csi_part2_size)
+{
+  // Directly decode the UCI payload if only one part is present.
+  if (csi_part2_size.entries.empty()) {
+    return decoder.decode(message.get_full_payload(), llr, decoder_config);
+  }
+
+  // Compute the UCI Part 1 size from the number of bits for SR, HARQ-ACK and CSI Part 1.
+  unsigned nof_bits_uci_part1 = message.get_expected_nof_sr_bits() + message.get_expected_nof_harq_ack_bits() +
+                                message.get_expected_nof_csi_part1_bits();
+
+  // Calculate the number of rate matched output bits for UCI Part 1 according to TS38.212 Table 6.3.1.4.1-1.
+  unsigned nof_softbits_uci_part1 = get_nof_uci_part1_softbits(
+      nof_bits_uci_part1, llr.size(), max_code_rate, get_bits_per_symbol(decoder_config.modulation));
+
+  // The UCI Part 2 rate matched output bits are the remaining after UCI Part 1.
+  unsigned nof_softbits_uci_part2 = llr.size() - nof_softbits_uci_part1;
+
+  // Decode first part. Skip second part if the first part was not decoded successfully or there are no soft bits for
+  // Part 2.
+  uci_status status = decoder.decode(
+      message.get_full_payload().first(nof_bits_uci_part1), llr.first(nof_softbits_uci_part1), decoder_config);
+  if ((status != uci_status::valid) || (nof_softbits_uci_part2 == 0)) {
+    return status;
+  }
+
+  // The CSI Part 2 size depends on the decoded CSI Part 1.
+  unsigned nof_bits_part2 =
+      uci_part2_get_size(uci_payload_type(message.get_csi_part1_bits().begin(), message.get_csi_part1_bits().end()),
+                         csi_part2_size)
+          .value();
+
+  message.set_expected_nof_csi_part2_bits(nof_bits_part2);
+  if (nof_bits_part2 == 0) {
+    return uci_status::valid;
+  }
+
+  if (nof_bits_part2 >= 3) {
+    return decoder.decode(message.get_csi_part2_bits(), llr.last(nof_softbits_uci_part2), decoder_config);
+  }
+
+  // TS38.212 Section 6.3.1.1.3 requires CSI Part 2 bit sequences shorter than 3 bits to be zero-padded to length 3
+  // before channel coding.
+  std::array<uint8_t, 3> csi_part2_with_padding = {};
+  status = decoder.decode(span<uint8_t>(csi_part2_with_padding), llr.last(nof_softbits_uci_part2), decoder_config);
+  if (status == uci_status::valid) {
+    ocuduvec::copy(message.get_csi_part2_bits(), span<const uint8_t>(csi_part2_with_padding).first(nof_bits_part2));
+  }
+
+  return status;
 }
 
 pucch_processor_result pucch_processor_impl::process(const resource_grid_reader&                   grid,
@@ -134,7 +228,7 @@ pucch_processor_result pucch_processor_impl::process(const resource_grid_reader&
   pucch_uci_message_config.nof_sr        = config.nof_sr;
   pucch_uci_message_config.nof_harq_ack  = config.nof_harq_ack;
   pucch_uci_message_config.nof_csi_part1 = config.nof_csi_part1;
-  pucch_uci_message_config.nof_csi_part2 = config.nof_csi_part2;
+  pucch_uci_message_config.nof_csi_part2 = 0;
 
   result.message = pucch_uci_message(pucch_uci_message_config);
 
@@ -188,10 +282,12 @@ pucch_processor_result pucch_processor_impl::process(const resource_grid_reader&
   decoder_config.modulation = modulation_scheme::QPSK;
 
   // Decode UCI payload.
-  result.message.set_status(decoder->decode(result.message.get_full_payload(), llr, decoder_config));
+  result.message.set_status(
+      decode_uci_payload(*decoder, result.message, llr, config.max_code_rate, decoder_config, config.csi_part2_size));
 
   // Expected UCI payload length in number of bits.
-  unsigned expected_nof_uci_bits = config.nof_harq_ack + config.nof_sr + config.nof_csi_part1 + config.nof_csi_part2;
+  unsigned expected_nof_uci_bits =
+      config.nof_harq_ack + config.nof_sr + config.nof_csi_part1 + result.message.get_expected_nof_csi_part2_bits();
 
   // Assert that the decoded UCI payload has the expected number of bits.
   ocudu_assert(result.message.get_full_payload().size() == expected_nof_uci_bits,
@@ -216,7 +312,7 @@ pucch_processor_result pucch_processor_impl::process(const resource_grid_reader&
   pucch_uci_message_config.nof_sr        = config.nof_sr;
   pucch_uci_message_config.nof_harq_ack  = config.nof_harq_ack;
   pucch_uci_message_config.nof_csi_part1 = config.nof_csi_part1;
-  pucch_uci_message_config.nof_csi_part2 = config.nof_csi_part2;
+  pucch_uci_message_config.nof_csi_part2 = 0;
 
   result.message = pucch_uci_message(pucch_uci_message_config);
 
@@ -277,10 +373,12 @@ pucch_processor_result pucch_processor_impl::process(const resource_grid_reader&
   decoder_config.modulation = mod_scheme;
 
   // Decode UCI payload.
-  result.message.set_status(decoder->decode(result.message.get_full_payload(), llr, decoder_config));
+  result.message.set_status(
+      decode_uci_payload(*decoder, result.message, llr, config.max_code_rate, decoder_config, config.csi_part2_size));
 
   // Expected UCI payload length in number of bits.
-  unsigned expected_nof_uci_bits = config.nof_harq_ack + config.nof_sr + config.nof_csi_part1 + config.nof_csi_part2;
+  unsigned expected_nof_uci_bits =
+      config.nof_harq_ack + config.nof_sr + config.nof_csi_part1 + result.message.get_expected_nof_csi_part2_bits();
 
   // Assert that the decoded UCI payload has the expected number of bits.
   ocudu_assert(result.message.get_full_payload().size() == expected_nof_uci_bits,
@@ -305,7 +403,7 @@ pucch_processor_result pucch_processor_impl::process(const resource_grid_reader&
   pucch_uci_message_config.nof_sr        = config.nof_sr;
   pucch_uci_message_config.nof_harq_ack  = config.nof_harq_ack;
   pucch_uci_message_config.nof_csi_part1 = config.nof_csi_part1;
-  pucch_uci_message_config.nof_csi_part2 = config.nof_csi_part2;
+  pucch_uci_message_config.nof_csi_part2 = 0;
 
   result.message = pucch_uci_message(pucch_uci_message_config);
 
@@ -367,10 +465,12 @@ pucch_processor_result pucch_processor_impl::process(const resource_grid_reader&
   decoder_config.modulation = mod_scheme;
 
   // Decode UCI payload.
-  result.message.set_status(decoder->decode(result.message.get_full_payload(), llr, decoder_config));
+  result.message.set_status(
+      decode_uci_payload(*decoder, result.message, llr, config.max_code_rate, decoder_config, config.csi_part2_size));
 
   // Expected UCI payload length in number of bits.
-  unsigned expected_nof_uci_bits = config.nof_harq_ack + config.nof_sr + config.nof_csi_part1 + config.nof_csi_part2;
+  unsigned expected_nof_uci_bits =
+      config.nof_harq_ack + config.nof_sr + config.nof_csi_part1 + result.message.get_expected_nof_csi_part2_bits();
 
   // Assert that the decoded UCI payload has the expected number of bits.
   ocudu_assert(result.message.get_full_payload().size() == expected_nof_uci_bits,
@@ -579,30 +679,58 @@ error_type<std::string> pucch_pdu_validator_impl::is_valid(const pucch_processor
         ce_dims.nof_rx_ports));
   }
 
-  // CSI Part 2 is not supported.
-  if (config.nof_csi_part2 != 0) {
-    return make_unexpected(fmt::format("CSI Part 2 is not currently supported."));
+  // Get the maximum number of CSI Part 2 bits.
+  unsigned max_nof_csi_part2 = get_max_nof_csi_part2_bits(config.csi_part2_size);
+
+  // Count the total number of payload bits for UCI Part 1.
+  unsigned nof_uci_part1_bits = config.nof_harq_ack + config.nof_sr + config.nof_csi_part1;
+
+  // The UCI Part 1 payload must not be empty.
+  if (nof_uci_part1_bits == 0) {
+    return make_unexpected("The UCI Part 1 payload must not be empty.");
   }
 
-  // Count total number of payload bits.
-  unsigned nof_uci_bits = config.nof_harq_ack + config.nof_sr + config.nof_csi_part1 + config.nof_csi_part2;
+  // Check that the CSI Part 2 size description is valid for the given number of bits for CSI Part 1.
+  if (!config.csi_part2_size.is_valid(config.nof_csi_part1)) {
+    return make_unexpected("CSI Part 2 size description does not match CSI Part 1 payload size.");
+  }
+
+  // The maximum code rate shall not exceed the format maximum.
+  if (config.max_code_rate > pucch_constants::f2::MAX_CODE_RATE) {
+    return make_unexpected(fmt::format("The maximum code rate (i.e., {}) exceeds the format maximum (i.e., {}).",
+                                       config.max_code_rate,
+                                       static_cast<float>(pucch_constants::f2::MAX_CODE_RATE)));
+  }
 
   // Calculate effective code rate.
-  float effective_code_rate = pucch_format2_code_rate(config.prbs.length(), config.nof_symbols, nof_uci_bits);
+  float effective_code_rate = pucch_format2_code_rate(config.prbs.length(), config.nof_symbols, nof_uci_part1_bits);
 
   // The code rate shall not exceed the maximum.
-  if (effective_code_rate > pucch_constants::f2::MAX_CODE_RATE) {
+  if (effective_code_rate > config.max_code_rate) {
     return make_unexpected(fmt::format("The effective code rate (i.e., {}) exceeds the maximum allowed {}.",
                                        effective_code_rate,
-                                       static_cast<float>(pucch_constants::f2::MAX_CODE_RATE)));
+                                       config.max_code_rate));
   }
 
   // UCI payload exceeds the UCI payload size boundaries.
   static constexpr auto nof_uci_bits_range =
       interval<unsigned, true>(pucch_constants::f2::MIN_NOF_DATA_BITS, pucch_constants::f2::MAX_NOF_DATA_BITS);
-  if (!nof_uci_bits_range.contains(nof_uci_bits)) {
-    return make_unexpected(fmt::format(
-        "UCI Payload length (i.e., {}) is outside the supported range (i.e., {}).", nof_uci_bits, nof_uci_bits_range));
+  if (!nof_uci_bits_range.contains(nof_uci_part1_bits + max_nof_csi_part2)) {
+    return make_unexpected(fmt::format("UCI Payload length (i.e., {}) is outside the supported range (i.e., {}).",
+                                       nof_uci_part1_bits + max_nof_csi_part2,
+                                       nof_uci_bits_range));
+  }
+
+  // If there are any CSI Part 2 bits, check that there are rate matching output bits remaining for UCI Part 2.
+  if (max_nof_csi_part2 > 0) {
+    // Calculate the total number of rate matching output bits.
+    unsigned e_tot = get_pucch_format2_E_total(config.prbs.length(), config.nof_symbols);
+    // Calculate the number of rate matching output bits for UCI Part 1.
+    unsigned e_uci_part1 = get_nof_uci_part1_softbits(
+        nof_uci_part1_bits, e_tot, config.max_code_rate, get_bits_per_symbol(modulation_scheme::QPSK));
+    if (e_tot == e_uci_part1) {
+      return make_unexpected("There are no rate matching output bits remaining for UCI Part 2.");
+    }
   }
 
   return default_success_t();
@@ -662,33 +790,49 @@ error_type<std::string> pucch_pdu_validator_impl::is_valid(const pucch_processor
         ce_dims.nof_rx_ports));
   }
 
-  // CSI Part 2 is not supported.
-  if (config.nof_csi_part2 != 0) {
-    return make_unexpected(fmt::format("CSI Part 2 is not currently supported."));
+  // Get the maximum number of CSI Part 2 bits.
+  unsigned max_nof_csi_part2 = get_max_nof_csi_part2_bits(config.csi_part2_size);
+
+  // Count the total number of payload bits for UCI Part 1.
+  unsigned nof_uci_part1_bits = config.nof_harq_ack + config.nof_sr + config.nof_csi_part1;
+
+  // The UCI Part 1 payload must not be empty.
+  if (nof_uci_part1_bits == 0) {
+    return make_unexpected("The UCI Part 1 payload must not be empty.");
   }
 
-  // Count total number of payload bits.
-  unsigned nof_uci_bits = config.nof_harq_ack + config.nof_sr + config.nof_csi_part1 + config.nof_csi_part2;
+  // Check that the CSI Part 2 size description is valid for the given number of bits for CSI Part 1.
+  if (!config.csi_part2_size.is_valid(config.nof_csi_part1)) {
+    return make_unexpected("CSI Part 2 size description does not match CSI Part 1 payload size.");
+  }
+
+  // The maximum code rate shall not exceed the format maximum.
+  if (config.max_code_rate > pucch_constants::f3::MAX_CODE_RATE) {
+    return make_unexpected(fmt::format("The maximum code rate (i.e., {}) exceeds the format maximum (i.e., {}).",
+                                       config.max_code_rate,
+                                       static_cast<float>(pucch_constants::f3::MAX_CODE_RATE)));
+  }
 
   // Calculate effective code rate.
   symbol_slot_mask dmrs_symb_mask = get_pucch_formats3_4_dmrs_symbol_mask(
       config.nof_symbols, config.second_hop_prb.has_value(), config.additional_dmrs);
   float effective_code_rate = pucch_format3_code_rate(
-      config.prbs.length(), config.nof_symbols - dmrs_symb_mask.count(), config.pi2_bpsk, nof_uci_bits);
+      config.prbs.length(), config.nof_symbols - dmrs_symb_mask.count(), config.pi2_bpsk, nof_uci_part1_bits);
 
   // The code rate shall not exceed the maximum.
-  if (effective_code_rate > pucch_constants::f3::MAX_CODE_RATE) {
+  if (effective_code_rate > config.max_code_rate) {
     return make_unexpected(fmt::format("The effective code rate (i.e., {}) exceeds the maximum allowed {}.",
                                        effective_code_rate,
-                                       static_cast<float>(pucch_constants::f3::MAX_CODE_RATE)));
+                                       config.max_code_rate));
   }
 
   // UCI payload exceeds the UCI payload size boundaries.
   static constexpr interval<unsigned, true> nof_uci_bits_range(pucch_constants::f3::MIN_NOF_DATA_BITS,
                                                                pucch_constants::f3::MAX_NOF_DATA_BITS);
-  if (!nof_uci_bits_range.contains(nof_uci_bits)) {
-    return make_unexpected(fmt::format(
-        "UCI Payload length (i.e., {}) is outside the supported range (i.e., {}).", nof_uci_bits, nof_uci_bits_range));
+  if (!nof_uci_bits_range.contains(nof_uci_part1_bits + max_nof_csi_part2)) {
+    return make_unexpected(fmt::format("UCI Payload length (i.e., {}) is outside the supported range (i.e., {}).",
+                                       nof_uci_part1_bits + max_nof_csi_part2,
+                                       nof_uci_bits_range));
   }
 
   // The number of allocated PRBs is outside the allowed range.
@@ -698,6 +842,20 @@ error_type<std::string> pucch_pdu_validator_impl::is_valid(const pucch_processor
         fmt::format("Number of PRBs (i.e., {}) is outside the allowed range for PUCCH Format 3 (i.e., {}).",
                     config.prbs.length(),
                     nof_prb_range));
+  }
+
+  // If there are any CSI Part 2 bits, check that there are rate matching output bits remaining for UCI Part 2.
+  if (max_nof_csi_part2 > 0) {
+    const modulation_scheme mod_scheme = config.pi2_bpsk ? modulation_scheme::PI_2_BPSK : modulation_scheme::QPSK;
+    // Calculate the total number of rate matching output bits.
+    unsigned e_tot =
+        get_pucch_format3_E_total(config.prbs.length(), config.nof_symbols - dmrs_symb_mask.count(), config.pi2_bpsk);
+    // Calculate the number of rate matching output bits for UCI Part 1.
+    unsigned e_uci_part1 =
+        get_nof_uci_part1_softbits(nof_uci_part1_bits, e_tot, config.max_code_rate, get_bits_per_symbol(mod_scheme));
+    if (e_tot == e_uci_part1) {
+      return make_unexpected("There are no rate matching output bits remaining for UCI Part 2.");
+    }
   }
 
   return default_success_t();
@@ -749,39 +907,69 @@ error_type<std::string> pucch_pdu_validator_impl::is_valid(const pucch_processor
         ce_dims.nof_rx_ports));
   }
 
-  // CSI Part 2 is not supported.
-  if (config.nof_csi_part2 != 0) {
-    return make_unexpected(fmt::format("CSI Part 2 is not currently supported."));
+  // Get the maximum number of CSI Part 2 bits.
+  unsigned max_nof_csi_part2 = get_max_nof_csi_part2_bits(config.csi_part2_size);
+
+  // Count the total number of payload bits for UCI Part 1.
+  unsigned nof_uci_part1_bits = config.nof_harq_ack + config.nof_sr + config.nof_csi_part1;
+
+  // The UCI Part 1 payload must not be empty.
+  if (nof_uci_part1_bits == 0) {
+    return make_unexpected("The UCI Part 1 payload must not be empty.");
   }
 
-  // Count total number of payload bits.
-  unsigned nof_uci_bits = config.nof_harq_ack + config.nof_sr + config.nof_csi_part1 + config.nof_csi_part2;
+  // Check that the CSI Part 2 size description is valid for the given number of bits for CSI Part 1.
+  if (!config.csi_part2_size.is_valid(config.nof_csi_part1)) {
+    return make_unexpected("CSI Part 2 size description does not match CSI Part 1 payload size.");
+  }
+
+  // The maximum code rate shall not exceed the format maximum.
+  if (config.max_code_rate > pucch_constants::f4::MAX_CODE_RATE) {
+    return make_unexpected(fmt::format("The maximum code rate (i.e., {}) exceeds the format maximum (i.e., {}).",
+                                       config.max_code_rate,
+                                       static_cast<float>(pucch_constants::f4::MAX_CODE_RATE)));
+  }
 
   // Calculate effective code rate.
   symbol_slot_mask dmrs_symb_mask = get_pucch_formats3_4_dmrs_symbol_mask(
       config.nof_symbols, config.second_hop_prb.has_value(), config.additional_dmrs);
   float effective_code_rate = pucch_format4_code_rate(
-      config.occ_length, config.nof_symbols - dmrs_symb_mask.count(), config.pi2_bpsk, nof_uci_bits);
+      config.occ_length, config.nof_symbols - dmrs_symb_mask.count(), config.pi2_bpsk, nof_uci_part1_bits);
 
   // The code rate shall not exceed the maximum.
-  if (effective_code_rate > pucch_constants::f4::MAX_CODE_RATE) {
+  if (effective_code_rate > config.max_code_rate) {
     return make_unexpected(fmt::format("The effective code rate (i.e., {}) exceeds the maximum allowed {}.",
                                        effective_code_rate,
-                                       static_cast<float>(pucch_constants::f4::MAX_CODE_RATE)));
+                                       config.max_code_rate));
   }
 
   // UCI payload exceeds the UCI payload size boundaries.
   static constexpr interval<unsigned, true> nof_uci_bits_range(pucch_constants::f4::MIN_NOF_DATA_BITS,
                                                                pucch_constants::f4::MAX_NOF_DATA_BITS);
-  if (!nof_uci_bits_range.contains(nof_uci_bits)) {
-    return make_unexpected(fmt::format(
-        "UCI Payload length (i.e., {}) is outside the supported range (i.e., {}).", nof_uci_bits, nof_uci_bits_range));
+  if (!nof_uci_bits_range.contains(nof_uci_part1_bits + max_nof_csi_part2)) {
+    return make_unexpected(fmt::format("UCI Payload length (i.e., {}) is outside the supported range (i.e., {}).",
+                                       nof_uci_part1_bits + max_nof_csi_part2,
+                                       nof_uci_bits_range));
   }
 
   // The OCC length is invalid.
   if ((config.occ_length != 2) && (config.occ_length != 4)) {
     return make_unexpected(
         fmt::format("Invalid OCC length value (i.e., {}). Valid values are 2 and 4.", config.occ_length));
+  }
+
+  // If there are any CSI Part 2 bits, check that there are rate matching output bits remaining for UCI Part 2.
+  if (max_nof_csi_part2 > 0) {
+    const modulation_scheme mod_scheme = config.pi2_bpsk ? modulation_scheme::PI_2_BPSK : modulation_scheme::QPSK;
+    // Calculate the total number of rate matching output bits.
+    unsigned e_tot =
+        get_pucch_format4_E_total(config.occ_length, config.nof_symbols - dmrs_symb_mask.count(), config.pi2_bpsk);
+    // Calculate the number of rate matching output bits for UCI Part 1.
+    unsigned e_uci_part1 =
+        get_nof_uci_part1_softbits(nof_uci_part1_bits, e_tot, config.max_code_rate, get_bits_per_symbol(mod_scheme));
+    if (e_tot == e_uci_part1) {
+      return make_unexpected("There are no rate matching output bits remaining for UCI Part 2.");
+    }
   }
 
   return default_success_t();

@@ -33,7 +33,7 @@ static unsigned extract_parameter(unsigned offset, unsigned width, const uci_pay
   return static_cast<unsigned>(param);
 }
 
-unsigned ocudu::uci_part2_get_size(const uci_payload_type& part1, const uci_part2_size_description& descr)
+units::bits ocudu::uci_part2_get_size(const uci_payload_type& part1, const uci_part2_size_description& descr)
 {
   unsigned result = 0;
 
@@ -67,5 +67,5 @@ unsigned ocudu::uci_part2_get_size(const uci_payload_type& part1, const uci_part
     result += entry.map[index];
   }
 
-  return result;
+  return units::bits(result);
 }

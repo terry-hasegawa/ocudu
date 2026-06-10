@@ -19,9 +19,9 @@ TEST(uci_part2_size_calculator, fix_size)
   // Generate random payload with all ones.
   uci_payload_type csi_part1 = ~uci_payload_type(csi_part1_size);
 
-  unsigned csi_part2_size = uci_part2_get_size(csi_part1, description);
+  units::bits csi_part2_size = uci_part2_get_size(csi_part1, description);
 
-  ASSERT_EQ(csi_part2_size, expected_csi_part2_size);
+  ASSERT_EQ(csi_part2_size.value(), expected_csi_part2_size);
 }
 
 // Test two ports typical CSI report following TS38.212 Tables 6.3.2.1.2-3 and 6.3.2.1.2-4.
@@ -67,9 +67,9 @@ TEST(uci_part2_size_calculator, basic_two_ports)
     // Force RI to 1 layer.
     csi_part1.set(0, false);
 
-    unsigned csi_part2_size = uci_part2_get_size(csi_part1, description);
+    units::bits csi_part2_size = uci_part2_get_size(csi_part1, description);
 
-    ASSERT_EQ(csi_part2_size, 2);
+    ASSERT_EQ(csi_part2_size, units::bits(2));
   }
 
   // Test for RI=2 layer.
@@ -77,9 +77,9 @@ TEST(uci_part2_size_calculator, basic_two_ports)
     // Force RI to 2 layer.
     csi_part1.set(0, true);
 
-    unsigned csi_part2_size = uci_part2_get_size(csi_part1, description);
+    units::bits csi_part2_size = uci_part2_get_size(csi_part1, description);
 
-    ASSERT_EQ(csi_part2_size, 1);
+    ASSERT_EQ(csi_part2_size, units::bits(1));
   }
 }
 
@@ -132,9 +132,9 @@ TEST(uci_part2_size_calculator, basic_four_ports)
     csi_part1.set(0, false);
     csi_part1.set(1, false);
 
-    unsigned csi_part2_size = uci_part2_get_size(csi_part1, description);
+    units::bits csi_part2_size = uci_part2_get_size(csi_part1, description);
 
-    ASSERT_EQ(csi_part2_size, 4);
+    ASSERT_EQ(csi_part2_size, units::bits(4));
   }
 
   // Test for RI=2 layer.
@@ -142,9 +142,9 @@ TEST(uci_part2_size_calculator, basic_four_ports)
     csi_part1.set(0, false);
     csi_part1.set(1, true);
 
-    unsigned csi_part2_size = uci_part2_get_size(csi_part1, description);
+    units::bits csi_part2_size = uci_part2_get_size(csi_part1, description);
 
-    ASSERT_EQ(csi_part2_size, 4);
+    ASSERT_EQ(csi_part2_size, units::bits(4));
   }
 
   // Test for RI=3 layer.
@@ -152,9 +152,9 @@ TEST(uci_part2_size_calculator, basic_four_ports)
     csi_part1.set(0, true);
     csi_part1.set(1, false);
 
-    unsigned csi_part2_size = uci_part2_get_size(csi_part1, description);
+    units::bits csi_part2_size = uci_part2_get_size(csi_part1, description);
 
-    ASSERT_EQ(csi_part2_size, 3);
+    ASSERT_EQ(csi_part2_size, units::bits(3));
   }
 
   // Test for RI=4 layer.
@@ -162,8 +162,8 @@ TEST(uci_part2_size_calculator, basic_four_ports)
     csi_part1.set(0, true);
     csi_part1.set(1, true);
 
-    unsigned csi_part2_size = uci_part2_get_size(csi_part1, description);
+    units::bits csi_part2_size = uci_part2_get_size(csi_part1, description);
 
-    ASSERT_EQ(csi_part2_size, 3);
+    ASSERT_EQ(csi_part2_size, units::bits(3));
   }
 }

@@ -116,8 +116,26 @@ public:
   /// Returns the number of expected of CSI Part 1 information bits.
   unsigned get_expected_nof_csi_part1_bits() const { return nof_csi_part1_bits; }
 
-  /// Returns the number of expected of CSI Part 2 information bits.
+  /// \brief Returns the number of expected CSI Part 2 information bits.
+  ///
+  /// The number of bits for UCI Part 2 is determined after the decoding of UCI Part 1. Therefore, it's not possible to
+  /// know the expected number of bits for CSI Part 2 before the UCI Part 1 has been decoded.
+  ///
+  /// A return value of 0 corresponds to one of the following cases:
+  /// - UCI Part 1 has not been decoded yet, hence the CSI Part 2 size is still unknown; or
+  /// - UCI Part 1 has been decoded, and it maps to an empty CSI Part 2.
   unsigned get_expected_nof_csi_part2_bits() const { return nof_csi_part2_bits; }
+
+  /// Sets the number of expected CSI Part 2 information bits.
+  void set_expected_nof_csi_part2_bits(unsigned nof_csi_part2_bits_)
+  {
+    ocudu_assert(nof_harq_ack_bits + nof_sr_bits + nof_csi_part1_bits + nof_csi_part2_bits_ <=
+                     uci_constants::MAX_NOF_PAYLOAD_BITS,
+                 "The total number of payload bits (i.e. {}) shall not exceed {}.",
+                 nof_harq_ack_bits + nof_sr_bits + nof_csi_part1_bits + nof_csi_part2_bits_,
+                 uci_constants::MAX_NOF_PAYLOAD_BITS);
+    nof_csi_part2_bits = nof_csi_part2_bits_;
+  }
 
   /// Gets a read-write view of the SR bits.
   span<uint8_t> get_sr_bits() { return span<uint8_t>(data).subspan(nof_harq_ack_bits, nof_sr_bits); }
