@@ -28,3 +28,22 @@ struct nr_cell_global_id_t {
 };
 
 } // namespace ocudu
+
+namespace fmt {
+
+template <>
+struct formatter<ocudu::nr_cell_global_id_t> {
+  template <typename ParseContext>
+  auto parse(ParseContext& ctx)
+  {
+    return ctx.begin();
+  }
+
+  template <typename FormatContext>
+  auto format(const ocudu::nr_cell_global_id_t& val, FormatContext& ctx) const
+  {
+    return format_to(ctx.out(), "[plmn={} nci={}]", val.plmn_id, val.nci);
+  }
+};
+
+} // namespace fmt

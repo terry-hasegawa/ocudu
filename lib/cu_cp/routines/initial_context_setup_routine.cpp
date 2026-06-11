@@ -150,21 +150,27 @@ void initial_context_setup_routine::operator()(
 
   // Configure location reporting or/and send direct location report if requested.
   if (request.location_report_request_type.has_value()) {
-    const auto msg = request.location_report_request_type.value();
-    loc_mng.configure_location_reporting(msg);
+    const location_report_request loc_req = *request.location_report_request_type;
+
+    // Configure location reporting, only if required.
+    using event_type = location_report_request::event_type;
+    if (loc_req.location_reporting_type != event_type::direct &&
+        loc_req.location_reporting_type != event_type::nulltype) {
+      loc_mng.configure_location_reporting(loc_req);
+    }
+
     // Send immediate location report if required, 3GPP TS 38.413 8.12.1.2 states that "if reporting upon change of
     // serving cell is requested, the NG-RAN node shall send a report immediately"
-    using event_type = location_report_request::event_type;
-    if (msg.location_reporting_type == event_type::direct ||
-        msg.location_reporting_type == event_type::change_of_serve_cell ||
-        msg.location_reporting_type == event_type::change_of_serving_cell_and_ue_presence_in_the_area_of_interest) {
+    if (loc_req.location_reporting_type == event_type::direct ||
+        loc_req.location_reporting_type == event_type::change_of_serve_cell ||
+        loc_req.location_reporting_type == event_type::change_of_serving_cell_and_ue_presence_in_the_area_of_interest) {
       // Get cell info and build location report immediately.
       const auto& cell_ctx = rrc_ue.get_cell_context();
 
       cu_cp_user_location_info_nr user_location_info;
       user_location_info.nr_cgi = {request.guami.plmn, cell_ctx.cgi.nci};
       user_location_info.tai    = {request.guami.plmn, cell_ctx.tac};
-      auto report               = loc_mng.get_direct_location_report(request.ue_index, user_location_info, msg);
+      auto report               = loc_mng.get_direct_location_report(request.ue_index, user_location_info, loc_req);
       ngap_ue_location_reporting_handler.handle_location_report_transmission(report);
     }
   }
