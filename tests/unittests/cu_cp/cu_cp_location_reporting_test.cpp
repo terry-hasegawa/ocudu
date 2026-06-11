@@ -58,8 +58,7 @@ public:
     if (ue_ctx == nullptr) {
       return false;
     }
-    return setup_ue_security_and_ue_capabilies(
-        du_idx, du_ue_id, std::nullopt, true, loc_req, &out_location_report);
+    return setup_ue_security_and_ue_capabilies(du_idx, du_ue_id, std::nullopt, true, loc_req, &out_location_report);
   }
 
   unsigned du_idx    = 0;
@@ -261,8 +260,7 @@ TEST_F(cu_cp_location_reporting_test,
   ASSERT_FALSE(this->wait_for_ngap_tx_pdu(ngap_pdu, std::chrono::milliseconds{5}));
 }
 
-TEST_F(cu_cp_location_reporting_test,
-       when_ics_with_direct_type_is_received_then_location_report_is_sent_to_amf)
+TEST_F(cu_cp_location_reporting_test, when_ics_with_direct_type_is_received_then_location_report_is_sent_to_amf)
 {
   location_report_request loc_req;
   loc_req.location_reporting_type = location_report_request::event_type::direct;
