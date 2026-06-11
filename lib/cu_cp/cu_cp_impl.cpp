@@ -1832,6 +1832,9 @@ cu_cp_impl::handle_inter_cu_handover_request(const cu_cp_inter_cu_handover_reque
                "ue={}: could not find a CU-UP to serve the UE",
                request.ue_index);
 
+  auto* ngap = ngap_db.find_ngap(request.guami.plmn);
+  ocudu_assert(ngap != nullptr, "ue={}: NGAP not found for PLMN={}", request.ue_index, request.guami.plmn);
+
   return launch_async<inter_cu_handover_target_routine>(
       request,
       cu_up_db.find_cu_up_processor(ue->get_cu_up_index())->get_e1ap_bearer_context_manager(),
@@ -1839,6 +1842,7 @@ cu_cp_impl::handle_inter_cu_handover_request(const cu_cp_inter_cu_handover_reque
       get_cu_cp_ue_removal_handler(),
       ue_mng,
       cell_meas_mng,
+      ngap->get_ngap_location_reporting_handler(),
       cfg.security.default_security_indication,
       logger);
 }

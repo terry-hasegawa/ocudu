@@ -619,7 +619,8 @@ bool cu_cp_test_environment::setup_ue_security_and_ue_capabilies(
     gnb_du_ue_f1ap_id_t                                       du_ue_id,
     std::optional<ngap_core_network_assist_info_for_inactive> cn_assist_info_for_inactive,
     bool                                                      rrc_inactive_supported,
-    std::optional<location_report_request>                    location_reporting_request)
+    std::optional<location_report_request>                    location_reporting_request,
+    ngap_message*                                             out_location_report_pdu)
 {
   ngap_message ngap_pdu;
   ocudu_assert(not this->get_amf().try_pop_rx_pdu(ngap_pdu), "there are still NGAP messages to pop from AMF");
@@ -686,9 +687,17 @@ bool cu_cp_test_environment::setup_ue_security_and_ue_capabilies(
   report_fatal_error_if_not(test_helpers::is_valid_dl_rrc_message_transfer(f1ap_pdu),
                             "Invalid DL RRC Message Transfer");
 
-  // Wait for Initial Context Setup Response.
+  // When a direct or cell-change location report is requested via ICS, the Location Report is sent before the ICS
+  // Response. Consume it here so callers don't need to handle the ordering.
   result = this->wait_for_ngap_tx_pdu(ngap_pdu);
-  report_fatal_error_if_not(result, "Failed to receive Initial Context Setup Response");
+  report_fatal_error_if_not(result, "Failed to receive first NGAP PDU after ICS");
+  if (test_helpers::is_valid_location_report(ngap_pdu)) {
+    if (out_location_report_pdu != nullptr) {
+      *out_location_report_pdu = ngap_pdu;
+    }
+    result = this->wait_for_ngap_tx_pdu(ngap_pdu);
+    report_fatal_error_if_not(result, "Failed to receive Initial Context Setup Response after Location Report");
+  }
   report_fatal_error_if_not(test_helpers::is_valid_initial_context_setup_response(ngap_pdu), "Invalid init ctxt setup");
 
   // Wait for UE Radio Capability Info Indication.

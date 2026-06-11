@@ -35,6 +35,7 @@ inter_cu_handover_target_routine::inter_cu_handover_target_routine(
     cu_cp_ue_removal_handler&              ue_removal_handler_,
     ue_manager&                            ue_mng_,
     cell_meas_manager&                     cell_meas_mng_,
+    ngap_location_reporting_handler&       ngap_loc_report_handler_,
     const security_indication_t&           default_security_indication_,
     ocudulog::basic_logger&                logger_) :
   request(request_),
@@ -43,6 +44,7 @@ inter_cu_handover_target_routine::inter_cu_handover_target_routine(
   ue_removal_handler(ue_removal_handler_),
   ue_mng(ue_mng_),
   cell_meas_mng(cell_meas_mng_),
+  ngap_loc_report_handler(ngap_loc_report_handler_),
   logger(logger_),
   default_security_indication(default_security_indication_)
 {
@@ -240,9 +242,26 @@ void inter_cu_handover_target_routine::operator()(
     }
   }
 
-  // Configure location reporting if requested in the handover request.
+  // Configure location reporting and/or send immediate report if requested in the handover request.
   if (request.location_report_request_type.has_value()) {
-    ue->get_location_manager().configure_location_reporting(request.location_report_request_type.value());
+    const auto& msg = request.location_report_request_type.value();
+    ue->get_location_manager().configure_location_reporting(msg);
+    using event_type = location_report_request::event_type;
+    if (msg.location_reporting_type == event_type::direct ||
+        msg.location_reporting_type == event_type::change_of_serve_cell ||
+        msg.location_reporting_type == event_type::change_of_serving_cell_and_ue_presence_in_the_area_of_interest) {
+      const auto* du_ctx      = du_proc.get_context();
+      const auto* target_cell = du_ctx != nullptr ? du_ctx->find_cell(request.target_cell_id) : nullptr;
+      if (target_cell == nullptr) {
+        logger.warning("ue={}: target cell not found, cannot send immediate location report", request.ue_index);
+      } else {
+        cu_cp_user_location_info_nr user_location_info;
+        user_location_info.nr_cgi = {request.guami.plmn, target_cell->cgi.nci};
+        user_location_info.tai    = {request.guami.plmn, target_cell->tac};
+        auto report = ue->get_location_manager().get_direct_location_report(request.ue_index, user_location_info, msg);
+        ngap_loc_report_handler.handle_location_report_transmission(report);
+      }
+    }
   }
 
   CORO_RETURN(generate_handover_resource_allocation_response(true));

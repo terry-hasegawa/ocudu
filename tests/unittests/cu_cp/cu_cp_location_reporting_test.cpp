@@ -44,6 +44,24 @@ public:
     return ue_ctx != nullptr;
   }
 
+  // Runs the UE attach up through ICS with location reporting configured, capturing the Location Report emitted.
+  [[nodiscard]] bool attach_ue_with_ics_location_reporting(const location_report_request& loc_req,
+                                                           ngap_message&                  out_location_report)
+  {
+    if (!connect_new_ue(du_idx, du_ue_id, crnti)) {
+      return false;
+    }
+    if (!authenticate_ue(du_idx, du_ue_id, amf_ue_id)) {
+      return false;
+    }
+    ue_ctx = this->find_ue_context(du_idx, du_ue_id);
+    if (ue_ctx == nullptr) {
+      return false;
+    }
+    return setup_ue_security_and_ue_capabilies(
+        du_idx, du_ue_id, std::nullopt, true, loc_req, &out_location_report);
+  }
+
   unsigned du_idx    = 0;
   unsigned cu_up_idx = 0;
 
@@ -241,4 +259,60 @@ TEST_F(cu_cp_location_reporting_test,
 
   // No Location Report should be sent since the serving cell did not change.
   ASSERT_FALSE(this->wait_for_ngap_tx_pdu(ngap_pdu, std::chrono::milliseconds{5}));
+}
+
+TEST_F(cu_cp_location_reporting_test,
+       when_ics_with_direct_type_is_received_then_location_report_is_sent_to_amf)
+{
+  location_report_request loc_req;
+  loc_req.location_reporting_type = location_report_request::event_type::direct;
+  loc_req.location_report_area    = location_report_request::report_area::cell;
+
+  ASSERT_TRUE(attach_ue_with_ics_location_reporting(loc_req, ngap_pdu));
+
+  // Verify the captured Location Report.
+  ASSERT_EQ(ngap_pdu.pdu.type().value, asn1::ngap::ngap_pdu_c::types_opts::init_msg);
+  ASSERT_EQ(ngap_pdu.pdu.init_msg().value.type(),
+            asn1::ngap::ngap_elem_procs_o::init_msg_c::types_opts::location_report);
+
+  const auto& location_report = ngap_pdu.pdu.init_msg().value.location_report();
+
+  ASSERT_EQ(location_report->amf_ue_ngap_id, amf_ue_id_to_uint(ue_ctx->amf_ue_id.value()));
+  ASSERT_EQ(location_report->ran_ue_ngap_id, ran_ue_id_to_uint(ue_ctx->ran_ue_id.value()));
+
+  ASSERT_EQ(location_report->location_report_request_type.event_type, asn1::ngap::event_type_opts::direct);
+  ASSERT_EQ(location_report->location_report_request_type.report_area.value, asn1::ngap::report_area_opts::cell);
+
+  ASSERT_EQ(location_report->user_location_info.type(),
+            asn1::ngap::user_location_info_c::types_opts::user_location_info_nr);
+
+  const auto& user_loc_info = location_report->user_location_info.user_location_info_nr();
+  ASSERT_EQ(user_loc_info.nr_cgi.nr_cell_id.to_number(),
+            nr_cell_identity::create(gnb_id_t{411, 22}, 0).value().value());
+  ASSERT_EQ(user_loc_info.nr_cgi.plmn_id.to_number(), plmn_identity::test_value().to_bcd());
+  ASSERT_EQ(user_loc_info.tai.plmn_id.to_number(), plmn_identity::test_value().to_bcd());
+  ASSERT_EQ(user_loc_info.tai.tac.to_number(), 7);
+}
+
+TEST_F(cu_cp_location_reporting_test,
+       when_ics_with_change_of_serving_cell_type_is_received_then_location_report_is_sent_to_amf)
+{
+  location_report_request loc_req;
+  loc_req.location_reporting_type = location_report_request::event_type::change_of_serve_cell;
+  loc_req.location_report_area    = location_report_request::report_area::cell;
+
+  ASSERT_TRUE(attach_ue_with_ics_location_reporting(loc_req, ngap_pdu));
+
+  ASSERT_EQ(ngap_pdu.pdu.type().value, asn1::ngap::ngap_pdu_c::types_opts::init_msg);
+  ASSERT_EQ(ngap_pdu.pdu.init_msg().value.type(),
+            asn1::ngap::ngap_elem_procs_o::init_msg_c::types_opts::location_report);
+
+  const auto& location_report = ngap_pdu.pdu.init_msg().value.location_report();
+
+  ASSERT_EQ(location_report->amf_ue_ngap_id, amf_ue_id_to_uint(ue_ctx->amf_ue_id.value()));
+  ASSERT_EQ(location_report->ran_ue_ngap_id, ran_ue_id_to_uint(ue_ctx->ran_ue_id.value()));
+  ASSERT_EQ(location_report->location_report_request_type.event_type,
+            asn1::ngap::event_type_opts::change_of_serve_cell);
+  ASSERT_EQ(location_report->user_location_info.type(),
+            asn1::ngap::user_location_info_c::types_opts::user_location_info_nr);
 }
