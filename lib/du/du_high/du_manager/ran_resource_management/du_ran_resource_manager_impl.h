@@ -68,7 +68,7 @@ public:
   expected<ue_ran_resource_configurator, std::string>
   create_ue_resource_configurator(du_ue_index_t ue_index, du_cell_index_t pcell_index, bool has_tc_rnti) override;
 
-  unsigned get_max_nof_ues(du_cell_index_t cell_index) const override;
+  unsigned get_max_nof_setup_ues(du_cell_index_t cell_index) const override;
 
   /// \brief Updates a UE's cell configuration context based on the F1 UE Context Update request.
   ///

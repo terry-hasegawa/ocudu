@@ -27,7 +27,7 @@ static mac_cell_creation_request make_mac_cell_config(du_cell_index_t           
                                                       const byte_buffer&                              sib1,
                                                       span<const bcch_dl_sch_payload_type>            si_messages,
                                                       const sched_cell_configuration_request_message& sched_cell_cfg,
-                                                      unsigned                                        max_nof_ues)
+                                                      unsigned                                        max_nof_setup_ues)
 {
   mac_cell_creation_request mac_cfg{};
   mac_cfg.cell_index = cell_index;
@@ -51,7 +51,7 @@ static mac_cell_creation_request make_mac_cell_config(du_cell_index_t           
 
   // Dimension the MAC DL HARQ buffer pool based on the number of UEs the cell can actually support and the configured
   // number of DL HARQ processes per UE.
-  mac_cfg.max_harq_buffers = du_cfg.ran.init_bwp.pdsch.max_harq_procs * max_nof_ues;
+  mac_cfg.max_harq_buffers = du_cfg.ran.init_bwp.pdsch.max_harq_procs * max_nof_setup_ues;
 
   return mac_cfg;
 }
@@ -173,8 +173,13 @@ void du_setup_procedure::configure_du_cells()
     }
 
     // Forward config to MAC.
-    ctxt.params.mac.mgr.get_cell_manager().add_cell(make_mac_cell_config(
-        cell_index, du_cfg, sys_info.sib1, sys_info.si_messages, sched_cfg, ctxt.res_mng.get_max_nof_ues(cell_index)));
+    ctxt.params.mac.mgr.get_cell_manager().add_cell(
+        make_mac_cell_config(cell_index,
+                             du_cfg,
+                             sys_info.sib1,
+                             sys_info.si_messages,
+                             sched_cfg,
+                             ctxt.res_mng.get_max_nof_setup_ues(cell_index)));
   }
 }
 

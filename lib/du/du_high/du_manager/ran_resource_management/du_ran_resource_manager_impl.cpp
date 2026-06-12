@@ -98,14 +98,14 @@ du_ran_resource_manager_impl::du_ran_resource_manager_impl(span<const du_cell_co
                 "CSI ({}) and SRS ({}).",
                 cell.ran.pci,
                 fmt::underlying(cell_idx),
-                get_max_nof_ues(cell_idx),
+                get_max_nof_setup_ues(cell_idx),
                 pucch_res_mng.get_nof_free_sr_configs(cell_idx),
                 is_periodic_csi_report ? fmt::to_string(pucch_res_mng.get_nof_free_csi_configs(cell_idx)) : "n/a",
                 is_periodic_srs ? fmt::to_string(srs_res_mng->get_nof_srs_free_res_offsets(cell_idx)) : "n/a");
   }
 }
 
-unsigned du_ran_resource_manager_impl::get_max_nof_ues(du_cell_index_t cell_index) const
+unsigned du_ran_resource_manager_impl::get_max_nof_setup_ues(du_cell_index_t cell_index) const
 {
   const auto& cell = cell_cfg_list[cell_index];
 
@@ -136,7 +136,7 @@ du_ran_resource_manager_impl::create_ue_resource_configurator(du_ue_index_t   ue
   // Note: In case of lack of RAN resource availability, the return will be error type.
   error_type<std::string> err = allocate_cell_resources(ue_index, pcell_index, SERVING_PCELL_IDX);
   if (not err.has_value()) {
-    logger.info("Failed to create a configuration for ue={}. Cause: {}", static_cast<unsigned>(ue_index), err.error());
+    logger.info("Failed to create a configuration for ue={}. Cause: {}", ue_index, err.error());
   }
 
   // Initialize UE with DRX disabled.

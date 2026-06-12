@@ -141,7 +141,7 @@ private:
   /// DL HARQ buffers that are not associated with any UE and can be allocated to newly created UEs.
   std::vector<dl_harq_buffer_storage*> buffer_cache;
   /// Stores the DL HARQ buffers.
-  std::unique_ptr<std::array<dl_harq_buffer_storage, MAX_NOF_DU_UES * MAX_NOF_HARQS>> pool;
+  std::unique_ptr<std::array<dl_harq_buffer_storage, MAX_NOF_DU_UES_PER_CELL * MAX_NOF_HARQS>> pool;
   /// Index to the available buffer storage in the pool.
   size_t pool_elem_index;
   /// Flag used to cancel scheduled tasks that grow the cache of DL HARQ buffers.
