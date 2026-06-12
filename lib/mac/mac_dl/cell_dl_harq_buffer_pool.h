@@ -9,7 +9,6 @@
 #include "ocudu/ocudulog/ocudulog.h"
 #include "ocudu/ran/du_types.h"
 #include "ocudu/ran/harq_id.h"
-#include "ocudu/support/executors/task_executor.h"
 #include "ocudu/support/shared_transport_block.h"
 
 namespace ocudu {
@@ -85,12 +84,7 @@ public:
   /// \param cell_nof_prbs Number of PRBs of the cell.
   /// \param nof_ports Number of ports of the cell.
   /// \param max_harqs_per_cell Maximum number of HARQs per cell.
-  /// \param ctrl_exec Executor to which DL HARQ buffer allocation tasks is dispatched.
-  cell_dl_harq_buffer_pool(unsigned       cell_nof_prbs,
-                           unsigned       nof_ports,
-                           unsigned       max_harqs_per_cell,
-                           task_executor& ctrl_exec);
-  ~cell_dl_harq_buffer_pool();
+  cell_dl_harq_buffer_pool(unsigned cell_nof_prbs, unsigned nof_ports, unsigned max_harqs_per_cell);
 
   /// Called on cell deactivation to clear all available buffers.
   void clear();
@@ -116,36 +110,22 @@ public:
   }
 
 private:
-  /// Returns true if the pool has been depleted.
-  bool is_pool_depleted() const { return pool_elem_index == 0; }
-
-  /// This function dispatches a task to grow the cache of DL HARQ buffers, using the \c ctrl_exec, in case the cache
-  /// size decreased below a specific threshold.
-  void grow_cache_in_background();
-
-  /// Returns a pointer to an unused element in the pool or nullptr if the pool is depleted.
-  dl_harq_buffer_storage* allocate_from_pool();
-
-  /// Takes an unused element from the buffer cache (reference count is 0) and returns its pointer, otherwise returns
+  /// Takes an unused element from the free list (reference count is 0) and returns its pointer, otherwise returns
   /// nullptr if none is found.
-  dl_harq_buffer_storage* allocate_from_cache();
+  dl_harq_buffer_storage* allocate_buffer();
 
   /// Maximum MAC PDU length, derived based on the cell properties.
   const unsigned max_pdu_len;
-  /// Executor to which DL HARQ buffer allocation tasks is dispatched in the background.
-  task_executor& ctrl_exec;
+  /// Number of DL HARQ buffers held by the pool.
+  const unsigned nof_buffers;
   /// Logger.
   ocudulog::basic_logger& logger;
   /// List of DL HARQ buffers currently allocated to UEs in the cell.
   std::vector<ue_dl_harq_buffer_list> cell_buffers;
   /// DL HARQ buffers that are not associated with any UE and can be allocated to newly created UEs.
-  std::vector<dl_harq_buffer_storage*> buffer_cache;
+  std::vector<dl_harq_buffer_storage*> free_buffer_list;
   /// Stores the DL HARQ buffers.
   std::unique_ptr<dl_harq_buffer_storage[]> pool;
-  /// Index to the available buffer storage in the pool.
-  size_t pool_elem_index;
-  /// Flag used to cancel scheduled tasks that grow the cache of DL HARQ buffers.
-  std::shared_ptr<bool> pool_growth_cancelled = std::make_shared<bool>(false);
 };
 
 } // namespace ocudu

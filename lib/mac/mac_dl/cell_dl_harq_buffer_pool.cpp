@@ -16,58 +16,31 @@ static units::bytes derive_max_pdu_length(unsigned cell_nof_prbs, unsigned nof_p
   return cw_max_size.round_up_to_bytes();
 }
 
-// (Implementation-defined) Batch of DL HARQ buffers to allocate every time the cache is getting depleted.
-static constexpr unsigned DL_HARQ_ALLOC_BATCH = MAX_NOF_HARQS * 2;
-
-// (Implementation-defined) Number of DL HARQ buffers to allocate in the control executor in each executor call. This
-// value should be small to avoid blocking the control executor for too long.
-static constexpr unsigned DL_HARQ_ALLOC_MINIBATCH = 2;
-
 // (Implementation-defined) Number of HARQs needed to account for UEs that the DU cannot support but still require
 // HARQs for sending an RRC Reject. We consider that UEs to be RRC Rejected only need one HARQ.
 static constexpr unsigned HARQS_FOR_RRC_REJECTS = 64;
 
-// Hard upper-bound on the number of DL HARQ buffers a cell can hold. The pool acts as a one-way reserve, so it must be
-// dimensioned for the worst case of every possible UE in the cell holding the maximum number of HARQs.
-static constexpr unsigned MAX_NOF_DL_HARQ_BUFFERS_PER_CELL = MAX_NOF_DU_UES_PER_CELL * MAX_NOF_HARQS;
-
-cell_dl_harq_buffer_pool::cell_dl_harq_buffer_pool(unsigned       cell_nof_prbs,
-                                                   unsigned       nof_ports,
-                                                   unsigned       max_harqs_per_cell,
-                                                   task_executor& ctrl_exec_) :
+cell_dl_harq_buffer_pool::cell_dl_harq_buffer_pool(unsigned cell_nof_prbs,
+                                                   unsigned nof_ports,
+                                                   unsigned max_harqs_per_cell) :
   max_pdu_len(derive_max_pdu_length(cell_nof_prbs, nof_ports).value()),
-  ctrl_exec(ctrl_exec_),
+  nof_buffers(max_harqs_per_cell + HARQS_FOR_RRC_REJECTS),
   logger(ocudulog::fetch_basic_logger("MAC")),
   cell_buffers(MAX_NOF_DU_UES_PER_CELL),
-  pool(std::make_unique<dl_harq_buffer_storage[]>(MAX_NOF_DL_HARQ_BUFFERS_PER_CELL)),
-  pool_elem_index(MAX_NOF_DL_HARQ_BUFFERS_PER_CELL)
+  pool(std::make_unique<dl_harq_buffer_storage[]>(nof_buffers))
 {
-  const unsigned max_preallocated_harqs =
-      std::min<unsigned>(max_harqs_per_cell + HARQS_FOR_RRC_REJECTS, MAX_NOF_DL_HARQ_BUFFERS_PER_CELL);
-  buffer_cache.reserve(max_preallocated_harqs);
-
-  // Preallocate DL HARQ buffers for any UEs that may be added and save them in the cache.
-  for (unsigned i = 0; i != max_preallocated_harqs; ++i) {
-    auto* buffer = allocate_from_pool();
-    if (not buffer) {
-      break;
-    }
-    buffer->buffer.resize(max_pdu_len);
-    buffer_cache.emplace_back(buffer);
+  // Preallocate all DL HARQ buffers and make them available in the free list, so that UEs do not need to allocate
+  // buffers in their creation critical path. The pool is dimensioned to hold the maximum number of HARQs the cell can
+  // support plus a margin for UEs that need a single HARQ to be RRC Rejected.
+  free_buffer_list.reserve(nof_buffers);
+  for (unsigned i = 0; i != nof_buffers; ++i) {
+    pool[i].buffer.resize(max_pdu_len);
+    free_buffer_list.emplace_back(&pool[i]);
   }
-}
-
-cell_dl_harq_buffer_pool::~cell_dl_harq_buffer_pool()
-{
-  // Cancel any pending background task to grow the pool.
-  *pool_growth_cancelled = true;
 }
 
 void cell_dl_harq_buffer_pool::clear()
 {
-  *pool_growth_cancelled = true;
-  pool_growth_cancelled  = std::make_shared<bool>(false);
-
   for (unsigned i = 0; i != cell_buffers.size(); ++i) {
     deallocate_ue_buffers(to_du_ue_index(i));
   }
@@ -81,39 +54,19 @@ void cell_dl_harq_buffer_pool::allocate_ue_buffers(du_ue_index_t ue_index, unsig
   ue_dl_harq_buffer_list& ue_harqs = cell_buffers[ue_index];
 
   if (not ue_harqs.empty()) {
-    logger.error("ue={}: HARQ buffers already allocated for new UE", ue_index);
+    logger.error("ue={}: DL HARQ buffers already allocated for UE with matching ID", ue_index);
     return;
   }
 
-  // Grow the list of HARQ buffers associated with this UE.
+  // Grow the list of HARQ buffers associated with this UE by reusing buffers from the pre-allocated free list.
   while (ue_harqs.size() < nof_harqs) {
-    if (buffer_cache.empty()) {
-      // Allocate a new HARQ buffer as there are not enough buffers in the cache.
-      // In general, we should avoid allocating a DL HARQ at this point, to avoid delaying the UE creation.
-      auto* buffer = allocate_from_pool();
-      if (not buffer) {
-        return;
-      }
-      buffer->buffer.resize(max_pdu_len);
-      ue_harqs.emplace_back(buffer);
-      logger.warning("ue={}: No HARQ buffers are available from the pre-allocated set. Need to allocate them in UE "
-                     "creation critical path",
-                     ue_index);
-      continue;
-    }
-
-    // Reuse a HARQ buffer from the cache.
-    auto* buffer = allocate_from_cache();
-    if (not buffer) {
-      logger.warning("ue={}: No HARQ buffers available for new UE", ue_index);
+    auto* buffer = allocate_buffer();
+    if (buffer == nullptr) {
+      logger.warning("ue={}: No DL HARQ buffers available for new UE", ue_index);
       return;
     }
     ue_harqs.emplace_back(buffer);
   }
-
-  // Defer the growth of the DL HARQ buffer cache.
-  // We do not want to perform this operation at this point to avoid affecting the UE creation latency.
-  grow_cache_in_background();
 }
 
 void cell_dl_harq_buffer_pool::deallocate_ue_buffers(du_ue_index_t ue_idx)
@@ -121,66 +74,24 @@ void cell_dl_harq_buffer_pool::deallocate_ue_buffers(du_ue_index_t ue_idx)
   ocudu_assert(is_du_ue_index_valid(ue_idx), "Invalid UE index");
   ue_dl_harq_buffer_list& ue_harqs = cell_buffers[ue_idx];
 
-  // Move allocated HARQs for this UE into the cache.
+  // Move allocated HARQs for this UE into the free list.
   for (auto* harq_buffer : ue_harqs) {
-    buffer_cache.emplace_back(harq_buffer);
+    free_buffer_list.emplace_back(harq_buffer);
   }
   ue_harqs.clear();
 }
 
-void cell_dl_harq_buffer_pool::grow_cache_in_background()
-{
-  if (is_pool_depleted()) {
-    return;
-  }
-  if (buffer_cache.size() >= DL_HARQ_ALLOC_BATCH) {
-    // Stop growing the cache if it has enough DL HARQ buffers in cache.
-    return;
-  }
-
-  if (not ctrl_exec.defer([this, cancel_flag_cpy = pool_growth_cancelled]() {
-        if (cancel_flag_cpy) {
-          // Task cancelled.
-          return;
-        }
-        // Allocate minibatch of DL HARQ buffers and save them in cache.
-        for (unsigned i = 0; i != DL_HARQ_ALLOC_MINIBATCH; ++i) {
-          if (auto* buffer = allocate_from_pool()) {
-            buffer->buffer.resize(max_pdu_len);
-            buffer_cache.emplace_back(buffer);
-            continue;
-          }
-          return;
-        }
-
-        // Dispatch new task to grow the cache if it hasn't yet achieved the desired size.
-        grow_cache_in_background();
-      })) {
-    logger.warning("Failed to dispatch task to allocate DL HARQ buffers");
-  }
-}
-
-cell_dl_harq_buffer_pool::dl_harq_buffer_storage* cell_dl_harq_buffer_pool::allocate_from_pool()
-{
-  if (is_pool_depleted()) {
-    logger.warning("DL HARQ buffer pool depleted, no more buffers available");
-    return nullptr;
-  }
-
-  return &pool[--pool_elem_index];
-}
-
-cell_dl_harq_buffer_pool::dl_harq_buffer_storage* cell_dl_harq_buffer_pool::allocate_from_cache()
+cell_dl_harq_buffer_pool::dl_harq_buffer_storage* cell_dl_harq_buffer_pool::allocate_buffer()
 {
   // Some buffers may be still in flight after user removal.
-  auto it = std::find_if(buffer_cache.rbegin(), buffer_cache.rend(), [](const dl_harq_buffer_storage* buffer) {
+  auto it = std::find_if(free_buffer_list.rbegin(), free_buffer_list.rend(), [](const dl_harq_buffer_storage* buffer) {
     return buffer->ref_cnt.load(std::memory_order_relaxed) == 0;
   });
-  if (it == buffer_cache.rend()) {
+  if (it == free_buffer_list.rend()) {
     return nullptr;
   }
 
   auto* tmp = *it;
-  buffer_cache.erase(std::next(it).base());
+  free_buffer_list.erase(std::next(it).base());
   return tmp;
 }

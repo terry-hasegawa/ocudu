@@ -9,7 +9,6 @@
 #include "ocudu/mac/mac_pdu_format.h"
 #include "ocudu/ran/pdsch/pdsch_constants.h"
 #include "ocudu/support/bit_encoding.h"
-#include "ocudu/support/executors/manual_task_worker.h"
 #include <deque>
 #include <gtest/gtest.h>
 
@@ -140,7 +139,7 @@ public:
   mac_dl_sch_assembler_tester() :
     ue_mng(rnti_table),
     dl_bearers(2),
-    harqs(MAX_NOF_PRBS, pdsch_constants::CODEWORD_MAX_NOF_LAYERS, MAX_NOF_HARQS * MAX_NOF_DU_UES_PER_CELL, task_worker),
+    harqs(MAX_NOF_PRBS, pdsch_constants::CODEWORD_MAX_NOF_LAYERS, MAX_NOF_HARQS * MAX_NOF_DU_UES_PER_CELL),
     dl_sch_enc(ue_mng, harqs)
   {
     ocudulog::fetch_basic_logger("MAC", true).set_level(ocudulog::basic_levels::debug);
@@ -189,7 +188,6 @@ protected:
   du_rnti_table                rnti_table;
   mac_dl_ue_repository         ue_mng;
   std::vector<dummy_dl_bearer> dl_bearers;
-  manual_task_worker           task_worker{16};
   cell_dl_harq_buffer_pool     harqs;
   dl_sch_pdu_assembler         dl_sch_enc;
 };
