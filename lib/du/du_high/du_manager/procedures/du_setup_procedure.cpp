@@ -11,7 +11,6 @@
 #include "../ran_resource_management/du_ran_resource_manager.h"
 #include "ocudu/mac/config/mac_config_helpers.h"
 #include "ocudu/ocudulog/ocudulog.h"
-#include "ocudu/ran/harq_id.h"
 #include "ocudu/scheduler/config/scheduler_cell_config_validator.h"
 #include "ocudu/support/async/async_no_op_task.h"
 #include "ocudu/support/async/async_timer.h"
@@ -50,8 +49,9 @@ static mac_cell_creation_request make_mac_cell_config(du_cell_index_t           
   mac_cfg.cell_barred                     = du_cfg.cell_barred;
   mac_cfg.intra_freq_reselection          = du_cfg.intra_freq_reselection;
 
-  // Dimension the MAC DL HARQ buffer pool based on the number of UEs the cell can actually support.
-  mac_cfg.max_harq_buffers = MAX_NOF_HARQS * max_nof_ues;
+  // Dimension the MAC DL HARQ buffer pool based on the number of UEs the cell can actually support and the configured
+  // number of DL HARQ processes per UE.
+  mac_cfg.max_harq_buffers = du_cfg.ran.init_bwp.pdsch.max_harq_procs * max_nof_ues;
 
   return mac_cfg;
 }
