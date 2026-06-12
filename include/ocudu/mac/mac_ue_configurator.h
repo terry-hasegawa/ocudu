@@ -8,6 +8,7 @@
 #include "ocudu/mac/mac_cell_group_config.h"
 #include "ocudu/mac/mac_sdu_handler.h"
 #include "ocudu/mac/phr_config.h"
+#include "ocudu/ran/harq_id.h"
 #include "ocudu/ran/logical_channel/lcid.h"
 #include "ocudu/ran/physical_cell_group.h"
 #include "ocudu/ran/rnti.h"
@@ -63,6 +64,8 @@ struct mac_ue_create_request {
   std::optional<slot_point>               ul_ccch_slot_rx;
   /// RA preamble to be used within a Contention-free RA procedure context.
   std::optional<unsigned> cfra_preamble_index;
+  /// Number of DL HARQ processes configured for the UE on its PCell. Used by MAC to dimension DL HARQ buffers.
+  unsigned pdsch_harqs_per_cell = MAX_NOF_HARQS;
 
   // Scheduler-only params.
   sched_ue_config_request sched_cfg;

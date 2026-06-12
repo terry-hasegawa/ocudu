@@ -27,6 +27,10 @@ static constexpr unsigned DL_HARQ_ALLOC_MINIBATCH = 2;
 // HARQs for sending an RRC Reject. We consider that UEs to be RRC Rejected only need one HARQ.
 static constexpr unsigned HARQS_FOR_RRC_REJECTS = 64;
 
+// Hard upper-bound on the number of DL HARQ buffers a cell can hold. The pool acts as a one-way reserve, so it must be
+// dimensioned for the worst case of every possible UE in the cell holding the maximum number of HARQs.
+static constexpr unsigned MAX_NOF_DL_HARQ_BUFFERS_PER_CELL = MAX_NOF_DU_UES_PER_CELL * MAX_NOF_HARQS;
+
 cell_dl_harq_buffer_pool::cell_dl_harq_buffer_pool(unsigned       cell_nof_prbs,
                                                    unsigned       nof_ports,
                                                    unsigned       max_harqs_per_cell,
@@ -35,10 +39,11 @@ cell_dl_harq_buffer_pool::cell_dl_harq_buffer_pool(unsigned       cell_nof_prbs,
   ctrl_exec(ctrl_exec_),
   logger(ocudulog::fetch_basic_logger("MAC")),
   cell_buffers(MAX_NOF_DU_UES_PER_CELL),
-  pool(std::make_unique<std::array<dl_harq_buffer_storage, MAX_NOF_DU_UES_PER_CELL * MAX_NOF_HARQS>>()),
-  pool_elem_index(pool->size())
+  pool(std::make_unique<dl_harq_buffer_storage[]>(MAX_NOF_DL_HARQ_BUFFERS_PER_CELL)),
+  pool_elem_index(MAX_NOF_DL_HARQ_BUFFERS_PER_CELL)
 {
-  const unsigned max_preallocated_harqs = std::min<unsigned>(max_harqs_per_cell + HARQS_FOR_RRC_REJECTS, pool->size());
+  const unsigned max_preallocated_harqs =
+      std::min<unsigned>(max_harqs_per_cell + HARQS_FOR_RRC_REJECTS, MAX_NOF_DL_HARQ_BUFFERS_PER_CELL);
   buffer_cache.reserve(max_preallocated_harqs);
 
   // Preallocate DL HARQ buffers for any UEs that may be added and save them in the cache.
@@ -162,7 +167,7 @@ cell_dl_harq_buffer_pool::dl_harq_buffer_storage* cell_dl_harq_buffer_pool::allo
     return nullptr;
   }
 
-  return &(*pool)[--pool_elem_index];
+  return &pool[--pool_elem_index];
 }
 
 cell_dl_harq_buffer_pool::dl_harq_buffer_storage* cell_dl_harq_buffer_pool::allocate_from_cache()
