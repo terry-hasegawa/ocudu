@@ -24,8 +24,8 @@ static constexpr unsigned DL_HARQ_ALLOC_BATCH = MAX_NOF_HARQS * 2;
 static constexpr unsigned DL_HARQ_ALLOC_MINIBATCH = 2;
 
 // (Implementation-defined) Number of HARQs needed to account for UEs that the DU cannot support but still require
-// HARQs for sending an RRC Reject.
-static constexpr unsigned HARQS_FOR_RRC_REJECTS = 20 * MAX_NOF_HARQS;
+// HARQs for sending an RRC Reject. We consider that UEs to be RRC Rejected only need one HARQ.
+static constexpr unsigned HARQS_FOR_RRC_REJECTS = 64;
 
 cell_dl_harq_buffer_pool::cell_dl_harq_buffer_pool(unsigned       cell_nof_prbs,
                                                    unsigned       nof_ports,

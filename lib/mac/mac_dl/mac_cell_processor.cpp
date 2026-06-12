@@ -15,6 +15,7 @@
 #include "ocudu/support/async/execute_on_blocking.h"
 #include "ocudu/support/executors/execute_until_success.h"
 #include "ocudu/support/rtsan.h"
+#include <algorithm>
 
 using namespace ocudu;
 
@@ -205,12 +206,22 @@ void mac_cell_processor::handle_stop_indication() noexcept
   });
 }
 
+// Determine the number of DL HARQs to allocate for a new UE. A UE that is about to be RRC Rejected only has SRB0
+// configured and needs a single HARQ to transmit the RRC Reject. UEs that are being set up have additional bearers
+// (e.g. SRB1) and require the full set of HARQs.
+static unsigned get_nof_dl_harqs(const mac_ue_create_request& request)
+{
+  const bool to_be_setup = std::any_of(
+      request.bearers.begin(), request.bearers.end(), [](const auto& bearer) { return bearer.lcid != LCID_SRB0; });
+  return to_be_setup ? MAX_NOF_HARQS : 1;
+}
+
 async_task<bool> mac_cell_processor::add_ue(const mac_ue_create_request& request)
 {
   // > Allocate DL HARQ resources for the new UE.
   // Note: This may call a large allocation, and therefore, should be done out of the cell thread to avoid causing
   // lates.
-  dl_harq_buffers.allocate_ue_buffers(request.ue_index, MAX_NOF_HARQS);
+  dl_harq_buffers.allocate_ue_buffers(request.ue_index, get_nof_dl_harqs(request));
 
   // > Create a MAC UE DL context.
   mac_dl_ue_context ue_inst(request);
