@@ -390,6 +390,8 @@ public:
 
   expected<ue_ran_resource_configurator, std::string>
   create_ue_resource_configurator(du_ue_index_t ue_index, du_cell_index_t pcell_index, bool has_tc_rnti) override;
+
+  unsigned get_max_nof_ues(du_cell_index_t cell_index) const override { return MAX_NOF_DU_UES_PER_CELL; }
 };
 
 f1ap_ue_context_update_request create_f1ap_ue_context_update_request(du_ue_index_t                   ue_idx,

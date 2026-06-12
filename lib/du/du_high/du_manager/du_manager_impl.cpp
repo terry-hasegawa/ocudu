@@ -29,7 +29,7 @@ du_manager_impl::du_manager_impl(const du_manager_params& params_) :
   metrics(params.metrics, params.services.du_mng_exec, params.services.timers, params.f1ap.metrics),
   ue_mng(params, cell_res_alloc, cell_mng, metrics.get_proc_collector()),
   positioning_handler(create_du_positioning_handler(params, cell_mng, ue_mng, logger)),
-  proc_ctxt{params, ctxt, cell_mng, ue_mng, metrics, logger},
+  proc_ctxt{params, ctxt, cell_mng, ue_mng, cell_res_alloc, metrics, logger},
   controller(proc_ctxt, main_ctrl_loop)
 {
 }

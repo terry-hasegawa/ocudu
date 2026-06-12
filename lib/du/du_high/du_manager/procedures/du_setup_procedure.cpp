@@ -8,8 +8,10 @@
 #include "../converters/scheduler_configuration_helpers.h"
 #include "../du_cell_manager.h"
 #include "../du_manager_context.h"
+#include "../ran_resource_management/du_ran_resource_manager.h"
 #include "ocudu/mac/config/mac_config_helpers.h"
 #include "ocudu/ocudulog/ocudulog.h"
+#include "ocudu/ran/harq_id.h"
 #include "ocudu/scheduler/config/scheduler_cell_config_validator.h"
 #include "ocudu/support/async/async_no_op_task.h"
 #include "ocudu/support/async/async_timer.h"
@@ -25,7 +27,8 @@ static mac_cell_creation_request make_mac_cell_config(du_cell_index_t           
                                                       const du_cell_config&                           du_cfg,
                                                       const byte_buffer&                              sib1,
                                                       span<const bcch_dl_sch_payload_type>            si_messages,
-                                                      const sched_cell_configuration_request_message& sched_cell_cfg)
+                                                      const sched_cell_configuration_request_message& sched_cell_cfg,
+                                                      unsigned                                        max_nof_ues)
 {
   mac_cell_creation_request mac_cfg{};
   mac_cfg.cell_index = cell_index;
@@ -46,6 +49,9 @@ static mac_cell_creation_request make_mac_cell_config(du_cell_index_t           
   mac_cfg.sched_req                       = sched_cell_cfg;
   mac_cfg.cell_barred                     = du_cfg.cell_barred;
   mac_cfg.intra_freq_reselection          = du_cfg.intra_freq_reselection;
+
+  // Dimension the MAC DL HARQ buffer pool based on the number of UEs the cell can actually support.
+  mac_cfg.max_harq_buffers = MAX_NOF_HARQS * max_nof_ues;
 
   return mac_cfg;
 }
@@ -167,8 +173,8 @@ void du_setup_procedure::configure_du_cells()
     }
 
     // Forward config to MAC.
-    ctxt.params.mac.mgr.get_cell_manager().add_cell(
-        make_mac_cell_config(cell_index, du_cfg, sys_info.sib1, sys_info.si_messages, sched_cfg));
+    ctxt.params.mac.mgr.get_cell_manager().add_cell(make_mac_cell_config(
+        cell_index, du_cfg, sys_info.sib1, sys_info.si_messages, sched_cfg, ctxt.res_mng.get_max_nof_ues(cell_index)));
   }
 }
 

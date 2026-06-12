@@ -13,6 +13,7 @@ struct du_manager_params;
 struct du_manager_context;
 class du_cell_manager;
 class du_ue_manager;
+class du_ran_resource_manager;
 class du_manager_metrics_aggregator_impl;
 
 struct du_proc_context_view {
@@ -21,6 +22,7 @@ struct du_proc_context_view {
   du_manager_context&                 ctxt;
   du_cell_manager&                    cell_mng;
   du_ue_manager&                      ue_mng;
+  du_ran_resource_manager&            res_mng;
   du_manager_metrics_aggregator_impl& metrics;
   ocudulog::basic_logger&             logger;
 };

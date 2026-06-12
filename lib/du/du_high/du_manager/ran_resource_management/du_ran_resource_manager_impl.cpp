@@ -88,32 +88,36 @@ du_ran_resource_manager_impl::du_ran_resource_manager_impl(span<const du_cell_co
     const auto&           cell     = cell_cfg_list[cell_idx_uint];
     const du_cell_index_t cell_idx = to_du_cell_index(cell_idx_uint);
     pucch_res_mng.add_cell(cell_idx, cell.ran);
-    unsigned sr_limit  = pucch_res_mng.get_nof_free_sr_configs(cell_idx);
-    unsigned csi_limit = 0;
-    unsigned srs_limit = 0;
 
-    unsigned   max_nof_ues = sr_limit;
     const bool is_periodic_csi_report =
         cell.ran.init_bwp.csi.has_value() and cell.ran.init_bwp.csi->csi_report_slot_offset.has_value();
-    if (is_periodic_csi_report) {
-      csi_limit   = pucch_res_mng.get_nof_free_csi_configs(cell_idx);
-      max_nof_ues = std::min(max_nof_ues, csi_limit);
-    }
-    if (cell.ran.init_bwp.srs_cfg.srs_type_enabled == srs_type::periodic) {
-      srs_limit   = srs_res_mng->get_nof_srs_free_res_offsets(cell_idx);
-      max_nof_ues = std::min(max_nof_ues, srs_limit);
-    }
+    const bool is_periodic_srs = cell.ran.init_bwp.srs_cfg.srs_type_enabled == srs_type::periodic;
 
     logger.info("The upper-bound on the number of UEs supported by cell {{pci={}, du_cell_index={}}} is {} (the actual "
                 "number might be lower than that). This is determined by the lowest of the following limits: SR ({}), "
                 "CSI ({}) and SRS ({}).",
                 cell.ran.pci,
                 fmt::underlying(cell_idx),
-                max_nof_ues,
-                sr_limit,
-                is_periodic_csi_report ? fmt::to_string(csi_limit) : "n/a",
-                cell.ran.init_bwp.srs_cfg.srs_type_enabled == srs_type::periodic ? fmt::to_string(srs_limit) : "n/a");
+                get_max_nof_ues(cell_idx),
+                pucch_res_mng.get_nof_free_sr_configs(cell_idx),
+                is_periodic_csi_report ? fmt::to_string(pucch_res_mng.get_nof_free_csi_configs(cell_idx)) : "n/a",
+                is_periodic_srs ? fmt::to_string(srs_res_mng->get_nof_srs_free_res_offsets(cell_idx)) : "n/a");
   }
+}
+
+unsigned du_ran_resource_manager_impl::get_max_nof_ues(du_cell_index_t cell_index) const
+{
+  const auto& cell = cell_cfg_list[cell_index];
+
+  // The number of supported UEs is bounded by the lowest of the available SR, CSI and SRS resources.
+  unsigned max_nof_ues = pucch_res_mng.get_nof_free_sr_configs(cell_index);
+  if (cell.ran.init_bwp.csi.has_value() and cell.ran.init_bwp.csi->csi_report_slot_offset.has_value()) {
+    max_nof_ues = std::min(max_nof_ues, pucch_res_mng.get_nof_free_csi_configs(cell_index));
+  }
+  if (cell.ran.init_bwp.srs_cfg.srs_type_enabled == srs_type::periodic) {
+    max_nof_ues = std::min(max_nof_ues, srs_res_mng->get_nof_srs_free_res_offsets(cell_index));
+  }
+  return max_nof_ues;
 }
 
 expected<ue_ran_resource_configurator, std::string>
