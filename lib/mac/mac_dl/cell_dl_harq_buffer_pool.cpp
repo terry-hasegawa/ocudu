@@ -71,7 +71,7 @@ void cell_dl_harq_buffer_pool::allocate_ue_buffers(du_ue_index_t ue_index, unsig
   ue_dl_harq_buffer_list& ue_harqs = cell_buffers[ue_index];
 
   if (not ue_harqs.empty()) {
-    logger.error("ue={}: HARQ buffers already allocated for new UE", fmt::underlying(ue_index));
+    logger.error("ue={}: HARQ buffers already allocated for new UE", ue_index);
     return;
   }
 
@@ -86,13 +86,16 @@ void cell_dl_harq_buffer_pool::allocate_ue_buffers(du_ue_index_t ue_index, unsig
       }
       buffer->buffer.resize(max_pdu_len);
       ue_harqs.emplace_back(buffer);
+      logger.warning("ue={}: No HARQ buffers are available from the pre-allocated set. Need to allocate them in UE "
+                     "creation critical path",
+                     ue_index);
       continue;
     }
 
     // Reuse a HARQ buffer from the cache.
     auto* buffer = allocate_from_cache();
     if (not buffer) {
-      logger.warning("ue={}: No HARQ buffers available for new UE", fmt::underlying(ue_index));
+      logger.warning("ue={}: No HARQ buffers available for new UE", ue_index);
       return;
     }
     ue_harqs.emplace_back(buffer);
