@@ -10,8 +10,8 @@
 #   sign-sbom — grype CVE gate per published image (cosign sign + SPDX already
 #               handled by .docker-builder when MODE=publish)
 #
-# To add a driver, OS, or SIMD variant: add a row to the relevant
-# parallel:matrix: block in the build:* job below.
+# To add a driver, OS, component, or SIMD variant: edit the matching
+# .matrix-* template in .gitlab/ci/docker/image-matrix.yml.
 
 stages:
   - build
@@ -65,7 +65,13 @@ stages:
     # Tag: <os>-<os_version>-<simd>-<date>
     - DATE=$(date +%Y%m%d)
     - export NAME="${IMAGE_COMPONENT}"
-    - export VERSION="${OS}-${OS_VERSION}-${SIMD}-${DATE}"
+    - |
+      if [ -n "${PROMOTE_IMAGE_TAG:-}" ]; then
+        VERSION="${PROMOTE_IMAGE_TAG}"
+      else
+        VERSION="${OS}-${OS_VERSION}-${SIMD}-${DATE}"
+      fi
+      export VERSION
     - export PLATFORM="${TARGETARCH}"
     - |
       case "${COMPONENT}" in
@@ -99,6 +105,8 @@ stages:
       UHD_VERSION=${UHD_VERSION};\
       DPDK_VERSION=${DPDK_VERSION};\
       ROHC_VERSION=${ROHC_VERSION};\
+      OCUDU_IMAGE_VERSION=${VERSION};\
+      OCUDU_IMAGE_RELEASE=${CI_COMMIT_SHORT_SHA};\
       MARCH=${MARCH};\
       NUM_JOBS=${CPU_JOBS};\
       TARGETARCH=${TARGETARCH};\
@@ -125,192 +133,49 @@ stages:
 # ---------------------------------------------------------------------------
 
 build-and-publish:gnb:
-  extends: .image-build
-  parallel:
-    matrix:
-      - COMPONENT: gnb
-        DRIVER: uhd
-        OS: ubuntu
-        OS_VERSION: "24.04"
-        TARGETARCH: amd64
-        MARCH: x86-64-v4
-      - COMPONENT: gnb
-        DRIVER: uhd
-        OS: ubuntu
-        OS_VERSION: "24.04"
-        TARGETARCH: amd64
-        MARCH: x86-64-v3
-      - COMPONENT: gnb
-        DRIVER: dpdk
-        OS: ubuntu
-        OS_VERSION: "24.04"
-        TARGETARCH: amd64
-        MARCH: x86-64-v4
-      - COMPONENT: gnb
-        DRIVER: dpdk
-        OS: ubuntu
-        OS_VERSION: "24.04"
-        TARGETARCH: amd64
-        MARCH: x86-64-v3
-      - COMPONENT: gnb
-        DRIVER: uhd
-        OS: ubuntu
-        OS_VERSION: "24.04"
-        TARGETARCH: arm64
-        PLATFORM: arm64
-        MARCH: neoverse-n1+crc+crypto+ssbs
-      - COMPONENT: gnb
-        DRIVER: dpdk
-        OS: ubuntu
-        OS_VERSION: "24.04"
-        TARGETARCH: arm64
-        PLATFORM: arm64
-        MARCH: neoverse-n1+crc+crypto+ssbs
+  extends:
+    - .image-build
+    - .matrix-image-gnb
   rules:
     - if: $CI_PIPELINE_SOURCE == "parent_pipeline"
     - if: $CI_PIPELINE_SCHEDULE_DESCRIPTION =~ /Nightly/
 
 build-and-publish:du:
-  extends: .image-build
-  parallel:
-    matrix:
-      - COMPONENT: du
-        DRIVER: uhd
-        OS: ubuntu
-        OS_VERSION: "24.04"
-        TARGETARCH: amd64
-        MARCH: x86-64-v4
-      - COMPONENT: du
-        DRIVER: uhd
-        OS: ubuntu
-        OS_VERSION: "24.04"
-        TARGETARCH: amd64
-        MARCH: x86-64-v3
-      - COMPONENT: du
-        DRIVER: dpdk
-        OS: ubuntu
-        OS_VERSION: "24.04"
-        TARGETARCH: amd64
-        MARCH: x86-64-v4
-      - COMPONENT: du
-        DRIVER: dpdk
-        OS: ubuntu
-        OS_VERSION: "24.04"
-        TARGETARCH: amd64
-        MARCH: x86-64-v3
-      - COMPONENT: du
-        DRIVER: uhd
-        OS: ubuntu
-        OS_VERSION: "24.04"
-        TARGETARCH: arm64
-        PLATFORM: arm64
-        MARCH: neoverse-n1+crc+crypto+ssbs
-      - COMPONENT: du
-        DRIVER: dpdk
-        OS: ubuntu
-        OS_VERSION: "24.04"
-        TARGETARCH: arm64
-        PLATFORM: arm64
-        MARCH: neoverse-n1+crc+crypto+ssbs
+  extends:
+    - .image-build
+    - .matrix-image-du
   rules:
     - if: $CI_PIPELINE_SOURCE == "parent_pipeline"
     - if: $CI_PIPELINE_SCHEDULE_DESCRIPTION =~ /Nightly/
 
 build-and-publish:cu:
-  extends: .image-build
-  parallel:
-    matrix:
-      - COMPONENT: cu
-        OS: ubuntu
-        OS_VERSION: "24.04"
-        TARGETARCH: amd64
-        MARCH: x86-64-v4
-      - COMPONENT: cu
-        OS: ubuntu
-        OS_VERSION: "24.04"
-        TARGETARCH: amd64
-        MARCH: x86-64-v3
-      - COMPONENT: cu
-        OS: ubuntu
-        OS_VERSION: "24.04"
-        TARGETARCH: arm64
-        PLATFORM: arm64
-        MARCH: neoverse-n1+crc+crypto+ssbs
+  extends:
+    - .image-build
+    - .matrix-image-cu
   rules:
     - if: $CI_PIPELINE_SOURCE == "parent_pipeline"
     - if: $CI_PIPELINE_SCHEDULE_DESCRIPTION =~ /Nightly/
 
 build-and-publish:cu-cp:
-  extends: .image-build
-  parallel:
-    matrix:
-      - COMPONENT: cu-cp
-        OS: ubuntu
-        OS_VERSION: "24.04"
-        TARGETARCH: amd64
-        MARCH: x86-64-v4
-      - COMPONENT: cu-cp
-        OS: ubuntu
-        OS_VERSION: "24.04"
-        TARGETARCH: amd64
-        MARCH: x86-64-v3
-      - COMPONENT: cu-cp
-        OS: ubuntu
-        OS_VERSION: "24.04"
-        TARGETARCH: arm64
-        PLATFORM: arm64
-        MARCH: neoverse-n1+crc+crypto+ssbs
+  extends:
+    - .image-build
+    - .matrix-image-cu-cp
   rules:
     - if: $CI_PIPELINE_SOURCE == "parent_pipeline"
     - if: $CI_PIPELINE_SCHEDULE_DESCRIPTION =~ /Nightly/
 
 build-and-publish:cu-up:
-  extends: .image-build
-  parallel:
-    matrix:
-      - COMPONENT: cu-up
-        OS: ubuntu
-        OS_VERSION: "24.04"
-        TARGETARCH: amd64
-        MARCH: x86-64-v4
-      - COMPONENT: cu-up
-        OS: ubuntu
-        OS_VERSION: "24.04"
-        TARGETARCH: amd64
-        MARCH: x86-64-v3
-      - COMPONENT: cu-up
-        OS: ubuntu
-        OS_VERSION: "24.04"
-        TARGETARCH: arm64
-        PLATFORM: arm64
-        MARCH: neoverse-n1+crc+crypto+ssbs
+  extends:
+    - .image-build
+    - .matrix-image-cu-up
   rules:
     - if: $CI_PIPELINE_SOURCE == "parent_pipeline"
     - if: $CI_PIPELINE_SCHEDULE_DESCRIPTION =~ /Nightly/
 
 build-and-publish:ru-emulator:
-  extends: .image-build
-  parallel:
-    matrix:
-      - COMPONENT: ru-emulator
-        DRIVER: dpdk
-        OS: ubuntu
-        OS_VERSION: "24.04"
-        TARGETARCH: amd64
-        MARCH: x86-64-v4
-      - COMPONENT: ru-emulator
-        DRIVER: dpdk
-        OS: ubuntu
-        OS_VERSION: "24.04"
-        TARGETARCH: amd64
-        MARCH: x86-64-v3
-      - COMPONENT: ru-emulator
-        DRIVER: dpdk
-        OS: ubuntu
-        OS_VERSION: "24.04"
-        TARGETARCH: arm64
-        PLATFORM: arm64
-        MARCH: neoverse-n1+crc+crypto+ssbs
+  extends:
+    - .image-build
+    - .matrix-image-ru-emulator
   rules:
     - if: $CI_PIPELINE_SOURCE == "parent_pipeline"
     - if: $CI_PIPELINE_SCHEDULE_DESCRIPTION =~ /Nightly/

@@ -2,8 +2,8 @@
 # SPDX-License-Identifier: BSD-3-Clause-Open-MPI
 
 # Default library versions — overridable per pipeline run via CI/CD variables.
-# To add a driver, OS, or component: edit the parallel:matrix: blocks in
-# .gitlab/ci/docker/image-build.yml directly.
+# To add a driver, OS, component, or SIMD variant: edit the matching
+# .matrix-* template in this file.
 
 variables:
   UHD_VERSION: "4.6.0.0"
@@ -12,3 +12,306 @@ variables:
   PKG_VERSIONS: ""
   EXTRA_CMAKE_ARGS: "-DCMAKE_BUILD_TYPE=Release"
   RH_TOOL_CLI_VERSION: "1.0.3"
+
+.matrix-legacy-image:
+  parallel:
+    matrix:
+      - SUFFIX: avx2
+        MARCH: x86-64-v3
+        PLATFORM: amd64
+      - SUFFIX: avx2_debug
+        EXTRA_CMAKE_ARGS: -DFORCE_DEBUG_INFO=On
+        MARCH: x86-64-v3
+        PLATFORM: amd64
+      - SUFFIX: avx512
+        MARCH: x86-64-v4
+        PLATFORM: amd64
+      - SUFFIX: avx512_debug
+        EXTRA_CMAKE_ARGS: -DFORCE_DEBUG_INFO=On
+        MARCH: x86-64-v4
+        PLATFORM: amd64
+      - SUFFIX: arm64
+        MARCH: neoverse-n1+crc+crypto+ssbs
+        PLATFORM: arm64
+      - SUFFIX: arm64_debug
+        EXTRA_CMAKE_ARGS: -DFORCE_DEBUG_INFO=On
+        MARCH: neoverse-n1+crc+crypto+ssbs
+        PLATFORM: arm64
+
+.matrix-image-gnb:
+  parallel:
+    matrix:
+      - COMPONENT: gnb
+        DRIVER: uhd
+        OS: ubuntu
+        OS_VERSION: "24.04"
+        TARGETARCH: amd64
+        MARCH: x86-64-v4
+      - COMPONENT: gnb
+        DRIVER: uhd
+        OS: ubuntu
+        OS_VERSION: "24.04"
+        TARGETARCH: amd64
+        MARCH: x86-64-v3
+      - COMPONENT: gnb
+        DRIVER: dpdk
+        OS: ubuntu
+        OS_VERSION: "24.04"
+        TARGETARCH: amd64
+        MARCH: x86-64-v4
+      - COMPONENT: gnb
+        DRIVER: dpdk
+        OS: ubuntu
+        OS_VERSION: "24.04"
+        TARGETARCH: amd64
+        MARCH: x86-64-v3
+      - COMPONENT: gnb
+        DRIVER: uhd
+        OS: ubuntu
+        OS_VERSION: "24.04"
+        TARGETARCH: arm64
+        PLATFORM: arm64
+        MARCH: neoverse-n1+crc+crypto+ssbs
+      - COMPONENT: gnb
+        DRIVER: dpdk
+        OS: ubuntu
+        OS_VERSION: "24.04"
+        TARGETARCH: arm64
+        PLATFORM: arm64
+        MARCH: neoverse-n1+crc+crypto+ssbs
+
+.matrix-image-du:
+  parallel:
+    matrix:
+      - COMPONENT: du
+        DRIVER: uhd
+        OS: ubuntu
+        OS_VERSION: "24.04"
+        TARGETARCH: amd64
+        MARCH: x86-64-v4
+      - COMPONENT: du
+        DRIVER: uhd
+        OS: ubuntu
+        OS_VERSION: "24.04"
+        TARGETARCH: amd64
+        MARCH: x86-64-v3
+      - COMPONENT: du
+        DRIVER: dpdk
+        OS: ubuntu
+        OS_VERSION: "24.04"
+        TARGETARCH: amd64
+        MARCH: x86-64-v4
+      - COMPONENT: du
+        DRIVER: dpdk
+        OS: ubuntu
+        OS_VERSION: "24.04"
+        TARGETARCH: amd64
+        MARCH: x86-64-v3
+      - COMPONENT: du
+        DRIVER: uhd
+        OS: ubuntu
+        OS_VERSION: "24.04"
+        TARGETARCH: arm64
+        PLATFORM: arm64
+        MARCH: neoverse-n1+crc+crypto+ssbs
+      - COMPONENT: du
+        DRIVER: dpdk
+        OS: ubuntu
+        OS_VERSION: "24.04"
+        TARGETARCH: arm64
+        PLATFORM: arm64
+        MARCH: neoverse-n1+crc+crypto+ssbs
+
+.matrix-image-cu:
+  parallel:
+    matrix:
+      - COMPONENT: cu
+        OS: ubuntu
+        OS_VERSION: "24.04"
+        TARGETARCH: amd64
+        MARCH: x86-64-v4
+      - COMPONENT: cu
+        OS: ubuntu
+        OS_VERSION: "24.04"
+        TARGETARCH: amd64
+        MARCH: x86-64-v3
+      - COMPONENT: cu
+        OS: ubuntu
+        OS_VERSION: "24.04"
+        TARGETARCH: arm64
+        PLATFORM: arm64
+        MARCH: neoverse-n1+crc+crypto+ssbs
+
+.matrix-image-cu-cp:
+  parallel:
+    matrix:
+      - COMPONENT: cu-cp
+        OS: ubuntu
+        OS_VERSION: "24.04"
+        TARGETARCH: amd64
+        MARCH: x86-64-v4
+      - COMPONENT: cu-cp
+        OS: ubuntu
+        OS_VERSION: "24.04"
+        TARGETARCH: amd64
+        MARCH: x86-64-v3
+      - COMPONENT: cu-cp
+        OS: ubuntu
+        OS_VERSION: "24.04"
+        TARGETARCH: arm64
+        PLATFORM: arm64
+        MARCH: neoverse-n1+crc+crypto+ssbs
+
+.matrix-image-cu-up:
+  parallel:
+    matrix:
+      - COMPONENT: cu-up
+        OS: ubuntu
+        OS_VERSION: "24.04"
+        TARGETARCH: amd64
+        MARCH: x86-64-v4
+      - COMPONENT: cu-up
+        OS: ubuntu
+        OS_VERSION: "24.04"
+        TARGETARCH: amd64
+        MARCH: x86-64-v3
+      - COMPONENT: cu-up
+        OS: ubuntu
+        OS_VERSION: "24.04"
+        TARGETARCH: arm64
+        PLATFORM: arm64
+        MARCH: neoverse-n1+crc+crypto+ssbs
+
+.matrix-image-ru-emulator:
+  parallel:
+    matrix:
+      - COMPONENT: ru-emulator
+        DRIVER: dpdk
+        OS: ubuntu
+        OS_VERSION: "24.04"
+        TARGETARCH: amd64
+        MARCH: x86-64-v4
+      - COMPONENT: ru-emulator
+        DRIVER: dpdk
+        OS: ubuntu
+        OS_VERSION: "24.04"
+        TARGETARCH: amd64
+        MARCH: x86-64-v3
+      - COMPONENT: ru-emulator
+        DRIVER: dpdk
+        OS: ubuntu
+        OS_VERSION: "24.04"
+        TARGETARCH: arm64
+        PLATFORM: arm64
+        MARCH: neoverse-n1+crc+crypto+ssbs
+
+.matrix-image-rh-gnb:
+  parallel:
+    matrix:
+      - COMPONENT: gnb
+        DRIVER: uhd
+        TARGETARCH: amd64
+        MARCH: x86-64-v4
+      - COMPONENT: gnb
+        DRIVER: uhd
+        TARGETARCH: amd64
+        MARCH: x86-64-v3
+      - COMPONENT: gnb
+        DRIVER: dpdk
+        TARGETARCH: amd64
+        MARCH: x86-64-v4
+      - COMPONENT: gnb
+        DRIVER: dpdk
+        TARGETARCH: amd64
+        MARCH: x86-64-v3
+      - COMPONENT: gnb
+        DRIVER: uhd
+        TARGETARCH: arm64
+        MARCH: neoverse-n1+crc+crypto+ssbs
+      - COMPONENT: gnb
+        DRIVER: dpdk
+        TARGETARCH: arm64
+        MARCH: neoverse-n1+crc+crypto+ssbs
+
+.matrix-image-rh-du:
+  parallel:
+    matrix:
+      - COMPONENT: du
+        DRIVER: uhd
+        TARGETARCH: amd64
+        MARCH: x86-64-v4
+      - COMPONENT: du
+        DRIVER: uhd
+        TARGETARCH: amd64
+        MARCH: x86-64-v3
+      - COMPONENT: du
+        DRIVER: dpdk
+        TARGETARCH: amd64
+        MARCH: x86-64-v4
+      - COMPONENT: du
+        DRIVER: dpdk
+        TARGETARCH: amd64
+        MARCH: x86-64-v3
+      - COMPONENT: du
+        DRIVER: uhd
+        TARGETARCH: arm64
+        MARCH: neoverse-n1+crc+crypto+ssbs
+      - COMPONENT: du
+        DRIVER: dpdk
+        TARGETARCH: arm64
+        MARCH: neoverse-n1+crc+crypto+ssbs
+
+.matrix-image-rh-cu:
+  parallel:
+    matrix:
+      - COMPONENT: cu
+        TARGETARCH: amd64
+        MARCH: x86-64-v4
+      - COMPONENT: cu
+        TARGETARCH: amd64
+        MARCH: x86-64-v3
+      - COMPONENT: cu
+        TARGETARCH: arm64
+        MARCH: neoverse-n1+crc+crypto+ssbs
+
+.matrix-image-rh-cu-cp:
+  parallel:
+    matrix:
+      - COMPONENT: cu-cp
+        TARGETARCH: amd64
+        MARCH: x86-64-v4
+      - COMPONENT: cu-cp
+        TARGETARCH: amd64
+        MARCH: x86-64-v3
+      - COMPONENT: cu-cp
+        TARGETARCH: arm64
+        MARCH: neoverse-n1+crc+crypto+ssbs
+
+.matrix-image-rh-cu-up:
+  parallel:
+    matrix:
+      - COMPONENT: cu-up
+        TARGETARCH: amd64
+        MARCH: x86-64-v4
+      - COMPONENT: cu-up
+        TARGETARCH: amd64
+        MARCH: x86-64-v3
+      - COMPONENT: cu-up
+        TARGETARCH: arm64
+        MARCH: neoverse-n1+crc+crypto+ssbs
+
+.matrix-image-rh-ru-emulator:
+  parallel:
+    matrix:
+      - COMPONENT: ru-emulator
+        DRIVER: dpdk
+        TARGETARCH: amd64
+        MARCH: x86-64-v4
+      - COMPONENT: ru-emulator
+        DRIVER: dpdk
+        TARGETARCH: amd64
+        MARCH: x86-64-v3
+      - COMPONENT: ru-emulator
+        DRIVER: dpdk
+        TARGETARCH: arm64
+        MARCH: neoverse-n1+crc+crypto+ssbs

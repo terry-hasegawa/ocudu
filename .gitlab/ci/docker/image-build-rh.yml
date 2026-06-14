@@ -9,6 +9,9 @@
 #
 # Stages:
 #   build   — parallel matrix jobs, one per component × driver × arch/SIMD
+#
+# To add a driver, component, or SIMD variant: edit the matching .matrix-* template
+# in .gitlab/ci/docker/image-matrix.yml.
 
 stages:
   - build
@@ -58,7 +61,13 @@ stages:
       fi
     - DATE=$(date +%Y%m%d)
     - export NAME="${IMAGE_COMPONENT}"
-    - export VERSION="ubi9-${OS_VERSION}-${SIMD}-${DATE}"
+    - |
+      if [ -n "${PROMOTE_IMAGE_TAG:-}" ]; then
+        VERSION="${PROMOTE_IMAGE_TAG}"
+      else
+        VERSION="ubi9-${OS_VERSION}-${SIMD}-${DATE}"
+      fi
+      export VERSION
     - export PLATFORM="${TARGETARCH}"
     - |
       case "${COMPONENT}" in
@@ -91,6 +100,8 @@ stages:
       UHD_VERSION=${UHD_VERSION};\
       DPDK_VERSION=${DPDK_VERSION};\
       ROHC_VERSION=${ROHC_VERSION};\
+      OCUDU_IMAGE_VERSION=${VERSION};\
+      OCUDU_IMAGE_RELEASE=${CI_COMMIT_SHORT_SHA};\
       MARCH=${MARCH};\
       NUM_JOBS=${CPU_JOBS};\
       TARGETARCH=${TARGETARCH};\
@@ -128,136 +139,49 @@ stages:
 # ---------------------------------------------------------------------------
 
 build-rh:gnb:
-  extends: .image-build-rh
-  parallel:
-    matrix:
-      - COMPONENT: gnb
-        DRIVER: uhd
-        TARGETARCH: amd64
-        MARCH: x86-64-v4
-      - COMPONENT: gnb
-        DRIVER: uhd
-        TARGETARCH: amd64
-        MARCH: x86-64-v3
-      - COMPONENT: gnb
-        DRIVER: dpdk
-        TARGETARCH: amd64
-        MARCH: x86-64-v4
-      - COMPONENT: gnb
-        DRIVER: dpdk
-        TARGETARCH: amd64
-        MARCH: x86-64-v3
-      - COMPONENT: gnb
-        DRIVER: uhd
-        TARGETARCH: arm64
-        MARCH: neoverse-n1+crc+crypto+ssbs
-      - COMPONENT: gnb
-        DRIVER: dpdk
-        TARGETARCH: arm64
-        MARCH: neoverse-n1+crc+crypto+ssbs
+  extends:
+    - .image-build-rh
+    - .matrix-image-rh-gnb
   rules:
     - if: $CI_PIPELINE_SOURCE == "parent_pipeline"
     - if: $CI_PIPELINE_SCHEDULE_DESCRIPTION =~ /Nightly/
 
 build-rh:du:
-  extends: .image-build-rh
-  parallel:
-    matrix:
-      - COMPONENT: du
-        DRIVER: uhd
-        TARGETARCH: amd64
-        MARCH: x86-64-v4
-      - COMPONENT: du
-        DRIVER: uhd
-        TARGETARCH: amd64
-        MARCH: x86-64-v3
-      - COMPONENT: du
-        DRIVER: dpdk
-        TARGETARCH: amd64
-        MARCH: x86-64-v4
-      - COMPONENT: du
-        DRIVER: dpdk
-        TARGETARCH: amd64
-        MARCH: x86-64-v3
-      - COMPONENT: du
-        DRIVER: uhd
-        TARGETARCH: arm64
-        MARCH: neoverse-n1+crc+crypto+ssbs
-      - COMPONENT: du
-        DRIVER: dpdk
-        TARGETARCH: arm64
-        MARCH: neoverse-n1+crc+crypto+ssbs
+  extends:
+    - .image-build-rh
+    - .matrix-image-rh-du
   rules:
     - if: $CI_PIPELINE_SOURCE == "parent_pipeline"
     - if: $CI_PIPELINE_SCHEDULE_DESCRIPTION =~ /Nightly/
 
 build-rh:cu:
-  extends: .image-build-rh
-  parallel:
-    matrix:
-      - COMPONENT: cu
-        TARGETARCH: amd64
-        MARCH: x86-64-v4
-      - COMPONENT: cu
-        TARGETARCH: amd64
-        MARCH: x86-64-v3
-      - COMPONENT: cu
-        TARGETARCH: arm64
-        MARCH: neoverse-n1+crc+crypto+ssbs
+  extends:
+    - .image-build-rh
+    - .matrix-image-rh-cu
   rules:
     - if: $CI_PIPELINE_SOURCE == "parent_pipeline"
     - if: $CI_PIPELINE_SCHEDULE_DESCRIPTION =~ /Nightly/
 
 build-rh:cu-cp:
-  extends: .image-build-rh
-  parallel:
-    matrix:
-      - COMPONENT: cu-cp
-        TARGETARCH: amd64
-        MARCH: x86-64-v4
-      - COMPONENT: cu-cp
-        TARGETARCH: amd64
-        MARCH: x86-64-v3
-      - COMPONENT: cu-cp
-        TARGETARCH: arm64
-        MARCH: neoverse-n1+crc+crypto+ssbs
+  extends:
+    - .image-build-rh
+    - .matrix-image-rh-cu-cp
   rules:
     - if: $CI_PIPELINE_SOURCE == "parent_pipeline"
     - if: $CI_PIPELINE_SCHEDULE_DESCRIPTION =~ /Nightly/
 
 build-rh:cu-up:
-  extends: .image-build-rh
-  parallel:
-    matrix:
-      - COMPONENT: cu-up
-        TARGETARCH: amd64
-        MARCH: x86-64-v4
-      - COMPONENT: cu-up
-        TARGETARCH: amd64
-        MARCH: x86-64-v3
-      - COMPONENT: cu-up
-        TARGETARCH: arm64
-        MARCH: neoverse-n1+crc+crypto+ssbs
+  extends:
+    - .image-build-rh
+    - .matrix-image-rh-cu-up
   rules:
     - if: $CI_PIPELINE_SOURCE == "parent_pipeline"
     - if: $CI_PIPELINE_SCHEDULE_DESCRIPTION =~ /Nightly/
 
 build-rh:ru-emulator:
-  extends: .image-build-rh
-  parallel:
-    matrix:
-      - COMPONENT: ru-emulator
-        DRIVER: dpdk
-        TARGETARCH: amd64
-        MARCH: x86-64-v4
-      - COMPONENT: ru-emulator
-        DRIVER: dpdk
-        TARGETARCH: amd64
-        MARCH: x86-64-v3
-      - COMPONENT: ru-emulator
-        DRIVER: dpdk
-        TARGETARCH: arm64
-        MARCH: neoverse-n1+crc+crypto+ssbs
+  extends:
+    - .image-build-rh
+    - .matrix-image-rh-ru-emulator
   rules:
     - if: $CI_PIPELINE_SOURCE == "parent_pipeline"
     - if: $CI_PIPELINE_SCHEDULE_DESCRIPTION =~ /Nightly/

@@ -11,6 +11,7 @@ include:
 
 stages:
   - ci
+  - promote
   - static
   - build and unit tests
   - documentation
@@ -105,6 +106,33 @@ trigger docker:
     strategy: mirror
   needs:
     - job: trigger buildkit
+      optional: true
+      artifacts: false
+
+promote stable docker images:
+  stage: promote
+  rules:
+    - if: $SKIP_OCUDU_BUILDING_CONTAINERS_CI
+      when: never
+    - if: $ON_MR_FORK
+      when: never
+    - if: $ON_WEB
+      when: manual
+      allow_failure: true
+    - if: $ON_API
+      when: manual
+      allow_failure: true
+  trigger:
+    include: .gitlab/ci/docker/promote-stable-preflight.yml
+    strategy: mirror
+    forward:
+      yaml_variables: true
+      pipeline_variables: true
+  needs:
+    - job: trigger buildkit
+      optional: true
+      artifacts: false
+    - job: trigger rh-tool-cli
       optional: true
       artifacts: false
 

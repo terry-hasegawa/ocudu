@@ -312,9 +312,20 @@ FROM ${OS}:${OS_VERSION} AS runtime-base
 
 ARG UHD_VERSION
 ARG DPDK_VERSION
+ARG OCUDU_IMAGE_VERSION=dev
+ARG OCUDU_IMAGE_RELEASE=1
+
+LABEL name="OCUDU" \
+      vendor="Software Radio Systems Limited" \
+      version="${OCUDU_IMAGE_VERSION}" \
+      release="${OCUDU_IMAGE_RELEASE}" \
+      summary="OCUDU component runtime image" \
+      description="Runtime image for OCUDU radio access network components" \
+      maintainer="Software Radio Systems Limited"
 
 # Copy the install dependencies scripts (top-level dispatchers and per-OS implementations)
 ADD docker/scripts/install_*.sh /usr/local/etc/
+ADD LICENSE /licenses/LICENSE
 RUN chmod +x /usr/local/etc/install_*.sh && \
     ln -sf /usr/local/etc/install_dependencies.sh /usr/local/etc/install_ocudu_dependencies.sh
 ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/opt/rohc/lib/:/opt/rohc/lib64/
@@ -421,6 +432,8 @@ RUN case "${COMPONENT}" in \
       *)     echo "Unsupported lean component: ${COMPONENT}" >&2; exit 1 ;; \
     esac
 
+USER 1001
+
 # Stage 3d: runtime — UHD components without DPDK.
 FROM runtime-base AS runtime-uhd
 
@@ -442,6 +455,8 @@ RUN case "${COMPONENT}" in \
       du)  setcap cap_sys_nice,cap_ipc_lock,cap_perfmon+ep /usr/local/bin/odu && getcap /usr/local/bin/odu ;; \
       *)   echo "Unsupported UHD component: ${COMPONENT}" >&2; exit 1 ;; \
     esac
+
+USER 1001
 
 # Stage 3e: runtime — DPDK components without UHD.
 FROM runtime-base AS runtime-dpdk
@@ -465,6 +480,8 @@ RUN case "${COMPONENT}" in \
       ru-emulator) setcap cap_sys_nice,cap_ipc_lock+ep /usr/local/bin/ru_emulator && getcap /usr/local/bin/ru_emulator ;; \
       *)           echo "Unsupported DPDK component: ${COMPONENT}" >&2; exit 1 ;; \
     esac
+
+USER 1001
 
 # Keep no-target builds, including docker-compose, on the full runtime image.
 FROM runtime AS default
