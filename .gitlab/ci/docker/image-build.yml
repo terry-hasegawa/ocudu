@@ -67,7 +67,7 @@ stages:
     - export NAME="${IMAGE_COMPONENT}"
     - |
       if [ -n "${PROMOTE_IMAGE_TAG:-}" ]; then
-        VERSION="${PROMOTE_IMAGE_TAG}"
+        VERSION="${PROMOTE_IMAGE_TAG}-${OS}-${OS_VERSION}-${SIMD}"
       else
         VERSION="${OS}-${OS_VERSION}-${SIMD}-${DATE}"
       fi

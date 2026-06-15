@@ -158,7 +158,7 @@ promote-stable:legacy:
         IMAGE_COMPONENT="${COMPONENT}"
       fi
       if [ -n "${PROMOTE_IMAGE_TAG:-}" ]; then
-        VERSION="${PROMOTE_IMAGE_TAG}"
+        VERSION="${PROMOTE_IMAGE_TAG}-${OS}-${OS_VERSION}-${SIMD}"
       else
         VERSION="${OS}-${OS_VERSION}-${SIMD}-$(date +%Y%m%d)"
       fi
@@ -224,7 +224,7 @@ promote-stable:ubuntu:ru-emulator:
         IMAGE_COMPONENT="${COMPONENT}"
       fi
       if [ -n "${PROMOTE_IMAGE_TAG:-}" ]; then
-        VERSION="${PROMOTE_IMAGE_TAG}"
+        VERSION="${PROMOTE_IMAGE_TAG}-ubi9-9.6-${SIMD}"
       else
         VERSION="ubi9-9.6-${SIMD}-$(date +%Y%m%d)"
       fi
@@ -291,7 +291,7 @@ promote-stable:rh:ru-emulator:
         IMAGE_COMPONENT="${COMPONENT}"
       fi
       if [ -n "${PROMOTE_IMAGE_TAG:-}" ]; then
-        VERSION="${PROMOTE_IMAGE_TAG}"
+        VERSION="${PROMOTE_IMAGE_TAG}-ubi9-9.6-${SIMD}"
       else
         VERSION="ubi9-9.6-${SIMD}-$(date +%Y%m%d)"
       fi
