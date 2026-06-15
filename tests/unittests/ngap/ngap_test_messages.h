@@ -148,9 +148,6 @@ ngap_message generate_invalid_ue_context_modification_request_message(amf_ue_id_
 /// \brief Generate an valid dummy UE Context Release Command Message with AMF UE NGAP ID.
 ngap_message generate_valid_ue_context_release_command_with_amf_ue_ngap_id(amf_ue_id_t amf_ue_id);
 
-/// \brief Generate a valid dummy UE Context Release Command Message with de-registration NAS cause.
-ngap_message generate_valid_ue_context_release_command_with_deregistration_cause(amf_ue_id_t amf_ue_id);
-
 /// \brief Generate an valid dummy UE Context Release Command Message with UE NGAP ID pair.
 ngap_message generate_valid_ue_context_release_command_with_ue_ngap_id_pair(amf_ue_id_t amf_ue_id,
                                                                             ran_ue_id_t ran_ue_id);
