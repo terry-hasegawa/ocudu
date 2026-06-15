@@ -129,8 +129,9 @@ TEST_P(PdschProcessorFixture, UnitTest)
   pdu.cp           = cp;
   for (unsigned codeword = 0; codeword != nof_codewords; ++codeword) {
     pdu.codewords.emplace_back();
-    pdu.codewords.back().modulation = modulations[dist_mod(rgen)];
-    pdu.codewords.back().rv         = dist_rv(rgen);
+    pdu.codewords.back().modulation      = modulations[dist_mod(rgen)];
+    pdu.codewords.back().rv              = dist_rv(rgen);
+    pdu.codewords.back().ldpc_base_graph = static_cast<ldpc_base_graph_type>(dist_bool(rgen));
   }
   pdu.n_id             = 0;
   pdu.precoding        = precoding_configuration::make_wideband(make_identity(nof_layers));
@@ -148,7 +149,6 @@ TEST_P(PdschProcessorFixture, UnitTest)
   pdu.freq_alloc                 = rb_allocation::make_custom({1, 2, 3, 4}, vrb_to_prb::create_non_interleaved_other());
   pdu.start_symbol_index         = dist_start_symb(rgen);
   pdu.nof_symbols                = get_nsymb_per_slot(cp) - pdu.start_symbol_index;
-  pdu.ldpc_base_graph            = static_cast<ldpc_base_graph_type>(dist_bool(rgen));
   pdu.tbs_lbrm                   = units::bytes(50);
   pdu.reserved                   = {};
   pdu.ratio_pdsch_dmrs_to_sss_dB = get_power();
@@ -207,15 +207,17 @@ TEST_P(PdschProcessorFixture, UnitTest)
 
   // Validate encoder.
   {
-    // Calculate rate match buffer size.
-    units::bits Nref = ldpc::compute_N_ref(
-        pdu.tbs_lbrm, compute_nof_codeblocks(units::bytes(data.size()).to_bits(), pdu.ldpc_base_graph));
-
     ASSERT_EQ(encoder_spy->get_nof_entries(), nof_codewords);
     const auto& entries = encoder_spy->get_entries();
     for (unsigned codeword = 0; codeword != nof_codewords; ++codeword) {
       const auto& entry = entries[codeword];
-      ASSERT_EQ(entry.config.base_graph, pdu.ldpc_base_graph);
+
+      // Calculate rate match buffer size.
+      units::bits Nref = ldpc::compute_N_ref(
+          pdu.tbs_lbrm,
+          compute_nof_codeblocks(units::bytes(data.size()).to_bits(), pdu.codewords[codeword].ldpc_base_graph));
+
+      ASSERT_EQ(entry.config.base_graph, pdu.codewords[codeword].ldpc_base_graph);
       ASSERT_EQ(entry.config.rv, pdu.codewords[codeword].rv);
       ASSERT_EQ(entry.config.mod, pdu.codewords[codeword].modulation);
       ASSERT_EQ(entry.config.Nref, Nref.value());

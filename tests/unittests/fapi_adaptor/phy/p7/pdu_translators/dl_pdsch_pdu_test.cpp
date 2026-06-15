@@ -216,6 +216,7 @@ TEST(fapi_to_phy_pdsch_conversion_test, valid_pdu_conversion_success)
                     // Codeword.
                     ASSERT_EQ(static_cast<modulation_scheme>(qam_mod), proc_pdu.codewords[0].modulation);
                     ASSERT_EQ(rv_index, proc_pdu.codewords[0].rv);
+                    ASSERT_EQ(ldpc_graph, proc_pdu.codewords[0].ldpc_base_graph);
 
                     ASSERT_EQ(nid_pdsch, proc_pdu.n_id);
                     ASSERT_EQ(dl_dmrs_symbol, proc_pdu.dmrs_symbol_mask);
@@ -248,8 +249,6 @@ TEST(fapi_to_phy_pdsch_conversion_test, valid_pdu_conversion_success)
                                                                          rb_size);
 
                     ASSERT_TRUE(freq_allocation == proc_pdu.freq_alloc);
-
-                    ASSERT_EQ(ldpc_graph, proc_pdu.ldpc_base_graph);
                     ASSERT_EQ(tb_size_lbrm_bytes, proc_pdu.tbs_lbrm);
                   }
                 }

@@ -287,13 +287,13 @@ private:
     pdsch_config.freq_alloc                  = freq_alloc;
     pdsch_config.start_symbol_index          = 0;
     pdsch_config.nof_symbols                 = nof_ofdm_symbols;
-    pdsch_config.ldpc_base_graph             = ldpc_base_graph;
     pdsch_config.tbs_lbrm                    = tbs_lbrm_default;
     pdsch_config.reserved                    = {};
     pdsch_config.ratio_pdsch_data_to_sss_dB  = 0.0F;
     pdsch_config.ratio_pdsch_dmrs_to_sss_dB  = get_sch_to_dmrs_ratio_dB(nof_cdm_groups_without_data);
     pdsch_config.precoding                   = precoding_configuration::make_wideband(make_identity(nof_layers));
-    pdsch_config.codewords.emplace_back(pdsch_processor::codeword_description{mcs_descr.modulation, rv});
+    pdsch_config.codewords.emplace_back(
+        pdsch_processor::codeword_description{mcs_descr.modulation, rv, ldpc_base_graph});
 
     static_vector<uint8_t, MAX_PORTS> rx_ports(nof_rx_ports);
     std::iota(rx_ports.begin(), rx_ports.end(), 0U);

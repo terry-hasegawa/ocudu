@@ -470,7 +470,8 @@ static std::vector<test_case_type> generate_test_cases(const test_profile& profi
             .bwp_size_rb                 = nof_prb,
             .bwp_start_rb                = 0,
             .cp                          = profile.cp,
-            .codewords                   = {pdsch_processor::codeword_description{mcs.modulation, i_rv}},
+            .codewords                   = {pdsch_processor::codeword_description{
+                mcs.modulation, i_rv, get_ldpc_base_graph(mcs.get_normalised_target_code_rate(), units::bits(tbs))}},
             .n_id                        = 0,
             .ref_point                   = pdsch_processor::pdu_t::CRB0,
             .dmrs_symbol_mask            = dmrs_mask,
@@ -481,7 +482,6 @@ static std::vector<test_case_type> generate_test_cases(const test_profile& profi
             .freq_alloc                  = rb_allocation::make_type1(config.bwp_start_rb, nof_prb),
             .start_symbol_index          = profile.start_symbol,
             .nof_symbols                 = profile.nof_symbols,
-            .ldpc_base_graph             = get_ldpc_base_graph(mcs.get_normalised_target_code_rate(), units::bits(tbs)),
             .tbs_lbrm                    = units::bits(ldpc::MAX_CODEBLOCK_SIZE).truncate_to_bytes(),
             .reserved                    = {},
             .ptrs                        = std::nullopt,

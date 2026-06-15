@@ -46,6 +46,8 @@ public:
     modulation_scheme modulation;
     /// Redundancy version index.
     unsigned rv;
+    /// LDPC base graph to use for CW generation.
+    ldpc_base_graph_type ldpc_base_graph;
   };
 
   /// Parameters for the Phase Tracking Reference Signals (PT-RS).
@@ -132,8 +134,6 @@ public:
     // ...
     // Ignore CBGs.
     // ...
-    /// LDPC base graph to use for CW generation.
-    ldpc_base_graph_type ldpc_base_graph;
     /// \brief Transport block size for limited buffer rate match.
     ///
     /// Parameter \f$TBS_{LBRM}\f$ from 3GPP TS38.212 Section 5.4.2.1, for computing the size of the circular buffer.

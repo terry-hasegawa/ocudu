@@ -137,8 +137,11 @@ void pdsch_processor_flexible_impl::initialize_new_transmission(
   // Calculate transport block size.
   units::bits tbs = units::bytes(data.get_buffer().size()).to_bits();
 
+  // LDPC base graph for the codeword.
+  ldpc_base_graph_type ldpc_base_graph = config.codewords.front().ldpc_base_graph;
+
   // Calculate number of codeblocks.
-  nof_cb = compute_nof_codeblocks(tbs, config.ldpc_base_graph);
+  nof_cb = compute_nof_codeblocks(tbs, ldpc_base_graph);
 
   modulation_scheme modulation = config.codewords.front().modulation;
 
@@ -151,14 +154,14 @@ void pdsch_processor_flexible_impl::initialize_new_transmission(
                                                       .rv              = config.codewords.front().rv,
                                                       .n_id            = config.n_id,
                                                       .scrambling_id   = config.scrambling_id,
-                                                      .ldpc_base_graph = config.ldpc_base_graph,
+                                                      .ldpc_base_graph = ldpc_base_graph,
                                                       .nof_re_pdsch    = nof_re_pdsch,
                                                       .Nref            = Nref,
                                                       .nof_layers      = nof_layers};
 
   // Initialize the segmenter.
   segmenter_config segmenter_cfg = {.transport_block_size = units::bytes(data.get_buffer().size()),
-                                    .base_graph           = config.ldpc_base_graph,
+                                    .base_graph           = ldpc_base_graph,
                                     .rv                   = config.codewords.front().rv,
                                     .mod                  = modulation,
                                     .Nref                 = Nref.value(),
