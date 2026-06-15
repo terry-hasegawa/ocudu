@@ -87,3 +87,17 @@ TEST(crc_indication_builder, valid_indication_with_no_metrics_passes)
   ASSERT_EQ(static_cast<uint16_t>(rssi_dB ? (rssi_dB.value() + 128) * 10.F : 65535), msg.pdu.rssi);
   ASSERT_EQ(static_cast<uint16_t>(ul_sinr_dB ? ul_sinr_dB.value() * 500.F : 65535), msg.pdu.rsrp);
 }
+
+TEST(crc_indication_builder, valid_rapid_passes)
+{
+  crc_indication         msg;
+  crc_indication_builder builder(msg);
+
+  ASSERT_FALSE(msg.pdu.rapid.has_value());
+
+  uint8_t rapid = 10;
+
+  builder.set_rapid_parameter(rapid);
+
+  ASSERT_EQ(msg.pdu.rapid, rapid);
+}

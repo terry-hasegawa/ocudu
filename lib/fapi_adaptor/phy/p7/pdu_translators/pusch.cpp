@@ -127,4 +127,6 @@ void ocudu::fapi_adaptor::convert_pusch_fapi_to_phy(uplink_pdu_slot_repository::
   // Fill the antenna port indices starting from 0.
   proc_pdu.rx_ports.resize(num_rx_ant);
   std::iota(proc_pdu.rx_ports.begin(), proc_pdu.rx_ports.end(), 0);
+
+  proc_pdu.n_rapid = fapi_pdu.rapid;
 }

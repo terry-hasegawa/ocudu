@@ -16,6 +16,7 @@ namespace fapi {
 struct crc_ind_pdu {
   uint32_t                     handle = 0;
   rnti_t                       rnti;
+  std::optional<uint8_t>       rapid;
   harq_id_t                    harq_id;
   bool                         tb_crc_status_ok;
   int16_t                      ul_sinr_metric;

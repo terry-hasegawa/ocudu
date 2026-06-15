@@ -184,6 +184,16 @@ public:
     return *this;
   }
 
+  /// \brief Adds optional PUSCH RAPID to the PUSCH PDU and returns a reference to the builder.
+  ///
+  /// These parameters are specified in SCF-222 v4.0 section 3.4.3.2 in table optional PUSCH data information.
+  ul_pusch_pdu_builder& add_optional_rapid(uint8_t rapid)
+  {
+    pdu.rapid = rapid;
+
+    return *this;
+  }
+
   /// Sets the PUSCH context as vendor specific.
   ul_pusch_pdu_builder& set_context_vendor_specific(rnti_t rnti, harq_id_t harq_id)
   {

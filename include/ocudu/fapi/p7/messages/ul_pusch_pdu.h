@@ -78,6 +78,7 @@ struct ul_pusch_pdu {
   ldpc_base_graph_type                             ldpc_base_graph;
   units::bytes                                     tb_size_lbrm_bytes;
   std::optional<uci_part1_to_part2_correspondence> uci_correspondence;
+  std::optional<uint8_t>                           rapid;
   /// Vendor specific parameters.
   std::optional<pusch_context> context;
 };

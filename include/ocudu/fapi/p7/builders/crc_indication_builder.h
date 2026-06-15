@@ -78,6 +78,16 @@ public:
     msg.pdu.ul_sinr_metric = static_cast<int16_t>(ul_sinr);
     return *this;
   }
+
+  /// \brief Sets the rapid parameter and returns a reference to the builder.
+  ///
+  /// These parameters are specified in SCF-222 v4.0 section 3.4.8 in table CRC.indication message body.
+  crc_indication_builder& set_rapid_parameter(uint8_t rapid)
+  {
+    msg.pdu.rapid = rapid;
+
+    return *this;
+  }
 };
 
 } // namespace fapi

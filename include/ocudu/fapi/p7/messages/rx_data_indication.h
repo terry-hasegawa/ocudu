@@ -13,10 +13,11 @@ namespace fapi {
 
 /// Reception data indication PDU information.
 struct rx_data_indication_pdu {
-  uint32_t            handle = 0;
-  rnti_t              rnti;
-  harq_id_t           harq_id;
-  span<const uint8_t> transport_block;
+  uint32_t               handle = 0;
+  rnti_t                 rnti;
+  std::optional<uint8_t> rapid;
+  harq_id_t              harq_id;
+  span<const uint8_t>    transport_block;
 };
 
 /// Reception data indication message.

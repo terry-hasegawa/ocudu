@@ -262,6 +262,10 @@ void phy_to_fapi_results_event_fastpath_translator::notify_crc_indication(const 
   builder.set_pdu(
       result.rnti, result.harq_id, result.decoder_result.tb_crc_ok, sinr_dB, timing_advance, {}, rsrp, false);
 
+  if (result.n_rapid.has_value()) {
+    builder.set_rapid_parameter(*result.n_rapid);
+  }
+
   p7_notifier->on_crc_indication(msg);
 }
 
@@ -273,6 +277,10 @@ void phy_to_fapi_results_event_fastpath_translator::notify_rx_data_indication(co
   builder.set_slot(result.slot);
 
   builder.set_pdu(result.rnti, result.harq_id, result.payload);
+
+  if (result.n_rapid.has_value()) {
+    builder.set_rapid_parameter(*result.n_rapid);
+  }
 
   p7_notifier->on_rx_data_indication(msg);
 }

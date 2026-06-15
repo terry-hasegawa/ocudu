@@ -39,6 +39,16 @@ public:
 
     return *this;
   }
+
+  /// \brief Sets the rapid parameter and returns a reference to the builder.
+  ///
+  /// These parameters are specified in SCF-222 v4.0 section 3.4.7 in table Rx_Data.indication message body.
+  rx_data_indication_builder& set_rapid_parameter(uint8_t rapid)
+  {
+    msg.pdu.rapid = rapid;
+
+    return *this;
+  }
 };
 
 } // namespace fapi

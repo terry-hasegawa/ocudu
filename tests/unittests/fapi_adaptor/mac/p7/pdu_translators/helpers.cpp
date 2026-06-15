@@ -558,6 +558,9 @@ ul_sched_info_test_helper unittests::build_valid_pusch_pdu()
       ri_restriction_type({true, true, true, true}),
       csi_report_quantities::cri_ri_li_pmi_cqi};
 
+  // Rapid.
+  info.context.rapid = 123;
+
   return helper;
 }
 

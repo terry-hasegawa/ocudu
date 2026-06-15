@@ -107,6 +107,10 @@ void ocudu::fapi_adaptor::convert_pusch_mac_to_fapi(fapi::ul_pusch_pdu_builder& 
   // Fill the UCI parameters.
   fill_optional_uci_parameters(builder, mac_pdu.uci, part2_mapper);
 
+  if (mac_pdu.context.rapid.has_value()) {
+    builder.add_optional_rapid(*mac_pdu.context.rapid);
+  }
+
   // Set PUSCH context for logging.
   builder.set_context_vendor_specific(pusch_pdu.rnti, pusch_pdu.harq_id);
 }

@@ -5,7 +5,6 @@
 #pragma once
 
 #include "ocudu/ran/phy_time_unit.h"
-#include "ocudu/ran/time/radio_frame_constants.h"
 
 namespace ocudu {
 

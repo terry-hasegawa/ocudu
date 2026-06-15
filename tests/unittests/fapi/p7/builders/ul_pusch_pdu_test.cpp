@@ -211,3 +211,18 @@ TEST(ul_pusch_pdu_builder, valid_uci_part1_part2_correspondence_parameters_passe
 
   ASSERT_EQ(nof_part2, pdu.uci_correspondence->part2.size());
 }
+
+TEST(ul_pusch_pdu_builder, valid_rapid_parameter_passes)
+{
+  uint8_t rapid = 123;
+
+  ul_pusch_pdu         pdu;
+  ul_pusch_pdu_builder builder(pdu);
+
+  ASSERT_FALSE(pdu.rapid.has_value());
+
+  builder.add_optional_rapid(rapid);
+
+  ASSERT_TRUE(pdu.rapid.has_value());
+  ASSERT_EQ(pdu.rapid, rapid);
+}

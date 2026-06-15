@@ -789,6 +789,8 @@ ul_pusch_pdu unittest::build_valid_ul_pusch_pdu()
   pdu.ldpc_base_graph    = generate_ldpc_graph_type();
   pdu.tb_size_lbrm_bytes = units::bytes{32323242};
 
+  pdu.rapid = 123;
+
   return pdu;
 }
 

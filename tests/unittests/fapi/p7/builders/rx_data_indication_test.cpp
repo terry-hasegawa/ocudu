@@ -40,3 +40,17 @@ TEST(rx_data_indication_builder, add_custom_pdu_passes)
   ASSERT_EQ(transport_block.size(), msg.pdu.transport_block.size());
   ASSERT_EQ(transport_block.data(), msg.pdu.transport_block.data());
 }
+
+TEST(rx_data_indication_builder, valid_rapid_passes)
+{
+  rx_data_indication         msg;
+  rx_data_indication_builder builder(msg);
+
+  ASSERT_FALSE(msg.pdu.rapid.has_value());
+
+  uint8_t rapid = 10;
+
+  builder.set_rapid_parameter(rapid);
+
+  ASSERT_EQ(msg.pdu.rapid, rapid);
+}

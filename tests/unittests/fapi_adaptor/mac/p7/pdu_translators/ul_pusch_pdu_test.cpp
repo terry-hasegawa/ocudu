@@ -88,4 +88,7 @@ TEST(mac_to_fapi_pusch_pdu_test, valid_pusch_pdu_should_pass)
                 ? mac_uci.csi->beta_offset_csi_2.value()
                 : 0U,
             fapi_uci.beta_offset_csi2);
+
+  // Rapid.
+  ASSERT_EQ(fapi_pdu.rapid, pdu_test.info.context.rapid);
 }
