@@ -1,6 +1,21 @@
 # SPDX-FileCopyrightText: Copyright (C) 2021-2026 Software Radio Systems Limited
 # SPDX-License-Identifier: BSD-3-Clause-Open-MPI
 
+spec:
+  inputs:
+    promote-image-tag:
+      description: "Optional Docker tag to build and promote. Leave empty to use the normal date-based tag."
+      default: ""
+      regex: "^$|^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$"
+    pflt-submit:
+      description: "Submit RH preflight results to Red Hat/Pyxis."
+      default: "false"
+      options:
+        - "false"
+        - "true"
+
+---
+
 include:
   - local: .gitlab/ci-shared/gitlab_settings/.gitlab-ci.yml
   - local: .gitlab/ci-shared/workflow.yml
@@ -111,6 +126,9 @@ trigger docker:
 
 promote stable docker images:
   stage: promote
+  variables:
+    PROMOTE_IMAGE_TAG: "$[[ inputs.promote-image-tag ]]"
+    PFLT_SUBMIT: "$[[ inputs.pflt-submit ]]"
   rules:
     - if: $SKIP_OCUDU_BUILDING_CONTAINERS_CI
       when: never
