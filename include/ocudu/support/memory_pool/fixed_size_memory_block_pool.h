@@ -262,6 +262,12 @@ private:
     return pool;
   }
 
+  static std::atomic<unsigned>& get_nof_workers()
+  {
+    static std::atomic<unsigned> counter{0};
+    return counter;
+  }
+
   struct worker_ctxt {
     /// Shared ownership of the pool.
     std::shared_ptr<pool_type> parent;
@@ -280,9 +286,21 @@ private:
       producer_token(parent->central_mem_cache),
       consumer_token(parent->central_mem_cache)
     {
+      // Check if the number of workers * nof batches per worker does not exceed the total number of batches of the
+      // pool. If it does, it can happen that all worker caches absorve all available buffers, depleting the central
+      // cache.
+      if ((get_nof_workers().fetch_add(1, std::memory_order_relaxed) + 1) * parent->max_local_batches >
+          parent->nof_blocks / block_batch_size) {
+        fmt::print(stderr,
+                   "Warning: Memory pool per-worker caches are too large, considering the number of workers. Please, "
+                   "increase MAX_EXPECTED_WORKERS\n");
+      }
     }
+    worker_ctxt(const worker_ctxt&) = delete;
+    worker_ctxt(worker_ctxt&&)      = delete;
     ~worker_ctxt()
     {
+      get_nof_workers().fetch_sub(1, std::memory_order_relaxed);
       while (not local_cache.empty()) {
         if (local_cache.back().size() < block_batch_size) {
           // Batch is incomplete. We combine it with any other existing incomplete batch.
@@ -311,6 +329,8 @@ private:
         local_cache.pop_back();
       }
     }
+    worker_ctxt& operator=(const worker_ctxt&) = delete;
+    worker_ctxt& operator=(worker_ctxt&&)      = delete;
   };
 
   worker_ctxt* get_worker_cache()
