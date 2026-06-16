@@ -5,8 +5,8 @@
 #include "cell_meas_manager_impl.h"
 #include "cell_meas_manager_helpers.h"
 #include "ocudu/cu_cp/cell_meas_manager_config.h"
+#include "ocudu/ran/meas_types.h"
 #include "ocudu/ran/plmn_identity.h"
-#include "ocudu/rrc/meas_types.h"
 #include "ocudu/support/ocudu_assert.h"
 #include <set>
 #include <utility>

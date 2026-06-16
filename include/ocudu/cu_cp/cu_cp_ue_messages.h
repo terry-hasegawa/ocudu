@@ -7,7 +7,7 @@
 #include "ocudu/adt/byte_buffer.h"
 #include "ocudu/adt/static_vector.h"
 #include "ocudu/cu_cp/up_context.h"
-#include "ocudu/rrc/meas_types.h"
+#include "ocudu/ran/meas_types.h"
 #include "ocudu/security/security.h"
 #include <optional>
 

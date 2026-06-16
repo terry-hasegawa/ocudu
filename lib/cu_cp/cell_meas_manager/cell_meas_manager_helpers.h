@@ -7,14 +7,12 @@
 #include "measurement_context.h"
 #include "ocudu/adt/span.h"
 #include "ocudu/cu_cp/cell_meas_manager_config.h"
-#include "ocudu/rrc/meas_types.h"
+#include "ocudu/ran/meas_types.h"
 #include "ocudu/rrc/rrc_ue.h"
 #include <unordered_map>
-#include <utility>
 #include <vector>
 
-namespace ocudu {
-namespace ocucp {
+namespace ocudu::ocucp {
 
 /// \brief Log configured cells.
 void log_cells(const ocudulog::basic_logger& logger, const cell_meas_manager_cfg& cfg);
@@ -54,8 +52,8 @@ std::vector<ssb_frequency_t> generate_cho_measurement_object_list(const cell_mea
 /// \param[out] meas_cfg The resulting measurement configuration.
 /// \param[out] ue_meas_context The UE measurement context.
 void generate_report_config(const cell_meas_manager_cfg&  cfg,
-                            const nr_cell_identity        nci,
-                            const report_cfg_id_t         report_cfg_id,
+                            nr_cell_identity              nci,
+                            report_cfg_id_t               report_cfg_id,
                             rrc_meas_cfg&                 meas_cfg,
                             cell_meas_manager_ue_context& ue_meas_context);
 
@@ -86,5 +84,4 @@ rrc_meas_obj_nr generate_measurement_object(const serving_cell_meas_config& cfg)
 /// \brief Check whether the given measurement objects are the same.
 bool is_duplicate(const rrc_meas_obj_nr& obj_1, const rrc_meas_obj_nr& obj_2);
 
-} // namespace ocucp
-} // namespace ocudu
+} // namespace ocudu::ocucp

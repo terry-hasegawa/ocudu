@@ -7,10 +7,10 @@
 #include "ocudu/adt/byte_buffer.h"
 #include "ocudu/pdcp/pdcp_config.h"
 #include "ocudu/ran/cu_types.h"
+#include "ocudu/ran/meas_types.h"
 #include "ocudu/ran/ranac.h"
 #include "ocudu/ran/rb_id.h"
 #include "ocudu/ran/tac.h"
-#include "ocudu/rrc/meas_types.h"
 #include "ocudu/security/security.h"
 #include <string>
 #include <vector>

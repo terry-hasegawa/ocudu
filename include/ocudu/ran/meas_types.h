@@ -4,8 +4,6 @@
 
 #pragma once
 
-#include "ocudu/adt/byte_buffer.h"
-#include "ocudu/adt/slotted_array.h"
 #include "ocudu/adt/slotted_vector.h"
 #include "ocudu/ran/nr_cell_identity.h"
 #include "ocudu/ran/pci.h"
@@ -15,8 +13,7 @@
 #include <variant>
 #include <vector>
 
-namespace ocudu {
-namespace ocucp {
+namespace ocudu::ocucp {
 
 /// Maximum number of measurements.
 const uint8_t MAX_NOF_MEAS = 64;
@@ -546,8 +543,7 @@ struct rrc_meas_results {
   std::optional<rrc_meas_result_neigh_cells>          meas_result_neigh_cells;
 };
 
-} // namespace ocucp
-} // namespace ocudu
+} // namespace ocudu::ocucp
 
 namespace fmt {
 

@@ -4,17 +4,13 @@
 
 #pragma once
 
+#include "ocudu/adt/slotted_array.h"
 #include "ocudu/nrppa/nrppa.h"
-#include "ocudu/ocudulog/ocudulog.h"
-#include "ocudu/ran/gnb_id.h"
-#include "ocudu/ran/nr_cgi.h"
+#include "ocudu/ran/meas_types.h"
 #include "ocudu/ran/pci.h"
-#include "ocudu/rrc/meas_types.h"
 #include <map>
-#include <unordered_map>
 
-namespace ocudu {
-namespace ocucp {
+namespace ocudu::ocucp {
 
 struct meas_context_t {
   meas_obj_id_t    meas_obj_id   = meas_obj_id_t::invalid;
@@ -94,5 +90,4 @@ public:
   }
 };
 
-} // namespace ocucp
-} // namespace ocudu
+} // namespace ocudu::ocucp

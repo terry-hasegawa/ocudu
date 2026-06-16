@@ -8,8 +8,8 @@
 #include "ocudu/asn1/rrc_nr/common.h"
 #include "ocudu/asn1/rrc_nr/rrc_nr.h"
 #include "ocudu/asn1/rrc_nr/ul_dcch_msg_ies.h"
+#include "ocudu/ran/meas_types.h"
 #include "ocudu/ran/subcarrier_spacing.h"
-#include "ocudu/rrc/meas_types.h"
 
 namespace ocudu::ocucp {
 

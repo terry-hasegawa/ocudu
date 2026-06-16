@@ -8,8 +8,8 @@
 #include "ocudu/adt/span.h"
 #include "ocudu/cu_cp/cell_meas_manager_config.h"
 #include "ocudu/ran/cu_cp_types.h"
+#include "ocudu/ran/meas_types.h"
 #include "ocudu/ran/plmn_identity.h"
-#include "ocudu/rrc/meas_types.h"
 #include <unordered_map>
 
 namespace ocudu::ocucp {

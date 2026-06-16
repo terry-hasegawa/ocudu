@@ -5,8 +5,8 @@
 #pragma once
 
 #include "ocudu/ran/cu_cp_types.h"
+#include "ocudu/ran/meas_types.h"
 #include "ocudu/ran/positioning/positioning_messages.h"
-#include "ocudu/rrc/meas_types.h"
 #include "ocudu/support/async/async_task.h"
 #include <map>
 

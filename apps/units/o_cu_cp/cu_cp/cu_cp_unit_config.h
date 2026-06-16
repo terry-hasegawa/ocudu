@@ -10,12 +10,12 @@
 #include "cu_cp_unit_logger_config.h"
 #include "ocudu/ran/arfcn.h"
 #include "ocudu/ran/gnb_id.h"
+#include "ocudu/ran/meas_types.h"
 #include "ocudu/ran/nr_band.h"
 #include "ocudu/ran/pci.h"
 #include "ocudu/ran/qos/five_qi.h"
 #include "ocudu/ran/s_nssai.h"
 #include "ocudu/ran/tac.h"
-#include "ocudu/rrc/meas_types.h"
 #include <chrono>
 #include <optional>
 #include <vector>

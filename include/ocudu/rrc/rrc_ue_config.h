@@ -4,8 +4,8 @@
 
 #pragma once
 
+#include "ocudu/ran/meas_types.h"
 #include "ocudu/ran/pdcp/pdcp_t_reordering.h"
-#include "ocudu/rrc/meas_types.h"
 
 namespace ocudu::ocucp {
 

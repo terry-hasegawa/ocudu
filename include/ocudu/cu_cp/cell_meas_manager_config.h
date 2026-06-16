@@ -6,10 +6,10 @@
 
 #include "ocudu/ran/band_helper.h"
 #include "ocudu/ran/gnb_id.h"
+#include "ocudu/ran/meas_types.h"
 #include "ocudu/ran/plmn_identity.h"
 #include "ocudu/ran/subcarrier_spacing.h"
 #include "ocudu/ran/tac.h"
-#include "ocudu/rrc/meas_types.h"
 #include <map>
 #include <unordered_map>
 #include <vector>
