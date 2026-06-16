@@ -247,10 +247,10 @@ ngap_message ocudu::ocucp::generate_initial_context_setup_request_base(amf_ue_id
 }
 
 ngap_message ocudu::ocucp::generate_valid_initial_context_setup_request_message(
-    amf_ue_id_t                                               amf_ue_id,
-    ran_ue_id_t                                               ran_ue_id,
-    std::optional<ngap_core_network_assist_info_for_inactive> cn_assist_info_for_inactive,
-    std::optional<location_report_request>                    location_reporting_request)
+    amf_ue_id_t                                                amf_ue_id,
+    ran_ue_id_t                                                ran_ue_id,
+    std::optional<cu_cp_core_network_assist_info_for_inactive> cn_assist_info_for_inactive,
+    std::optional<location_report_request>                     location_reporting_request)
 {
   ngap_message ngap_msg = generate_initial_context_setup_request_base(amf_ue_id, ran_ue_id);
 
@@ -364,11 +364,11 @@ ngap_message ocudu::ocucp::generate_ue_context_modification_request_base(amf_ue_
 }
 
 ngap_message ocudu::ocucp::generate_valid_ue_context_modification_request_message(
-    amf_ue_id_t                                               amf_ue_id,
-    ran_ue_id_t                                               ran_ue_id,
-    std::optional<aggregate_maximum_bit_rate_t>               ue_ambr,
-    std::optional<ngap_core_network_assist_info_for_inactive> cn_assist_info_for_inactive,
-    std::optional<guami_t>                                    new_guami)
+    amf_ue_id_t                                                amf_ue_id,
+    ran_ue_id_t                                                ran_ue_id,
+    std::optional<aggregate_maximum_bit_rate_t>                ue_ambr,
+    std::optional<cu_cp_core_network_assist_info_for_inactive> cn_assist_info_for_inactive,
+    std::optional<guami_t>                                     new_guami)
 {
   ngap_message ngap_msg = generate_ue_context_modification_request_base(amf_ue_id, ran_ue_id);
 

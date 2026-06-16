@@ -12,6 +12,7 @@
 #include "ocudu/ngap/ngap_pdu_session.h"
 #include "ocudu/ngap/ngap_rrc_inactive_transition.h"
 #include "ocudu/ngap/ngap_setup.h"
+#include "ocudu/ngap/ngap_types.h"
 #include "ocudu/ngap/ngap_ue_context_mod.h"
 #include "ocudu/ngap/ngap_ue_radio_capability_management.h"
 #include "ocudu/ran/cu_cp_location_reporting_types.h"
@@ -345,7 +346,7 @@ public:
   /// \brief Get the core network assist info for inactive.
   /// \param[in] ue_index The index of the UE.
   /// \returns The core network assist info for inactive if available.
-  virtual std::optional<ngap_core_network_assist_info_for_inactive>
+  virtual std::optional<cu_cp_core_network_assist_info_for_inactive>
   get_cn_assist_info_for_inactive(cu_cp_ue_index_t ue_index) = 0;
 };
 

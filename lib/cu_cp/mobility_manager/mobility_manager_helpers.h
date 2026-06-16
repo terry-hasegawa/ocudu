@@ -6,6 +6,7 @@
 
 #include "ocudu/cu_cp/up_context.h"
 #include "ocudu/ngap/ngap_handover.h"
+#include "ocudu/ngap/ngap_types.h"
 #include "ocudu/xnap/xnap_handover.h"
 
 namespace ocudu::ocucp {

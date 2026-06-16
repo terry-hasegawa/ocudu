@@ -615,11 +615,11 @@ bool cu_cp_test_environment::authenticate_ue(unsigned du_idx, gnb_du_ue_f1ap_id_
 }
 
 bool cu_cp_test_environment::setup_ue_security_and_ue_capabilies(
-    unsigned                                                  du_idx,
-    gnb_du_ue_f1ap_id_t                                       du_ue_id,
-    std::optional<ngap_core_network_assist_info_for_inactive> cn_assist_info_for_inactive,
-    bool                                                      rrc_inactive_supported,
-    std::optional<location_report_request>                    location_reporting_request)
+    unsigned                                                   du_idx,
+    gnb_du_ue_f1ap_id_t                                        du_ue_id,
+    std::optional<cu_cp_core_network_assist_info_for_inactive> cn_assist_info_for_inactive,
+    bool                                                       rrc_inactive_supported,
+    std::optional<location_report_request>                     location_reporting_request)
 {
   ngap_message ngap_pdu;
   ocudu_assert(not this->get_amf().try_pop_rx_pdu(ngap_pdu), "there are still NGAP messages to pop from AMF");
@@ -1029,21 +1029,21 @@ bool cu_cp_test_environment::setup_pdu_session(unsigned                         
 }
 
 bool cu_cp_test_environment::attach_ue(
-    unsigned                                                  du_idx,
-    unsigned                                                  cu_up_idx,
-    gnb_du_ue_f1ap_id_t                                       du_ue_id,
-    rnti_t                                                    crnti,
-    amf_ue_id_t                                               amf_ue_id,
-    gnb_cu_up_ue_e1ap_id_t                                    cu_up_e1ap_id,
-    pdu_session_id_t                                          psi,
-    drb_id_t                                                  drb_id,
-    qos_flow_id_t                                             qfi,
-    byte_buffer                                               rrc_setup_complete,
-    byte_buffer                                               rrc_reconfiguration_complete,
-    std::optional<ngap_core_network_assist_info_for_inactive> cn_assist_info_for_inactive,
-    bool                                                      rrc_inactive_supported,
-    std::optional<location_report_request>                    location_reporting_request,
-    std::optional<security_indication_t>                      security_indication)
+    unsigned                                                   du_idx,
+    unsigned                                                   cu_up_idx,
+    gnb_du_ue_f1ap_id_t                                        du_ue_id,
+    rnti_t                                                     crnti,
+    amf_ue_id_t                                                amf_ue_id,
+    gnb_cu_up_ue_e1ap_id_t                                     cu_up_e1ap_id,
+    pdu_session_id_t                                           psi,
+    drb_id_t                                                   drb_id,
+    qos_flow_id_t                                              qfi,
+    byte_buffer                                                rrc_setup_complete,
+    byte_buffer                                                rrc_reconfiguration_complete,
+    std::optional<cu_cp_core_network_assist_info_for_inactive> cn_assist_info_for_inactive,
+    bool                                                       rrc_inactive_supported,
+    std::optional<location_report_request>                     location_reporting_request,
+    std::optional<security_indication_t>                       security_indication)
 {
   if (not connect_new_ue(du_idx, du_ue_id, crnti, plmn_identity::test_value(), std::move(rrc_setup_complete))) {
     return false;

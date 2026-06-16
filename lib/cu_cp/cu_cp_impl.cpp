@@ -283,7 +283,7 @@ void cu_cp_impl::handle_bearer_context_inactivity_notification(const e1ap_inacti
     }
 
     // Get Core Network Assist Info for Inactive if present.
-    std::optional<ngap_core_network_assist_info_for_inactive> cn_assist_info_for_inactive =
+    std::optional<cu_cp_core_network_assist_info_for_inactive> cn_assist_info_for_inactive =
         ngap->get_cn_assist_info_for_inactive(msg.ue_index);
 
     // To set the UE as inactive, the following conditions must be met:
@@ -1757,7 +1757,7 @@ void cu_cp_impl::send_ran_paging(cu_cp_ue_index_t ue_index, full_i_rnti_t full_i
   }
 
   // Get Core Network Assist Info for Inactive if present.
-  std::optional<ngap_core_network_assist_info_for_inactive> cn_assist_info_for_inactive =
+  std::optional<cu_cp_core_network_assist_info_for_inactive> cn_assist_info_for_inactive =
       ngap->get_cn_assist_info_for_inactive(ue_index);
 
   if (!cn_assist_info_for_inactive.has_value()) {

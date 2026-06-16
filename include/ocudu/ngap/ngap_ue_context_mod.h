@@ -4,17 +4,18 @@
 
 #pragma once
 
-#include "ocudu/ngap/ngap_types.h"
+#include "ocudu/ran/aggregate_maximum_bit_rate.h"
+#include "ocudu/ran/cu_cp_inactive.h"
 #include "ocudu/ran/cu_cp_types.h"
 #include "ocudu/ran/guami.h"
 
 namespace ocudu::ocucp {
 
 struct ngap_ue_context_modification_request {
-  cu_cp_ue_index_t                                          ue_index = cu_cp_ue_index_t::invalid;
-  std::optional<aggregate_maximum_bit_rate_t>               ue_aggr_max_bit_rate;
-  std::optional<ngap_core_network_assist_info_for_inactive> core_network_assist_info_for_inactive;
-  std::optional<guami_t>                                    new_guami;
+  cu_cp_ue_index_t                                           ue_index = cu_cp_ue_index_t::invalid;
+  std::optional<aggregate_maximum_bit_rate_t>                ue_aggr_max_bit_rate;
+  std::optional<cu_cp_core_network_assist_info_for_inactive> core_network_assist_info_for_inactive;
+  std::optional<guami_t>                                     new_guami;
 };
 
 struct ngap_ue_context_modification_failure {

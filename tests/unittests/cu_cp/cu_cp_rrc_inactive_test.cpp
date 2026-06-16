@@ -50,8 +50,8 @@ public:
   }
 
   void connect_ue_with_rrc_inactive_support(
-      std::optional<ngap_core_network_assist_info_for_inactive> cn_assist_info_for_inactive =
-          ngap_core_network_assist_info_for_inactive{.ue_id_idx_value = 0x64c0})
+      std::optional<cu_cp_core_network_assist_info_for_inactive> cn_assist_info_for_inactive =
+          cu_cp_core_network_assist_info_for_inactive{.ue_id_idx_value = 0x64c0})
   {
     // Connect UE 0x4601 with RRC inactive support.
     report_fatal_error_if_not(attach_ue(du_idx,

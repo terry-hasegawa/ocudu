@@ -5,9 +5,9 @@
 #pragma once
 
 #include "ocudu/adt/slotted_vector.h"
-#include "ocudu/ngap/ngap_types.h"
 #include "ocudu/ran/cause/ngap_cause.h"
 #include "ocudu/ran/cause/xnap_cause.h"
+#include "ocudu/ran/cu_cp_inactive.h"
 #include "ocudu/ran/cu_cp_types.h"
 #include "ocudu/ran/cu_types.h"
 #include "ocudu/ran/pdcp/pdcp_count_info.h"
@@ -144,13 +144,13 @@ struct cu_cp_pdu_session_res_released_item {
 };
 
 struct cu_cp_path_switch_request_ack {
-  cu_cp_ue_index_t                                           ue_index = cu_cp_ue_index_t::invalid;
-  security::security_context                                 security_context;
-  std::vector<cu_cp_pdu_session_res_switched_item>           pdu_session_res_switched_list;
-  std::vector<cu_cp_pdu_session_res_released_item>           pdu_session_res_released_list;
-  std::vector<s_nssai_t>                                     allowed_nssai;
-  std::optional<ngap_core_network_assist_info_for_inactive>  core_network_assist_info_for_inactive;
-  std::optional<ngap_rrc_inactive_transition_report_request> rrc_inactive_transition_report_request;
+  cu_cp_ue_index_t                                            ue_index = cu_cp_ue_index_t::invalid;
+  security::security_context                                  security_context;
+  std::vector<cu_cp_pdu_session_res_switched_item>            pdu_session_res_switched_list;
+  std::vector<cu_cp_pdu_session_res_released_item>            pdu_session_res_released_list;
+  std::vector<s_nssai_t>                                      allowed_nssai;
+  std::optional<cu_cp_core_network_assist_info_for_inactive>  core_network_assist_info_for_inactive;
+  std::optional<cu_cp_rrc_inactive_transition_report_request> rrc_inactive_transition_report_request;
 };
 
 struct cu_cp_path_switch_request_failure {

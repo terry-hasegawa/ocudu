@@ -11,7 +11,6 @@
 #include "ocudu/ocudulog/ocudulog.h"
 #include "ocudu/ran/cause/ngap_cause.h"
 #include "ocudu/ran/cu_cp_location_reporting_types.h"
-#include "ocudu/ran/cu_cp_pdu_session.h"
 #include "ocudu/ran/cu_types.h"
 #include "ocudu/ran/five_g_s_tmsi.h"
 #include "ocudu/ran/rb_id.h"
@@ -963,16 +962,16 @@ inline asn1::ngap::pdu_session_type_e pdu_session_type_to_asn1(const pdu_session
   }
 }
 
-inline ngap_rrc_inactive_transition_report_request asn1_to_rrc_inactive_transition_report_request(
+inline cu_cp_rrc_inactive_transition_report_request asn1_to_rrc_inactive_transition_report_request(
     const asn1::ngap::rrc_inactive_transition_report_request_e& asn1_rrc_inactive_transition_report_request)
 {
   switch (asn1_rrc_inactive_transition_report_request) {
     case asn1::ngap::rrc_inactive_transition_report_request_opts::options::subsequent_state_transition_report:
-      return ngap_rrc_inactive_transition_report_request::subsequent_state_transition_report;
+      return cu_cp_rrc_inactive_transition_report_request::subsequent_state_transition_report;
     case asn1::ngap::rrc_inactive_transition_report_request_opts::options::single_rrc_connected_state_report:
-      return ngap_rrc_inactive_transition_report_request::single_rrc_connected_state_report;
+      return cu_cp_rrc_inactive_transition_report_request::single_rrc_connected_state_report;
     default:
-      return ngap_rrc_inactive_transition_report_request::cancel_report;
+      return cu_cp_rrc_inactive_transition_report_request::cancel_report;
   }
 }
 
@@ -1044,10 +1043,10 @@ asn1_to_periodic_registration_update_timer(uint8_t asn1_periodic_registration_up
   return periodic_registration_update_timer;
 }
 
-inline ngap_core_network_assist_info_for_inactive asn1_to_core_network_assist_info_for_inactive(
+inline cu_cp_core_network_assist_info_for_inactive asn1_to_core_network_assist_info_for_inactive(
     const asn1::ngap::core_network_assist_info_for_inactive_s& asn1_cn_assist_info_for_inactive)
 {
-  ngap_core_network_assist_info_for_inactive cn_assist_info_for_inactive;
+  cu_cp_core_network_assist_info_for_inactive cn_assist_info_for_inactive;
 
   if (asn1_cn_assist_info_for_inactive.ue_id_idx_value.type() ==
       asn1::ngap::ue_id_idx_value_c::types_opts::options::idx_len10) {

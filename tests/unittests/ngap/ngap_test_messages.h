@@ -115,10 +115,10 @@ ngap_message generate_initial_context_setup_request_base(amf_ue_id_t amf_ue_id, 
 
 /// \brief Generate a valid dummy Initial Context Setup Request Message.
 ngap_message generate_valid_initial_context_setup_request_message(
-    amf_ue_id_t                                               amf_ue_id,
-    ran_ue_id_t                                               ran_ue_id,
-    std::optional<ngap_core_network_assist_info_for_inactive> cn_assist_info_for_inactive = std::nullopt,
-    std::optional<location_report_request>                    location_reporting_request  = std::nullopt);
+    amf_ue_id_t                                                amf_ue_id,
+    ran_ue_id_t                                                ran_ue_id,
+    std::optional<cu_cp_core_network_assist_info_for_inactive> cn_assist_info_for_inactive = std::nullopt,
+    std::optional<location_report_request>                     location_reporting_request  = std::nullopt);
 
 /// \brief Generate a valid dummy Initial Context Setup Request Message with a PDUSessionResourceSetupListCxtReq.
 ngap_message generate_valid_initial_context_setup_request_message_with_pdu_session(amf_ue_id_t amf_ue_id,
@@ -136,11 +136,11 @@ ngap_message generate_ue_context_modification_request_base(amf_ue_id_t amf_ue_id
 
 /// \brief Generate a valid dummy UE Context Modification Request Message.
 ngap_message generate_valid_ue_context_modification_request_message(
-    amf_ue_id_t                                               amf_ue_id,
-    ran_ue_id_t                                               ran_ue_id,
-    std::optional<aggregate_maximum_bit_rate_t>               ue_ambr                     = std::nullopt,
-    std::optional<ngap_core_network_assist_info_for_inactive> cn_assist_info_for_inactive = std::nullopt,
-    std::optional<guami_t>                                    new_guami                   = std::nullopt);
+    amf_ue_id_t                                                amf_ue_id,
+    ran_ue_id_t                                                ran_ue_id,
+    std::optional<aggregate_maximum_bit_rate_t>                ue_ambr                     = std::nullopt,
+    std::optional<cu_cp_core_network_assist_info_for_inactive> cn_assist_info_for_inactive = std::nullopt,
+    std::optional<guami_t>                                     new_guami                   = std::nullopt);
 
 /// \brief Generate an invalid dummy UE Context Modification Request Message.
 ngap_message generate_invalid_ue_context_modification_request_message(amf_ue_id_t amf_ue_id, ran_ue_id_t ran_ue_id);

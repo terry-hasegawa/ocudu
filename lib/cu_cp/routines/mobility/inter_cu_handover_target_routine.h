@@ -16,17 +16,17 @@ namespace ocudu::ocucp {
 
 struct cu_cp_inter_cu_handover_request {
   // NG handover specific fields.
-  ngap_handov_type                                           handov_type;
-  std::optional<ngap_core_network_assist_info_for_inactive>  core_network_assist_info_for_inactive;
-  std::optional<bool>                                        new_security_context_ind;
-  byte_buffer                                                nasc;
-  std::vector<s_nssai_t>                                     allowed_nssai;
-  std::optional<uint64_t>                                    masked_imeisv;
-  std::optional<ngap_rrc_inactive_transition_report_request> rrc_inactive_transition_report_request;
-  std::vector<ngap_pdu_session_res_info_item>                pdu_session_res_info_list;
-  std::vector<ngap_erab_info_item>                           erab_info_list;
-  std::optional<uint16_t>                                    idx_to_rfsp;
-  std::vector<ngap_last_visited_cell_item>                   ue_history_info;
+  ngap_handov_type                                            handov_type;
+  std::optional<cu_cp_core_network_assist_info_for_inactive>  core_network_assist_info_for_inactive;
+  std::optional<bool>                                         new_security_context_ind;
+  byte_buffer                                                 nasc;
+  std::vector<s_nssai_t>                                      allowed_nssai;
+  std::optional<uint64_t>                                     masked_imeisv;
+  std::optional<cu_cp_rrc_inactive_transition_report_request> rrc_inactive_transition_report_request;
+  std::vector<ngap_pdu_session_res_info_item>                 pdu_session_res_info_list;
+  std::vector<ngap_erab_info_item>                            erab_info_list;
+  std::optional<uint16_t>                                     idx_to_rfsp;
+  std::vector<ngap_last_visited_cell_item>                    ue_history_info;
   // TODO: Add missing optional fields.
 
   // XNAP handover specific fields.

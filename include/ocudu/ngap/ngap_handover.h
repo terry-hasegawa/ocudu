@@ -5,12 +5,13 @@
 #pragma once
 
 #include "ocudu/ngap/ngap_pdu_session.h"
-#include "ocudu/ngap/ngap_types.h"
+#include "ocudu/ran/cu_cp_inactive.h"
 #include "ocudu/ran/cu_cp_location_reporting_types.h"
 #include "ocudu/ran/cu_cp_pdu_session.h"
 #include "ocudu/ran/cu_cp_types.h"
 #include "ocudu/ran/guami.h"
 #include "ocudu/ran/plmn_identity.h"
+#include "ocudu/ran/rb_id.h"
 #include "ocudu/ran/tac.h"
 #include "ocudu/security/security.h"
 #include <map>
@@ -96,7 +97,7 @@ struct ngap_handover_request {
   ngap_handov_type                                                      handov_type;
   ngap_cause_t                                                          cause;
   aggregate_maximum_bit_rate_t                                          ue_aggr_max_bit_rate;
-  std::optional<ngap_core_network_assist_info_for_inactive>             core_network_assist_info_for_inactive;
+  std::optional<cu_cp_core_network_assist_info_for_inactive>            core_network_assist_info_for_inactive;
   security::security_context                                            security_context;
   std::optional<bool>                                                   new_security_context_ind;
   byte_buffer                                                           nasc;
@@ -106,9 +107,9 @@ struct ngap_handover_request {
   std::optional<uint64_t>                                           masked_imeisv;
   ngap_source_ngran_node_to_target_ngran_node_transparent_container source_to_target_transparent_container;
   // TODO: Add optional mob_restrict_list
-  std::optional<location_report_request>                     location_report_request_type;
-  std::optional<ngap_rrc_inactive_transition_report_request> rrc_inactive_transition_report_request;
-  guami_t                                                    guami;
+  std::optional<location_report_request>                      location_report_request_type;
+  std::optional<cu_cp_rrc_inactive_transition_report_request> rrc_inactive_transition_report_request;
+  guami_t                                                     guami;
   // TODO: Add optional redirection_voice_fallback
   // TODO: Add optional cn_assisted_ran_tuning
 };

@@ -20,15 +20,15 @@ struct ngap_ue_ids {
 };
 
 struct ngap_ue_context {
-  ngap_ue_ids                                               ue_ids;
-  ngap_cu_cp_ue_notifier*                                   ue = nullptr;
-  guami_t                                                   serving_guami;
-  unique_timer                                              request_pdu_session_timer;
-  bool                                                      release_requested                     = false;
-  bool                                                      release_scheduled                     = false;
-  std::optional<ngap_core_network_assist_info_for_inactive> core_network_assist_info_for_inactive = std::nullopt;
-  ngap_rrc_inactive_transition_report_request               rrc_inactive_transition_report_request =
-      ngap_rrc_inactive_transition_report_request::cancel_report;
+  ngap_ue_ids                                                ue_ids;
+  ngap_cu_cp_ue_notifier*                                    ue = nullptr;
+  guami_t                                                    serving_guami;
+  unique_timer                                               request_pdu_session_timer;
+  bool                                                       release_requested                     = false;
+  bool                                                       release_scheduled                     = false;
+  std::optional<cu_cp_core_network_assist_info_for_inactive> core_network_assist_info_for_inactive = std::nullopt;
+  cu_cp_rrc_inactive_transition_report_request               rrc_inactive_transition_report_request =
+      cu_cp_rrc_inactive_transition_report_request::cancel_report;
   byte_buffer last_pdu_session_resource_modify_request; // To check if a received modify request is a duplicate
   ngap_ue_transaction_manager ev_mng;
   ngap_ue_logger              logger;

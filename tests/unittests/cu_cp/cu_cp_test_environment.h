@@ -136,11 +136,11 @@ public:
   [[nodiscard]] bool authenticate_ue(unsigned du_idx, gnb_du_ue_f1ap_id_t du_ue_id, amf_ue_id_t amf_ue_id);
   /// Runs the Security Mode procedure for a given UE.
   [[nodiscard]] bool setup_ue_security_and_ue_capabilies(
-      unsigned                                                  du_idx,
-      gnb_du_ue_f1ap_id_t                                       du_ue_id,
-      std::optional<ngap_core_network_assist_info_for_inactive> cn_assist_info_for_inactive = std::nullopt,
-      bool                                                      rrc_inactive_supported      = true,
-      std::optional<location_report_request>                    location_reporting_request  = std::nullopt);
+      unsigned                                                   du_idx,
+      gnb_du_ue_f1ap_id_t                                        du_ue_id,
+      std::optional<cu_cp_core_network_assist_info_for_inactive> cn_assist_info_for_inactive = std::nullopt,
+      bool                                                       rrc_inactive_supported      = true,
+      std::optional<location_report_request>                     location_reporting_request  = std::nullopt);
   /// Get a Location Report, if one is awaited for.
   std::optional<ngap_message>
   get_location_report_if_required(std::optional<location_report_request> location_reporting_request);
@@ -176,10 +176,10 @@ public:
             qos_flow_id_t          qfi     = qos_flow_id_t::min,
             byte_buffer rrc_setup_complete = test_helpers::pack_ul_dcch_msg(test_helpers::create_rrc_setup_complete()),
             byte_buffer rrc_reconfiguration_complete = make_byte_buffer("00070e00cc6fcda5").value(),
-            std::optional<ngap_core_network_assist_info_for_inactive> cn_assist_info_for_inactive = std::nullopt,
-            bool                                                      rrc_inactive_supported      = true,
-            std::optional<location_report_request>                    location_reporting_request  = std::nullopt,
-            std::optional<security_indication_t>                      security_indication         = std::nullopt);
+            std::optional<cu_cp_core_network_assist_info_for_inactive> cn_assist_info_for_inactive = std::nullopt,
+            bool                                                       rrc_inactive_supported      = true,
+            std::optional<location_report_request>                     location_reporting_request  = std::nullopt,
+            std::optional<security_indication_t>                       security_indication         = std::nullopt);
   /// Reestablishes a UE connection, including RRC Reestablishment and RRC Reconfiguration procedures.
   /// \return True if the reestablishment was successful, false if RRC Setup/Reject was performed instead.
   [[nodiscard]] bool reestablish_ue(unsigned            du_idx,

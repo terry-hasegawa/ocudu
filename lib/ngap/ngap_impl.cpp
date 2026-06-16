@@ -85,7 +85,7 @@ bool ngap_impl::update_ue_index(cu_cp_ue_index_t        new_ue_index,
   return true;
 }
 
-std::optional<ngap_core_network_assist_info_for_inactive>
+std::optional<cu_cp_core_network_assist_info_for_inactive>
 ngap_impl::get_cn_assist_info_for_inactive(cu_cp_ue_index_t ue_index)
 {
   if (!ue_ctxt_list.contains(ue_index)) {
@@ -1521,7 +1521,7 @@ ngap_impl::handle_rrc_inactive_transition_report_required(const ngap_rrc_inactiv
   ngap_ue_context& ue_ctxt = ue_ctxt_list[ue_index];
 
   if (ue_ctxt.rrc_inactive_transition_report_request !=
-      ngap_rrc_inactive_transition_report_request::subsequent_state_transition_report) {
+      cu_cp_rrc_inactive_transition_report_request::subsequent_state_transition_report) {
     logger.debug("ue={}: Ignoring RRCInactiveTransitionReport. Cause: Report was not requested", ue_index);
     return launch_async([](coro_context<async_task<bool>>& ctx) {
       CORO_BEGIN(ctx);
