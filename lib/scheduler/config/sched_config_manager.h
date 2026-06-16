@@ -167,10 +167,10 @@ private:
   sched_configuration_notifier& config_notifier;
   ocudulog::basic_logger&       logger;
 
-  std::array<std::unique_ptr<ue_configuration>, MAX_NOF_DU_UES> ue_cfg_list;
-
-  // Config Resources associated with this cell group.
+  // Config Resources associated with supported cell groups.
   slotted_vector<std::unique_ptr<du_cell_group_config_pool>> group_cfg_pool;
+
+  std::array<std::unique_ptr<ue_configuration>, MAX_NOF_DU_UES> ue_cfg_list;
 
   // List of common configs for the scheduler cells.
   cell_common_configuration_list added_cells;
