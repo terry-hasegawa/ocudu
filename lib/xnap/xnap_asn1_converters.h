@@ -5,12 +5,12 @@
 #pragma once
 
 #include "ocudu/asn1/xnap/xnap_ies.h"
-#include "ocudu/cu_cp/inter_cu_handover_messages.h"
 #include "ocudu/ran/cause/xnap_cause.h"
 #include "ocudu/ran/cu_cp_cell_configuration.h"
 #include "ocudu/ran/cu_cp_location_reporting_types.h"
 #include "ocudu/ran/cu_types.h"
 #include "ocudu/ran/guami.h"
+#include "ocudu/ran/inter_cu_handover_messages.h"
 #include "ocudu/ran/nr_cgi.h"
 #include "ocudu/ran/qos/qos_parameters.h"
 #include "ocudu/ran/s_nssai.h"

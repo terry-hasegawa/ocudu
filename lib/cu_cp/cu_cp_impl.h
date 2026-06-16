@@ -22,8 +22,8 @@
 #include "ocudu/cu_cp/cu_configurator.h"
 #include "ocudu/cu_cp/cu_cp.h"
 #include "ocudu/cu_cp/cu_cp_configuration.h"
-#include "ocudu/cu_cp/inter_cu_handover_messages.h"
 #include "ocudu/nrppa/nrppa.h"
+#include "ocudu/ran/inter_cu_handover_messages.h"
 #include "ocudu/ran/plmn_identity.h"
 #include "ocudu/support/async/async_task_scheduler.h"
 #include <dlfcn.h>

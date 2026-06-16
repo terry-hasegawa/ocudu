@@ -8,9 +8,9 @@
 #include "ocudu/asn1/ngap/common.h"
 #include "ocudu/asn1/ngap/ngap.h"
 #include "ocudu/asn1/ngap/ngap_ies.h"
-#include "ocudu/cu_cp/inter_cu_handover_messages.h"
 #include "ocudu/ngap/ngap_message.h"
 #include "ocudu/ran/cu_types.h"
+#include "ocudu/ran/inter_cu_handover_messages.h"
 #include "ocudu/security/security_asn1_utils.h"
 #include <variant>
 

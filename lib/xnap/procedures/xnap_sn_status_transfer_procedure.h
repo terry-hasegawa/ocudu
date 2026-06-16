@@ -6,7 +6,7 @@
 
 #include "../ue_context/xnap_ue_logger.h"
 #include "ocudu/asn1/xnap/xnap_pdu_contents.h"
-#include "ocudu/cu_cp/inter_cu_handover_messages.h"
+#include "ocudu/ran/inter_cu_handover_messages.h"
 #include "ocudu/support/async/async_task.h"
 #include "ocudu/support/async/protocol_transaction_manager.h"
 

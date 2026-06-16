@@ -6,8 +6,8 @@
 
 #include "ue_context/ngap_ue_context.h"
 #include "ocudu/asn1/ngap/ngap.h"
-#include "ocudu/cu_cp/inter_cu_handover_messages.h"
 #include "ocudu/ngap/ngap.h"
+#include "ocudu/ran/inter_cu_handover_messages.h"
 #include "ocudu/support/async/async_task.h"
 
 namespace ocudu::ocucp {

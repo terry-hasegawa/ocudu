@@ -9,7 +9,6 @@
 #include "ocudu/asn1/asn1_utils.h"
 #include "ocudu/asn1/ngap/ngap_ies.h"
 #include "ocudu/asn1/ngap/ngap_pdu_contents.h"
-#include "ocudu/cu_cp/inter_cu_handover_messages.h"
 #include "ocudu/ngap/ngap_context.h"
 #include "ocudu/ngap/ngap_handover.h"
 #include "ocudu/ngap/ngap_init_context_setup.h"
@@ -18,8 +17,10 @@
 #include "ocudu/ngap/ngap_ue_context_mod.h"
 #include "ocudu/ran/cu_cp_location_reporting_types.h"
 #include "ocudu/ran/cu_cp_pdu_session.h"
+#include "ocudu/ran/cu_cp_ue_context_release.h"
 #include "ocudu/ran/cu_types.h"
 #include "ocudu/ran/five_g_s_tmsi.h"
+#include "ocudu/ran/inter_cu_handover_messages.h"
 #include "ocudu/ran/tac.h"
 #include <string>
 #include <variant>

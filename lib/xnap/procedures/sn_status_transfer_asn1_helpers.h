@@ -5,7 +5,7 @@
 #pragma once
 
 #include "ocudu/asn1/xnap/xnap_pdu_contents.h"
-#include "ocudu/cu_cp/inter_cu_handover_messages.h"
+#include "ocudu/ran/inter_cu_handover_messages.h"
 
 namespace ocudu::ocucp {
 

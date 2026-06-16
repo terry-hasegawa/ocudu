@@ -5,7 +5,7 @@
 #pragma once
 
 #include "../ue_context/xnap_ue_context.h"
-#include "ocudu/cu_cp/inter_cu_handover_messages.h"
+#include "ocudu/ran/inter_cu_handover_messages.h"
 #include "ocudu/support/async/async_task.h"
 #include "ocudu/xnap/xnap.h"
 #include "ocudu/xnap/xnap_handover.h"

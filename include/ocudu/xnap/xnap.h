@@ -5,9 +5,9 @@
 #pragma once
 
 #include "xnap_message_notifier.h"
-#include "ocudu/cu_cp/inter_cu_handover_messages.h"
 #include "ocudu/ran/cu_cp_types.h"
 #include "ocudu/ran/gnb_id.h"
+#include "ocudu/ran/inter_cu_handover_messages.h"
 #include "ocudu/support/async/async_task.h"
 #include "ocudu/xnap/xnap_handover.h"
 

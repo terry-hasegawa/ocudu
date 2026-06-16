@@ -4,7 +4,7 @@
 
 #include "inter_cu_conditional_handover_target_execution_routine.h"
 #include "../pdu_session_routine_helpers.h"
-#include "ocudu/cu_cp/inter_cu_handover_messages.h"
+#include "ocudu/ran/inter_cu_handover_messages.h"
 #include "ocudu/security/security.h"
 #include "ocudu/support/async/coroutine.h"
 #include "ocudu/xnap/xnap.h"

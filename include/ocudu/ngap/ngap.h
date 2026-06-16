@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include "ocudu/cu_cp/inter_cu_handover_messages.h"
 #include "ocudu/ngap/ngap_context.h"
 #include "ocudu/ngap/ngap_handover.h"
 #include "ocudu/ngap/ngap_init_context_setup.h"
@@ -18,6 +17,7 @@
 #include "ocudu/ran/cu_cp_location_reporting_types.h"
 #include "ocudu/ran/cu_cp_types.h"
 #include "ocudu/ran/cu_cp_ue_context_release.h"
+#include "ocudu/ran/inter_cu_handover_messages.h"
 #include "ocudu/ran/plmn_identity.h"
 #include "ocudu/support/async/async_task.h"
 

@@ -6,7 +6,7 @@
 
 #include "ue_context/ngap_ue_logger.h"
 #include "ue_context/ngap_ue_transaction_manager.h"
-#include "ocudu/cu_cp/inter_cu_handover_messages.h"
+#include "ocudu/ran/inter_cu_handover_messages.h"
 #include "ocudu/support/async/async_task.h"
 
 namespace ocudu::ocucp {
