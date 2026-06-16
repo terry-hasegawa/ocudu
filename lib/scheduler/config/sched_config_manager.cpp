@@ -10,6 +10,10 @@
 
 using namespace ocudu;
 
+/// (Implementation-defined) Maximum number of UE configuration objects in the flush queue that are to be destroyed
+/// when flush_ues_to_rem is called. This value is low enough to minimize latencies during UE creation.
+static constexpr unsigned DEFAULT_FLUSH_REM_UES = 3;
+
 ue_config_update_event::ue_config_update_event(du_ue_index_t                     ue_index_,
                                                sched_config_manager&             parent_,
                                                std::unique_ptr<ue_configuration> next_cfg,
@@ -100,6 +104,9 @@ const cell_configuration* sched_config_manager::add_cell(const sched_cell_config
 
 void sched_config_manager::update_cell(const sched_cell_reconfiguration_request_message& msg)
 {
+  // See if there are any pending events to process out of the critical path.
+  flush_ues_to_rem(MAX_NOF_DU_UES);
+
   if (msg.slice_reconf_req.has_value()) {
     const auto& cell_index = msg.slice_reconf_req->cell_index;
     ocudu_assert(added_cells.contains(cell_index), "cell={} does not exist", fmt::underlying(cell_index));
@@ -124,6 +131,10 @@ void sched_config_manager::rem_cell(du_cell_index_t cell_index)
 {
   const du_cell_group_index_t group_index = added_cells[cell_index]->cell_group_index;
 
+  // See if there are any pending events to process out of the critical path.
+  // \note Destroy as many UEs as possible to avoid dangling references to the cell about to be destroyed.
+  flush_ues_to_rem(MAX_NOF_DU_UES);
+
   // Eliminate metrics.
   metrics_handler.rem_cell(cell_index);
 
@@ -139,7 +150,7 @@ ue_config_update_event sched_config_manager::add_ue(const sched_ue_creation_requ
   ocudu_assert(cfg_req.ue_index < MAX_NOF_DU_UES, "Invalid ue_index={}", cfg_req.ue_index);
 
   // See if there are any pending events to process out of the critical path.
-  flush_ues_to_rem();
+  flush_ues_to_rem(DEFAULT_FLUSH_REM_UES);
 
   // Ensure PCell exists.
   if (not cfg_req.cfg.cells.has_value() or cfg_req.cfg.cells->empty()) {
@@ -202,7 +213,7 @@ ue_config_update_event sched_config_manager::update_ue(const sched_ue_reconfigur
   ocudu_assert(cfg_req.ue_index < MAX_NOF_DU_UES, "Invalid ue_index={}", fmt::underlying(cfg_req.ue_index));
 
   // See if there are any pending events to process out of the critical path.
-  flush_ues_to_rem();
+  flush_ues_to_rem(DEFAULT_FLUSH_REM_UES);
 
   // Check if UE already exists.
   const du_cell_index_t       pcell_index = get_pcell_index(cfg_req.ue_index);
@@ -236,7 +247,7 @@ ue_config_delete_event sched_config_manager::remove_ue(du_ue_index_t ue_index)
   ocudu_assert(ue_index < MAX_NOF_DU_UES, "Invalid ue_index={}", fmt::underlying(ue_index));
 
   // See if there are any pending events to process out of the critical path.
-  flush_ues_to_rem();
+  flush_ues_to_rem(DEFAULT_FLUSH_REM_UES);
 
   // Check if UE already exists.
   const du_cell_index_t       pcell_index = get_pcell_index(ue_index);
@@ -313,14 +324,12 @@ void sched_config_manager::handle_ue_delete_complete(du_ue_index_t ue_index)
   config_notifier.on_ue_deletion_completed(ue_index);
 }
 
-void sched_config_manager::flush_ues_to_rem()
+void sched_config_manager::flush_ues_to_rem(unsigned max_rem_ues)
 {
   // Note: This should be called by a thread outside of the critical path.
-  static constexpr unsigned max_rems_per_flush = 3;
 
   // Clear the UEs to rem.
   std::unique_ptr<ue_configuration> obj;
-  for (unsigned remaining_rems = max_rems_per_flush; remaining_rems != 0 and ues_to_rem.try_pop(obj);
-       --remaining_rems) {
+  for (unsigned remaining_rems = max_rem_ues; remaining_rems != 0 and ues_to_rem.try_pop(obj); --remaining_rems) {
   }
 }

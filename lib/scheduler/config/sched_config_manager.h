@@ -157,7 +157,7 @@ private:
   }
   static du_cell_index_t unpack_pcell(uint32_t val) { return to_du_cell_index(val & (0xffffU)); }
 
-  void flush_ues_to_rem();
+  void flush_ues_to_rem(unsigned max_rem_ues);
 
   void handle_ue_config_complete(du_ue_index_t ue_index, std::unique_ptr<ue_configuration> next_cfg);
   void handle_ue_delete_complete(du_ue_index_t ue_index);
