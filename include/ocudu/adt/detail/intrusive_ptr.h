@@ -15,6 +15,9 @@ public:
 
   bool unique() const { return ref_count.load(std::memory_order_relaxed) == 1; }
 
+  /// Whether there are no references to the object. Useful for pools that reuse an object's storage once unreferenced.
+  bool is_unreferenced() const { return ref_count.load(std::memory_order_acquire) == 0; }
+
   bool dec_ref() { return ref_count.fetch_sub(1, std::memory_order_acq_rel) == 1; }
 
 private:

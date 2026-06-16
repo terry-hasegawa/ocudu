@@ -21,31 +21,32 @@ bwp_config_pool::bwp_config_pool(pci_t                      pci,
   pdcch_pool(pci, bwp_dl_cmn.generic_params, bwp_dl_cmn.pdcch_common, bwp_ded_res.dl),
   common_bwp_cfg{bwp_id,
                  sched_bwp_dl_config{bwp_dl_cmn, nullptr, pdcch_pool.init_cfg()},
-                 sched_bwp_ul_config{bwp_ul_cmn, nullptr}}
+                 sched_bwp_ul_config{bwp_ul_cmn, std::nullopt}}
 {
 }
 
-config_ptr<sched_bwp_config> bwp_config_pool::add_ded_cfg(const bwp_downlink_dedicated* dl_ded,
-                                                          const bwp_uplink_dedicated*   ul_ded,
-                                                          const ue_bwp_config&          ue_bwp_cfg)
+sched_bwp_config bwp_config_pool::add_ded_cfg(const bwp_downlink_dedicated* dl_ded,
+                                              const bwp_uplink_dedicated*   ul_ded,
+                                              const ue_bwp_config&          ue_bwp_cfg)
 {
   config_ptr<bwp_downlink_dedicated> dl_ptr;
   if (dl_ded != nullptr) {
     dl_ptr = dl_ded_config_pool.create(*dl_ded);
   }
-  config_ptr<bwp_uplink_dedicated> ul_ptr;
+  // The UL dedicated config (PUCCH/SR/SRS) is high-cardinality (differs per UE), so it is owned by value here rather
+  // than interned in a shared pool that would grow unbounded.
+  std::optional<bwp_uplink_dedicated> ul_owned;
   if (ul_ded != nullptr) {
-    ul_ptr = ul_ded_config_pool.create(*ul_ded);
+    ul_owned = *ul_ded;
   }
 
-  sched_bwp_config bwp_cfg{bwp_id,
-                           sched_bwp_dl_config{bwp_dl_cmn,
-                                               dl_ptr.get(),
-                                               dl_ptr.has_value() and dl_ptr->pdcch_cfg.has_value()
-                                                   ? pdcch_pool.ded_cfgs()[0]
-                                                   : pdcch_pool.init_cfg()},
-                           sched_bwp_ul_config{bwp_ul_cmn, ul_ptr.get(), ue_bwp_cfg.ul}};
-  return sched_bwp_config_pool.create(bwp_cfg);
+  return sched_bwp_config{bwp_id,
+                          sched_bwp_dl_config{bwp_dl_cmn,
+                                              dl_ptr.get(),
+                                              dl_ptr.has_value() and dl_ptr->pdcch_cfg.has_value()
+                                                  ? pdcch_pool.ded_cfgs()[0]
+                                                  : pdcch_pool.init_cfg()},
+                          sched_bwp_ul_config{bwp_ul_cmn, std::move(ul_owned), ue_bwp_cfg.ul}};
 }
 
 static std::vector<std::unique_ptr<bwp_config_pool>>
@@ -67,10 +68,23 @@ du_cell_config_pool::du_cell_config_pool(const scheduler_expert_config&         
 {
 }
 
+ue_cell_res_config& du_cell_config_pool::acquire_ue_cell_cfg()
+{
+  // Reuse a slot whose references have all been dropped (ref_cnt == 0), else grow the pool. Both happen on the
+  // (non-RT) config path, so the allocation on growth is fine; the pool plateaus at the peak concurrent UE count.
+  for (ue_cell_res_config& slot : ue_cell_cfg_pool) {
+    if (slot.ref_cnt.is_unreferenced()) {
+      slot.clear();
+      return slot;
+    }
+  }
+  return ue_cell_cfg_pool.emplace_back();
+}
+
 ue_cell_config_ptr du_cell_config_pool::update_ue(const ue_cell_config& ue_cell)
 {
-  ue_cell_res_config ret;
-  ret.cell_index = ue_cell.serv_cell_cfg.cell_index;
+  ue_cell_res_config& ret = acquire_ue_cell_cfg();
+  ret.cell_index          = ue_cell.serv_cell_cfg.cell_index;
   if (ue_cell.serv_cell_cfg.ul_config.has_value() and
       ue_cell.serv_cell_cfg.ul_config.value().pusch_serv_cell_cfg.has_value()) {
     ret.pusch_serv_cell_cfg.emplace(
@@ -90,7 +104,9 @@ ue_cell_config_ptr du_cell_config_pool::update_ue(const ue_cell_config& ue_cell)
           ue_cell.serv_cell_cfg.ul_config.has_value() ? &ue_cell.serv_cell_cfg.ul_config->init_ul_bwp : nullptr,
           ue_cell.bwps[0]);
 
-  return cell_cfg_pool.create(ret);
+  // Hand out an intrusive_ptr to the pool-owned slot. Dropping the last reference (possibly on the RT thread) only
+  // decrements ref_cnt; the slot is reused on a later acquire, never freed off the config path.
+  return ue_cell_config_ptr{&ret};
 }
 
 void du_cell_config_pool::add_bwp(ue_cell_res_config&           out,
@@ -98,16 +114,18 @@ void du_cell_config_pool::add_bwp(ue_cell_res_config&           out,
                                   const bwp_uplink_dedicated*   ul_bwp_ded,
                                   const ue_bwp_config&          ue_bwp_cfg)
 {
-  auto bwp_cfg = cell_bwps[0]->add_ded_cfg(&dl_bwp_ded, ul_bwp_ded, ue_bwp_cfg);
-  out.bwps.emplace(bwp_cfg->id, bwp_cfg);
+  sched_bwp_config bwp_cfg = cell_bwps[0]->add_ded_cfg(&dl_bwp_ded, ul_bwp_ded, ue_bwp_cfg);
 
-  // Generate cell-wide lookups of CORESETs and SearchSpaces for this UE.
-  for (const auto& cs : bwp_cfg->dl.pdcch().coresets()) {
+  // Generate cell-wide lookups of CORESETs and SearchSpaces for this UE. These reference the (shared, pooled) PDCCH
+  // config, so they stay valid after the BWP config is moved into the owned list below.
+  for (const auto& cs : bwp_cfg.dl.pdcch().coresets()) {
     out.coresets.emplace(cs->id(), cs);
   }
-  for (const auto& ss : bwp_cfg->dl.pdcch().search_spaces()) {
+  for (const auto& ss : bwp_cfg.dl.pdcch().search_spaces()) {
     out.search_spaces.emplace(ss->id(), &ss->cfg());
   }
+
+  out.bwps.emplace(bwp_cfg.id, std::move(bwp_cfg));
 }
 
 // class du_cell_group_config_pool

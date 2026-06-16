@@ -33,7 +33,7 @@ using crb_index_list = static_vector<uint16_t, pdcch_constants::MAX_NOF_RB_PDCCH
 struct search_space_info {
   const search_space_configuration*                 cfg     = nullptr;
   const sched_coreset_config*                       coreset = nullptr;
-  bwp_config_ptr                                    bwp;
+  const sched_bwp_config*                           bwp     = nullptr;
   crb_interval                                      dl_crb_lims;
   crb_interval                                      ul_crb_lims;
   span<const pdsch_time_domain_resource_allocation> pdsch_time_domain_list;
@@ -128,8 +128,8 @@ public:
   /// Get BWP information given a BWP-Id.
   bool                    has_bwp_id(bwp_id_t bwp_id) const { return cell_ded->bwps.contains(bwp_id); }
   const sched_bwp_config* find_bwp(bwp_id_t bwp_id) const { return has_bwp_id(bwp_id) ? &bwp(bwp_id) : nullptr; }
-  const sched_bwp_config& bwp(bwp_id_t bwp_id) const { return cell_ded->bwps[bwp_id].value(); }
-  const sched_bwp_config& init_bwp() const { return cell_ded->bwps[to_bwp_id(0)].value(); }
+  const sched_bwp_config& bwp(bwp_id_t bwp_id) const { return cell_ded->bwps[bwp_id]; }
+  const sched_bwp_config& init_bwp() const { return cell_ded->bwps[to_bwp_id(0)]; }
   const bwp_config_list&  bwps() const { return cell_ded->bwps; }
 
   /// Fetches CORESET configuration based on Coreset-Id.

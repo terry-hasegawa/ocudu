@@ -640,8 +640,8 @@ void ue_cell_configuration::reconfigure(const ue_cell_config_ptr&             ue
   search_spaces = {};
 
   // Recompute param lookup tables.
-  for (const bwp_config_ptr& bwp : cell_ded->bwps) {
-    configure_bwp_cfg(to_bwp_id(0), *bwp);
+  for (const sched_bwp_config& bwp : cell_ded->bwps) {
+    configure_bwp_cfg(to_bwp_id(0), bwp);
   }
 
   // Compute DCI sizes
@@ -657,8 +657,8 @@ void ue_cell_configuration::reconfigure(const ue_cell_config_ptr&             ue
   }
 
   // Generate PDCCH candidates.
-  for (const bwp_config_ptr& bwp : cell_ded->bwps.unsorted()) {
-    generate_crnti_monitored_pdcch_candidates(search_spaces, *bwp, crnti);
+  for (const sched_bwp_config& bwp : cell_ded->bwps.unsorted()) {
+    generate_crnti_monitored_pdcch_candidates(search_spaces, bwp, crnti);
   }
 }
 
@@ -678,7 +678,7 @@ void ue_cell_configuration::configure_bwp_cfg(bwp_id_t bwpid, const sched_bwp_co
 
     ss.cfg     = &ss_cfg->cfg();
     ss.coreset = &ss_cfg->cs();
-    ss.bwp     = cell_ded->bwps[bwpid];
+    ss.bwp     = &cell_ded->bwps[bwpid];
     // DL
     ss.update_pdsch_time_domain_list(*this);
     ss.dl_crb_lims = pdsch_helper::get_ra_crb_limits(

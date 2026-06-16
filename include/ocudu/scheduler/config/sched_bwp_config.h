@@ -75,15 +75,15 @@ class sched_bwp_ul_config
 public:
   sched_bwp_ul_config() = default;
   sched_bwp_ul_config(const bwp_uplink_common&                   common,
-                      const bwp_uplink_dedicated*                ded,
+                      std::optional<bwp_uplink_dedicated>        ded,
                       const std::optional<ue_uplink_bwp_config>& ue_cfg = std::nullopt) :
-    bwp_ul_common(&common), bwp_ul_ded(ded), ue_ul_bwp_cfg(ue_cfg)
+    bwp_ul_common(&common), bwp_ul_ded(std::move(ded)), ue_ul_bwp_cfg(ue_cfg)
   {
   }
 
   const bwp_configuration&    cfg() const { return bwp_ul_common->generic_params; }
   const bwp_uplink_common&    common() const { return *bwp_ul_common; }
-  const bwp_uplink_dedicated* ded() const { return bwp_ul_ded; }
+  const bwp_uplink_dedicated* ded() const { return bwp_ul_ded.has_value() ? &*bwp_ul_ded : nullptr; }
   const rach_config_common*   rach_common() const
   {
     return bwp_ul_common->rach_cfg_common.has_value() ? &*bwp_ul_common->rach_cfg_common : nullptr;
@@ -94,7 +94,7 @@ public:
   }
   const pusch_config* pusch_ded() const
   {
-    return bwp_ul_ded != nullptr and bwp_ul_ded->pusch_cfg.has_value() ? &*bwp_ul_ded->pusch_cfg : nullptr;
+    return bwp_ul_ded.has_value() and bwp_ul_ded->pusch_cfg.has_value() ? &*bwp_ul_ded->pusch_cfg : nullptr;
   }
 
   const pucch_config_common* pucch_common() const
@@ -103,25 +103,27 @@ public:
   }
   const pucch_config* pucch_ded() const
   {
-    return bwp_ul_ded != nullptr and bwp_ul_ded->pucch_cfg.has_value() ? &*bwp_ul_ded->pucch_cfg : nullptr;
+    return bwp_ul_ded.has_value() and bwp_ul_ded->pucch_cfg.has_value() ? &*bwp_ul_ded->pucch_cfg : nullptr;
   }
 
   const srs_config* srs() const
   {
-    return bwp_ul_ded != nullptr and bwp_ul_ded->srs_cfg.has_value() ? &*bwp_ul_ded->srs_cfg : nullptr;
+    return bwp_ul_ded.has_value() and bwp_ul_ded->srs_cfg.has_value() ? &*bwp_ul_ded->srs_cfg : nullptr;
   }
 
   const ue_uplink_bwp_config* ue_cfg() const { return ue_ul_bwp_cfg.has_value() ? &*ue_ul_bwp_cfg : nullptr; }
 
   bool operator==(const sched_bwp_ul_config& other) const
   {
-    return *bwp_ul_common == *other.bwp_ul_common and *bwp_ul_ded == *other.bwp_ul_ded and
+    return *bwp_ul_common == *other.bwp_ul_common and bwp_ul_ded == other.bwp_ul_ded and
            ue_ul_bwp_cfg == other.ue_ul_bwp_cfg;
   }
 
 private:
-  const bwp_uplink_common*            bwp_ul_common = nullptr;
-  const bwp_uplink_dedicated*         bwp_ul_ded    = nullptr;
+  const bwp_uplink_common* bwp_ul_common = nullptr;
+  // UE-dedicated UL BWP config.
+  // \note Owned by value (per-UE, high-cardinality: not worth interning in a shared pool).
+  std::optional<bwp_uplink_dedicated> bwp_ul_ded;
   std::optional<ue_uplink_bwp_config> ue_ul_bwp_cfg;
 };
 
