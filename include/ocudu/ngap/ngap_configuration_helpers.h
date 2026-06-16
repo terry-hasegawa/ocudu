@@ -5,12 +5,8 @@
 #pragma once
 
 #include "ocudu/ngap/ngap_configuration.h"
-#include "ocudu/ran/s_nssai.h"
 
-namespace ocudu {
-namespace config_helpers {
-
-std::map<uint8_t, ocucp::cu_cp_qos_config> make_default_ngap_qos_config_list();
+namespace ocudu::config_helpers {
 
 /// Returns true if the given CU-CP configuration is valid, otherwise false.
 inline bool is_valid_configuration(const ocucp::ngap_configuration& config)
@@ -22,5 +18,4 @@ inline bool is_valid_configuration(const ocucp::ngap_configuration& config)
   return true;
 }
 
-} // namespace config_helpers
-} // namespace ocudu
+} // namespace ocudu::config_helpers

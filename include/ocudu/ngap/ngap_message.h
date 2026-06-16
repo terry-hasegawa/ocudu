@@ -6,13 +6,11 @@
 
 #include "ocudu/asn1/ngap/ngap.h"
 
-namespace ocudu {
-namespace ocucp {
+namespace ocudu::ocucp {
 
 /// \brief NGAP PDU sent and received from the AMF.
 struct ngap_message {
   asn1::ngap::ngap_pdu_c pdu;
 };
 
-} // namespace ocucp
-} // namespace ocudu
+} // namespace ocudu::ocucp

@@ -6,8 +6,7 @@
 
 #include "ocudu/ngap/ngap.h"
 
-namespace ocudu {
-namespace ocucp {
+namespace ocudu::ocucp {
 
 /// This interface notifies the receeption of new NGAP messages over the NGAP interface.
 class ngap_rx_message_notifier
@@ -34,5 +33,4 @@ public:
   handle_cu_cp_connection_request(std::unique_ptr<ngap_rx_message_notifier> cu_cp_rx_pdu_notifier) = 0;
 };
 
-} // namespace ocucp
-} // namespace ocudu
+} // namespace ocudu::ocucp
