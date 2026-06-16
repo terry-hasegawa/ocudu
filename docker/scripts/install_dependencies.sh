@@ -35,14 +35,14 @@ install_dependencies_debian_ubuntu() {
     local ARCH=""
 
     local -a build_pkgs=(
-        "$(_pkg_ver cmake)" "$(_pkg_ver make)" "$(_pkg_ver gcc)" "$(_pkg_ver g++)" "$(_pkg_ver pkg-config)"
-        "$(_pkg_ver libfftw3-dev)" "$(_pkg_ver libmbedtls-dev)" "$(_pkg_ver libsctp-dev)" "$(_pkg_ver libyaml-cpp-dev)" "$(_pkg_ver libgtest-dev)"
+        cmake make gcc g++ pkg-config
+        libfftw3-dev libmbedtls-dev libsctp-dev libyaml-cpp-dev libgtest-dev
     )
     local -a run_pkgs=(
-        "$(_pkg_ver libfftw3-dev)" "$(_pkg_ver libmbedtls-dev)" "$(_pkg_ver libsctp-dev)" "$(_pkg_ver libyaml-cpp-dev)" "$(_pkg_ver libgtest-dev)" "$(_pkg_ver libcap2-bin)"
+        libfftw3-dev libmbedtls-dev libsctp-dev libyaml-cpp-dev libgtest-dev libcap2-bin
     )
     local -a extra_pkgs=(
-        "$(_pkg_ver libzmq3-dev)" "$(_pkg_ver libuhd-dev)" "$(_pkg_ver uhd-host)" "$(_pkg_ver libboost-program-options-dev)" "$(_pkg_ver libdpdk-dev)" "$(_pkg_ver libelf-dev)" "$(_pkg_ver libdwarf-dev)" "$(_pkg_ver libdw-dev)" "$(_pkg_ver capnproto)" "$(_pkg_ver libcapnp-dev)"
+        libzmq3-dev libuhd-dev uhd-host libboost-program-options-dev libdpdk-dev libelf-dev libdwarf-dev libdw-dev capnproto libcapnp-dev
     )
 
     case "$mode" in
@@ -75,8 +75,10 @@ install_dependencies_debian_ubuntu() {
     fi
 
     if ((${#pkgs[@]})); then
+        local -a versioned_pkgs=()
+        for pkg in "${pkgs[@]}"; do versioned_pkgs+=("$(_pkg_ver "$pkg")"); done
         apt-get update
-        apt-get install -y --no-install-recommends "${pkgs[@]}"
+        apt-get install -y --no-install-recommends "${versioned_pkgs[@]}"
     fi
 
     if [[ "$mode" == "all" || "$mode" == "extra" ]]; then
@@ -114,7 +116,7 @@ install_dependencies_fedora() {
         "$(_pkg_ver cmake)" "$(_pkg_ver make)" "$(_pkg_ver libatomic)" "$(_pkg_ver fftw-devel)" "$(_pkg_ver lksctp-tools-devel)" "$(_pkg_ver yaml-cpp-devel)" "$(_pkg_ver mbedtls-devel)" "$(_pkg_ver gtest-devel)"
     )
     local -a run_pkgs=(
-        "$(_pkg_ver fftw-libs-single)" "$(_pkg_ver lksctp-tools)" "$(_pkg_ver yaml-cpp)" "$(_pkg_ver mbedtls)"
+        "$(_pkg_ver fftw-libs-single)" "$(_pkg_ver lksctp-tools)" "$(_pkg_ver yaml-cpp)" "$(_pkg_ver mbedtls)" "$(_pkg_ver libcap)"
     )
     local -a extra_pkgs=(
         "$(_pkg_ver boost-devel)" "$(_pkg_ver capnproto)" "$(_pkg_ver capnproto-devel)" "$(_pkg_ver cppzmq-devel)" "$(_pkg_ver dpdk-devel)" "$(_pkg_ver elfutils-devel)" "$(_pkg_ver elfutils-libelf-devel)"
@@ -142,7 +144,9 @@ install_dependencies_fedora() {
     esac
 
     if ((${#pkgs[@]})); then
-        dnf -y install "${pkgs[@]}"
+        local -a versioned_pkgs=()
+        for pkg in "${pkgs[@]}"; do versioned_pkgs+=("$(_pkg_ver "$pkg")"); done
+        dnf -y install "${versioned_pkgs[@]}"
         dnf clean all
     fi
 }
@@ -152,13 +156,13 @@ install_dependencies_arch() {
     local -a pkgs=()
 
     local -a build_pkgs=(
-        "$(_pkg_ver cmake)" "$(_pkg_ver fftw)" "$(_pkg_ver mbedtls)" "$(_pkg_ver yaml-cpp)" "$(_pkg_ver lksctp-tools)" "$(_pkg_ver gtest)" "$(_pkg_ver pkgconf)"
+        cmake fftw mbedtls yaml-cpp lksctp-tools gtest pkgconf
     )
     local -a run_pkgs=(
-        "$(_pkg_ver fftw)" "$(_pkg_ver mbedtls)" "$(_pkg_ver yaml-cpp)" "$(_pkg_ver lksctp-tools)" "$(_pkg_ver gtest)" "$(_pkg_ver libcap)"
+        fftw mbedtls yaml-cpp lksctp-tools gtest libcap
     )
     local -a extra_pkgs=(
-        "$(_pkg_ver zeromq)" "$(_pkg_ver libuhd)" "$(_pkg_ver boost)" "$(_pkg_ver dpdk)" "$(_pkg_ver libelf)" "$(_pkg_ver libdwarf)" "$(_pkg_ver elfutils)" "$(_pkg_ver capnproto)"
+        zeromq libuhd boost dpdk libelf libdwarf elfutils capnproto
     )
 
     case "$mode" in
@@ -182,7 +186,9 @@ install_dependencies_arch() {
     esac
 
     if ((${#pkgs[@]})); then
-        pacman -Syu --noconfirm "${pkgs[@]}"
+        local -a versioned_pkgs=()
+        for pkg in "${pkgs[@]}"; do versioned_pkgs+=("$(_pkg_ver "$pkg")"); done
+        pacman -Syu --noconfirm "${versioned_pkgs[@]}"
         pacman -Scc --noconfirm
     fi
 }
@@ -195,17 +201,17 @@ install_dependencies_rhel() {
     # where GCC 11 is the default compiler. libatomic replaces gcc-toolset-12-libatomic-devel.
     # yaml-cpp-devel and mbedtls-devel come from EPEL (installed below).
     local -a build_pkgs=(
-        "$(_pkg_ver cmake)" "$(_pkg_ver fftw-devel)" "$(_pkg_ver lksctp-tools-devel)"
-        "$(_pkg_ver gcc)" "$(_pkg_ver gcc-c++)" "$(_pkg_ver libatomic)"
-        "$(_pkg_ver yaml-cpp-devel)" "$(_pkg_ver mbedtls-devel)"
+        cmake fftw-devel lksctp-tools-devel
+        gcc gcc-c++ libatomic
+        yaml-cpp-devel mbedtls-devel
     )
     local -a run_pkgs=(
-        "$(_pkg_ver fftw-devel)" "$(_pkg_ver lksctp-tools)"
-        "$(_pkg_ver libatomic)" "$(_pkg_ver libcap)"
-        "$(_pkg_ver yaml-cpp-devel)" "$(_pkg_ver mbedtls-devel)"
+        fftw-devel lksctp-tools
+        libatomic libcap
+        yaml-cpp-devel mbedtls-devel
     )
     local -a extra_pkgs=(
-        "$(_pkg_ver cppzmq-devel)" "$(_pkg_ver libusbx-devel)" "$(_pkg_ver boost-devel)" "$(_pkg_ver numactl-devel)" "$(_pkg_ver capnproto)" "$(_pkg_ver capnproto-devel)"
+        cppzmq-devel libusbx-devel boost-devel numactl-devel capnproto capnproto-devel
     )
 
     case "$mode" in
@@ -231,7 +237,9 @@ install_dependencies_rhel() {
     # EPEL provides yaml-cpp-devel and mbedtls-devel which are not in UBI9 free repos
     dnf -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm
     if ((${#pkgs[@]})); then
-        dnf -y install "${pkgs[@]}"
+        local -a versioned_pkgs=()
+        for pkg in "${pkgs[@]}"; do versioned_pkgs+=("$(_pkg_ver "$pkg")"); done
+        dnf -y install "${versioned_pkgs[@]}"
         dnf clean all
     fi
 }
