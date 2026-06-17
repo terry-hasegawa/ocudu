@@ -24,13 +24,12 @@ ARG MARCH=native
 ARG NUM_JOBS=""
 ARG TARGETARCH
 
-########################
-# Stage 0: Shared base #
-########################
-# All build stages except builder-rohc share this base so that UHD/DPDK system
-# deps (Boost, libusb, libnuma, libfdt, …) are installed only once
+################################
+# Stage 0: Common build base   #
+################################
+# All OCUDU build bases share the common project and Docker build dependencies.
 # builder-rohc is kept separate: its deps are known to conflict with the DPDK build.
-FROM ${OS}:${OS_VERSION} AS builder-base
+FROM ${OS}:${OS_VERSION} AS builder-base-common
 
 COPY docker/scripts/ /src/docker/scripts/
 
@@ -39,8 +38,6 @@ RUN --mount=type=secret,id=rh_entitlement_cert,target=/etc/pki/entitlement/entit
     --mount=type=secret,id=rh_rhsm_conf,target=/etc/rhsm/rhsm.conf \
     --mount=type=secret,id=rh_rhsm_ca,target=/etc/rhsm/ca/redhat-uep.pem \
     /src/docker/scripts/install_dependencies.sh build && \
-    /src/docker/scripts/install_uhd_dependencies.sh build && \
-    /src/docker/scripts/install_dpdk_dependencies.sh build && \
     /src/docker/scripts/install_docker_dependencies.sh build
 
 #################################
@@ -48,46 +45,41 @@ RUN --mount=type=secret,id=rh_entitlement_cert,target=/etc/pki/entitlement/entit
 #################################
 # CU, CU-CP and CU-UP images do not need UHD or DPDK. Keep a separate base for
 # these targets so they do not install or build driver dependencies.
-FROM ${OS}:${OS_VERSION} AS builder-base-lean
-
-COPY docker/scripts/ /src/docker/scripts/
-
-RUN --mount=type=secret,id=rh_entitlement_cert,target=/etc/pki/entitlement/entitlement.pem \
-    --mount=type=secret,id=rh_entitlement_key,target=/etc/pki/entitlement/entitlement-key.pem \
-    --mount=type=secret,id=rh_rhsm_conf,target=/etc/rhsm/rhsm.conf \
-    --mount=type=secret,id=rh_rhsm_ca,target=/etc/rhsm/ca/redhat-uep.pem \
-    /src/docker/scripts/install_dependencies.sh build && \
-    /src/docker/scripts/install_docker_dependencies.sh build
+FROM builder-base-common AS builder-base-lean
 
 ################################
 # Stage 0c: Shared UHD base    #
 ################################
-FROM ${OS}:${OS_VERSION} AS builder-base-uhd
-
-COPY docker/scripts/ /src/docker/scripts/
+FROM builder-base-common AS builder-base-uhd
 
 RUN --mount=type=secret,id=rh_entitlement_cert,target=/etc/pki/entitlement/entitlement.pem \
     --mount=type=secret,id=rh_entitlement_key,target=/etc/pki/entitlement/entitlement-key.pem \
     --mount=type=secret,id=rh_rhsm_conf,target=/etc/rhsm/rhsm.conf \
     --mount=type=secret,id=rh_rhsm_ca,target=/etc/rhsm/ca/redhat-uep.pem \
-    /src/docker/scripts/install_dependencies.sh build && \
-    /src/docker/scripts/install_uhd_dependencies.sh build && \
-    /src/docker/scripts/install_docker_dependencies.sh build
+    /src/docker/scripts/install_uhd_dependencies.sh build
 
 #################################
 # Stage 0d: Shared DPDK base    #
 #################################
-FROM ${OS}:${OS_VERSION} AS builder-base-dpdk
-
-COPY docker/scripts/ /src/docker/scripts/
+FROM builder-base-common AS builder-base-dpdk
 
 RUN --mount=type=secret,id=rh_entitlement_cert,target=/etc/pki/entitlement/entitlement.pem \
     --mount=type=secret,id=rh_entitlement_key,target=/etc/pki/entitlement/entitlement-key.pem \
     --mount=type=secret,id=rh_rhsm_conf,target=/etc/rhsm/rhsm.conf \
     --mount=type=secret,id=rh_rhsm_ca,target=/etc/rhsm/ca/redhat-uep.pem \
-    /src/docker/scripts/install_dependencies.sh build && \
-    /src/docker/scripts/install_dpdk_dependencies.sh build && \
-    /src/docker/scripts/install_docker_dependencies.sh build
+    /src/docker/scripts/install_dpdk_dependencies.sh build
+
+########################
+# Stage 0e: Full base  #
+########################
+FROM builder-base-common AS builder-base
+
+RUN --mount=type=secret,id=rh_entitlement_cert,target=/etc/pki/entitlement/entitlement.pem \
+    --mount=type=secret,id=rh_entitlement_key,target=/etc/pki/entitlement/entitlement-key.pem \
+    --mount=type=secret,id=rh_rhsm_conf,target=/etc/rhsm/rhsm.conf \
+    --mount=type=secret,id=rh_rhsm_ca,target=/etc/rhsm/ca/redhat-uep.pem \
+    /src/docker/scripts/install_uhd_dependencies.sh build && \
+    /src/docker/scripts/install_dpdk_dependencies.sh build
 
 #########################
 # Stage 1.1: Build ROHC #
