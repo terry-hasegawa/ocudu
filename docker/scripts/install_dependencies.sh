@@ -113,14 +113,14 @@ install_dependencies_fedora() {
     local -a pkgs=()
 
     local -a build_pkgs=(
-        "$(_pkg_ver cmake)" "$(_pkg_ver make)" "$(_pkg_ver libatomic)" "$(_pkg_ver fftw-devel)" "$(_pkg_ver lksctp-tools-devel)" "$(_pkg_ver yaml-cpp-devel)" "$(_pkg_ver mbedtls-devel)" "$(_pkg_ver gtest-devel)"
+        cmake make libatomic fftw-devel lksctp-tools-devel yaml-cpp-devel mbedtls-devel gtest-devel
     )
     local -a run_pkgs=(
-        "$(_pkg_ver fftw-libs-single)" "$(_pkg_ver lksctp-tools)" "$(_pkg_ver yaml-cpp)" "$(_pkg_ver mbedtls)" "$(_pkg_ver libcap)"
+        fftw-libs-single lksctp-tools yaml-cpp mbedtls libcap
     )
     local -a extra_pkgs=(
-        "$(_pkg_ver boost-devel)" "$(_pkg_ver capnproto)" "$(_pkg_ver capnproto-devel)" "$(_pkg_ver cppzmq-devel)" "$(_pkg_ver dpdk-devel)" "$(_pkg_ver elfutils-devel)" "$(_pkg_ver elfutils-libelf-devel)"
-        "$(_pkg_ver libdwarf-devel)" "$(_pkg_ver libusb1-devel)" "$(_pkg_ver numactl-devel)" "$(_pkg_ver zeromq-devel)"
+        boost-devel capnproto capnproto-devel cppzmq-devel dpdk-devel elfutils-devel elfutils-libelf-devel
+        libdwarf-devel libusb1-devel numactl-devel zeromq-devel
     )
 
     case "$mode" in

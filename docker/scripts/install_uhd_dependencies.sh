@@ -125,16 +125,16 @@ install_uhd_dependencies_fedora() {
     local -a pkgs=()
 
     local -a build_pkgs=(
-        "$(_pkg_ver curl)" "$(_pkg_ver ca-certificates)" "$(_pkg_ver xz)" "$(_pkg_ver cmake)" "$(_pkg_ver make)" "$(_pkg_ver boost-devel)" "$(_pkg_ver libusb1-devel)"
-        "$(_pkg_ver python3-mako)" "$(_pkg_ver python3-numpy)" "$(_pkg_ver python3-setuptools)" "$(_pkg_ver python3-requests)"
+        curl ca-certificates xz cmake make boost-devel libusb1-devel
+        python3-mako python3-numpy python3-setuptools python3-requests
     )
     local -a run_pkgs=(
-        "$(_pkg_ver boost-atomic)" "$(_pkg_ver boost-chrono)" "$(_pkg_ver boost-container)" "$(_pkg_ver boost-date-time)"
-        "$(_pkg_ver boost-filesystem)" "$(_pkg_ver boost-serialization)" "$(_pkg_ver boost-thread)"
-        "$(_pkg_ver libusb1)" "$(_pkg_ver python3-requests)"
+        boost-atomic boost-chrono boost-container boost-date-time
+        boost-filesystem boost-serialization boost-thread
+        libusb1 python3-requests
     )
     local -a extra_pkgs=(
-        "$(_pkg_ver kernel-tools)" "$(_pkg_ver iputils)" "$(_pkg_ver ncurses-devel)" "$(_pkg_ver libusb1-devel)" "$(_pkg_ver python3-devel)"
+        kernel-tools iputils ncurses-devel libusb1-devel python3-devel
     )
 
     case "$mode" in
@@ -154,7 +154,9 @@ install_uhd_dependencies_fedora() {
     esac
 
     if ((${#pkgs[@]})); then
-        dnf -y install "${pkgs[@]}"
+        local -a versioned_pkgs=()
+        for pkg in "${pkgs[@]}"; do versioned_pkgs+=("$(_pkg_ver "$pkg")"); done
+        dnf -y install "${versioned_pkgs[@]}"
         dnf clean all
     fi
 
