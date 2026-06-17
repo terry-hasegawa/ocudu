@@ -394,25 +394,27 @@ void pucch_allocator_impl::alloc_csi_opportunity(cell_slot_resource_allocator& p
     return;
   }
 
-  // Handle case of no existing PUCCH grant.
-  if (existing_ue_grants == nullptr) {
-    allocate_csi_grant(pucch_slot_alloc, ue_cell_cfg, csi_part1_nof_bits, alloc_ctx);
-    return;
-  }
-
-  if (existing_ue_grants->has_common_pucch) {
+  if (existing_ue_grants != nullptr and existing_ue_grants->has_common_pucch) {
     // Allocation of dedicated + common resources are handled by allocating PUCCH common on existing CSI, not the
     // other way around. If the function enters the path, it means it too early to start scheduling the CSI.
     alloc_ctx.log_skipped_alloc(logger.info, "existing common PUCCH grant for the same UE");
     return;
   }
 
-  // Handle case of existing PUCCHs with possible multiplexing.
-  pucch_uci_bits bits_for_uci = existing_ue_grants->pucch_grants.get_uci_bits();
+  // Multiplex the CSI bits with the existing grants, if any. When the UE has no existing grants, use a local empty
+  // grant and only add it to the scheduler list if the allocation succeeds.
+  ue_grants  fresh_grants{.rnti = crnti};
+  ue_grants& grants = existing_ue_grants != nullptr ? *existing_ue_grants : fresh_grants;
+
+  pucch_uci_bits bits_for_uci = grants.pucch_grants.get_uci_bits();
   ocudu_assert(bits_for_uci.csi_part1_nof_bits == 0, "PUCCH grant for CSI has already been allocated");
   bits_for_uci.csi_part1_nof_bits = csi_part1_nof_bits;
-  multiplex_and_allocate_pucch(
-      pucch_slot_alloc, bits_for_uci, *existing_ue_grants, ue_cell_cfg, std::nullopt, alloc_ctx);
+  const std::optional<unsigned> alloc_result =
+      multiplex_and_allocate_pucch(pucch_slot_alloc, bits_for_uci, grants, ue_cell_cfg, std::nullopt, alloc_ctx);
+
+  if (alloc_result.has_value() and existing_ue_grants == nullptr) {
+    slot_ctx.ue_grants_list.emplace_back(fresh_grants);
+  }
 }
 
 pucch_uci_bits pucch_allocator_impl::remove_ue_uci_from_pucch(cell_slot_resource_allocator& slot_alloc,
@@ -706,57 +708,6 @@ std::optional<unsigned> pucch_allocator_impl::allocate_harq_grant(cell_slot_reso
   // Finalize the reservation of the resources.
   guard.commit();
   return harq_res.pucch_res_indicator;
-}
-
-void pucch_allocator_impl::allocate_csi_grant(cell_slot_resource_allocator& pucch_slot_alloc,
-                                              const ue_cell_configuration&  ue_cell_cfg,
-                                              unsigned                      csi_part1_bits,
-                                              const alloc_context&          alloc_ctx)
-{
-  ocudu_assert(csi_part1_bits != 0, "This function can only be called to allocate a PUCCH F2/F3/F4 resource for CSI");
-  const slot_point sl_tx = pucch_slot_alloc.slot;
-
-  // [Implementation-defined] We only allow a max number of PUCCH + PUSCH grants per slot.
-  if (not is_there_space_for_new_pucch_grants(pucch_slot_alloc.result, 1U)) {
-    alloc_ctx.log_skipped_alloc(logger.info, "max number of UL/PUCCH grants reached");
-    return;
-  }
-
-  // The guard will release the resources reserved through it unless commit() is called (i.e., on success).
-  pucch_resource_manager::ue_reservation_guard guard(&resource_manager, pucch_slot_alloc, alloc_ctx.rnti, ue_cell_cfg);
-
-  // Get the F2/F3/F4 resource specific for with CSI.
-  const pucch_resource* csi_res = guard.reserve_csi_resource();
-  if (csi_res == nullptr) {
-    alloc_ctx.log_skipped_alloc(logger.warning, "CSI resource not available");
-    return;
-  }
-  ocudu_assert(csi_res->format() == pucch_format::FORMAT_2 or csi_res->format() == pucch_format::FORMAT_3 or
-                   csi_res->format() == pucch_format::FORMAT_4,
-               "Invalid PUCCH Format for CSI resource (should be 2, 3, or 4)");
-
-  // When this function is called, it means that there are no SR grants to be multiplexed with CSI; thus, the CSI bits
-  // are the only UCI bits to be considered.
-  // It's the validator that should make sure the CSI bits fit into a PUCCH Format 2/3/4 resource.
-  const unsigned max_payload = get_max_payload(csi_res->format());
-  ocudu_assert(csi_part1_bits <= max_payload,
-               "rnti={}: PUCCH F2/F3/F4 max payload {} is insufficient for {} candidate UCI bits",
-               alloc_ctx.rnti,
-               max_payload,
-               csi_part1_bits);
-
-  // Allocate a PUCCH PDU in the list and fill it with the parameters.
-  pucch_info& pucch_pdu = pucch_slot_alloc.result.ul.pucchs.emplace_back();
-  fill_ded_pdu(pucch_pdu, *csi_res, pucch_uci_bits{.csi_part1_nof_bits = csi_part1_bits}, alloc_ctx.rnti, false);
-
-  // Save the info in the scheduler list of PUCCH grants.
-  auto& grants = slots_ctx[sl_tx.to_uint()].ue_grants_list.emplace_back(ue_grants{.rnti = alloc_ctx.rnti});
-  grants.pucch_grants.csi.emplace(pucch_grant{.type = pucch_grant_type::csi});
-  grants.pucch_grants.csi.value().res                     = csi_res;
-  grants.pucch_grants.csi.value().bits.csi_part1_nof_bits = csi_part1_bits;
-
-  // Finalize the reservation of the resources.
-  guard.commit();
 }
 
 std::optional<unsigned>

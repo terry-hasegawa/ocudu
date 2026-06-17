@@ -173,16 +173,7 @@ private:
                                               const ue_cell_configuration&  ue_cell_cfg,
                                               const alloc_context&          alloc_ctx);
 
-  // Helper that allocates a new PUCCH HARQ grant (Format 2/3/4) for CSI.
-  void allocate_csi_grant(cell_slot_resource_allocator& pucch_slot_alloc,
-                          const ue_cell_configuration&  ue_cell_cfg,
-                          unsigned                      csi_part1_bits,
-                          const alloc_context&          alloc_ctx);
-
   // Implements the main steps of the multiplexing procedure as defined in TS 38.213, Section 9.2.5.
-  // Note: If \c common_grants is set, it means that the function is called while allocating common and dedicated
-  // resources together. In this case, the allocation will fail if the multiplexed resources collide with it or with any
-  // other UL grant.
   std::optional<unsigned> multiplex_and_allocate_pucch(cell_slot_resource_allocator& pucch_slot_alloc,
                                                        const pucch_uci_bits&         new_bits,
                                                        ue_grants&                    current_grants,
