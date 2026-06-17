@@ -98,13 +98,14 @@ install_dependencies_fedora() {
     local -a pkgs=()
 
     local -a build_pkgs=(
-        cmake fftw-devel lksctp-tools-devel yaml-cpp-devel mbedtls-devel gtest-devel
+        cmake make libatomic fftw-devel lksctp-tools-devel yaml-cpp-devel mbedtls-devel gtest-devel
     )
     local -a run_pkgs=(
-        fftw-devel lksctp-tools-devel yaml-cpp-devel mbedtls-devel gtest-devel libcap
+        fftw-libs-single lksctp-tools yaml-cpp mbedtls
     )
     local -a extra_pkgs=(
-        cppzmq-devel libusb1-devel boost-devel numactl-devel capnproto capnproto-devel
+	boost-devel capnproto capnproto-devel cppzmq-devel dpdk-devel elfutils-devel elfutils-libelf-devel 
+	libdwarf-devel libusb1-devel numactl-devel zeromq-devel 
     )
 
     case "$mode" in
@@ -178,7 +179,7 @@ install_dependencies_rhel() {
     local -a pkgs=()
 
     local -a build_pkgs=(
-        cmake fftw-devel lksctp-tools-devel yaml-cpp-devel mbedtls-devel
+        cmake which fftw-devel lksctp-tools-devel yaml-cpp-devel mbedtls-devel
         gcc-toolset-11 gcc-toolset-11-gcc-c++ gcc-toolset-12-libatomic-devel
     )
     local -a run_pkgs=(

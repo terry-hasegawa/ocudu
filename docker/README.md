@@ -100,9 +100,9 @@ remote_control:
 
 ### Base image: `OS` and `OS_VERSION`
 
-The gNB image (`docker/Dockerfile`) is built from `${OS}:${OS_VERSION}`. Defaults are **ubuntu** and **24.04**. Override them when you run Compose so the build matches another Debian-based image (for example **debian:bookworm**).
+The gNB image (`docker/Dockerfile`) is built from `${OS}:${OS_VERSION}`. Defaults are **ubuntu** and **24.04**. Override them when you run Compose so the build uses another base image (for example **debian:bookworm** or **fedora:43**).
 
-**Using environment variables** (recommended; works with any `docker compose` command that builds `gnb`):
+**Using environment variables** (recommended; works with any `docker compose` command that builds `gnb`). Podman users can run the same commands with `podman compose` instead of `docker compose`.
 
 ```bash
 # Debian bookworm instead of Ubuntu
@@ -110,6 +110,9 @@ OS=debian OS_VERSION=bookworm docker compose -f docker/docker-compose.yml build 
 
 # Another Ubuntu LTS tag
 OS=ubuntu OS_VERSION=22.04 docker compose -f docker/docker-compose.yml up --build
+
+# Fedora 43 (matches Docker Hub tag fedora:43; install scripts use dnf and /etc/os-release ID=fedora)
+OS=fedora OS_VERSION=43 docker compose -f docker/docker-compose.yml build gnb
 ```
 
 **Using a `.env` file** in the `docker/` directory (or project root, depending on where you run Compose from): add lines such as:
@@ -117,6 +120,13 @@ OS=ubuntu OS_VERSION=22.04 docker compose -f docker/docker-compose.yml up --buil
 ```dotenv
 OS=debian
 OS_VERSION=bookworm
+```
+
+or, for **fedora:43**:
+
+```dotenv
+OS=fedora
+OS_VERSION=43
 ```
 
 Then run `docker compose` as usual; Compose substitutes these into `docker-compose.yml` / `docker-compose.split.yml` build args.
@@ -127,10 +137,27 @@ Then run `docker compose` as usual; Compose substitutes these into `docker-compo
 docker build -f docker/Dockerfile \
   --build-arg OS=debian \
   --build-arg OS_VERSION=bookworm \
-  ..
+  .
+
+docker build -f docker/Dockerfile \
+  --build-arg OS=fedora \
+  --build-arg OS_VERSION=43 \
+  .
 ```
 
-The install scripts under `docker/scripts/` dispatch on `/etc/os-release` (`ID=debian` vs `ID=ubuntu`, etc.). Choosing `OS`/`OS_VERSION` only selects the base image; the same script logic applies as long as the distribution is one of the supported families.
+### Building on Fedora
+
+Use an official **`fedora:NN`** image (for example **43**) so `/etc/os-release` reports **`ID=fedora`**. The `docker/scripts/install_*.sh` helpers install **dnf** packages for that ID (toolchain, ROHC autotools, UHD/DPDK build deps, **chrony** for the small runtime helper set instead of legacy **ntp**).
+
+If you previously built **`gnb`** with another **`OS`** (for example Ubuntu) and then switch to Fedora, reuse of cached layers can hide missing packages or wrong paths. Prefer a clean rebuild when changing the base family:
+
+```bash
+OS=fedora OS_VERSION=43 docker compose -f docker/docker-compose.yml build --no-cache gnb
+```
+
+The ROHC tarball’s **`autogen.sh`** locates **`aclocal`** and friends with the **`which`** command; minimal Fedora images do not ship **`which`** by default, so the Fedora package lists in the install scripts include it.
+
+The install scripts under `docker/scripts/` dispatch on `/etc/os-release` (for example `ID=debian`, `ID=ubuntu`, `ID=fedora`, `ID=rhel`, `ID=arch`). Choosing `OS`/`OS_VERSION` only selects the base image; the same script logic applies as long as the distribution is one of the supported families.
 
 ### Customizations
 

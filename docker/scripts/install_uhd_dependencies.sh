@@ -60,49 +60,6 @@ install_uhd_dependencies_debian_ubuntu() {
     fi
 }
 
-install_uhd_dependencies_fedora() {
-    local mode="${1:?}"
-    local -a pkgs=()
-
-    local -a build_pkgs=(
-        curl ca-certificates xz
-        cmake gcc gcc-c++ make pkgconf-pkg-config
-        boost-devel libusb1-devel
-        python3-mako python3-numpy python3-setuptools python3-requests
-    )
-    local -a run_pkgs=(
-        boost-devel libusb1 libusb1-devel python3-devel python3-requests
-    )
-    local -a extra_pkgs=(
-        boost-devel libusb1 libusb1-devel python3-devel
-    )
-
-    case "$mode" in
-        all)
-            pkgs+=( "${build_pkgs[@]}" "${extra_pkgs[@]}" )
-            ;;
-        build)
-            pkgs+=( "${build_pkgs[@]}" )
-            ;;
-        run)
-            pkgs+=( "${run_pkgs[@]}" )
-            ;;
-        *)
-            echo >&2 "Unsupported mode: $mode"
-            exit 1
-            ;;
-    esac
-
-    if ((${#pkgs[@]})); then
-        dnf -y install "${pkgs[@]}"
-        dnf clean all
-    fi
-
-    if [[ "$mode" == "all" || "$mode" == "run" ]]; then
-        uhd_images_downloader
-    fi
-}
-
 install_uhd_dependencies_arch() {
     local mode="${1:?}"
     local -a pkgs=()
@@ -139,6 +96,49 @@ install_uhd_dependencies_arch() {
     if ((${#pkgs[@]})); then
         pacman -Syu --noconfirm "${pkgs[@]}"
         pacman -Scc --noconfirm
+    fi
+
+    if [[ "$mode" == "all" || "$mode" == "run" ]]; then
+        uhd_images_downloader
+    fi
+}
+
+install_uhd_dependencies_fedora() {
+    local mode="${1:?}"
+    local -a pkgs=()
+
+    local -a build_pkgs=(
+        curl ca-certificates xz cmake make boost-devel libusb1-devel
+        python3-mako python3-numpy python3-setuptools python3-requests
+    )
+    local -a run_pkgs=(
+        boost-atomic boost-chrono boost-container boost-date-time
+        boost-filesystem boost-serialization boost-thread
+        libusb1 python3-requests
+    )
+    local -a extra_pkgs=(
+        kernel-tools iputils ncurses-devel libusb1-devel python3-devel
+    )
+
+    case "$mode" in
+        all)
+            pkgs+=( "${build_pkgs[@]}" "${extra_pkgs[@]}" )
+            ;;
+        build)
+            pkgs+=( "${build_pkgs[@]}" )
+            ;;
+        run)
+            pkgs+=( "${run_pkgs[@]}" )
+            ;;
+        *)
+            echo >&2 "Unsupported mode: $mode"
+            exit 1
+            ;;
+    esac
+
+    if ((${#pkgs[@]})); then
+        dnf -y install "${pkgs[@]}"
+        dnf clean all
     fi
 
     if [[ "$mode" == "all" || "$mode" == "run" ]]; then

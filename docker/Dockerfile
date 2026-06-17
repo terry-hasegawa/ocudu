@@ -4,8 +4,8 @@
 
 # Build args
 ################
-# OS                    Base image (Docker Hub name), e.g. ubuntu or debian
-# OS_VERSION            Image tag, e.g. 24.04 or bookworm (must match OS)
+# OS                    Base image name, e.g. ubuntu, debian, or fedora
+# OS_VERSION            Image tag, e.g. 24.04, bookworm, or 43 (must match OS)
 # UHD_VERSION           UHD version number
 # DPDK_VERSION          DPDK version number
 # ROHC_VERSION          ROHC version number
@@ -153,10 +153,10 @@ COPY --from=builder /opt/ocudu                /usr/local
 ADD docker/scripts/install_*.sh /usr/local/etc/
 RUN chmod +x /usr/local/etc/install_*.sh && \
     ln -sf /usr/local/etc/install_dependencies.sh /usr/local/etc/install_ocudu_dependencies.sh
-ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/opt/rohc/lib/
-ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/opt/uhd/${UHD_VERSION}/lib/:/opt/uhd/${UHD_VERSION}/lib/x86_64-linux-gnu/:/opt/uhd/${UHD_VERSION}/lib/aarch64-linux-gnu/
-ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/opt/dpdk/${DPDK_VERSION}/lib/:/opt/dpdk/${DPDK_VERSION}/lib/x86_64-linux-gnu/:/opt/dpdk/${DPDK_VERSION}/lib/aarch64-linux-gnu/
-ENV PATH=$PATH:/opt/uhd/${UHD_VERSION}/bin/:/opt/dpdk/${DPDK_VERSION}/bin/
+ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/opt/rohc/lib/:/opt/rohc/lib64/
+ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/opt/uhd/${UHD_VERSION}/lib/:/opt/uhd/${UHD_VERSION}/lib64/:/opt/uhd/${UHD_VERSION}/lib/x86_64-linux-gnu/:/opt/uhd/${UHD_VERSION}/lib/aarch64-linux-gnu/
+ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/opt/dpdk/${DPDK_VERSION}/lib/:/opt/dpdk/${DPDK_VERSION}/lib64/:/opt/dpdk/${DPDK_VERSION}/lib/x86_64-linux-gnu/:/opt/dpdk/${DPDK_VERSION}/lib/aarch64-linux-gnu/
+ENV PATH=$PATH:/opt/uhd/${UHD_VERSION}/bin/
 
 # Install ocudu and lib runtime dependencies (curl / NTP helpers: install_docker_dependencies.sh)
 RUN /usr/local/etc/install_ocudu_dependencies.sh run && \
@@ -172,9 +172,11 @@ RUN /usr/local/etc/install_ocudu_dependencies.sh run && \
 RUN printf '%s\n' \
     "/opt/rohc/lib" \
     "/opt/uhd/${UHD_VERSION}/lib" \
+    "/opt/uhd/${UHD_VERSION}/lib64" \
     "/opt/uhd/${UHD_VERSION}/lib/x86_64-linux-gnu" \
     "/opt/uhd/${UHD_VERSION}/lib/aarch64-linux-gnu" \
     "/opt/dpdk/${DPDK_VERSION}/lib" \
+    "/opt/dpdk/${DPDK_VERSION}/lib64" \
     "/opt/dpdk/${DPDK_VERSION}/lib/x86_64-linux-gnu" \
     "/opt/dpdk/${DPDK_VERSION}/lib/aarch64-linux-gnu" \
     > /etc/ld.so.conf.d/ocudu.conf && \

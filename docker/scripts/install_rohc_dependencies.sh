@@ -40,7 +40,8 @@ install_rohc_dependencies_fedora() {
     local -a pkgs=()
 
     local -a build_pkgs=(
-        curl ca-certificates gcc gcc-c++ make which xz autoconf automake libtool libpcap-devel libcmocka-devel
+        curl ca-certificates gcc gcc-c++ make which xz
+        autoconf automake libtool libpcap-devel libcmocka-devel
     )
     local -a run_pkgs=()
 
@@ -63,12 +64,15 @@ install_rohc_dependencies_fedora() {
     fi
 
     if [[ "$mode" != "run" ]]; then
-        if ! command -v aclocal >/dev/null 2>&1 && command -v aclocal-1.18 >/dev/null 2>&1; then
-            ln -sf "$(command -v aclocal-1.18)" /usr/bin/aclocal
-        fi
-        if ! command -v automake >/dev/null 2>&1 && command -v automake-1.18 >/dev/null 2>&1; then
-            ln -sf "$(command -v automake-1.18)" /usr/bin/automake
-        fi
+        local tool ver
+        for tool in aclocal automake; do
+            if ! command -v "${tool}" >/dev/null 2>&1; then
+                ver=$(compgen -G "/usr/bin/${tool}-*" | head -1)
+                if [[ -n "$ver" ]]; then
+                    ln -sf "${ver}" "/usr/bin/${tool}"
+                fi
+            fi
+        done
     fi
 }
 

@@ -77,7 +77,7 @@ install_docker_dependencies_fedora() {
     local -a pkgs=()
 
     local -a build_pkgs=(git ca-certificates make gcc gcc-c++ pkgconf-pkg-config which)
-    local -a run_pkgs=(curl chrony)
+    local -a run_pkgs=(curl chrony tini procps-ng)
 
     case "$mode" in
         build)

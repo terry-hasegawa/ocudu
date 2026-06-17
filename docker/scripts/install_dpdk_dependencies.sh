@@ -60,17 +60,15 @@ install_dpdk_dependencies_fedora() {
     local -a pip_pkgs=()
 
     local -a build_pkgs=(
-        curl ca-certificates xz
-        python3-pip ninja-build gcc gcc-c++ make pkgconf-pkg-config numactl-devel libfdt-devel pciutils
+        curl ca-certificates xz ninja-build make numactl-devel libfdt-devel pciutils python3-pyelftools meson
     )
     local -a extra_pkgs=(
         libatomic iproute
     )
     local -a run_pkgs=(
-        python3-pip numactl-devel pciutils libfdt libatomic iproute
+        numactl-libs pciutils libfdt libatomic iproute
     )
-    local -a pip_build_pkgs=(meson pyelftools)
-    local -a pip_run_pkgs=(pyelftools)
+    local -a pip_run_pkgs=()
 
     case "$mode" in
         all)
@@ -96,9 +94,6 @@ install_dpdk_dependencies_fedora() {
         dnf clean all
     fi
 
-    if ((${#pip_pkgs[@]})); then
-        pip3 install "${pip_pkgs[@]}" --break-system-packages
-    fi
 }
 
 install_dpdk_dependencies_arch() {
@@ -145,6 +140,7 @@ install_dpdk_dependencies_arch() {
 
     if ((${#pip_pkgs[@]})); then
         pip3 install "${pip_pkgs[@]}" --break-system-packages
+        pip3 install "${pip_pkgs[@]}" || pip3 install --break-system-packages "${pip_pkgs[@]}"
     fi
 }
 
