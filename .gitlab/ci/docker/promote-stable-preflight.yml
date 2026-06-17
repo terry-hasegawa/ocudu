@@ -21,20 +21,8 @@ stages:
   esac
 
 .promote-stable:
+  extends: .docker copy
   stage: promote-stable
-  image: ${OCUDU_REGISTRY_URI}/buildkit-cli:$BUILDKIT_CLI_VERSION
-  tags:
-    - ${OCUDU_RUNNER_TAG}-amd64
-  variables:
-    GIT_STRATEGY: none
-  before_script:
-    - echo "$CI_REGISTRY_PASSWORD" | docker login $CI_REGISTRY -u $CI_REGISTRY_USER --password-stdin
-  script:
-    - |
-      [ -z "${IMAGE_REF}" ] && echo "IMAGE_REF is mandatory" && exit 1
-      regctl manifest get "${IMAGE_REF}" >/dev/null
-      regctl image copy "${IMAGE_REF}" "${IMAGE_REF}-stable"
-      echo "Image ${IMAGE_REF}-stable pushed"
   rules:
     - if: $CI_PIPELINE_SOURCE == "parent_pipeline"
 
@@ -135,14 +123,15 @@ promote-stable:legacy:
   variables:
     GIT_STRATEGY: fetch
   before_script:
-    - echo "$CI_REGISTRY_PASSWORD" | docker login $CI_REGISTRY -u $CI_REGISTRY_USER --password-stdin
     - |
       if [ -n "${PROMOTE_IMAGE_TAG:-}" ]; then
         VERSION="${PROMOTE_IMAGE_TAG}"
       else
         VERSION="$(git show -s --date=format:%Y%m%d --format=%cd ${CI_COMMIT_SHA})_${CI_COMMIT_SHORT_SHA}"
       fi
-      export IMAGE_REF="${OCUDU_REGISTRY_URI}/ocudu_nightly_${SUFFIX}:${VERSION}"
+      IMAGE_REF="${OCUDU_REGISTRY_URI}/ocudu_nightly_${SUFFIX}:${VERSION}"
+      export SOURCE_IMAGE="${IMAGE_REF}"
+      export DESTINATION_IMAGE="${IMAGE_REF}-stable"
   needs:
     - job: build-stable-source:legacy
       artifacts: false
@@ -151,7 +140,6 @@ promote-stable:legacy:
   extends: .promote-stable
   before_script:
     - *simd-label
-    - echo "$CI_REGISTRY_PASSWORD" | docker login $CI_REGISTRY -u $CI_REGISTRY_USER --password-stdin
     - |
       if [ -n "${DRIVER}" ]; then
         IMAGE_COMPONENT="${COMPONENT}-${DRIVER}"
@@ -163,7 +151,9 @@ promote-stable:legacy:
       else
         VERSION="${OS}-${OS_VERSION}-${SIMD}-$(date +%Y%m%d)"
       fi
-      export IMAGE_REF="${CI_REGISTRY}/${CI_PROJECT_PATH}/images/${IMAGE_COMPONENT}:${VERSION}"
+      IMAGE_REF="${CI_REGISTRY}/${CI_PROJECT_PATH}/images/${IMAGE_COMPONENT}:${VERSION}"
+      export SOURCE_IMAGE="${IMAGE_REF}"
+      export DESTINATION_IMAGE="${IMAGE_REF}-stable"
 
 promote-stable:ubuntu:gnb:
   extends:
@@ -217,7 +207,6 @@ promote-stable:ubuntu:ru-emulator:
   extends: .promote-stable
   before_script:
     - *simd-label
-    - echo "$CI_REGISTRY_PASSWORD" | docker login $CI_REGISTRY -u $CI_REGISTRY_USER --password-stdin
     - |
       if [ -n "${DRIVER}" ]; then
         IMAGE_COMPONENT="${COMPONENT}-${DRIVER}"
@@ -229,7 +218,9 @@ promote-stable:ubuntu:ru-emulator:
       else
         VERSION="ubi9-9.6-${SIMD}-$(date +%Y%m%d)"
       fi
-      export IMAGE_REF="${CI_REGISTRY}/${CI_PROJECT_PATH}/images/${IMAGE_COMPONENT}:${VERSION}"
+      IMAGE_REF="${CI_REGISTRY}/${CI_PROJECT_PATH}/images/${IMAGE_COMPONENT}:${VERSION}"
+      export SOURCE_IMAGE="${IMAGE_REF}"
+      export DESTINATION_IMAGE="${IMAGE_REF}-stable"
 
 promote-stable:rh:gnb:
   extends:
