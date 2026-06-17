@@ -300,25 +300,30 @@ std::optional<unsigned> pucch_allocator_impl::alloc_ded_harq_ack(cell_resource_a
     return std::nullopt;
   }
 
-  // Allocate PUCCH HARQ-ACK grant depending on whether there are existing PUCCH grants.
-  if (existing_ue_grants != nullptr) {
-    // As per Section 9.2.1, TS 38.213:
-    // - If a UE is not provided pdsch-HARQ-ACK-Codebook, the UE generates at most one HARQ-ACK information bit.
-    // Multiplexing of multiple HARQ-ACK bits in a PUCCH common grant is not allowed.
-    if (existing_ue_grants->has_common_pucch) {
-      alloc_ctx.log_skipped_alloc(logger.debug, "existing common PUCCH grant for the same UE");
-      return std::nullopt;
-    }
-
-    const pucch_uci_bits current_bits = existing_ue_grants->pucch_grants.get_uci_bits();
-    pucch_uci_bits       new_bits     = current_bits;
-    ++new_bits.harq_ack_nof_bits;
-
-    std::optional<unsigned> pucch_res_ind = multiplex_and_allocate_pucch(
-        pucch_slot_alloc, new_bits, *existing_ue_grants, ue_cell_cfg, std::nullopt, alloc_ctx);
-    return pucch_res_ind;
+  // As per Section 9.2.1, TS 38.213:
+  // - If a UE is not provided pdsch-HARQ-ACK-Codebook, the UE generates at most one HARQ-ACK information bit.
+  // Multiplexing of multiple HARQ-ACK bits in a PUCCH common grant is not allowed.
+  if (existing_ue_grants != nullptr and existing_ue_grants->has_common_pucch) {
+    alloc_ctx.log_skipped_alloc(logger.debug, "existing common PUCCH grant for the same UE");
+    return std::nullopt;
   }
-  return allocate_harq_grant(pucch_slot_alloc, ue_cell_cfg, alloc_ctx);
+
+  // Multiplex the HARQ-ACK bit with the existing grants, if any. When the UE has no existing grants, use a local empty
+  // grant and only add it to the scheduler list if the allocation succeeds.
+  ue_grants  fresh_grants{.rnti = crnti};
+  ue_grants& grants = existing_ue_grants != nullptr ? *existing_ue_grants : fresh_grants;
+
+  const pucch_uci_bits current_bits = grants.pucch_grants.get_uci_bits();
+  pucch_uci_bits       new_bits     = current_bits;
+  ++new_bits.harq_ack_nof_bits;
+
+  std::optional<unsigned> pucch_res_ind =
+      multiplex_and_allocate_pucch(pucch_slot_alloc, new_bits, grants, ue_cell_cfg, std::nullopt, alloc_ctx);
+
+  if (pucch_res_ind.has_value() and existing_ue_grants == nullptr) {
+    slot_ctx.ue_grants_list.emplace_back(fresh_grants);
+  }
+  return pucch_res_ind;
 }
 
 void pucch_allocator_impl::alloc_sr_opportunity(cell_slot_resource_allocator& pucch_slot_alloc,
@@ -665,49 +670,6 @@ pucch_allocator_impl::find_common_and_ded_harq_res_available(cell_slot_resource_
     return pucch_common_params{.pucch_res_indicator = d_pri, .r_pucch = r_pucch};
   };
   return std::nullopt;
-}
-
-std::optional<unsigned> pucch_allocator_impl::allocate_harq_grant(cell_slot_resource_allocator& pucch_slot_alloc,
-                                                                  const ue_cell_configuration&  ue_cell_cfg,
-                                                                  const alloc_context&          alloc_ctx)
-{
-  slot_point sl_tx = pucch_slot_alloc.slot;
-
-  // [Implementation-defined] We only allow a max number of PUCCH + PUSCH grants per slot.
-  if (not is_there_space_for_new_pucch_grants(pucch_slot_alloc.result, 1U)) {
-    alloc_ctx.log_skipped_alloc(logger.info, "max number of UL/PUCCH grants reached");
-    return std::nullopt;
-  }
-
-  // The guard will release the resources reserved through it unless commit() is called (i.e., on success).
-  pucch_resource_manager::ue_reservation_guard guard(&resource_manager, pucch_slot_alloc, alloc_ctx.rnti, ue_cell_cfg);
-
-  const pucch_harq_resource_alloc_record harq_res = guard.reserve_harq_set_0_resource_next_available();
-  if (harq_res.resource == nullptr) {
-    alloc_ctx.log_skipped_alloc(logger.debug, "Resource Set ID 0 resource not available");
-    return std::nullopt;
-  }
-  ocudu_assert(harq_res.resource->format() == pucch_format::FORMAT_0 or
-                   harq_res.resource->format() == pucch_format::FORMAT_1,
-               "Invalid PUCCH Format for Resource Set ID 0 resource (should be 0 or 1)");
-
-  // Allocate the new grant on PUCCH F1 resources for HARQ-ACK bits (without SR).
-  pucch_info&               pucch_pdu         = pucch_slot_alloc.result.ul.pucchs.emplace_back();
-  static constexpr unsigned harq_ack_nof_bits = 1U;
-  fill_ded_pdu(
-      pucch_pdu, *harq_res.resource, pucch_uci_bits{.harq_ack_nof_bits = harq_ack_nof_bits}, alloc_ctx.rnti, false);
-
-  // Save the info in the scheduler list of PUCCH grants.
-  auto& grants = slots_ctx[sl_tx.to_uint()].ue_grants_list.emplace_back(ue_grants{.rnti = alloc_ctx.rnti});
-  grants.pucch_grants.harq_ack.emplace(pucch_grant{.type = pucch_grant_type::harq_ack});
-  grants.pucch_grants.harq_ack.value().res                    = harq_res.resource;
-  grants.pucch_grants.harq_ack.value().harq_id.pucch_set_idx  = pucch_res_set_id::set_0;
-  grants.pucch_grants.harq_ack.value().harq_id.pucch_res_ind  = harq_res.pucch_res_indicator;
-  grants.pucch_grants.harq_ack.value().bits.harq_ack_nof_bits = harq_ack_nof_bits;
-
-  // Finalize the reservation of the resources.
-  guard.commit();
-  return harq_res.pucch_res_indicator;
 }
 
 std::optional<unsigned>

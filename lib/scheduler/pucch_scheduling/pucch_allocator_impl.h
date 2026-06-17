@@ -168,11 +168,6 @@ private:
                                          const dci_context_information& dci_info,
                                          const alloc_context&           alloc_ctx);
 
-  // Helper that allocates a NEW PUCCH HARQ grant (Format 0 or 1).
-  std::optional<unsigned> allocate_harq_grant(cell_slot_resource_allocator& pucch_slot_alloc,
-                                              const ue_cell_configuration&  ue_cell_cfg,
-                                              const alloc_context&          alloc_ctx);
-
   // Implements the main steps of the multiplexing procedure as defined in TS 38.213, Section 9.2.5.
   std::optional<unsigned> multiplex_and_allocate_pucch(cell_slot_resource_allocator& pucch_slot_alloc,
                                                        const pucch_uci_bits&         new_bits,
