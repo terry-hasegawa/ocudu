@@ -3,7 +3,7 @@
 // Portions of this file may implement 3GPP specifications, which may be subject to additional licensing requirements.
 
 #include "sib_pdu_assembler.h"
-#include "ocudu/adt/ring_buffer.h"
+#include "ocudu/adt/spsc_queue.h"
 #include "ocudu/ocudulog/ocudulog.h"
 #include "ocudu/support/units.h"
 
@@ -43,7 +43,13 @@ public:
     logger(ocudulog::fetch_basic_logger("MAC"))
   {
     cur_si_msg.resize(req.si_messages.size());
-    si_msg_queues.resize(req.si_messages.size());
+
+    /// Min si_period is 8 frames (80 ms), with size of 128, we can enqueue SIB19 PDUs for the next 10s.
+    static constexpr unsigned max_nof_msgs = 128;
+    si_msg_queues.reserve(req.si_messages.size());
+    for (unsigned i = 0; i != req.si_messages.size(); ++i) {
+      si_msg_queues.emplace_back(std::make_unique<si_msg_queue_type>(max_nof_msgs));
+    }
   }
 
   // See interface for documentation.
@@ -61,23 +67,25 @@ public:
       return span<const uint8_t>();
     }
 
-    if (si_msg_queues[idx].empty()) {
+    if (si_msg_queues[idx]->empty()) {
       // si_message_handler does not hold any PDUs for the given si_msg_index.
       return span<const uint8_t>();
     }
 
     // Check if we need to move to the SI next version.
-    if (sl_tx >= si_msg_queues[idx].begin()->slot) {
-      // Update the current SI version.
-      cur_si_msg[idx] = std::move(*si_msg_queues[idx].begin());
+    if (sl_tx >= si_msg_queues[idx]->front()->slot) {
       // Pop the current SI PDU.
-      si_msg_queues[idx].pop();
+      if (not si_msg_queues[idx]->try_pop(cur_si_msg[idx])) {
+        logger.warning("SI-message idx={} try_pop failed despite non-empty queue", idx);
+        return span<const uint8_t>();
+      }
     }
 
     if (cur_si_msg[idx].len.value() == 0) {
       logger.warning("SI-message extension idx={} tbs={} not yet initialized.", idx, tbs);
       return span<const uint8_t>();
     }
+    ocudu_assert(cur_si_msg[idx].pdu_buffer, "SI-message idx={} has null PDU buffer after dequeue", idx);
 
     if (cur_si_msg[idx].len.value() > tbs) {
       logger.warning("Failed to encode SI-message extension idx={}. Cause: "
@@ -108,7 +116,7 @@ public:
                    req.si_msg_idx,
                    static_cast<unsigned>(pdu.length()));
       si_pdu_update sib_pdu_update{tx_slot, units::bytes{static_cast<unsigned>(pdu.length())}, make_linear_buffer(pdu)};
-      if (!si_msg_queues[req.si_msg_idx].try_push(sib_pdu_update)) {
+      if (!si_msg_queues[req.si_msg_idx]->try_push(sib_pdu_update)) {
         return false;
       }
     }
@@ -119,10 +127,11 @@ public:
 private:
   ocudulog::basic_logger& logger;
 
-  /// Min si_period is 8 frames (80 ms), with size of 128, we can enqueue SIB19 PDUs for the next 10s.
-  static constexpr unsigned                                    max_nof_msgs = 128;
-  std::vector<static_ring_buffer<si_pdu_update, max_nof_msgs>> si_msg_queues;
-  std::vector<si_pdu_update>                                   cur_si_msg;
+  using si_msg_queue_type = concurrent_queue<si_pdu_update,
+                                             concurrent_queue_policy::lockfree_spsc,
+                                             concurrent_queue_wait_policy::non_blocking>;
+  std::vector<std::unique_ptr<si_msg_queue_type>> si_msg_queues;
+  std::vector<si_pdu_update>                      cur_si_msg;
 };
 } // namespace
 
