@@ -69,6 +69,10 @@ add_executable(lockfree_triple_buffer_test lockfree_triple_buffer_test.cpp)
 target_link_libraries(lockfree_triple_buffer_test ocudulog ocudu_support GTest::gtest GTest::gtest_main)
 add_test(lockfree_triple_buffer_test lockfree_triple_buffer_test)
 
+add_executable(spmc_slot_ring_test spmc_slot_ring_test.cpp)
+target_link_libraries(spmc_slot_ring_test ocudulog ocudu_support GTest::gtest ocudu_gtest_main)
+gtest_discover_tests(spmc_slot_ring_test PROPERTIES LABELS "tsan")
+
 add_executable(batched_dispatch_queue_test batched_dispatch_queue_test.cpp)
 target_link_libraries(batched_dispatch_queue_test ocudulog ocudu_support GTest::gtest GTest::gtest_main)
 add_test(batched_dispatch_queue_test batched_dispatch_queue_test)
