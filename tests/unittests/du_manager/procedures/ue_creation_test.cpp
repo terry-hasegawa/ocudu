@@ -7,6 +7,7 @@
 #include "tests/test_doubles/utils/test_rng.h"
 #include "ocudu/asn1/rrc_nr/cell_group_config.h"
 #include "ocudu/du/du_cell_config_helpers.h"
+#include "ocudu/ntn/ntn_cell_params.h"
 #include <gtest/gtest.h>
 
 using namespace ocudu;
@@ -195,4 +196,61 @@ TEST_F(du_manager_ue_creation_tester, when_ul_ccch_flush_fails_then_ue_is_destro
 
   ASSERT_FALSE(ue_mng.ues.contains(ue_index));
   ASSERT_TRUE(proc.ready());
+}
+
+TEST_F(du_manager_ue_creation_tester, when_ue_is_created_on_non_ntn_cell_then_mac_dl_harq_buffer_uses_nof_harq_proc)
+{
+  start_procedure();
+
+  ASSERT_TRUE(this->mac.last_ue_create_msg.has_value());
+  EXPECT_EQ(this->mac.last_ue_create_msg->pdsch_harqs_per_cell, 16U);
+}
+
+class du_manager_ntn_ue_creation_tester : public du_manager_proc_tester, public ::testing::Test
+{
+protected:
+  du_manager_ntn_ue_creation_tester() : du_manager_proc_tester(std::vector<du_cell_config>{make_ntn_du_cell_config()})
+  {
+  }
+
+  static du_cell_config make_ntn_du_cell_config()
+  {
+    du_cell_config cell                    = config_helpers::make_default_du_cell_config();
+    cell.ran.ntn_params                    = ntn_cell_params{};
+    cell.ran.init_bwp.pdsch.max_harq_procs = 32;
+    return cell;
+  }
+
+  void start_procedure(du_ue_index_t ue_index = to_du_ue_index(0), rnti_t rnti = to_rnti(0x4601))
+  {
+    f1ap.f1ap_ues.emplace(ue_index);
+    f1ap.f1ap_ues[ue_index].f1c_bearers.emplace(srb_id_t::srb0);
+    f1ap.f1ap_ues[ue_index].f1c_bearers.emplace(srb_id_t::srb1);
+    f1ap.next_ue_create_response.result = true;
+    f1ap.next_ue_create_response.f1c_bearers_added.resize(2);
+    f1ap.next_ue_create_response.f1c_bearers_added[0] = &f1ap.f1ap_ues[ue_index].f1c_bearers[srb_id_t::srb0];
+    f1ap.next_ue_create_response.f1c_bearers_added[1] = &f1ap.f1ap_ues[ue_index].f1c_bearers[srb_id_t::srb1];
+
+    ul_ccch_indication_message ul_ccch_msg = create_test_ul_ccch_message(rnti);
+
+    proc = launch_async<ue_creation_procedure>(
+        du_ue_creation_request{ue_index, ul_ccch_msg.cell_index, rnti, std::move(ul_ccch_msg.subpdu)},
+        ue_mng,
+        params,
+        cell_res_alloc,
+        proc_metrics);
+    proc_launcher.emplace(proc);
+  }
+
+  async_task<void>                        proc;
+  std::optional<lazy_task_launcher<void>> proc_launcher;
+};
+
+TEST_F(du_manager_ntn_ue_creation_tester,
+       when_ue_is_created_on_ntn_cell_then_mac_dl_harq_buffer_is_pre_sized_to_cell_maximum)
+{
+  start_procedure();
+
+  ASSERT_TRUE(this->mac.last_ue_create_msg.has_value());
+  EXPECT_EQ(this->mac.last_ue_create_msg->pdsch_harqs_per_cell, 32U);
 }
