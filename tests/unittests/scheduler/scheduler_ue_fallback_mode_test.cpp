@@ -631,8 +631,10 @@ public:
 
 /// Verify that no PUCCH is scheduled for the CFRA UE in the same slot as its Msg3 PUSCH.
 ///
-/// This guards against the regression where uci_sched.add_ue() was called at UE creation, causing a
-/// PUCCH+PUSCH conflict before Msg3 was ACKed.
+/// A CFRA UE has UCI scheduling active from creation (it holds its dedicated config from the handover command),
+/// so it would multiplex a coincident periodic CSI report onto the Msg3 PUSCH, which the RA scheduler builds
+/// without UCI. The scheduler also forbids a UE from holding a PUCCH and a PUSCH in the same slot. The RA
+/// scheduler therefore keeps the Msg3 PUSCH off any slot carrying a PUCCH for the UE.
 TEST_F(cfra_scheduler_test, no_pucch_in_msg3_slot_while_cfra_pending)
 {
   sched->handle_rach_indication(create_cfra_rach_indication());
@@ -642,9 +644,8 @@ TEST_F(cfra_scheduler_test, no_pucch_in_msg3_slot_while_cfra_pending)
     const auto& puschs = last_sched_result()->ul.puschs;
     for (const auto& pusch : puschs) {
       if (pusch.pusch_cfg.rnti == cfra_tc_rnti) {
-        // Verify no PUCCH for the same RNTI in the same slot.
-        const pucch_info* pucch = find_ue_pucch(cfra_tc_rnti, *last_sched_result());
-        EXPECT_EQ(pucch, nullptr) << "PUCCH scheduled for CFRA UE in the same slot as Msg3 PUSCH";
+        EXPECT_EQ(find_ue_pucch(cfra_tc_rnti, last_sched_result()->ul.pucchs), nullptr)
+            << "PUCCH scheduled for CFRA UE in the same slot as Msg3 PUSCH";
         msg3_found = true;
         return true;
       }
@@ -679,3 +680,78 @@ TEST_F(cfra_scheduler_test, scheduler_is_stable_after_msg3_ack)
     run_slot();
   }
 }
+
+/// Fixture identical to \ref cfra_scheduler_test but with a dense periodic-CSI period, so that — once the RACH
+/// trigger is swept across the CSI grid — a CSI report occasion reliably lands on a Msg3 candidate slot. This
+/// exercises the RA-scheduler avoidance: Msg3 must never share a slot with the UE's CSI PUCCH.
+class cfra_csi_collision_test : public scheduler_test_simulator, public ::testing::TestWithParam<unsigned>
+{
+  static constexpr unsigned NOF_CB_PREAMBLES = 60;
+
+public:
+  cfra_csi_collision_test()
+  {
+    cell_config_builder_params bparams;
+    auto                       cell_req = sched_config_helper::make_default_sched_cell_configuration_request(bparams);
+    cell_req.ran.ul_cfg_common.init_ul_bwp.rach_cfg_common->nof_cb_preambles_per_ssb = NOF_CB_PREAMBLES;
+    // Dense CSI so an occasion reliably collides with a swept Msg3 slot.
+    if (cell_req.ran.init_bwp.csi.has_value()) {
+      cell_req.ran.init_bwp.csi->csi_rs_period = csi_resource_periodicity::slots20;
+    }
+    add_cell(cell_req);
+
+    auto ue_req = sched_config_helper::create_default_sched_ue_creation_request(
+        cell_cfg().params, std::array<lcid_t, 3>{lcid_t::LCID_SRB1, lcid_t::LCID_SRB2, lcid_t::LCID_MIN_DRB});
+    ue_req.crnti              = cfra_tc_rnti;
+    ue_req.ue_index           = cfra_ue_index;
+    ue_req.starts_in_fallback = true;
+    ue_req.cfra_enabled       = true;
+    ue_req.ul_ccch_slot_rx    = std::nullopt;
+    add_ue(ue_req);
+  }
+
+  rach_indication_message create_cfra_rach_indication() const
+  {
+    const unsigned cfra_preamble_id =
+        cell_cfg().params.ul_cfg_common.init_ul_bwp.rach_cfg_common->nof_cb_preambles_per_ssb;
+    auto preamble = test_helper::create_preamble(cfra_preamble_id, cfra_tc_rnti);
+    return test_helper::create_rach_indication(next_slot_rx(), {preamble});
+  }
+
+  const du_ue_index_t cfra_ue_index = to_du_ue_index(0);
+  const rnti_t        cfra_tc_rnti  = to_rnti(0x4601);
+};
+
+TEST_P(cfra_csi_collision_test, msg3_pusch_never_shares_slot_with_csi_pucch)
+{
+  // Sweep the RACH trigger across the periodic-CSI grid so that, for some alignments, a CSI occasion would
+  // otherwise fall on the Msg3 slot.
+  for (unsigned i = 0; i != GetParam(); ++i) {
+    run_slot();
+  }
+
+  sched->handle_rach_indication(create_cfra_rach_indication());
+
+  bool msg3_seen      = false;
+  bool csi_pucch_seen = false;
+  for (unsigned i = 0; i != 40; ++i) {
+    run_slot();
+    const auto& res = *last_sched_result();
+    if (find_ue_pucch_with_csi(cfra_tc_rnti, res.ul.pucchs) != nullptr) {
+      csi_pucch_seen = true;
+    }
+    if (find_ue_pusch(cfra_tc_rnti, res.ul.puschs) != nullptr) {
+      // While pending CFRA the only PUSCH for this RNTI is Msg3 (initial or retx). No PUCCH for the UE may
+      // share its slot (a coincident CSI would otherwise be multiplexed onto the UCI-free Msg3 grant).
+      msg3_seen = true;
+      EXPECT_EQ(find_ue_pucch(cfra_tc_rnti, res.ul.pucchs), nullptr)
+          << "PUCCH coincides with Msg3 PUSCH (rach_lead=" << GetParam() << ")";
+    }
+  }
+  // Msg3 must still be scheduled (avoidance shifts it to a CSI-free slot rather than blocking it forever).
+  EXPECT_TRUE(msg3_seen) << "Msg3 PUSCH was not scheduled (rach_lead=" << GetParam() << ")";
+  // The early-activated periodic CSI PUCCH must be observable for the still-pending CFRA UE.
+  EXPECT_TRUE(csi_pucch_seen) << "No CSI PUCCH observed for the pending CFRA UE (rach_lead=" << GetParam() << ")";
+}
+
+INSTANTIATE_TEST_SUITE_P(cfra_csi_sweep, cfra_csi_collision_test, ::testing::Range(0U, 20U));

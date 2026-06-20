@@ -46,7 +46,7 @@ void mac_cell_rach_handler_impl::handle_rach_indication(const mac_rach_indicatio
         if (selected_rnti == rnti_t::INVALID_RNTI) {
           parent.logger.info("cell={} preamble id={}: Ignoring detected contention-free PRACH preamble. Cause: No "
                              "C-RNTI was allocated this preamble.",
-                             fmt::underlying(cell_index),
+                             cell_index,
                              preamble.index);
           continue;
         }
@@ -54,9 +54,8 @@ void mac_cell_rach_handler_impl::handle_rach_indication(const mac_rach_indicatio
         // It is a Contention-based RACH preamble. Allocate TC-RNTI for the UE.
         selected_rnti = parent.rnti_mng.allocate();
         if (selected_rnti == rnti_t::INVALID_RNTI) {
-          parent.logger.warning("cell={} preamble id={}: Ignoring PRACH. Cause: Failed to allocate TC-RNTI.",
-                                fmt::underlying(cell_index),
-                                preamble.index);
+          parent.logger.warning(
+              "cell={} preamble id={}: Ignoring PRACH. Cause: Failed to allocate TC-RNTI.", cell_index, preamble.index);
           continue;
         }
       }

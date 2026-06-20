@@ -85,7 +85,8 @@ private:
     unique_ue_harq_entity harq_ent;
   };
   struct msg3_alloc_candidate {
-    unsigned     pusch_td_res_index;
+    uint8_t      pusch_td_res_index;
+    rnti_t       rnti_to_alloc;
     crb_interval crbs;
   };
 
@@ -157,19 +158,25 @@ private:
   /// Try scheduling pending RARs for the provided slot.
   void schedule_pending_rars(cell_resource_allocator& res_alloc, slot_point pdcch_slot);
 
-  /// Find and allocate DL and UL resources for pending RAR and associated Msg3 grants.
-  /// \return The number of allocated Msg3 grants.
-  unsigned schedule_rar(pending_rar_alloc& rar, cell_resource_allocator& res_alloc, slot_point pdcch_slot);
+  /// Find and allocate DL and UL resources for the pending RAR pointed to by \c rar_it and its Msg3 grants. The
+  /// allocated UEs are removed from the RAR's tc_rntis.
+  /// \return Iterator to the next pending RAR to process: the RAR is erased (so the returned iterator points to the
+  /// following RAR) when all its Msg3 grants were allocated, otherwise the iterator advances past the kept RAR.
+  std::vector<pending_rar_alloc>::iterator schedule_rar(std::vector<pending_rar_alloc>::iterator rar_it,
+                                                        cell_resource_allocator&                 res_alloc,
+                                                        slot_point                               pdcch_slot);
+
+  /// Returns true if an RAR UL grant can be scheduled for the given UE in the given slot.
+  bool can_allocate_rar_ul_grant(rnti_t crnti, const cell_slot_resource_allocator& slot_alloc) const;
 
   /// Schedule RAR grant and associated Msg3 grants in the provided scheduling resources.
   /// \param res_alloc Cell Resource Allocator.
-  /// \param pending_rar pending RAR with an associated RA-RNTI that is going to be scheduled.
   /// \param pdcch_slot Slot where the PDCCH is going to be scheduled.
   /// \param rar_crbs CRBs of the RAR to be scheduled.
   /// \param pdsch_time_res_index Index of PDSCH time domain resource.
-  /// \param msg3_candidates List of Msg3s with respective resource information (e.g. RBs and symbols) to allocate.
+  /// \param msg3_candidates List of Msg3s with respective resource information (e.g. RBs and symbols, and the RNTI to
+  /// allocate) to schedule.
   void fill_rar_grant(cell_resource_allocator&         res_alloc,
-                      const pending_rar_alloc&         pending_rar,
                       slot_point                       pdcch_slot,
                       crb_interval                     rar_crbs,
                       unsigned                         pdsch_time_res_index,

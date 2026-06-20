@@ -301,9 +301,8 @@ void ue_cell_event_manager::handle_ue_creation(ue_config_update_event ev)
 
     auto& u     = ue_db[ue_index];
     auto& ue_cc = u.get_pcell();
-    if (ue_cc.get_pcell_state().conres_st != ue_conres_state::pending_conres_crnti_ce and
-        ue_cc.get_pcell_state().conres_st != ue_conres_state::pending_cfra) {
-      // In case the UE is expecting a C-RNTI CE, defer activation of UCI/SR scheduling.
+    if (ue_cc.get_pcell_state().conres_st != ue_conres_state::pending_conres_crnti_ce) {
+      // Defer UCI/SR scheduling only for UEs awaiting a C-RNTI MAC CE.
       uci_sched.add_ue(ue_cc.cfg());
       srs_sched.add_ue(ue_cc.cfg());
     }
@@ -354,8 +353,7 @@ void ue_cell_event_manager::handle_ue_reconfiguration(ue_config_update_event ev)
     // Note: Carrier aggregation not yet supported.
     auto& ue_cc = u.get_cell(SERVING_PCELL_IDX);
 
-    if (ue_cc.get_pcell_state().conres_st != ue_conres_state::pending_conres_crnti_ce and
-        ue_cc.get_pcell_state().conres_st != ue_conres_state::pending_cfra) {
+    if (ue_cc.get_pcell_state().conres_st != ue_conres_state::pending_conres_crnti_ce) {
       uci_sched.reconf_ue(ev.next_config().ue_cell_cfg(ue_cc.cell_index), ue_cc.cfg());
       srs_sched.reconf_ue(ev.next_config().ue_cell_cfg(ue_cc.cell_index), ue_cc.cfg());
     }
@@ -396,9 +394,9 @@ void ue_cell_event_manager::handle_ue_deletion(ue_config_delete_event ev)
     const rnti_t rnti = u.crnti;
 
     const auto& ue_cc = u.get_pcell();
-    if (ue_cc.get_pcell_state().conres_st != ue_conres_state::pending_conres_crnti_ce and
-        ue_cc.get_pcell_state().conres_st != ue_conres_state::pending_cfra) {
-      // F1AP-created UE was only added to UCI/SRS scheduling after the reception of C-RNTI CE.
+    if (ue_cc.get_pcell_state().conres_st != ue_conres_state::pending_conres_crnti_ce) {
+      // A UE awaiting a C-RNTI CE was not added to UCI/SRS scheduling yet (deferred until the CE is received), so
+      // it must not be removed either. All other UEs (including CFRA) were added at creation.
       uci_sched.rem_ue(u.get_pcell().cfg());
       srs_sched.rem_ue(u.get_pcell().cfg());
     }
@@ -530,9 +528,7 @@ void ue_cell_event_manager::handle_crc_indication(const ul_crc_indication& crc_i
       const auto tbs              = ue_cc->handle_crc_pdu(sl_rx, *crc_ptr);
       if (not tbs.has_value()) {
         if (was_pending_cfra and crc_ptr->tb_crc_success and ue_db.cfra_msg3_acked(crc_ptr->ue_index)) {
-          // CFRA Msg3 ACKed: start UCI/SRS scheduling now that Msg3 is complete.
-          uci_sched.add_ue(ue_cc->cfg());
-          srs_sched.add_ue(ue_cc->cfg());
+          // CFRA Msg3 ACKed. UE is directly added to slice scheduling. It doesn't need to be in fallback mode.
           if (not ue_cc->is_in_fallback_mode()) {
             slice_sched.config_applied(crc_ptr->ue_index);
           }
