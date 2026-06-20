@@ -1,0 +1,4 @@
+# ISAC sensing PoC - Block D (Python) dependencies
+numpy>=1.24
+pyzmq>=25
+websockets>=11

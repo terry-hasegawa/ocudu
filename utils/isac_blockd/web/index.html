@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<!-- SPDX-FileCopyrightText: 2026 OCUDU ISAC sensing PoC -->
+<!-- SPDX-License-Identifier: BSD-3-Clause-Open-MPI -->
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OCUDU ISAC sensing PoC — Block D</title>
+<style>
+  :root{
+    --bg:#0a1420; --panel:#0f1d2d; --line:rgba(255,255,255,.08);
+    --tx:#e8eef5; --tx2:#8aa0b8; --tx3:#5f768c;
+    --teal-tx:#5DCAA5; --teal-bg:rgba(29,158,117,.15);
+    --amber-tx:#FAC775; --amber-bg:rgba(239,159,39,.16);
+    --mono:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI","Yu Gothic","Hiragino Kaku Gothic ProN",Meiryo,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--tx);font-family:var(--sans);
+    -webkit-font-smoothing:antialiased;display:flex;justify-content:center;padding:20px 14px 40px}
+  .wrap{width:100%;max-width:720px;display:flex;flex-direction:column;gap:12px}
+  .mono{font-family:var(--mono)}
+  .lbl{font-size:11px;color:var(--tx3);letter-spacing:.03em}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+  .pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;padding:5px 11px;border-radius:8px;
+    background:var(--panel);border:1px solid var(--line);color:var(--tx2)}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--teal-tx)}
+  canvas{display:block;width:100%}
+  h1{font-size:15px;font-weight:600;margin:0}
+  sub{font-size:.7em}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+    <div>
+      <h1>OCUDU ISAC sensing PoC</h1>
+      <div style="font-size:12px;color:var(--tx3);margin-top:2px">PHY TAP &rarr; ZMQ &rarr; CSI motion detector &middot; rank-1 / 4R &middot; per-slot</div>
+    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">
+      <span class="pill"><span class="dot" id="live" style="background:#5f768c"></span><span id="conn">connecting</span></span>
+      <span class="pill">layers/Rx <span class="mono" id="lr" style="color:var(--tx)">1L / 4R</span></span>
+    </div>
+  </div>
+
+  <div id="banner" style="border-radius:12px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--teal-bg);border:1px solid var(--line);transition:background .15s">
+    <div style="display:flex;align-items:center;gap:14px">
+      <span id="bdot" style="width:14px;height:14px;border-radius:50%;background:var(--teal-tx)"></span>
+      <div>
+        <div id="bstate" style="font-size:20px;font-weight:600;color:var(--teal-tx)">waiting</div>
+        <div class="lbl" id="bsub" style="color:var(--teal-tx)">no data yet</div>
+      </div>
+    </div>
+    <div style="text-align:right">
+      <div class="lbl">metric / thr</div>
+      <div class="mono" style="font-size:18px"><span id="mval">--</span> <span style="color:var(--tx3)">/ <span id="thr">--</span></span></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px">
+      <div class="lbl">CSI |H| &mdash; composite (4 Rx averaged)</div>
+      <div class="lbl mono"><span id="nre">--</span> sc &middot; SCS <span id="scs">--</span> kHz</div>
+    </div>
+    <canvas id="main" style="height:150px;border-radius:8px"></canvas>
+  </div>
+
+  <div>
+    <div class="lbl" style="margin-bottom:6px">per Rx branch &mdash; same DMRS port, 4 antenna branches (with per-branch SNR)</div>
+    <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px">
+      <div class="panel" style="padding:6px"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px"><span class="lbl mono">Rx0</span><span class="lbl mono" id="snr0">--</span></div><canvas class="thumb" style="height:58px;border-radius:6px"></canvas></div>
+      <div class="panel" style="padding:6px"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px"><span class="lbl mono">Rx1</span><span class="lbl mono" id="snr1">--</span></div><canvas class="thumb" style="height:58px;border-radius:6px"></canvas></div>
+      <div class="panel" style="padding:6px"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px"><span class="lbl mono">Rx2</span><span class="lbl mono" id="snr2">--</span></div><canvas class="thumb" style="height:58px;border-radius:6px"></canvas></div>
+      <div class="panel" style="padding:6px"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px"><span class="lbl mono">Rx3</span><span class="lbl mono" id="snr3">--</span></div><canvas class="thumb" style="height:58px;border-radius:6px"></canvas></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px"><span class="lbl">motion metric &mdash; 4 Rx combined, &Sigma;<sub>sc</sub> | |H<sub>t</sub>| &minus; |H<sub>t-1</sub>| |</span><span class="lbl mono">per-slot &middot; <span id="combine">mean</span></span></div>
+    <canvas id="mt" style="height:96px"></canvas>
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(0,1fr));gap:8px">
+    <div class="panel"><div class="lbl">slot</div><div class="mono" id="ss" style="font-size:15px;margin-top:2px">--</div></div>
+    <div class="panel"><div class="lbl">snapshot rate</div><div class="mono" id="rate" style="font-size:15px;margin-top:2px">~0/s</div></div>
+    <div class="panel"><div class="lbl">layers / Rx</div><div class="mono" style="font-size:15px;margin-top:2px">1L / 4R</div></div>
+    <div class="panel"><div class="lbl">detections</div><div class="mono" id="det" style="font-size:15px;margin-top:2px">0</div></div>
+    <div class="panel"><div class="lbl">uptime</div><div class="mono" id="up" style="font-size:15px;margin-top:2px">0:00</div></div>
+  </div>
+
+  <div style="font-size:11px;color:var(--tx3)">live feed from Block A PHY TAP via ZMQ &rarr; Block D detector &middot; x-axis = per-slot snapshots (per PUSCH PDU) &middot; waterfall shows interpolated |H|</div>
+</div>
+
+<script>
+(function(){
+  const N=64, W=200, B=4;
+  const dpr=Math.min(window.devicePixelRatio||1,2);
+  const mainC=document.getElementById('main');
+  const thumbEls=[...document.querySelectorAll('.thumb')];
+  const mt=document.getElementById('mt');
+  const snrEl=[0,1,2,3].map(i=>document.getElementById('snr'+i));
+  let mctxMain, thumbs, mctx;
+  const off=document.createElement('canvas');off.width=W;off.height=N;const octx=off.getContext('2d');
+  const id=octx.createImageData(W,N);
+
+  function fit(c){const r=c.getBoundingClientRect();c.width=Math.max(1,r.width*dpr);c.height=Math.max(1,r.height*dpr);return c.getContext('2d');}
+  function fitAll(){mctxMain=fit(mainC);thumbs=thumbEls.map(c=>({c,ctx:fit(c)}));mctx=fit(mt);}
+  fitAll();
+  let rT;window.addEventListener('resize',()=>{clearTimeout(rT);rT=setTimeout(fitAll,150);});
+
+  const stops=[[0,4,52,44],[0.42,29,158,117],[0.72,239,159,39],[1,250,199,117]];
+  function cmap(v){v=v<0?0:v>1?1:v;for(let i=0;i<stops.length-1;i++){const a=stops[i],b=stops[i+1];if(v<=b[0]){const t=(v-a[0])/(b[0]-a[0]);return[a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t,a[3]+(b[3]-a[3])*t];}}return[250,199,117];}
+
+  // Rolling waterfall buffers: one composite + B per-branch, each W columns of N rows.
+  const comp=[];for(let i=0;i<W;i++)comp.push(new Float32Array(N));
+  const br=[];for(let b=0;b<B;b++){const cols=[];for(let i=0;i<W;i++)cols.push(new Float32Array(N));br.push(cols);}
+  const hist=new Array(W).fill(0);          // motion metric history
+  let lastMetric=0, threshold=null, detections=0, scaleY=0.01;
+
+  function pushCol(buf, arr){const col=buf.shift();for(let y=0;y<N;y++)col[y]=arr&&arr[y]!=null?arr[y]:0;buf.push(col);}
+
+  function renderBuf(getCell, ctx, cw, ch){
+    const d=id.data;
+    for(let x=0;x<W;x++)for(let y=0;y<N;y++){const rgb=cmap(getCell(x,y));const p=(y*W+x)*4;d[p]=rgb[0];d[p+1]=rgb[1];d[p+2]=rgb[2];d[p+3]=255;}
+    octx.putImageData(id,0,0);
+    ctx.imageSmoothingEnabled=true;ctx.clearRect(0,0,cw,ch);ctx.drawImage(off,0,0,W,N,0,0,cw,ch);
+  }
+
+  function drawMetric(active){
+    const w=mt.width,h=mt.height;mctx.clearRect(0,0,w,h);
+    const top=8*dpr,bot=h-8*dpr;
+    // auto-scale: cover threshold and recent peaks.
+    let peak=threshold?threshold*1.4:0.001;for(const v of hist)if(v>peak)peak=v;
+    scaleY+= .1*(peak*1.15-scaleY);
+    const sc=v=>bot-(Math.min(v,scaleY)/scaleY)*(bot-top);
+    if(threshold!=null){
+      mctx.strokeStyle='rgba(239,159,39,0.55)';mctx.setLineDash([5*dpr,4*dpr]);mctx.lineWidth=1*dpr;
+      mctx.beginPath();mctx.moveTo(0,sc(threshold));mctx.lineTo(w,sc(threshold));mctx.stroke();mctx.setLineDash([]);
+    }
+    mctx.beginPath();for(let i=0;i<hist.length;i++){const x=i/(hist.length-1)*w,y=sc(hist[i]);i?mctx.lineTo(x,y):mctx.moveTo(x,y);}
+    mctx.lineTo(w,bot);mctx.lineTo(0,bot);mctx.closePath();
+    mctx.fillStyle=active?'rgba(239,159,39,0.16)':'rgba(29,158,117,0.14)';mctx.fill();
+    mctx.beginPath();for(let i=0;i<hist.length;i++){const x=i/(hist.length-1)*w,y=sc(hist[i]);i?mctx.lineTo(x,y):mctx.moveTo(x,y);}
+    mctx.strokeStyle=active?'#EF9F27':'#1D9E75';mctx.lineWidth=1.6*dpr;mctx.lineJoin='round';mctx.stroke();
+  }
+
+  const banner=document.getElementById('banner'),bstate=document.getElementById('bstate'),bsub=document.getElementById('bsub'),bdot=document.getElementById('bdot');
+  const mval=document.getElementById('mval'),thrEl=document.getElementById('thr'),det=document.getElementById('det'),ss=document.getElementById('ss'),up=document.getElementById('up'),rateEl=document.getElementById('rate');
+  const connEl=document.getElementById('conn'),liveEl=document.getElementById('live'),nreEl=document.getElementById('nre'),scsEl=document.getElementById('scs'),combineEl=document.getElementById('combine');
+
+  function setBanner(state){
+    if(state==='detected'){banner.style.background='var(--amber-bg)';bstate.textContent='motion detected';bstate.style.color='var(--amber-tx)';bsub.textContent='disturbance across Rx branches';bsub.style.color='var(--amber-tx)';bdot.style.background='var(--amber-tx)';}
+    else if(state==='calibrating'){banner.style.background='var(--panel)';bstate.textContent='calibrating';bstate.style.color='var(--tx2)';bsub.textContent='keep the sensing field clear';bsub.style.color='var(--tx2)';bdot.style.background='var(--tx2)';}
+    else{banner.style.background='var(--teal-bg)';bstate.textContent='clear';bstate.style.color='var(--teal-tx)';bsub.textContent='no motion in sensing field';bsub.style.color='var(--teal-tx)';bdot.style.background='var(--teal-tx)';}
+  }
+
+  function onFrame(f){
+    pushCol(comp, f.composite);
+    for(let b=0;b<B;b++)pushCol(br[b], f.branches&&f.branches[b]);
+    lastMetric = (f.metric!=null)?f.metric:lastMetric;
+    threshold = (f.threshold!=null)?f.threshold:threshold;
+    hist.shift();hist.push(lastMetric);
+    detections=f.detections;
+
+    renderBuf((x,y)=>comp[x][y], mctxMain, mainC.width, mainC.height);
+    for(let b=0;b<B;b++)renderBuf((x,y)=>br[b][x][y], thumbs[b].ctx, thumbs[b].c.width, thumbs[b].c.height);
+    const active=!!f.detected;
+    drawMetric(active);
+
+    mval.textContent=(f.metric!=null)?f.metric.toFixed(3):'--';
+    thrEl.textContent=(f.threshold!=null)?f.threshold.toFixed(3):'cal';
+    det.textContent=detections;
+    ss.textContent=f.slot;
+    rateEl.textContent='~'+Math.round(f.rate)+'/s';
+    const el=f.uptime||0;up.textContent=Math.floor(el/60)+':'+String(el%60).padStart(2,'0');
+    nreEl.textContent=f.nof_re; scsEl.textContent=f.scs_khz; combineEl.textContent=combineMode||'mean';
+    for(let b=0;b<B;b++)snrEl[b].textContent=(f.snr&&f.snr[b]!=null)?f.snr[b].toFixed(1)+' dB':'--';
+    setBanner(f.calibrating?'calibrating':(active?'detected':'clear'));
+  }
+
+  // ---- WebSocket ----
+  const params=new URLSearchParams(location.search);
+  const wsPort=params.get('ws')||'8765';
+  const wsUrl='ws://'+(location.hostname||'localhost')+':'+wsPort;
+  let combineMode='mean';
+  function connect(){
+    const ws=new WebSocket(wsUrl);
+    ws.onopen=()=>{connEl.textContent='live';liveEl.style.background='var(--teal-tx)';};
+    ws.onclose=()=>{connEl.textContent='reconnecting';liveEl.style.background='#5f768c';setTimeout(connect,1000);};
+    ws.onerror=()=>ws.close();
+    ws.onmessage=ev=>{try{onFrame(JSON.parse(ev.data));}catch(e){}};
+  }
+  connect();
+})();
+</script>
+</body>
+</html>
