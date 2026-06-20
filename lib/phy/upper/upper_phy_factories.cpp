@@ -26,6 +26,12 @@
 #include "ocudu/support/error_handling.h"
 #include <algorithm>
 
+#ifdef ENABLE_ISAC_TAP
+// ISAC sensing PoC (Block A): disposable, gated read-only PHY TAP. Header lives under lib/ which is
+// added to the include path only when ENABLE_ISAC_TAP is set (see lib/phy/upper/CMakeLists.txt).
+#include "isac/isac_pusch_estimator_tap_factory.h"
+#endif
+
 using namespace ocudu;
 
 static std::unique_ptr<downlink_processor_pool>
@@ -728,6 +734,14 @@ create_ul_processor_factory(const upper_phy_factory_configuration& config,
         std::move(pusch_channel_estimator_factory), metric_notifier->get_pusch_channel_estimator_notifier());
     report_fatal_error_if_not(pusch_channel_estimator_factory, "Failed to create factory.");
   }
+
+#ifdef ENABLE_ISAC_TAP
+  // ISAC sensing PoC (Block A): wrap the PUSCH channel estimator with a read-only tap. Gated at
+  // runtime by env OCUDU_ISAC_ZMQ_ENDPOINT (no-op and unchanged behavior when unset). Done before
+  // pusch_config consumption so the data and UCI PUSCH processors share the single wrapped factory.
+  pusch_channel_estimator_factory =
+      isac::maybe_wrap_pusch_estimator_factory(std::move(pusch_channel_estimator_factory));
+#endif
 
   // Check if a hardware-accelerated PUSCH processor is requested.
   pusch_processor_factory_sw_configuration pusch_config;

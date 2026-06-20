@@ -45,6 +45,14 @@ target_link_libraries(ocudu_upper_phy
         ocudu_uplink_processor
         ocudu_upper_phy_metrics)
 
+# ISAC sensing PoC (Block A): gated read-only PHY TAP. When OFF, nothing below is compiled and
+# upper_phy_factories.cpp is byte-for-byte unchanged (the wiring is behind #ifdef ENABLE_ISAC_TAP).
+if (ENABLE_ISAC_TAP)
+    target_compile_definitions(ocudu_upper_phy PRIVATE ENABLE_ISAC_TAP)
+    target_include_directories(ocudu_upper_phy PRIVATE ${PROJECT_SOURCE_DIR}/lib)
+    target_link_libraries(ocudu_upper_phy ocudu_isac)
+endif ()
+
 add_library(log_likelihood_ratio log_likelihood_ratio.cpp)
 target_link_libraries(log_likelihood_ratio ocuduvec)
 
