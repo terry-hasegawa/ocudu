@@ -1,9 +1,9 @@
 # OCUDU 実装技術リファレンス（dev）
 
 本書は OCUDU の実装構造を、DU-High / DU-Low / CU-CP / CU-UP の 4 コンポーネントと、
-3 つの横断章（① task executor・スレッドモデル、② F1/E1/NG インターフェースとコールフロー、
-③ Open Fronthaul (OFH / split 7.2x) のタイミングと締め切り処理）に分けて解説する技術
-リファレンスである。
+4 つの横断章（① task executor・スレッドモデル、② F1/E1/NG インターフェースとコールフロー、
+③ Open Fronthaul (OFH / split 7.2x) のタイミングと締め切り処理、④ 非標準化アルゴリズム
+（scheduler 判断系 / 受信 DSP））に分けて解説する技術リファレンスである。
 
 > **記述の根拠について**
 > 本書のすべての記述は、チェックアウト中の作業ツリー（`git` ブランチ
@@ -1272,7 +1272,304 @@ DU-Low 内のパイプライン段数決定に使われる値で、OFH 窓とは
 
 ---
 
-## 9. 未確認事項一覧
+## 9. 横断④ 非標準化アルゴリズム（scheduler 判断系 / 受信 DSP）
+
+3GPP / O-RAN は signaling とインターフェースを規定するが、**判断ロジックは実装裁量**に委ねる箇所が
+多い。本章はそうした非標準アルゴリズムを、MAC スケジューラ（A）と DU-Low upper PHY 受信 DSP（B）に
+分けて横断的に深掘りする。各節は次の **4 点テンプレ**で統一する。
+
+1. **標準が固定する部分** … 3GPP/O-RAN が縛る箇所
+2. **実装裁量の実アルゴリズム**（`path:line`） … ツリーの実コード
+3. **主要 tunable / config キー** … struct field・CLI
+4. **ハードコード定数・閾値・ヒューリスティック** … magic number（各社の差が最も出る箇所）
+
+> 既存章との切り分け: §7.4 は scheduler policy（`scheduler_time_qos` / `scheduler_time_rr`）の
+> **優先度 metric 算出**式（QoS 重み・RR カウント差）を扱った。§8.7 は OFH wire 層（eCPRI/U-plane）の
+> **BFP 伸張**を扱った。本章はこれらを再掲せず参照に留め、§7.4 が触れない「metric 算出後の段」と、
+> §8.7 が伸張した IQ を入力とする「upper PHY 信号処理」を扱う。
+
+---
+
+### A. MAC スケジューラの判断パイプライン（§7.4 の先）
+
+**§7.4 と本節 A の境界**: §7.4 の `scheduler_policy` は UE ごとの優先度 metric（DL/UL の `ue_sched_priority`）
+を算出する段だった。本節 A はその **metric が出た後**の段——UE 事前選択・並べ替え・RB/grant 割当・
+リンクアダプテーション・HARQ・電力制御・slicing・PUCCH/UCI——を扱う。判断パイプラインのオーケストレータは
+`lib/scheduler/ue_scheduling/intra_slice_scheduler.cpp`（DL `dl_sched():168`、UL `ul_sched():197`）で、
+両者とも **budget 決定 → reTx 先行 → newTx** の順で動く。
+
+```mermaid
+flowchart TD
+  PRE["UE 事前選択 + RR グルーピング<br/>(intra_slice_scheduler, pre_policy_rr_ue_group_size=32)"]
+  MET["優先度 metric 算出<br/>(scheduler_policy = §7.4 : QoS 重み / RR)"]
+  SORT["優先度降順 sort + forbid 除外<br/>(:399-408)"]
+  BUD["スロット budget 決定<br/>(ues=min(cand/4,8), RB 等share, MIN_RB=4)"]
+  RETX["reTx 候補を先に割当<br/>(retx-before-newtx, :187)"]
+  NEWTX["newTx 候補を割当<br/>(:194)"]
+  GRANT["per-grant MCS/PRB 確定<br/>(grant_params_selector, mcs_tbs_calculator)"]
+  OLLA["OLLA offset 適用<br/>(effective CQI/SNR += offset_db)"]
+  OUT["DCI / grant 生成"]
+  FB["ACK/CRC feedback<br/>(olla.update : target BLER 追従)"]
+
+  PRE --> MET --> SORT --> BUD --> RETX --> NEWTX --> GRANT --> OUT
+  OLLA --> GRANT
+  OUT -. "後続スロット" .-> FB
+  FB -. "SNR/CQI offset" .-> OLLA
+```
+
+#### 9.A.1 UE 事前選択と RR グルーピング
+
+1. **標準**: per-slot にどの UE を選ぶか・どう rotate するかは 3GPP 非規定（完全実装裁量）。標準に紐づく
+   唯一の candidacy 入力は HARQ process 数（`has_empty_dl_harqs()`）。
+2. **実装**: `slice_ue_group_scheduler::fill_ue_candidate_group`
+   （`intra_slice_scheduler.cpp:58-119`）。SFN 切替ごとに group offset を回転（`jump = max(min(max_dl_ue_count,
+   max_ul_ue_count), pre_policy_rr_ue_group_size)`、`:74`；`group_offset = (group_offset + jump) % ue_idx_mod`、
+   `:75`）、ただし `nof_ues > group_size` のときのみ（`:66`）。候補は `ues_with_data` bitmap を
+   `group_offset` から走査し `group_size = min(nof_ues, pre_policy_rr_ue_group_size)`（`:88`）まで集める。
+   候補は `forbid_sched_priority` で初期化され（`:723`）、metric 算出後に降順 sort（`:399-404`）し forbid を
+   除外（`:407-410`）。
+3. **config**: `pre_policy_rr_ue_group_size = 32`（`scheduler_expert_config.h:211`）、アプリ層
+   `nof_preselected_newtx_ues = 1024`（`du_high_config.h:93`、CLI `--nof_preselected_newtx_ues`）が前者へ
+   マップ（`du_high_config_translators.cpp:1215`）。
+4. **定数・ヒューリスティック**: 既定 **32 / 1024**。回転 jump の下限を group_size に固定し「最低 1 グループ
+   分は必ず進める」（`:74`）。grouping は `nof_ues > group_size` のときだけ作動、それ以外は index 0 から全走査
+   （`:81`）。`forbid_sched_priority = lowest()` を初期値兼カル印に二重利用。`max_expected_ran_slices = 8`
+   で reserve（`:148`）。
+
+#### 9.A.2 並べ替え後の RB / grant 割当
+
+1. **標準**: TBS/MCS テーブル・実効符号化率 ≤ 0.95（TS 38.214）、VRB↔PRB マッピング（TS 38.211 §7.3.1.6）、
+   DCI フィールド符号化は標準。RB 数と UE 間配分は実装裁量。
+2. **実装**: 2 段構成。budget 決定 `get_max_grants_and_rb_grant_size`（`:228-283`）→ 制御確保
+   `schedule_dl_newtx_candidates` Stage1（`:458-504`）→ CRB/MCS/RB 確定 Stage2（`:510-560`）。VRB は
+   `rb_helper::find_empty_interval_of_length`（**first-fit**、無ければ最長空き、`rb_helper.h:84-110`）。
+   per-grant MCS/PRB は `compute_newtx_required_mcs_and_prbs`（`grant_params_selector.cpp:32-64`）で
+   link adaptation（§9.A.3）と `get_nof_prbs` から算出。reTx は前回 MCS/TBS を再利用し RB 長が変わると postpone
+   （`:345-353`）。
+3. **config**: `pdsch_nof_rbs{1,MAX_NOF_PRBS}`、`pusch_nof_rbs`、`max_pdschs_per_slot`、`max_puschs_per_slot`、
+   `max_pucchs_per_slot{31}`、`max_ul_grants_per_slot{32}`、`dl_mcs{0,28}` / `ul_mcs{0,28}`
+   （`scheduler_expert_config.h:160-203`）。
+4. **定数・ヒューリスティック ★**: `ues_to_alloc = min(max_ue_grants, max(nof_candidates/4, 1), **8**)`
+   （`:251-253`、「候補を 4 で割り、1 スロット最大 8 UE」）。`MIN_RB_PER_GRANT = 4`（`:281`）。CORESET CCE を
+   **/2**（DL/UL 折半）し **AL2 仮定**で PDCCH 候補数算出（`:259`）。RB は `max_nof_rbs / ues_to_alloc` の
+   **等share**＋余り繰越（`rbs_missing`）＋最終 grant に残余（`:518-522,559`）。CSI-RS スロットは `mcs -= 1`、
+   上限 28 / **26**(qam64) / **24**(qam256)（`ue_cell_grid_allocator.cpp:63-78`）。partial slot で `nof_prbs==1`
+   かつ 14 シンボル未満なら **2** に引上げ（KO 確率ヒューリスティック、`grant_params_selector.cpp:59-61`）。
+   UL `mcs==5 && nof_prbs==1` は経験則で `++nof_prbs`（`:163-168`）。capacity 定数:
+   `MAX_PDSCH_PDUS_PER_SLOT = 35`、`MAX_PUSCH_PDUS_PER_SLOT = 16`、`MAX_PUCCH_PDUS_PER_SLOT = 128`
+   （`slot_pdu_capacity_constants.h`）。`max_pucchs = min(max_pucchs, max_ul_grants - 1)`（**-1** は PUSCH 用に
+   1 grant 確保、`:23-24`）。
+
+#### 9.A.3 リンクアダプテーション: CQI→MCS 選択と OLLA
+
+1. **標準**: CQI→spectral-efficiency / MCS→SE テーブル（TS 38.214）、実効符号化率上限 0.95、テーブルごとの
+   最大 MCS（qam256/transform-precoding は 27、他 28）。**OLLA 自体は非標準**（vendor 技術、Sampath 1997 /
+   eOLLA 2016、`outer_loop_link_adaptation.h:14-18`）。
+2. **実装**: OLLA 更新則（`outer_loop_link_adaptation.h:43-53`）は `current_offset += ack ? delta_down :
+   -delta_up` を `±max_snr_offset` でクランプ。DL は CQI→MCS を**線形補間**（`ue_link_adaptation_controller.cpp:98-122`）、
+   UL は min-SNR テーブルを `upper_bound`（`mcs_calculator.cpp:114-151`）。OLLA offset は `get_effective_cqi()`
+   / `get_effective_snr()` で推定値に加算（`:76-96`）。OLLA は実使用 MCS が OLLA 推奨 MCS と一致するときのみ
+   更新（`:43-45`）。wideband CQI は**平均せず latest-value 上書き**（`ue_channel_state_manager.cpp:36-39`）。
+   joint MCS/TBS は max_mcs から符号化率 > 0.95 まで減算（`mcs_tbs_calculator.cpp:203-317`）。
+3. **config**（`scheduler_expert_config.h`）: `olla_cqi_inc=0.001`（`:179`、`--olla_cqi_inc_step`、0 で無効）、
+   `olla_dl_target_bler=0.01`（`:181`、`--olla_target_bler`）、`olla_max_cqi_offset=4.0`（`:183`）、
+   `olla_ul_snr_inc=0.001`（`:185`）、`olla_ul_target_bler=0.01`、`olla_max_ul_snr_offset=5.0`、
+   `dl_mcs/ul_mcs{0,28}`、`initial_cqi=3`、`initial_ul_sinr=5.0`。`dl_mcs.length()==0` で**固定 MCS** 化。
+4. **定数・ヒューリスティック ★**: **`delta_up = (1 - target_bler) * snr_inc_step / target_bler`**
+   （`outer_loop_link_adaptation.h:30`）— target 0.01 で **NACK 当り −0.099 dB / ACK 当り +0.001 dB**、定常で
+   BLER ≈ target。`target_bler ∈ (0, 0.5)` を assert（`:33`）。収束ガード `delta_down < 2·e·target_bler / 1.03`
+   （`:37`、`1.03` と `2·exp(1)` は eOLLA 論文由来の magic）。MCS 飽和 workaround（max MCS で増加禁止 / min MCS で
+   減少禁止、`:48-49`）。CQI→MCS `cqi_to_mcs_table[3][16]`（`mcs_calculator.cpp:30-39`）。UL SNR→MCS テーブル
+   （64QAM 29 entries、MCS0 = **−5.7998 dB** … MCS28 = **16.591 dB**、`:57-66`、「ZMQ/AWGN・SISO・20 MHz TDD で実測」
+   とコメント）。符号化率上限 **0.95**。
+
+#### 9.A.4 HARQ: 再送スケジューリング優先度・process 選択
+
+1. **標準**: HARQ mode（TS 38.300）、NDI トグル、`nrofHARQ-ProcessesForPDSCH ∈ {2,4,6,10,12,16,32}`。retx 回数と
+   retx-vs-newTx 順序は実装裁量。
+2. **実装**: **reTx 先行**を hard-wire（`intra_slice_scheduler.cpp:187` retx → `:194` newtx）。retx 候補は
+   `cell_harqs.pending_dl_retxs()` の intrusive list を走査（`:285-332`）。state machine `handle_ack`
+   （`cell_harq_manager.cpp:353-388`）は NACK かつ `nof_retxs < max` で `set_pending_retx`、ACK または上限到達で
+   `dealloc_harq`。NDI flip は **newTx のみ**（`h.ndi = !h.ndi`、`:295`）。process 数は DL = `min(cfg, 16)` 既定 8、
+   UL 既定 16（`ue_cell.cpp:32-39`）。
+3. **config**: `max_nof_dl_harq_retxs=4`（`:146`）、`max_nof_ul_harq_retxs=4`（`:148`）、
+   `dl/ul_harq_retx_timeout{100ms}`、`pdsch/pusch_rv_sequence={0}`、`dl_harq_la_cqi_drop_threshold{2}`、
+   `dl_harq_la_ri_drop_threshold{1}`。CLI `--max_nof_harq_retxs`（PDSCH/PUSCH）。
+4. **定数・ヒューリスティック ★**: `MAX_NOF_HARQS=32`(NTN)/`MAX_NOF_HARQS_NON_NTN=16`、**max retx = 4**、
+   `DEFAULT_NOF_DL_HARQS=8` / `DEFAULT_NOF_UL_HARQS=16`、`DEFAULT_ACK_TIMEOUT_SLOTS=256`、
+   `DEFAULT_HARQ_RETX_TIMEOUT_SLOTS=200`、`MAX_RETX_TIMEOUT = NOF_SFNS/2 = 512`、`NTN_ACK_WAIT_TIMEOUT=1`。
+   free HARQ id は逆順詰めで**最小 id 優先**（`:452,483`）。link-adaptation 起因の retx キャンセル閾値
+   `cqi_drop=2` / `ri_drop=1`。
+
+#### 9.A.5 UL 閉ループ電力制御（TPC 生成）
+
+1. **標準**: TPC command → δ 累積ステップ表（TS 38.213 Table 7.1.1-1 / 7.2.1-1）= `0→-1, 1→0, 2→+1, 3→+3` dB
+   （`tpc_mapping.h:11-26`）。`f(i,l)`/`g(i,l)` 閉ループ状態、fractional path-loss 補償。**SINR-error → どの TPC
+   command を送るかのマップは非標準**（コードも "[Implementation-defined]" と明記、`pusch_power_controller.cpp:183`）。
+2. **実装**: `compute_tpc_command`（`pusch_power_controller.cpp:147-209`）。CL 無効/状態無→`f=0`, TPC=1。prohibit
+   window（`tpc_adjust_prohibit_time` 40 ms）内は変更なし。`sinr_to_target_diff = target + fract_pl_comp -
+   avg_sinr`（`:169`、SINR は EMA 平均）。headroom cap `max_delta_f_cl_pw_control`（次回 PHR 非負を保つ）。閾値
+   ladder で TPC 決定 → floor cap（`min_f = -30`）→ `f += tpc_mapping(tpc)`（`:206`）。PUCCH 版（`pucch_power_controller.cpp`）
+   は Format 1/4 を CL 対象外、SINR error は format 間の最大欠損を採る。
+3. **config**: `enable_pusch_cl_pw_control=false`（`:62`、`--enable_cl_loop_pw_control`）、`target_pusch_sinr=10dB`
+   （`:67`、`--target_sinr`）、`path_loss_for_target_pusch_sinr=70dB`（`:71`）、`enable_pucch_cl_pw_control=false`、
+   `pucch_f0/f2/f3_sinr_target_dB = 6 / 3 / -3`、`ema_alpha_cl_pw_control_sinr=0.5`。
+4. **定数・ヒューリスティック ★（TPC 閾値 ladder）**: `pusch_power_controller.cpp:191-199`:
+
+   | `sinr_to_target_diff` | headroom guard | TPC | δ |
+   |---|---|---|---|
+   | `> 2.5f` | `max_delta_f > 3.0f` | 3 | +3 dB |
+   | `> 0.5f` | `max_delta_f > 1.0f` | 2 | +1 dB |
+   | `> -0.5f` | `max_delta_f >= 0.0f` | 1 | 0 dB |
+   | else | — | 0 | −1 dB |
+
+   breakpoint **`2.5 / 0.5 / -0.5`**（PUCCH も同一、`pucch_power_controller.cpp:138-150`）。`tpc_mapping = {-1,0,+1,+3}`
+   （**+2 は欠番**）。`min_f = -30`、PUCCH `g_bounds = {-30, 12}`、prohibit **40 ms**、`MAX_PHR/UCI_IND_DELAY = 80`、
+   無調整時 default TPC = 1。
+
+#### 9.A.6 RAN slicing スケジューラ（inter-slice 配分）
+
+1. **標準**: RRM policy ratio（dedicated/min/max PRB、TS 28.541）と S-NSSAI（PLMN+SST+SD）。inter-slice の配分
+   アルゴリズムは非標準。
+2. **実装**: slice 数 = `members + 2`。**SRB slice（id 0）は `{full, full}`・priority 255**、default DRB slice
+   （id 1）は `{0, full}`（`inter_slice_scheduler.cpp:32-43`）。`slot_indication`（`:73-190`）で候補生成: minRB 未達なら
+   2 候補（high-prio を min まで、normal を max まで、`:108-121`）。UL は他チャネル消費分を割り引く ratio scaling
+   `scaled_max = rbs.max() * pusch_avail_rbs / cell_nof_rbs`（`:162`）。budget 確保 `get_next_candidate`（`:295-350`）で
+   `rem_rbs = cell + discount - Σ max(dedicated, rb_count)`。inter は優先度順 candidate を出し、intra（§9.A.1–9.A.5）が
+   1 候補ずつ UE 割当。
+3. **config**: `min/max/ded_prb_policy_ratio`（`du_high_config.h:1037-1043`、既定 **0 / 100 / 0**）→ RB へ換算
+   （`du_high_config_translators.cpp:347-350`、validator は `ded ≤ min ≤ max`）。`priority`（既定 0、範囲 {0..254}、
+   255 は SRB 予約）。per-slice policy（既定 `time_qos`）。RIC 再構成可。`MAX_SLICE_RECONF_POLICIES=16`。
+4. **定数・ヒューリスティック ★（bit-pack 優先度）**: `get_prio`（`:391-448`）が 1 つの `uint32_t` を MSB→LSB で連結:
+   **slot 距離 7bit > minRB 未達 1bit > traffic priority 8bit > 滞留 delay 8bit > round-robin 7bit（+1）**
+   （`:407-415`）。`max_priority=255`、SRB id 0 / default DRB id 1、ratio 既定 0/100/0、平均 RB の指数移動平均係数
+   **0.1**（`ran_slice_instance.cpp:34`）、`MAX_SLOTS_SINCE_LAST_PXSCH=256`、SR のみ時の最小 grant `SR_GRANT_BYTES=512`。
+
+#### 9.A.7 PUCCH / UCI リソース割当
+
+1. **標準**: TS 38.213 §9.2.1（UCI bit 数による resource set 選択）、§9.2.5（multiplex 擬似コード）、§9.3
+   （UCI-on-PUSCH の beta-offset 閾値）。F0/F1 は最大 2 HARQ bit、F2/F3/F4 は最大符号化率 0.80。どの resource/ΔPRI を
+   選ぶか等は実装裁量。
+2. **実装**: `alloc_ded_harq_ack`（`pucch_allocator_impl.cpp:282-336`）。多重化は新 HARQ bit 数が **1 または 3**
+   のときのみ実行（`:325`）。**resource-set 選択（`:905-906`）: HARQ bit ≤ 2 → Set 0（F0/F1）、> 2 → Set 1
+   （F2/F3/F4）**。`multiplex_resources`（`:1059`）が TS §9.2.5 を実装。UCI-on-PUSCH: 同 UE に PUSCH があれば HARQ
+   slot を skip・SR を drop・CSI を PUSCH へ移す（`uci_allocator_impl.cpp:191-285`）。resource pool は first-fit で
+   UE 既存 resource を再利用、commit 時に Set 0/1 両確保なら **Set 0 を解放**（`pucch_resource_manager.cpp:394-405`）。
+3. **config**: `max_pucchs_per_slot=31` / `max_ul_grants_per_slot=32`（後者 > 前者を validator が要求）、
+   `nof_cell_sr_resources=8` / `nof_cell_csi_resources=8`、`sr_period_msec=20`。
+4. **定数・ヒューリスティック ★（format 切替閾値）**: **HARQ bit ≤ 2 → Set 0、> 2 → Set 1**（`:905`）。多重化は
+   bit **1 / 3** で再実行（`:325`）。F0/F1 max payload **2 bit**（`:1551-1554`）、F2/F3/F4 max 符号化率 **0.80**・
+   max data bit **1706**（`pucch_constants.h`）。UCI-on-PUSCH beta index 閾値 **2 / 11**（`uci_allocator_impl.cpp:40-87`）。
+   multiplex の Q 最大 **3** grant。per-UE 想定: F0/F1 ×8 + F2/F3/F4 ×8（HARQ）+ SR ×1 + CSI ×1
+   （`pucch_resource_manager.h:29-37`）。`MAX_NOF_CELL_DED_RESOURCES=256`。
+
+---
+
+### B. DU-Low upper PHY 受信 DSP（OFH 伸張済み IQ を入力）
+
+**§8.7 と本節 B の境界**: §8.7 は OFH の eCPRI/U-plane wire 層と **BFP 伸張**を扱った。本節 B はその伸張で得た
+**IQ（resource grid）を入力**とする upper PHY の信号処理であり、層が異なる。gNB の受信処理は基本的に
+**非標準**（3GPP は UE 送信側のみ規定し、gNB 受信側のチャネル推定・等化・復号は実装裁量）。受信チェーン本体は
+`pusch_processor_impl::process`（推定 `:192` → 復調 → 復号 `:293-294`）。
+
+```mermaid
+graph LR
+  IQ["IQ resource grid<br/>(OFH 伸張済 = §8.7 の出力)"]
+  EST["channel estimation<br/>(DMRS LS + FD smoothing + TA/CFO)"]
+  EQ["equalization<br/>(ZF / MMSE)"]
+  DEMOD["demodulation -> LLR<br/>(pusch_demodulator)"]
+  DERM["rate dematch"]
+  LDPC["LDPC decode<br/>(normalized min-sum sf=0.8, CRC early stop, max_iter=6)"]
+  CRC["CRC / UL-SCH"]
+  CSI["CSI : TA / CFO / SNR -> scheduler"]
+
+  IQ --> EST --> EQ --> DEMOD --> DERM --> LDPC --> CRC
+  EST -. "TA/CFO/SNR" .-> CSI
+```
+
+#### 9.B.1 チャネル推定
+
+1. **標準**: DMRS シーケンス生成・マッピング（TS 38.211 §6.4.1.1）のみ標準。LS 推定・時間/周波数平均・平滑・
+   補間・RSRP/EPRE/SNR 算出は実装裁量。
+2. **実装**: `dmrs_pusch_estimator_impl::estimate` がポートごとに `port_channel_estimator_average_impl` を駆動。
+   LS 推定 = 受信/既知パイロットの共役積（`port_channel_estimator_average_impl.cpp:490`）。TD 戦略 `average`/
+   `interpolate`（`:614-676`）、FD 平滑 `filter`(raised-cosine FIR)/`mean`/`none`（`port_channel_estimator_helpers.cpp:192-233`）。
+   帯域端は仮想パイロットを線形回帰で外挿（`:297-368`）。雑音分散 = 受信−再生パイロットの電力（`:763-862`）、
+   SNR = `datarp / noise_var`。
+3. **config**: `pusch_channel_estimator_fd_strategy`（既定 `filter`）、`_td_strategy`（既定 `average`）、
+   `_cfo_compensation`（既定 `true`）（`du_low_config.h:41-52`）。
+4. **定数・ヒューリスティック**: raised-cosine FIR **31 タップ・roll-off 0.2**（`port_channel_estimator_helpers.cpp:32-37`）、
+   フィルタスパン ≤ 3 RB、`MAX_V_PILOTS=12`、`MAX_LAYERS=4`、雑音分散の下限 = `rsrp / 10^(MAX_SINR_DB/10)` で
+   **SINR を 100 dB にクランプ**（`port_channel_estimator_average_impl.cpp:285-286`）。
+
+   > 注意（観測した不整合）: FD 平滑戦略の選択が `upper_phy_factories.cpp:570-572` で **`pusch_channel_estimator_td_strategy`
+   > キー**を読んでいる（FD キーではない）。TD キーの値域は `average`/`interpolate` のため `"none"`/`"mean"` に一致せず、
+   > 結果として `--pusch_channel_estimator_fd_strategy` は FD 平滑に効かず常に既定 `filter` になると読める。バグの可能性
+   > として §10 未確認に集約（firsthand 確認済み）。
+
+#### 9.B.2 チャネル等化: ZF vs MMSE
+
+1. **標準**: 完全実装裁量（3GPP 非規定）。
+2. **実装**: factory が enum `channel_equalizer_algorithm_type{zf, mmse}`（`channel_equalizer_algorithm_type.h`）で
+   `channel_equalizer_generic_impl` を生成、文字列→enum は `upper_phy_factories.cpp:563-566`（`"mmse"`→mmse、他→zf）。
+   ZF は 1×N（matched filter / `‖h‖²` 正規化、`equalize_zf_1xn.h`）、2×N（2×2 閉形式擬似逆、`equalize_zf_2xn.h`）、
+   M×N（Gram 行列 `H^H·H` → 逆行列 → `H_gram_inv·H^H`、`equalize_zf_mxn_simd.h`）。**MMSE は Gram 対角に雑音分散を
+   加算**（`equalize_mmse_mxn_simd.h:34`）し `correction_term` で再スケール。1 層時は MMSE も ZF 1×N にフォールバック。
+3. **config**: `pusch_channel_equalizer_algorithm`（既定 `"zf"`、`du_low_config.h:58`、`--pusch_channel_equalizer_algorithm`、
+   許可値 `zf`/`mmse`）。
+4. **定数・ヒューリスティック**: `max_nof_ports=8`、対応ポート {1,2,4,8}・層数 1–4、ZF は高速近似逆数
+   `ocudu_simd_f_rcp`／MMSE・行列反転は高精度逆数 `ocudu_simd_f_precise_rcp`。雑音分散が NaN/inf/負なら出力 0・雑音 ∞
+   のガード。**MMSE に固定 epsilon/floor は無い**（正則化 = 推定雑音分散そのものの対角注入）。
+
+#### 9.B.3 LDPC デコード戦略: 最大反復・early stop
+
+1. **標準**: LDPC 符号構造（BG1/BG2、lifting、PCM、TS 38.212）固定。復号アルゴリズム・scaling・最大反復・
+   early stop は実装裁量。
+2. **実装**: **layered normalized min-sum**（`ldpc_decoder_impl.cpp:101-129`）。check node で絶対値の最小・第2最小
+   と符号積を取り（`ldpc_decoder_generic.cpp:28-90`）、`round(llr * scaling_factor)` でスケール（`:52-61`）。
+   early stop は per-codeblock CRC（`ldpc_decoder_impl.cpp:112-119`）。driver `pusch_decoder_impl`（`:295-381`）が
+   CB ごとに `decode(use_early_stop, nof_ldpc_iterations)`。
+3. **config**: `pusch_decoder_max_iterations=6`（`--pusch_dec_max_iterations`）、`pusch_decoder_early_stop=true`
+   （`--pusch_dec_enable_early_stop`）、`pusch_decoder_force_decoding=false`（`du_low_config.h:23-27`）。
+4. **定数・ヒューリスティック ★**: **`scaling_factor = 0.8`**（`ldpc_decoder_impl.h:185`、**config override 経路なし・
+   完全ハードコード**、`0 < sf < 1` を assert）。soft bit クランプ **±64**（`:192-194`）。max iter 既定 **6**。
+   `early_stop_syndrome = false` 固定（`upper_phy_factories.cpp:738`）のため PUSCH は **CRC ベース early-stop のみ**。
+   `INVERSE_BG1_RATE=3` / `INVERSE_BG2_RATE=5`、`MAX_BITS_CRC16=3824`。
+
+#### 9.B.4 PRACH 検出（upper PHY 側、§8.7 と区別）
+
+1. **標準**: preamble（ZC シーケンス・format・N_cs・restricted set、TS 38.211 §6.3.3）は標準。**検出アルゴリズムと
+   検出閾値は実装裁量**（PRACH で最も裁量が大きい＝閾値 vs 誤警報のトレードオフ）。クラスは GLRT 検定に着想
+   （`prach_detector_generic_impl.h:24-25`）。
+2. **実装**: `detect`（`prach_detector_generic_impl.cpp:60-342`）: root ZC の共役乗算 → IDFT で PDP → modulus² →
+   ポート/シンボルの**非コヒーレント結合** → cyclic shift 窓ごとに metric = signal/noise → ピーク探索 → **閾値比較**
+   （`:322-323`）。
+3. **config**: 直接 tunable キーは無い（閾値はテーブル固定）。format/SCS/ZCZ/ports/root はセル設定由来。
+4. **定数・ヒューリスティック ★**: **閾値テーブル `all_threshold_and_margins`**
+   （`prach_detector_generic_thresholds.cpp:146-1049`、約 1060 行）。key=(nof_rx_ports, SCS, format, ZCZ)、
+   value=(`threshold`, `combine_symbols`, `win_margin`) ＋品質フラグ red/orange/green。例:
+   `{1, 1.25kHz, format0, ZCZ0}` → `{0.147F, true, 5}`（orange）、`{2, …}` → `{0.085F, …}`（閾値はポート数で約半減）。
+   **default fallback**（テーブル未掲載時、`:115-118`、`todo(david)` コメント付き）: long → `{2.0F, false, 5}`、
+   short → `{0.3F, false, 12}`。検出窓**末尾 1/5 を無視**（`delay < max * 0.8`、"spurious peaks 回避"、`:320-323`）。
+   `MAX_IDFT_SIZE=4096`、`nof_sequences=64`。
+
+   > これは upper PHY が IQ から PRACH を検出する層。OFH の PRACH U-plane 受信（§8.7、別 eAxC・別 data flow）とは別。
+
+#### 9.B.5 タイミング / 周波数オフセット推定
+
+1. **標準**: 完全実装裁量。標準は TA コマンド粒度のみ規定。
+2. **実装**: **TA** は DFT ベース（`time_alignment_estimator_dft_impl.cpp:47-94`、「generic impl」は無く DFT 実装が唯一）:
+   チャネル推定を IDFT → PDP → 非コヒーレント結合 → ピーク探索（`:178-236`）→ サブサンプルは曲線フィッティング補間。
+   **CFO** は DMRS シンボル間の位相回転（`port_channel_estimator_average_impl.cpp:468-525`）: 第1・第2 DMRS の LSE 内積
+   → `arg()` → シンボル間時間差で正規化。補償は `polar(1, -2π·epoch·cfo)`。
+3. **config**: `pusch_channel_estimator_cfo_compensation`（既定 `true`）。TA は常時動作（`max_ta` は API 引数）。
+4. **定数・ヒューリスティック**: TA 最大 = **半 CP 長**（`κ=144` をハードコード、`time_alignment_estimator_dft_impl.cpp:184`）、
+   サブサンプル補間 tap = `(max_ta_samples > 2) ? 5 : 3`、CFO 推定は **DMRS 2 シンボル以上**必要（不足時 `nullopt`）、
+   hop 間で TA を `/= 2` / CFO を平均、CSI へは **best-SNR ポート**の TA/CFO を採用（`dmrs_pusch_estimator_impl.cpp:303-310`）。
+
+---
+
+## 10. 未確認事項一覧
 
 本書の作成過程で、実ツリーから確証を得られなかった事項を以下にまとめる。
 
@@ -1293,6 +1590,14 @@ DU-Low 内のパイプライン段数決定に使われる値で、OFH 窓とは
 - （§8.9）DU-Low `max_processing_delay_slots` と OFH の T1a/Ta4 窓・`nof_symbols_to_process_uplink` の
   整合検証はコード上に見当たらない（validator の cross-check 無し）。設計意図としての結合はあり得るが、
   コードによる強制は未確認。
+- （§9.B.1 要確認・バグの可能性）FD 平滑戦略の選択が `upper_phy_factories.cpp:570-572` で
+  `pusch_channel_estimator_td_strategy`（TD キー）を参照している。TD キーの値域は `average`/`interpolate` で
+  `"none"`/`"mean"` に一致しないため、`--pusch_channel_estimator_fd_strategy` は FD 平滑に効かず常に既定
+  `filter` になると読める（firsthand 確認済み）。**意図的な仕様か実装ミスかは未確認**。
+- （§9.A.4）`max_consecutive_kos`（CLI 結線は確認）の既定値、および `max_nof_msg3_harq_retxs`
+  （`scheduler_expert_config.h:239`）が独立 CLI flag を持つか、は未照合。
+- （§9.A.3 / §9.B.3 補足・事実）OLLA の `delta_up` 係数と LDPC `scaling_factor=0.8` は config override 経路を
+  持たないハードコード（未確認ではなく確定事実だが、運用上 override 不可である点に留意）。
 - 本書の `path:line` は作業ツリー（コミット `7a2b9e3`）時点のもの。以後の編集で行番号がずれる
   可能性がある。
 
@@ -1327,6 +1632,27 @@ DU-Low 内のパイプライン段数決定に使われる値で、OFH 窓とは
   `lib/support/executors/priority_task_queue.cpp`, `lib/support/executors/priority_task_worker.cpp`
 - 横断（scheduler policy）: `lib/scheduler/policy/{scheduler_policy.h, scheduler_policy_factory.cpp,
   scheduler_time_qos.cpp, scheduler_time_rr.cpp}`, `include/ocudu/scheduler/config/scheduler_expert_config.h`
+- 横断（非標準アルゴリズム / scheduler）: `lib/scheduler/ue_scheduling/{intra_slice_scheduler.{h,cpp},
+  ue_cell_grid_allocator.{h,cpp}, grant_params_selector.{h,cpp}}`,
+  `lib/scheduler/support/{outer_loop_link_adaptation.h, mcs_calculator.{h,cpp}, mcs_tbs_calculator.{h,cpp},
+  pusch_power_controller.{h,cpp}, pucch_power_controller.{h,cpp}, rb_helper.h}`,
+  `lib/scheduler/ue_context/{ue_link_adaptation_controller.{h,cpp}, ue_channel_state_manager.{h,cpp}}`,
+  `lib/scheduler/cell/cell_harq_manager.{h,cpp}`,
+  `lib/scheduler/slicing/{inter_slice_scheduler.{h,cpp}, ran_slice_instance.{h,cpp}, ran_slice_candidate.h}`,
+  `lib/scheduler/pucch_scheduling/{pucch_allocator_impl.{h,cpp}, pucch_resource_manager.{h,cpp}}`,
+  `lib/scheduler/uci_scheduling/uci_allocator_impl.{h,cpp}`,
+  `include/ocudu/ran/power_control/tpc_mapping.h`, `include/ocudu/ran/pucch/pucch_constants.h`,
+  `include/ocudu/ran/rrm.h`
+- 横断（非標準アルゴリズム / 受信 DSP）: `lib/phy/upper/signal_processors/channel_estimator/{port_channel_estimator_average_impl.{h,cpp},
+  port_channel_estimator_helpers.{h,cpp}}`, `lib/phy/upper/signal_processors/pusch/dmrs_pusch_estimator_impl.{h,cpp}`,
+  `lib/phy/upper/equalization/{channel_equalizer_generic_impl.{h,cpp}, equalize_zf_1xn.h, equalize_zf_2xn.h,
+  equalize_zf_mxn_simd.h, equalize_mmse_mxn_simd.h, gram_matrix.h, matrix_inverse.h}`,
+  `include/ocudu/phy/upper/equalization/channel_equalizer_algorithm_type.h`,
+  `lib/phy/upper/channel_processors/pusch/{pusch_processor_impl.cpp, pusch_decoder_impl.cpp}`,
+  `lib/phy/upper/channel_coding/ldpc/{ldpc_decoder_impl.{h,cpp}, ldpc_decoder_generic.cpp}`,
+  `lib/phy/upper/channel_processors/prach/{prach_detector_generic_impl.{h,cpp}, prach_detector_generic_thresholds.cpp}`,
+  `lib/phy/support/time_alignment_estimator/time_alignment_estimator_dft_impl.{h,cpp}`,
+  `lib/phy/upper/upper_phy_factories.cpp`, `apps/units/flexible_o_du/o_du_low/du_low_config.h`
 - 横断（OFH timing/deadline）: タイミング `include/ocudu/ofh/timing/{slot_symbol_point.h,
   ofh_ota_symbol_boundary_notifier_manager.h}`, `lib/ofh/timing/realtime_timing_worker.{h,cpp}`,
   `lib/ru/ofh/ru_ofh_impl.cpp`; 受信側締め切り `lib/ofh/receiver/{ofh_rx_window_checker.{h,cpp},
