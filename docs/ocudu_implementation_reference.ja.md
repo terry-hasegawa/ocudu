@@ -1,9 +1,10 @@
 # OCUDU 実装技術リファレンス（dev）
 
 本書は OCUDU の実装構造を、DU-High / DU-Low / CU-CP / CU-UP の 4 コンポーネントと、
-4 つの横断章（① task executor・スレッドモデル、② F1/E1/NG インターフェースとコールフロー、
+5 つの横断章（① task executor・スレッドモデル、② F1/E1/NG インターフェースとコールフロー、
 ③ Open Fronthaul (OFH / split 7.2x) のタイミングと締め切り処理、④ 非標準化アルゴリズム
-（scheduler 判断系 / 受信 DSP））に分けて解説する技術リファレンスである。
+（scheduler 判断系 / 受信 DSP）、⑤ スケーリング（cell / UE / RU 単位とリソース割当））に
+分けて解説する技術リファレンスである。
 
 > **記述の根拠について**
 > 本書のすべての記述は、チェックアウト中の作業ツリー（`git` ブランチ
@@ -1569,7 +1570,215 @@ graph LR
 
 ---
 
-## 10. 未確認事項一覧
+## 10. 横断⑤ スケーリング（cell / UE / RU 単位とリソース割当）
+
+本章は「**cell 数 / UE 数 / RU(sector) 数が増えたとき、何がスケール単位になるか**」を、スレッド・
+executor・per-instance オブジェクトの生成カウント、CPU affinity 割当規則、config 上限の観点で確定する。
+executor の**機構**は §6.1（main_pool・4 優先度）、§2.4（DU-High cell/UE/control）、§3.4（DU-Low）、
+§4.4（CU-CP 単一 strand）、§5/§6.3（CU-UP per-UE strand）、§8.8（OFH ru_timing/txrx）で既出のため
+再掲せず参照し、本章は「N が増えると何が何倍になり、どこで詰まるか」の合成と、未充足の穴を埋める。
+
+### 10.1 前提: モノリシック単一プロセス
+
+`gnb` / `cu` / `du` は **単一 OS プロセス**で動く（`apps/gnb/gnb.cpp` ほか、プロセス分割は無い）。したがって
+**スケール単位は「OS プロセス」ではなく「スレッド/executor ＋ per-instance オブジェクト」**である。
+「セル毎にプロセスが増える」式の理解は誤りで、cell 増で増えるのは `cell_scheduler` /
+`mac_cell_processor` / `upper_phy` などのオブジェクトと、worker 数の見積り（§10.3）に応じた main_pool
+スレッド数であって、**セル専用スレッドが立つわけではない**（§10.4）。
+
+### 10.2 スケール単位 × 生成物カウント表（本章の中心）
+
+| スケール単位 | 増える per-instance object | スレッド増の有無・方式 | 律速になりうる箇所 | 関連 config 上限 |
+|---|---|---|---|---|
+| **プロセス** | （増えない。単一プロセス） | — | — | — |
+| **cell** | `cell_scheduler`（`scheduler_impl.cpp:30`）、`mac_cell_processor`、`upper_phy`（cell 毎）、cell strand（`du_high_executor_mapper.cpp:117-121`） | **専用スレッドは増えない**。各 cell は共有 main_pool（`rt_prio_exec`）上の **per-cell strand**。worker 数式が cell に比例増（§10.3） | main_pool の worker 数、（CA 時）`cell_group_mutex`、OFH txrx 多重度 | `MAX_CELLS_PER_DU = 32`（`gnb_constants.h:13`） |
+| **UE** | scheduler `ue` / RLC bearer / PDCP・SDAP（CU-UP）等 | **増えない**。DU-High は cell 当り **1 UE strand** に集約（per_cell, `max_nof_strands=1`）、CU-UP は per-UE strand を round-robin 割当（上限 `max_nof_ue_strands`） | strand 内直列化、UE executor キュー長 | CU-CP `max_nof_ues=8192`、CU-UP `max_nof_ues=16384`、`max_nof_drbs_per_ue=8` |
+| **RU / sector** | OFH `sector_impl` / data flow / `eth_frame_pool`（sector 毎） | `ru_txrx_#i` は `txrx_affinities` 個、sector は `nof_sectors_per_txrx_thread` で多重化。`ru_timing` は**共有 1 本** | txrx スレッド多重度、`ru_timing` 単一スレッド | sector 数（= OFH cells）、`MAX_CELLS_PER_DU=32` |
+
+要点: **N が増えてもスレッド本数は基本増えない**（worker pool / strand の密度が上がる）。スレッドが増えるのは
+worker 数式（cell・アンテナに比例、§10.3）と OFH の `ru_txrx`（`txrx_affinities` 指定数）のみ。
+
+### 10.3 worker 数の決定式と spare CPU
+
+main_pool の worker 数は `get_default_nof_workers`（`apps/services/worker_manager/worker_manager.cpp:267-298`）が
+決める。実コードは以下（§6.1 で触れた近似式の実体）:
+
+```
+avail_cpus = main_pool_affinity_cfg.mask.count();            // :270
+if (avail_cpus == 0) avail_cpus = host_nof_available_cpus(); // :271-272  未指定なら全ホスト CPU
+spare_cpus = min(avail_cpus, 3);                             // :276  kernel/RU timing 用に最大 3 確保
+if (nof_main_pool_threads) nof_workers = その値;            // :279-280  明示指定の override
+else {
+  for each du_low cell: nof_workers += dl_ant[i] + ul_ant[i]; // :284-288  ★アンテナ和（per-cell）
+  if (du_hi)            nof_workers += nof_cells * 1;          // :289-291  ★cell 数
+  nof_workers += 2;                                            // :292
+}
+return max(min(nof_workers, avail_cpus - spare_cpus), 1);   // :297  [1, avail-spare] にクランプ
+```
+
+> §6.1 が引いた近似式 `nof_cells*(dl_ant+ul_ant+1)+2` は、実は **コード内コメント**（`:282-283`）の概算で
+> ある。実コードは「du_low の **per-cell アンテナ和** Σ(dl_ant[i]+ul_ant[i]) ＋ du_hi の **nof_cells** ＋ 2」。
+> 全セル同一アンテナ数なら両式は一致するが、**セルごとにアンテナ数が異なると一致しない**（実体は和形）。
+> worker 数を駆動するのは du_low のアンテナ数と du_hi の cell 数、上限は `avail_cpus - spare_cpus`。
+
+main_pool 自体は 4 優先度 executor（`rt_prio_exec` / `high_prio_exec` / `medium_prio_exec` /
+`low_prio_exec`、§6.1）。lock-free キューの事前確保プロデューサ数は `get_nof_prealloc_producers`
+（`worker_manager.cpp:301-321`）= `nof_workers + 2`（epoll/main）＋ RU timing 1 ＋ RU cell 毎 txrx ＋ …。
+
+### 10.4 cell スケール: executor 方式（strand 固定）とセル並列性
+
+#### (a) executor 方式の選択 — dedicated は存在するが production では未配線
+
+`create_du_high_executor_mapper`（`du_high_executor_mapper.cpp:458`）は `config.cell_executors`（`std::variant`）が
+どちらの alternative を持つかで方式を選ぶ:
+
+- `dedicated_cell_worker_list` を持てば `dedicated_cell_worker_executor_mapper`（cell 毎に専用ワーカ＝**真の
+  per-cell スレッド**、`:52-99`、選択 `:168-170`）。
+- `strand_based_worker_pool` を持てば `strand_cell_worker_executor_mapper`（共有 pool 上の **per-cell strand**、
+  `:104-162`、選択 `:173-174`）。
+
+**実アプリの `worker_manager` は無条件に `strand_based_worker_pool` を設定**し、`pool_executors = {rt_hi_prio_exec}`
+（単一プール）を渡す（`worker_manager.cpp:246-250`）。**dedicated を選ぶ config 分岐は存在しない**。ツリー全体で
+`dedicated_cell_worker_list` を構築するのは **test double のみ**（`tests/test_doubles/du/test_du_high_worker_manager.cpp:76-78`、
+`cell_executors.emplace<dedicated_cell_worker_list>()`）。
+
+> **結論（断定）**: gnb / du / cu アプリでは cell executor は **strand 方式に固定**。dedicated 方式は
+> ライブラリに実在し `du_high_executor_config` に直接 `dedicated_cell_worker_list` を入れれば到達するが、
+> それを行うのはテストのみで、**production には dedicated に切り替える config が無い**（前述の「既定は strand、
+> ただし切替可」ではなく「**切替不可・strand 固定**」が正確）。
+
+ただし **strand 固定 ≠ セルが直列化される、ではない**。`strand_cell_worker_executor_mapper` は cell 毎に
+別 strand を生成し（`du_high_executor_mapper.cpp:117-121`、`cfg.pool_executors[i % size]` に割当）、各 strand は
+共有 `rt_prio_exec`（multi-worker）へタスクを dispatch する。よって**異なるセルの strand は main_pool の worker 数だけ
+並列に走る**。直列化されるのは (i) **同一セルの strand 内**（`slot_ind`/`mac_cell` は `execs[0]`、`rlc_lower` は
+`execs[1]` の 2 優先度レーン、`:122-132`、strict priority は §6.3）と、(ii) 後述の **CA 時 `cell_group_mutex`**
+（scheduler 層）のみ。
+
+#### (b) MAC scheduler のセル並列性 — CA の有無で非対称
+
+`scheduler_impl` は cell ごとに `cell_scheduler` を保持し（`cells`、`scheduler_impl.cpp:30`）、cell-group ごとに
+`ue_scheduler_impl` を 1 つ生成して同一 group の全セルで共有させる（`groups`、`:24-31`）。`slot_indication(sl_tx,
+cell_index)`（`:215-231`）は当該セルの `cell.run_slot()` のみを実行し、**ロックを取らない**。`cell_scheduler::run_slot`
+（`cell_scheduler.cpp:54-110`）は cell-local の sub-scheduler（ssb/csi/si/prach/ra/pg）を回したのち
+`ue_sched->run_slot()`（`:96`）で共有 `ue_scheduler_impl` に入る。
+
+共有点である `cell_group_mutex` の獲得タイミングと粒度（実読、`ue_scheduler_impl.{h,cpp}`）:
+
+- **粒度**: `cell_group_mutex` は `ue_scheduler_impl` インスタンスごとに 1 つ（`ue_scheduler_impl.h:117`）。
+  `ue_scheduler_impl` は cell-group ごとに 1 つなので、**mutex の粒度は「cell-group 単位」**（全セル共通の単一ロック
+  ではない）。1 group は最大 `MAX_NOF_DU_CELLS = 32` セル。
+- **獲得条件**: `run_slot_impl`（`ue_scheduler_impl.cpp:114-125`）で
+  `std::unique_lock lock(cell_group_mutex, defer_lock); if (cells.size() > 1) lock.lock();`。つまり
+  **その group が複数セル（= Carrier Aggregation）のときだけロック**する（`:116-119`、コメント "Only mutex if the
+  cell group has more than one cell"）。
+- **CA 時の動作**: 同一 slot を group の最初のセルが処理すると `last_sl_ind == sl_tx` で残りのセルは即 return
+  （`:121-123`）。最初の run_slot が `for (auto& group_cell : cells)` で **group の全セルをまとめてスケジュール**する
+  （`:127`、joint carrier scheduling）。
+
+**スケール特性（重要な但し書き）**:
+
+- **非 CA（1 セル / group の典型構成）**: `cells.size() == 1` でロックを取らない。異なる group のセルは共有状態なしで
+  **完全並列**（main_pool の worker 数が並列度の上限）。→ セル数を増やすとほぼリニアに並列スケール。
+- **CA（1 UE が複数セルを跨ぐ = 同一 group に複数セル）**: その group のセル群は `cell_group_mutex` で**直列化**され、
+  1 セルの slot_indication が group 全体を 1 パスで処理する。→ **同一 CA group 内のセルは並列化されず**、group を
+  増やしてもグループ内セル数の分は逐次。group 間は並列。
+- 「セル数を増やせばリニアにスケールする」という素朴な期待は **非 CA でのみ成立**し、CA 構成では group 単位で頭打ちに
+  なる、という非対称がこの 1 行（`cells.size() > 1`）に集約されている。
+
+### 10.5 UE スケール: UE→strand 写像と strand 密度
+
+- **DU-High**: `worker_manager` は `ue_executors.policy = per_cell`、`max_nof_strands = 1` を設定
+  （`worker_manager.cpp:251-252`）。mapper は per_cell のとき `pcell_ue_executor_mapper` を使う
+  （`du_high_executor_mapper.cpp:364`）。→ **cell 当り UE strand は 1 本**（`ctrl`/`ul`/`dl` の 3 優先度）で、その
+  cell の全 UE が共有する。UE が増えてもスレッドも strand も増えず、**1 本の strand に積まれる UE タスクの密度が上がる**
+  （`pool_executor = non_rt_medium_prio_exec`）。
+- **CU-UP**: per-UE strand を `max_nof_ue_strands`（既定 16、§5.4）本だけ作り、UE を **round-robin** で strand に割り当てる
+  （`cu_up_executor_mapper.cpp` の round-robin pool、§5.4）。UE 増 → strand 当り UE 数が増える（strand 本数は 16 で頭打ち）。
+  crypto のみ共有 `medium_prio_executor`（唯一の並列パス）。
+- → DU-High / CU-UP とも **UE 増でスレッドは増えず**、strand/executor の密度（キュー長・strand 内直列化）が律速。
+
+### 10.6 RU / sector スケール
+
+- `ru_timing` は **共有 1 本**（`worker_manager.cpp:446-464`、RT `max()-0`）。全 sector の OTA シンボル境界を 1 スレッドが
+  刻むため、sector を増やしても増えない＝潜在的な単一点（§8.2/§8.8）。
+- `ru_txrx_#i` は `config.txrx_affinities` の指定数だけ生成（`worker_manager.cpp:470-486`、RT `max()-1`）。sector→txrx の
+  写像は `nof_sectors_per_txrx_thread = ceil(nof_sectors / nof_txrx_threads)`（`ru_ofh_executor_mapper.cpp:67-78`）で、
+  sector i は `txrx_executors[i / nof_sectors_per_txrx_thread]` に割り当てられる（**txrx スレッドが足りなければ複数 sector を
+  多重化**）。
+- `downlink` / `uplink` executor は共有 `rt_hi_prio_exec`（uplink は strand、§8.8）。
+- → sector 増の律速は **txrx スレッド多重度**と **ru_timing 単一スレッド**。
+
+### 10.7 CPU affinity 割当規則
+
+affinity の型は **2 カテゴリのみ**: `sched_affinity_mask_types { ru, main, last }`
+（`os_sched_affinity_manager.h:12`、`last` は番兵）。pin ポリシーは `round_robin`（mask 内 CPU を 1 個ずつ RR で pin）/
+`mask`（全スレッドが同一 mask を共有）（`:15-21`）。
+
+- **`main`** → main_pool worker（`worker_manager.cpp:347`）、非 RT 時の `phy_worker`（`:404`）。
+- **`ru`** → `ru_timing` / `ru_txrx`（`:454,480`）、`radio` / lower PHY（`:546`）など RU・PHY 系。per-cell の
+  `affinity_mng` が保持する。
+- **未指定時の既定**: `main_pool_cpu_cfg = {main, 空 mask, policy=mask}`（`worker_manager_appconfig.h:14`）。空 mask は
+  `calculate_mask()` が空を返す（`os_sched_affinity_manager.h:100-105,128`）＝**pin なし（OS が全ホスト CPU に配置）**。
+  worker 数算出でも空 mask 時は `avail_cpus = 全ホスト CPU`（`worker_manager.cpp:270-272`）。`ru` も未指定なら `ru_timing` は
+  **先頭セルの `ru` mask に fallback**（`:452-454`）。
+- **重なり / 分離**: 既定は `main`・`ru` とも空 mask＝**全 CPU で overlap**（明示的なコア分離なし）。分離するには
+  isolated CPU を `main` / `ru` の mask に config で与える（CLI は `cli11_cpu_affinities_parser_helper.*`、cell の
+  `ru_cpus` / `ru_pinning`、OFH の `timing_cpu` / `txrx_cpus`、§8.9）。
+
+> ★制約（有用な発見）: **PHY DL / UL を個別にコア pin する mask 型は存在しない**（srsRAN にあった l1_dl/l1_ul 等の
+> 細分は無い）。粒度は `ru` と `main` の **2 つだけ**で、cell / PHY 系は一律 `ru`（RU 系スレッド）または `main`
+> （main_pool）に乗る。将来コア割当をチューニングする際、「l1 を細かく pin したくても粒度は ru/main の 2 つ」という
+> 制約として効く。
+
+```mermaid
+graph TB
+  subgraph CPUSET["CPU セット（未指定時は両者とも空 mask = 全ホスト CPU で overlap）"]
+    MAINMASK["main mask<br/>(main_pool_cpu_cfg, 既定 空)"]
+    RUMASK["ru mask (per cell)<br/>(ru_cpus / ru_timing_cpu / txrx_cpus, 既定 空)"]
+  end
+  MAINMASK --> MP["main_pool workers (4 prio exec)<br/>+ phy_worker(非RT)"]
+  RUMASK --> RT["ru_timing (共有1本, RT max()-0)"]
+  RUMASK --> TX["ru_txrx_#i (txrx_affinities 個, RT max()-1)"]
+  RUMASK --> RAD["radio / lower PHY"]
+  MP --> CELLS["cell strand / UE strand / CU-CP・CU-UP strand<br/>(= main_pool 上で動く)"]
+```
+
+### 10.8 config 上限一覧
+
+| スコープ | キー / 定数 | 値 | 箇所 |
+|---|---|---|---|
+| DU | `MAX_CELLS_PER_DU` | 32 | `gnb_constants.h:13` |
+| DU | `MAX_NOF_DU_CELLS` / `MAX_DU_CELL_GROUPS` | 32 / 32 | `du_cell_index.h:18` / `du_types.h:37` |
+| CU-CP | `max_nof_dus` | 6 | `cu_cp_unit_config.h`（§4.6） |
+| CU-CP | `max_nof_cu_ups` | 6 | 〃 |
+| CU-CP | `max_nof_ues` | 8192 | 〃 |
+| CU-CP | `max_nof_drbs_per_ue` | 8 | 〃 |
+| CU-UP | `max_nof_ues` | 16384 | `cu_up_unit_config.h`（§5.6） |
+| worker | `max_nof_ue_strands`（CU-UP） | 16 | `worker_manager_config.h`（§5.4） |
+| worker | `nof_main_pool_threads` | optional（未指定なら §10.3 の式） | `worker_manager_config.h` |
+
+### 10.9 「N を増やしたとき」のボトルネック
+
+```mermaid
+flowchart LR
+  CELL["cell 数 N↑"] --> C1["upper_phy / cell strand が N 個<br/>(PHY 処理量 N 倍)"]
+  CELL --> C2["worker 数式が cell・アンテナで増<br/>(§10.3, 上限 avail-spare)"]
+  CELL --> C3{"CA?"}
+  C3 -- "非CA" --> C4["group 独立 → 並列 (リニア)"]
+  C3 -- "CA" --> C5["cell_group_mutex で group 内逐次"]
+  UE["UE 数 N↑"] --> U1["スレッド不変<br/>DU-High: cell 当り1 strand 密度↑<br/>CU-UP: 16 strand に RR"]
+  UE --> U2["executor キュー長・strand 直列化が律速"]
+  SEC["sector 数 N↑"] --> S1["ru_txrx を多重化<br/>(nof_sectors_per_txrx_thread)"]
+  SEC --> S2["ru_timing は単一スレッドのまま"]
+```
+
+要約: cell 増 → PHY/cell strand と main_pool worker（CA なら `cell_group_mutex`）、UE 増 → strand 密度と
+executor キュー、sector 増 → txrx 多重度と単一 `ru_timing`、がそれぞれの律速。スレッド本数が増えるのは
+worker 数式（cell・アンテナ）と `ru_txrx`（`txrx_affinities`）のみで、それ以外は密度で吸収される。
+
+---
+
+## 11. 未確認事項一覧
 
 本書の作成過程で、実ツリーから確証を得られなかった事項を以下にまとめる。
 
@@ -1598,6 +1807,12 @@ graph LR
   （`scheduler_expert_config.h:239`）が独立 CLI flag を持つか、は未照合。
 - （§9.A.3 / §9.B.3 補足・事実）OLLA の `delta_up` 係数と LDPC `scaling_factor=0.8` は config override 経路を
   持たないハードコード（未確認ではなく確定事実だが、運用上 override 不可である点に留意）。
+- （§10.8）CU-CP / CU-UP の `max_nof_*` 既定値（`max_nof_dus=6` 等、`max_nof_ues=8192/16384`、
+  `max_nof_ue_strands=16`）は §4.6 / §5.6 / §5.4（既存章）で firsthand 確認した値を参照しており、本章 §10 では
+  再オープンしていない。行番号は当該章を参照のこと。
+- （§10.5 補足・事実）DU-High の UE→strand も `dedicated` cell executor（§10.4）と同型で、`round_robin`
+  （`index_based_ue_executor_mapper`）が実在するが `worker_manager` は `per_cell` を配線する。production が
+  `index_based` を選ぶ経路の有無は未照合（dedicated と同様、テスト/直接 API 経由と推測されるが未確認）。
 - 本書の `path:line` は作業ツリー（コミット `7a2b9e3`）時点のもの。以後の編集で行番号がずれる
   可能性がある。
 
@@ -1653,6 +1868,13 @@ graph LR
   `lib/phy/upper/channel_processors/prach/{prach_detector_generic_impl.{h,cpp}, prach_detector_generic_thresholds.cpp}`,
   `lib/phy/support/time_alignment_estimator/time_alignment_estimator_dft_impl.{h,cpp}`,
   `lib/phy/upper/upper_phy_factories.cpp`, `apps/units/flexible_o_du/o_du_low/du_low_config.h`
+- 横断（スケーリング）: `apps/services/worker_manager/{worker_manager.cpp, worker_manager_config.h,
+  worker_manager_appconfig.h, os_sched_affinity_manager.h, cli11_cpu_affinities_parser_helper.{h,cpp}}`,
+  `lib/du/du_high/du_high_executor_mapper.cpp`, `tests/test_doubles/du/test_du_high_worker_manager.cpp`,
+  `lib/scheduler/{scheduler_impl.{h,cpp}, cell_scheduler.{h,cpp}}`,
+  `lib/scheduler/ue_scheduling/ue_scheduler_impl.{h,cpp}`, `lib/ru/ofh/ru_ofh_executor_mapper.cpp`,
+  `include/ocudu/ran/{gnb_constants.h, du_cell_index.h, du_types.h}`,
+  `apps/units/o_cu_cp/cu_cp/cu_cp_unit_config.h`, `apps/units/o_cu_up/cu_up/cu_up_unit_config.h`
 - 横断（OFH timing/deadline）: タイミング `include/ocudu/ofh/timing/{slot_symbol_point.h,
   ofh_ota_symbol_boundary_notifier_manager.h}`, `lib/ofh/timing/realtime_timing_worker.{h,cpp}`,
   `lib/ru/ofh/ru_ofh_impl.cpp`; 受信側締め切り `lib/ofh/receiver/{ofh_rx_window_checker.{h,cpp},
