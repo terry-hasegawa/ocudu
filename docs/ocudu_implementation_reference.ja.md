@@ -1,10 +1,10 @@
 # OCUDU 実装技術リファレンス（dev）
 
 本書は OCUDU の実装構造を、DU-High / DU-Low / CU-CP / CU-UP の 4 コンポーネントと、
-6 つの横断章（① task executor・スレッドモデル、② F1/E1/NG インターフェースとコールフロー、
+7 つの横断章（① task executor・スレッドモデル、② F1/E1/NG インターフェースとコールフロー、
 ③ Open Fronthaul (OFH / split 7.2x) のタイミングと締め切り処理、④ 非標準化アルゴリズム
 （scheduler 判断系 / 受信 DSP）、⑤ スケーリング（cell / UE / RU 単位とリソース割当）、
-⑥ ライフサイクルと障害時挙動）に分けて解説する技術リファレンスである。
+⑥ ライフサイクルと障害時挙動、⑦ メトリクスと可観測性）に分けて解説する技術リファレンスである。
 
 > **記述の根拠について**
 > 本書のすべての記述は、チェックアウト中の作業ツリー（`git` ブランチ
@@ -2059,7 +2059,165 @@ heartbeat interval）。プロセス健全性の能動監視は、§11.2(e) の 
 
 ---
 
-## 12. 未確認事項一覧
+## 12. 横断⑦ メトリクスと可観測性
+
+本章は「各層がどの metric/counter を生成し、どう集約され、どの backend へ出力されるか」を横断的に整理する。
+中心成果物は §12.6 の **カウンタ索引表（症状 → 見る counter → 出どころ → 何がわかるか）** である。
+
+> **metrics と error_notifier の境界**: 本章の metrics は **周期的な観測**（`report_period` ごとに集計してから出力、
+> §12.3）である。一方 §11.3 の `error_notifier`（late/overflow の即時通知）は **イベント駆動の障害通知**で、
+> スロット粒度で即座に上がる別系統である。両者は出どころが重なる場合があるが（例: OFH の late）、metrics は
+> 「期間内の集計値」、error_notifier は「その瞬間のイベント」を表す。OFH の送受信窓 counter は §8.5 で詳述済みの
+> ため本章では再掲せず、索引（§12.6）から参照する。
+
+### 12.1 metric 生成点（各層）
+
+各層は `*_metrics` 構造体を持ち、collector/notifier 経由で値を出す。主な生成点（構造体と path）:
+
+| 層 | metric 構造体 | path |
+|---|---|---|
+| Scheduler | `scheduler_ue_metrics` / `scheduler_cell_metrics` / `scheduler_metrics_report` | `include/ocudu/scheduler/scheduler_metrics.h:23,119,175` |
+| MAC | `mac_dl_cell_metric_report` / `mac_metric_report` | `include/ocudu/mac/mac_metrics.h:15,61` |
+| RLC | `rlc_metrics`（`rlc_tx_metrics` + `rlc_rx_metrics`） | `include/ocudu/rlc/{rlc_metrics.h:16, rlc_tx_metrics.h, rlc_rx_metrics.h:42}` |
+| PDCP | `pdcp_{tx,rx}_metrics_container` | `include/ocudu/pdcp/{pdcp_tx_metrics.h:23, pdcp_rx_metrics.h:23}`（container は `pdcp_entity.h:17`） |
+| F1-U (CU-UP) | `f1u_{tx,rx}_metrics_container` | `include/ocudu/f1u/cu_up/{f1u_tx_metrics.h:21, f1u_rx_metrics.h:21}`（container は `f1u_bearer.h:17`） |
+| CU-CP | `cu_cp_metrics_report` / `rrc_du_metrics` / `ngap_metrics` / `mobility_management_metrics` | `include/ocudu/cu_cp/cu_cp_metrics_notifier.h:19`、`include/ocudu/rrc/rrc_metrics.h:111`、`include/ocudu/ngap/{ngap_metrics.h:117, mobility_management_metrics.h:10}` |
+| CU-UP (E1AP) | `e1ap_cu_up_metrics_container` | `include/ocudu/e1ap/cu_up/e1ap_cu_up_metrics.h:17` |
+| RU / OFH | `ru_metrics` / `ofh_*_metrics`（受信窓 counter は §8.5） | `include/ocudu/ru/ru_metrics.h`、`include/ocudu/ofh/{ofh_metrics.h, receiver/ofh_receiver_metrics.h, transmitter/ofh_transmitter_metrics.h, timing/ofh_timing_metrics.h}` |
+| PHY upper | `upper_phy_metrics` / `phy_metrics_reports` | `include/ocudu/phy/upper/upper_phy_metrics.h:317`、`include/ocudu/phy/metrics/phy_metrics_reports.h` |
+| executor/worker | `executor_metrics` / `executor_metrics_channel` | `include/ocudu/support/executors/metrics/{executor_metrics.h:13, executor_metrics_channel.h:19}` |
+| resource usage | `resource_usage_metrics`（cpu/memory/power） | `include/ocudu/support/resource_usage/resource_usage_metrics.h:23` |
+
+### 12.2 集約フレームワーク
+
+App-services のフレームワーク（`apps/services/metrics/`）が層横断で集約する。
+
+- **`metrics_producer`**（各層ラッパ）: `on_new_report_period()` で蓄積 metric を `metrics_set` として吐く。
+- **`periodic_metrics_report_controller`**（`periodic_metrics_report_controller.h:18`）: unique timer ＋ `report_period`
+  を持ち、周期ごとに `report_metrics()`（`:65`）が timer を再 arm して各 producer の `on_new_report_period()`
+  を呼ぶ（`:77-79`）。`report_period==0` なら start/stop とも no-op（`:39,53`）。
+- **`metrics_manager`**（`metrics_manager.h:20`、`metrics_notifier` 実装）: producer と consumer を登録し、
+  `on_new_metric(metrics_set)`（`:72`）で当該 metric を登録済み consumer 群へ fan-out する（`:85`）。
+- **`metrics_consumer`**（出力 backend、§12.3）: log / JSON / STDOUT 各形式で emit。
+
+> 注: 一部の producer は `on_new_report_period()` が空実装で（例: `cu_cp_metrics_producer.h:23`、
+> `flexible_o_du_metrics_producer.h:24`）、その層は controller の pull ではなく**内部の独自タイミングで push** する。
+> つまり pull（周期 controller）と push（層内タイマ/イベント）が混在する。
+
+### 12.3 出力 backend
+
+`metrics_config`（`apps/helpers/metrics/metrics_config.h:14-23`）の `enable_log_metrics` / `enable_json_metrics` /
+`enable_verbose` で有効化する。実在する emitter は次の通り。
+
+| backend | 形式・トランスポート | 実体 | 有効化 |
+|---|---|---|---|
+| **LOG** | ログ行 | 各層 `*_metrics_consumers.{h,cpp}`（log 形式） | `enable_log_metrics` |
+| **JSON** | JSON 文字列 | `apps/helpers/metrics/json_generators/{du_high,cu_cp,cu_up,ru}/` ＋ json consumer | `enable_json_metrics` |
+| **Remote（JSON push）** | **WebSocket**（`remote_server` は "WebSocket server"、`remote_server.h:32-33`）。`remote_server_metrics_gateway::send(std::string)`（`remote_server_metrics_gateway.h:19`）で push | `apps/services/remote_control/{remote_server.cpp, remote_server_metrics_gateway.h}` | `remote_control_appconfig`（`enabled`、`bind_addr="127.0.0.1"`、`port=8001`、`remote_control_appconfig.h:14-16`） |
+| **STDOUT（対話）** | cmdline 表示 | `apps/services/cmdline/stdout_metrics_command.h` | cmdline コマンド |
+| **E2 / E2SM-KPM** | ASN.1（RIC へ） | `lib/e2/e2sm/e2sm_kpm/`（§12.4） | E2 agent 有効時 |
+
+> **Prometheus は実装されていない**（ネガティブ根拠）。`prometheus` / `exporter` / `scrape` / `openmetrics` を
+> `apps lib include` 全体で grep してヒット **0 件**。OCUDU dev には Prometheus exporter / scrape endpoint は無く、
+> 外部監視は JSON（WebSocket remote）か E2/KPM 経由となる。
+
+### 12.4 E2 / E2SM-KPM 経由の metric 公開
+
+E2SM-KPM による RIC 向け metric 公開は **実装あり**（在の根拠を以下に示す）。E2SM-RC / E2SM-CCC も併存
+（`lib/e2/e2sm/{e2sm_rc, e2sm_ccc}`）。
+
+- **(a) meas provider（DU/CU）**: `e2sm_kpm_du_meas_provider_impl`（`lib/e2/e2sm/e2sm_kpm/e2sm_kpm_du_meas_provider_impl.{h,cpp}`）、
+  `e2sm_kpm_cu_meas_provider_impl`（同 `e2sm_kpm_cu_meas_provider_impl.{h,cpp}`）。各 metric を getter 関数に紐づけた
+  `supported_metrics` map を持つ（DU: `cpp:14-89`、CU: `cpp:16-49,219-223`）。connector は
+  `include/ocudu/e2/{e2_du_metrics_connector.h, e2_cu_metrics_connector.h}`。
+- **(b) report service（周期報告の駆動側）**: `e2sm_kpm_report_service_base`（`e2sm_kpm_report_service_impl.h:16`）。
+  `collect_measurements()`（`:25`）と `granul_period`（`:38`）を持ち、style 1〜5 を実装。RIC の subscription に従い
+  granularity period ごとに meas provider から値を収集して報告する。
+- **(c) 公開される measurement — 限定的な curated subset**: 仕様カタログ自体は **3GPP TS 28.552 の 279 件 ＋
+  O-RAN の 9 件**（`e2sm_kpm_metric_defs.h:65,68`、`get_e2sm_kpm_28_552_metrics()`）と大きいが、meas provider が
+  **実際にサポートするのはその部分集合のみ**:
+  - **DU 側（約 18 件）**: `CQI` / `RSRP` / `RSRQ`、`RRU.PrbAvailDl/Ul`・`RRU.PrbUsedDl/Ul`・`RRU.PrbTotDl/Ul`、
+    `DRB.RlcSduDelayDl`・`DRB.UEThpDl/Ul`・`DRB.RlcPacketDropRateDl`・`DRB.RlcSduTransmittedVolumeDL/UL`、
+    `DRB.AirIfDelayUl`・`DRB.RlcDelayUl`、`RACH.PreambleDedCell`（`e2sm_kpm_du_meas_provider_impl.cpp:15-89`）。
+  - **CU 側（約 11 件）**: `RRC.ConnMean`・`RRC.ConnMax` ほか（`e2sm_kpm_cu_meas_provider_impl.cpp:16-49,219-223`）。
+  - 構築時に `check_e2sm_kpm_metrics_definitions()` で上記カタログとの整合を検証する（`du_meas_provider_impl.cpp:92-93`）。
+  - → **「E2SM-KPM の枠組みは在るが、公開される measurement は主要 KPI（CQI/RSRP、PRB 使用率、DRB スループット/遅延/
+    ドロップ、RRC 接続数、RACH）に限定された curated subset」**であり、279 件全部が出るわけではない。
+
+> **内部 metric との関係**: E2-KPM の getter（`get_cqi` / `get_prb_used_dl` / `get_drb_dl_mean_throughput` 等）は、
+> LOG/JSON consumer が読むのと **同じ内部 metric 源**（scheduler / RLC 等）を読む。すなわち **E2-KPM で外部公開される
+> KPM は内部 metric の subset を RIC 向けに再公開したもの**であり、別系統の計測ではない。§12.6 索引表で E2-KPM
+> 公開対象の counter には「E2-KPM」印を付す。
+
+### 12.5 config キー一覧
+
+| キー | 既定 | 箇所 |
+|---|---|---|
+| `enable_log_metrics` | false | `apps/helpers/metrics/metrics_config.h:15` |
+| `enable_json_metrics` | false | `:18` |
+| `enable_verbose` | false | `:20` |
+| `cu_cp_report_period`（CU-CP、ms） | 1000 | `apps/units/o_cu_cp/cu_cp/cu_cp_unit_config.h:363`（`--cu_cp_report_period`） |
+| DU/RU/CU-UP の report period（`metrics_period_ms` 等、各 unit） | 各 unit | 各 unit の metrics config（layer ごとに別キー） |
+| remote `enabled` / `bind_addr` / `port` | false / `127.0.0.1` / `8001` | `apps/services/remote_control/remote_control_appconfig.h:14-16` |
+
+layer 選択（どの層の metrics を出すか）は各 unit の metrics 設定（`enable_*` フラグ群）で行う。`report_period==0` は
+当該 controller を無効化する（§12.2）。
+
+### 12.6 カウンタ索引表（症状 → 見る counter → 出どころ → わかること）★
+
+> OFH の late/drop（受信窓 counter）と RT timing 遅延は §8.5 / §8.2 で詳述済みのため、ここでは参照に留める。
+> 「E2-KPM」列に ✓ がある counter は RIC へも公開される（§12.4）。
+
+| 症状 / 観点 | 見る counter（field） | 出どころ path | わかること | E2-KPM |
+|---|---|---|---|---|
+| **DL BLER** | `scheduler_ue_metrics::dl_nof_ok` / `dl_nof_nok` | `scheduler_metrics.h:38,40` | DL HARQ-ACK/NACK 比＝DL ブロック誤り率 | |
+| **UL BLER** | `scheduler_ue_metrics::ul_nof_ok` / `ul_nof_nok` | `scheduler_metrics.h:55,57` | UL CRC 成否＝UL ブロック誤り率 | |
+| **PHY 復号 BLER / 反復** | `pusch_processing_metrics::decoding_bler`、LDPC `avg_nof_iterations` | `upper_phy_metrics.h:243,26` | upper PHY の PUSCH 復号失敗率・LDPC 反復数（早期停止効果） | |
+| **MCS / CQI / OLLA** | `dl_mcs` / `ul_mcs` / `cqi_stats` / `last_dl_olla` / `last_ul_olla` | `scheduler_metrics.h:31,48,96,85,86` | リンクアダプテーション挙動・OLLA オフセット（§9.A.3） | CQI ✓ |
+| **無線品質** | `pusch_snr_db` / `pusch_rsrp_db` / `pucch_snr_db` | `scheduler_metrics.h:42,44,46` | UL SINR・RSRP | RSRP/RSRQ ✓ |
+| **HARQ 再送（RLC AM）** | `rlc_am_tx_metrics_lower::num_retx_pdus` / `num_retx_pdu_bytes` | `rlc_tx_metrics.h:72,73` | RLC AM 再送量 | |
+| **late-HARQ で grant 落ち** | `scheduler_cell_metrics::nof_failed_pdsch_allocs_late_harqs` / `nof_failed_pusch_allocs_late_harqs` | `scheduler_metrics.h:154,156` | HARQ が間に合わず割当失敗した回数 | |
+| **PRACH / RACH** | `nof_prach_preambles` / `avg_prach_delay_slots` / `nof_msg3_ok` / `nof_msg3_nok` | `scheduler_metrics.h:138,152,148,150` | プリアンブル検出数・Msg3 成否（RACH 成功率） | `RACH.PreambleDedCell` ✓ |
+| **接続 UE 数** | `cu_cp_metrics_report::ues`（size）、`rrc_du_metrics::mean/max_nof_rrc_connections` | `cu_cp_metrics_notifier.h:43`、`rrc_metrics.h:113,114` | RRC 接続中 UE 数（容量・輻輳） | `RRC.ConnMean/Max` ✓ |
+| **RRC 接続成功率** | `attempted/successful/failed_rrc_connection_establishments`（cause 別） | `rrc_metrics.h:118-120` | 接続確立の成功/失敗（原因別） | |
+| **PDU session 成否** | `ngap_metrics::pdu_session_metrics`（req/succ/fail、cause 別） | `ngap_metrics.h:118,108` | PDU session セットアップ成功率 | |
+| **ハンドオーバ** | `mobility_management_metrics::nof_*_handover_*` | `mobility_management_metrics.h:12-17` | HO 準備/実行の成否 | |
+| **DL/UL スループット** | `dl_brate_kbps` / `ul_brate_kbps`（MAC）、`DRB.UEThp*`（E2） | `scheduler_metrics.h:36,53` | UE 実効スループット | `DRB.UEThpDl/Ul` ✓ |
+| **RLC drop** | `rlc_rx_metrics::num_lost_pdus`、`rlc_tx_metrics_higher::num_dropped_sdus` | `rlc_rx_metrics.h:50`、`rlc_tx_metrics.h:19` | RLC の喪失/キュー溢れ廃棄 | `DRB.RlcPacketDropRateDl` ✓ |
+| **PDCP drop / integrity** | `pdcp_rx::num_dropped_pdus` / `num_integrity_failed_pdus`、`pdcp_tx::num_dropped_sdus` / `num_discard_timeouts` | `pdcp_rx_metrics.h:28,33`、`pdcp_tx_metrics.h:26,29` | PDCP 廃棄・完全性失敗・discard timeout | |
+| **F1-U drop** | `f1u_rx::num_dropped_pdus`、`f1u_tx::num_dropped_sdus` | `f1u_rx_metrics.h:23`、`f1u_tx_metrics.h:24` | F1-U の廃棄 | |
+| **PRB 使用率** | `tot_pdsch_prbs_used` / `tot_pusch_prbs_used`、`RRU.Prb*`（E2） | `scheduler_metrics.h:33,50` | 無線リソース使用率 | `RRU.PrbUsed/Tot/Avail*` ✓ |
+| **scheduler 飽和/エラー** | `nof_error_indications` / `nof_failed_pdcch_allocs` / `nof_failed_uci_allocs` / `nof_filtered_events` | `scheduler_metrics.h:162,144,146,158` | error indication・割当失敗・イベント溢れ（§11.3 と連動） | |
+| **scheduler レイテンシ** | `average/max_decision_latency` / `latency_histogram` | `scheduler_metrics.h:163-166` | スケジューラ判断遅延 | |
+| **MAC レイテンシ / CPU** | `mac_dl_cell_metric_report::{sched_latency, dl_tti_req_latency, …}`、`count_{voluntary,involuntary}_context_switches` | `mac_metrics.h:32-47,49,51` | MAC 各段の遅延・コンテキストスイッチ（CPU 逼迫） | |
+| **executor / strand 飽和** | `executor_metrics::{nof_defers, avg/max_enqueue_latency_us, avg/max_task_us, cpu_load}` | `executor_metrics.h:19,21,23,25,27,31` | キュー詰まり・enqueue 遅延・CPU 負荷（§10 のスケール律速） | |
+| **プロセス CPU/メモリ** | `resource_usage_metrics::{cpu_stats.cpu_usage_percentage, memory_stats.memory_usage, power_usage_watts}` | `resource_usage_metrics.h:13,19,26` | アプリ全体の CPU/メモリ/電力 | |
+| **遅延（DRB エアIF）** | `DRB.AirIfDelayUl` / `DRB.RlcDelayUl` / `DRB.RlcSduDelayDl` | `e2sm_kpm_du_meas_provider_impl.cpp:78,82,52` ／ RLC latency（`rlc_*_metrics.h`） | UL エアIF/RLC 遅延 | ✓ |
+| **OFH late/drop** | §8.5 参照（`ofh_receiver/transmitter_metrics`） | §8.5 | 受信/送信窓ミス・破棄（計数≠破棄） | |
+| **RT timing 遅延** | §8.2 参照（`ofh_timing_metrics` skipped symbols） | §8.2 | タイミングスレッド遅延 | |
+
+```mermaid
+flowchart LR
+  subgraph SRC["各層 metric source + producer"]
+    SCH["scheduler / mac / phy"]
+    L2["rlc / pdcp / f1u"]
+    CP["cu_cp / rrc / ngap"]
+    EX["executor / rusage"]
+    RU2["ru / ofh (§8.5)"]
+  end
+  PER["periodic_metrics_report_controller<br/>(timer, report_period)"] -->|"on_new_report_period (pull)"| SRC
+  SRC -->|"metrics_set / metrics_notifier"| MGR["metrics_manager<br/>(on_new_metric -> consumers)"]
+  MGR --> LOG["LOG consumer (enable_log_metrics)"]
+  MGR --> JSON["JSON consumer (enable_json_metrics)"]
+  JSON --> WS["remote_server WebSocket<br/>(bind_addr:port, 既定 127.0.0.1:8001)"]
+  MGR --> ST["STDOUT cmdline (stdout_metrics_command)"]
+  SRC -.->|"getter で subset を読む"| E2["E2SM-KPM meas provider (DU/CU)"]
+  E2 --> RIC["near-RT RIC (E2)"]
+```
+
+---
+
+## 13. 未確認事項一覧
 
 本書の作成過程で、実ツリーから確証を得られなかった事項を以下にまとめる。
 
@@ -2101,6 +2259,12 @@ heartbeat interval）。プロセス健全性の能動監視は、§11.2(e) の 
   の `// TODO`）。ack 受領後に追加の UE アクションを取るかは未確認（コードは明示的に処理していない）。
 - （§11.3 Style 2）F1AP DU 側で **受信した** ErrorIndication に対する能動ハンドラは PDU dispatch 内に見当たらず、
   log 止まりと推測されるが、受信 ErrorIndication への具体アクションの有無は未確認。
+- （§12.5）`report_period` の config キーは CU-CP の `cu_cp_report_period`（既定 1000ms）を firsthand 確認した
+  のみ。DU-high / RU / CU-UP の各 report period の正確なキー名は layer ごとに別で、全件は未照合。
+- （§12.4）E2SM-KPM の supported metrics は DU 側 約18件・CU 側 約11件を確認したが、CU 側の全 `emplace` の網羅と、
+  各 getter が読む内部 metric 源の完全な対応付けは未照合（公開対象が「限定的 subset」である事実は確定）。
+- （§12.2）metric producer の pull（`on_new_report_period` 実装）／push（層内独自タイミング）の混在は、
+  `cu_cp` / `flexible_o_du` の producer が空実装＝push であることを確認した範囲で、全層の分類は未照合。
 - 本書の `path:line` は作業ツリー（コミット `7a2b9e3`）時点のもの。以後の編集で行番号がずれる
   可能性がある。
 
@@ -2180,6 +2344,19 @@ heartbeat interval）。プロセス健全性の能動監視は、§11.2(e) の 
   `lib/cu_up/routines/cu_up_e1_connection_loss_routine.cpp`, `lib/f1ap/du/f1ap_du_connection_handler.cpp`,
   `lib/{f1ap/gateways/f1c_local_connector_factory.cpp, e1ap/gateways/e1_local_connector_factory.cpp}`,
   `lib/gateways/sctp_socket.cpp`, `apps/helpers/network/sctp_appconfig.h`
+- 横断（メトリクス・可観測性）: フレームワーク `apps/services/metrics/{metrics_manager.h, metrics_producer.h,
+  metrics_consumer.h, metrics_notifier.h, periodic_metrics_report_controller.h, metrics_config.h}`,
+  `apps/helpers/metrics/{metrics_config.h, json_generators/}`;
+  各層 metric `include/ocudu/scheduler/scheduler_metrics.h`, `include/ocudu/mac/mac_metrics.h`,
+  `include/ocudu/rlc/{rlc_metrics.h, rlc_tx_metrics.h, rlc_rx_metrics.h}`,
+  `include/ocudu/pdcp/{pdcp_tx_metrics.h, pdcp_rx_metrics.h}`, `include/ocudu/f1u/cu_up/{f1u_tx_metrics.h, f1u_rx_metrics.h}`,
+  `include/ocudu/cu_cp/cu_cp_metrics_notifier.h`, `include/ocudu/rrc/rrc_metrics.h`,
+  `include/ocudu/ngap/{ngap_metrics.h, mobility_management_metrics.h}`, `include/ocudu/e1ap/cu_up/e1ap_cu_up_metrics.h`,
+  `include/ocudu/phy/upper/upper_phy_metrics.h`, `include/ocudu/support/executors/metrics/executor_metrics.h`,
+  `include/ocudu/support/resource_usage/resource_usage_metrics.h`;
+  backend `apps/services/{remote_control/{remote_server.h, remote_server_metrics_gateway.h, remote_control_appconfig.h}, cmdline/stdout_metrics_command.h}`;
+  E2-KPM `lib/e2/e2sm/e2sm_kpm/{e2sm_kpm_du_meas_provider_impl.cpp, e2sm_kpm_cu_meas_provider_impl.cpp, e2sm_kpm_report_service_impl.h, e2sm_kpm_metric_defs.h}`,
+  `include/ocudu/e2/{e2_du_metrics_connector.h, e2_cu_metrics_connector.h}`
 - 横断（OFH timing/deadline）: タイミング `include/ocudu/ofh/timing/{slot_symbol_point.h,
   ofh_ota_symbol_boundary_notifier_manager.h}`, `lib/ofh/timing/realtime_timing_worker.{h,cpp}`,
   `lib/ru/ofh/ru_ofh_impl.cpp`; 受信側締め切り `lib/ofh/receiver/{ofh_rx_window_checker.{h,cpp},
