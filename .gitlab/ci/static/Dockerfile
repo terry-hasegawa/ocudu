@@ -17,6 +17,7 @@ RUN apt-get update \
     ca-certificates \
     gawk \
     yamllint \
+    file \
     pipx \
     && apt-get autoremove \
     && apt-get clean \
@@ -24,7 +25,7 @@ RUN apt-get update \
 
 ENV PATH="/root/.local/bin:${PATH}"
 ENV PIP_NO_CACHE_DIR=1
-RUN pipx install reuse
+RUN pipx install "reuse<7"
 
 ADD hex2lowercase.sh \
     include-guards-check.sh \
