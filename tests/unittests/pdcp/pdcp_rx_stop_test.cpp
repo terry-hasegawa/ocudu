@@ -11,8 +11,11 @@ using namespace ocudu;
 /// Test stopping PDCP RX entities when no PDUs are present.
 TEST_P(pdcp_rx_stop_test, stop_when_there_are_no_pending_pdus)
 {
-  init(std::get<pdcp_sn_size>(GetParam()), std::get<unsigned>(GetParam()), std::get<rohc_test_params>(GetParam()));
-  ocudu::test_delimit_logger delimiter("Normal stop test. SN_SIZE={} ", sn_size);
+  set_sn_size(std::get<pdcp_sn_size>(GetParam()));
+  set_algo(std::get<unsigned>(GetParam()));
+  set_header_compression(std::get<rohc_test_params>(GetParam()).config);
+  init();
+  ocudu::test_delimit_logger delimiter("Normal stop test. SN_SIZE={} ", config.sn_size);
 
   pdcp_rx->configure_security(sec_cfg, security::integrity_enabled::on, security::ciphering_enabled::on);
 
@@ -30,8 +33,11 @@ TEST_P(pdcp_rx_stop_test, stop_when_there_are_no_pending_pdus)
 /// Test stopping PDCP RX entities when PDUs are present.
 TEST_P(pdcp_rx_stop_test, stop_when_there_are_pending_pdus)
 {
-  init(std::get<pdcp_sn_size>(GetParam()), std::get<unsigned>(GetParam()), std::get<rohc_test_params>(GetParam()));
-  ocudu::test_delimit_logger delimiter("Normal stop test. SN_SIZE={} ", sn_size);
+  set_sn_size(std::get<pdcp_sn_size>(GetParam()));
+  set_algo(std::get<unsigned>(GetParam()));
+  set_header_compression(std::get<rohc_test_params>(GetParam()).config);
+  init();
+  ocudu::test_delimit_logger delimiter("Normal stop test. SN_SIZE={} ", config.sn_size);
 
   pdcp_rx->configure_security(sec_cfg, security::integrity_enabled::on, security::ciphering_enabled::on);
 
@@ -84,8 +90,11 @@ TEST_P(pdcp_rx_stop_test, stop_when_there_are_pending_pdus)
 /// Test stopping PDCP RX entities when PDUs are present.
 TEST_P(pdcp_rx_stop_test, stop_when_integrity_failed)
 {
-  init(std::get<pdcp_sn_size>(GetParam()), std::get<unsigned>(GetParam()), std::get<rohc_test_params>(GetParam()));
-  ocudu::test_delimit_logger delimiter("Normal stop test. SN_SIZE={} ", sn_size);
+  set_sn_size(std::get<pdcp_sn_size>(GetParam()));
+  set_algo(std::get<unsigned>(GetParam()));
+  set_header_compression(std::get<rohc_test_params>(GetParam()).config);
+  init();
+  ocudu::test_delimit_logger delimiter("Normal stop test. SN_SIZE={} ", config.sn_size);
 
   pdcp_rx->configure_security(sec_cfg, security::integrity_enabled::on, security::ciphering_enabled::on);
 

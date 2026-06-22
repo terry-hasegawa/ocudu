@@ -15,10 +15,13 @@ using namespace ocudu;
 TEST_P(pdcp_rx_status_report_test, build_status_report)
 {
   uint32_t count = 262143;
-  init(std::get<pdcp_sn_size>(GetParam()), std::get<unsigned>(GetParam()), std::get<rohc_test_params>(GetParam()));
+  set_sn_size(std::get<pdcp_sn_size>(GetParam()));
+  set_algo(std::get<unsigned>(GetParam()));
+  set_header_compression(std::get<rohc_test_params>(GetParam()).config);
+  init();
 
   ocudu::test_delimit_logger delimiter(
-      "RX build status report test, no t-Reordering. SN_SIZE={} COUNT=[{}, {}]", sn_size, count + 1, count);
+      "RX build status report test, no t-Reordering. SN_SIZE={} COUNT=[{}, {}]", config.sn_size, count + 1, count);
 
   pdcp_rx_state init_state = {.rx_next = count, .rx_deliv = count, .rx_reord = 0};
   pdcp_rx->set_state(init_state);
@@ -96,8 +99,12 @@ TEST_P(pdcp_rx_status_report_test, build_truncated_status_report)
   uint32_t count = 262143;
 
   ocudu::test_delimit_logger delimiter(
-      "RX build status report test, no t-Reordering. SN_SIZE={} COUNT=[{}, {}]", sn_size, count + 1, count);
-  init(std::get<pdcp_sn_size>(GetParam()), std::get<unsigned>(GetParam()), std::get<rohc_test_params>(GetParam()));
+      "RX build status report test, no t-Reordering. SN_SIZE={} COUNT=[{}, {}]", config.sn_size, count + 1, count);
+
+  set_sn_size(std::get<pdcp_sn_size>(GetParam()));
+  set_algo(std::get<unsigned>(GetParam()));
+  set_header_compression(std::get<rohc_test_params>(GetParam()).config);
+  init();
 
   pdcp_rx_state init_state = {.rx_next = count, .rx_deliv = count, .rx_reord = 0};
   pdcp_rx->set_state(init_state);
@@ -155,7 +162,10 @@ TEST_P(pdcp_rx_status_report_test, build_truncated_status_report)
 /// Test reception and forwarding of PDCP status report
 TEST_P(pdcp_rx_status_report_test, rx_status_report)
 {
-  init(std::get<pdcp_sn_size>(GetParam()), std::get<unsigned>(GetParam()), std::get<rohc_test_params>(GetParam()));
+  set_sn_size(std::get<pdcp_sn_size>(GetParam()));
+  set_algo(std::get<unsigned>(GetParam()));
+  set_header_compression(std::get<rohc_test_params>(GetParam()).config);
+  init();
 
   pdcp_rx->configure_security(sec_cfg, security::integrity_enabled::on, security::ciphering_enabled::on);
 
@@ -193,7 +203,10 @@ TEST_P(pdcp_rx_status_report_test, rx_status_report)
 /// Test reception and forwarding of PDCP status report
 TEST_P(pdcp_rx_status_report_test, rx_status_report_with_invalid_cpt)
 {
-  init(std::get<pdcp_sn_size>(GetParam()), std::get<unsigned>(GetParam()), std::get<rohc_test_params>(GetParam()));
+  set_sn_size(std::get<pdcp_sn_size>(GetParam()));
+  set_algo(std::get<unsigned>(GetParam()));
+  set_header_compression(std::get<rohc_test_params>(GetParam()).config);
+  init();
 
   pdcp_rx->configure_security(sec_cfg, security::integrity_enabled::on, security::ciphering_enabled::on);
 

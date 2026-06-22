@@ -150,8 +150,11 @@ TEST_F(pdcp_rx_metrics_container_test, values)
 TEST_P(pdcp_rx_metrics_test, sdu_pdu_metrics)
 {
   auto test_metrics = [this](uint32_t count) {
-    init(std::get<pdcp_sn_size>(GetParam()), std::get<unsigned>(GetParam()), std::get<rohc_test_params>(GetParam()));
-    ocudu::test_delimit_logger delimiter("RX PDU/SDU metrics tests. SN_SIZE={} COUNT={}", sn_size, count);
+    set_sn_size(std::get<pdcp_sn_size>(GetParam()));
+    set_algo(std::get<unsigned>(GetParam()));
+    set_header_compression(std::get<rohc_test_params>(GetParam()).config);
+    init();
+    ocudu::test_delimit_logger delimiter("RX PDU/SDU metrics tests. SN_SIZE={} COUNT={}", config.sn_size, count);
 
     pdcp_rx->configure_security(sec_cfg, security::integrity_enabled::on, security::ciphering_enabled::on);
 
@@ -204,10 +207,14 @@ TEST_P(pdcp_rx_metrics_test, sdu_pdu_metrics)
 /// integrity failures.
 TEST_P(pdcp_rx_metrics_test, integrity_metrics)
 {
-  init(std::get<pdcp_sn_size>(GetParam()), std::get<unsigned>(GetParam()), std::get<rohc_test_params>(GetParam()));
+  set_sn_size(std::get<pdcp_sn_size>(GetParam()));
+  set_algo(std::get<unsigned>(GetParam()));
+  set_header_compression(std::get<rohc_test_params>(GetParam()).config);
+  init();
 
   auto test_metrics = [this](uint32_t count) {
-    ocudu::test_delimit_logger delimiter("RX PDU with bad integrity metrics test. SN_SIZE={} COUNT={}", sn_size, count);
+    ocudu::test_delimit_logger delimiter(
+        "RX PDU with bad integrity metrics test. SN_SIZE={} COUNT={}", config.sn_size, count);
 
     pdcp_rx->configure_security(sec_cfg, security::integrity_enabled::on, security::ciphering_enabled::on);
 
@@ -261,9 +268,12 @@ TEST_P(pdcp_rx_metrics_test, integrity_metrics)
 TEST_P(pdcp_rx_metrics_test, rx_reordering_timer)
 {
   auto test_rx_t_reorder = [this](uint32_t count) {
-    init(std::get<pdcp_sn_size>(GetParam()), std::get<unsigned>(GetParam()), std::get<rohc_test_params>(GetParam()));
+    set_sn_size(std::get<pdcp_sn_size>(GetParam()));
+    set_algo(std::get<unsigned>(GetParam()));
+    set_header_compression(std::get<rohc_test_params>(GetParam()).config);
+    init();
     ocudu::test_delimit_logger delimiter(
-        "t-Reordering expiration metrics test. SN_SIZE={} COUNT=[{}, {}]", sn_size, count + 1, count);
+        "t-Reordering expiration metrics test. SN_SIZE={} COUNT=[{}, {}]", config.sn_size, count + 1, count);
 
     pdcp_rx->configure_security(sec_cfg, security::integrity_enabled::on, security::ciphering_enabled::on);
 

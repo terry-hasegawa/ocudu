@@ -12,10 +12,12 @@ using namespace ocudu;
 /// Test SRB reestablishment
 TEST_P(pdcp_rx_reestablish_test_srb, when_srb_reestablish_then_sdus_dropped)
 {
-  init(std::get<pdcp_sn_size>(GetParam()),
-       std::get<unsigned>(GetParam()),
-       std::get<rohc_test_params>(GetParam()),
-       pdcp_rb_type::srb);
+  set_sn_size(std::get<pdcp_sn_size>(GetParam()));
+  set_algo(std::get<unsigned>(GetParam()));
+  set_header_compression(std::get<rohc_test_params>(GetParam()).config);
+  set_rb_type(pdcp_rb_type::srb);
+  init();
+
   EXPECT_EQ(pdcp_rohc_factory->get_nof_compressors(), 0);
   EXPECT_EQ(pdcp_rohc_factory->get_nof_decompressors(), 0);
   uint32_t count = 0;
@@ -84,12 +86,14 @@ TEST_P(pdcp_rx_reestablish_test_srb, when_srb_reestablish_then_sdus_dropped)
 /// Test DRB UM reestablishment
 TEST_P(pdcp_rx_reestablish_test, when_drb_um_reestablish_then_pdus_forwared)
 {
-  init(std::get<pdcp_sn_size>(GetParam()),
-       std::get<unsigned>(GetParam()),
-       std::get<rohc_test_params>(GetParam()),
-       pdcp_rb_type::drb,
-       pdcp_rlc_mode::um);
-  unsigned exp_nof_decompressors = header_compression.has_value() ? 1 : 0;
+  set_sn_size(std::get<pdcp_sn_size>(GetParam()));
+  set_algo(std::get<unsigned>(GetParam()));
+  set_header_compression(std::get<rohc_test_params>(GetParam()).config);
+  set_rb_type(pdcp_rb_type::drb);
+  set_rlc_mode(pdcp_rlc_mode::um);
+  init();
+
+  unsigned exp_nof_decompressors = config.header_compression.has_value() ? 1 : 0;
   EXPECT_EQ(pdcp_rohc_factory->get_nof_compressors(), 0);
   EXPECT_EQ(pdcp_rohc_factory->get_nof_decompressors(), exp_nof_decompressors);
   uint32_t count = 0;
@@ -144,7 +148,7 @@ TEST_P(pdcp_rx_reestablish_test, when_drb_um_reestablish_then_pdus_forwared)
   // Check re-ordering timer was stopped
   ASSERT_EQ(false, pdcp_rx->is_reordering_timer_running());
 
-  exp_nof_decompressors = header_compression.has_value() ? 2 : 0;
+  exp_nof_decompressors = config.header_compression.has_value() ? 2 : 0;
   EXPECT_EQ(pdcp_rohc_factory->get_nof_compressors(), 0);
   EXPECT_EQ(pdcp_rohc_factory->get_nof_decompressors(), exp_nof_decompressors);
 }
@@ -152,12 +156,14 @@ TEST_P(pdcp_rx_reestablish_test, when_drb_um_reestablish_then_pdus_forwared)
 /// Test DRB AM reestablishment
 TEST_P(pdcp_rx_reestablish_test, when_drb_am_reestablish_then_state_preserved)
 {
-  init(std::get<pdcp_sn_size>(GetParam()),
-       std::get<unsigned>(GetParam()),
-       std::get<rohc_test_params>(GetParam()),
-       pdcp_rb_type::drb,
-       pdcp_rlc_mode::am);
-  unsigned exp_nof_decompressors = header_compression.has_value() ? 1 : 0;
+  set_sn_size(std::get<pdcp_sn_size>(GetParam()));
+  set_algo(std::get<unsigned>(GetParam()));
+  set_header_compression(std::get<rohc_test_params>(GetParam()).config);
+  set_rb_type(pdcp_rb_type::drb);
+  set_rlc_mode(pdcp_rlc_mode::am);
+  init();
+
+  unsigned exp_nof_decompressors = config.header_compression.has_value() ? 1 : 0;
   EXPECT_EQ(pdcp_rohc_factory->get_nof_compressors(), 0);
   EXPECT_EQ(pdcp_rohc_factory->get_nof_decompressors(), exp_nof_decompressors);
 
@@ -222,7 +228,7 @@ TEST_P(pdcp_rx_reestablish_test, when_drb_am_reestablish_then_state_preserved)
   worker.run_pending_tasks();
   ASSERT_EQ(3, test_frame->sdu_queue.size());
 
-  exp_nof_decompressors = header_compression.has_value() ? 2 : 0;
+  exp_nof_decompressors = config.header_compression.has_value() ? 2 : 0;
   EXPECT_EQ(pdcp_rohc_factory->get_nof_compressors(), 0);
   EXPECT_EQ(pdcp_rohc_factory->get_nof_decompressors(), exp_nof_decompressors);
 }

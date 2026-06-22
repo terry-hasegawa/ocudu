@@ -111,35 +111,44 @@ protected:
   {
   }
 
-  /// \brief Initializes fixture according to size sequence number size
-  /// \param sn_size_ size of the sequence number
-  void init(pdcp_sn_size      sn_size_     = pdcp_sn_size::size12bits,
-            unsigned          algo_        = 2,
-            rohc_test_params  rohc_params  = cfg_rohc_disabled,
-            pdcp_rb_type      rb_type_     = pdcp_rb_type::drb,
-            pdcp_rlc_mode     rlc_mode_    = pdcp_rlc_mode::am,
-            pdcp_t_reordering t_reordering = pdcp_t_reordering::ms10,
-            pdcp_max_count    max_count    = {pdcp_rx_default_max_count_notify, pdcp_rx_default_max_count_hard})
+  void set_algo(unsigned algo_) { algo = algo_; }
+  void set_sn_size(pdcp_sn_size sn_size) { config.sn_size = sn_size; }
+  void set_rb_type(pdcp_rb_type rb_type) { config.rb_type = rb_type; }
+  void set_rlc_mode(pdcp_rlc_mode rlc_mode) { config.rlc_mode = rlc_mode; }
+  void set_t_reordering(pdcp_t_reordering t_reordering) { config.t_reordering = t_reordering; }
+  void set_out_of_order_delivery(bool out_of_order_delivery) { config.out_of_order_delivery = out_of_order_delivery; }
+  void set_header_compression(std::optional<rohc_config> header_compression)
   {
-    sn_size            = sn_size_;
-    algo               = algo_;
-    header_compression = rohc_params.config;
-    logger.info(
-        "Creating PDCP RX ({} bit nia={} nea={}, {})", pdcp_sn_size_to_uint(sn_size), algo, algo, header_compression);
+    config.header_compression = header_compression;
+  }
+  void set_max_count(pdcp_max_count max_count) { config.custom.max_count = max_count; }
 
-    // Set Rx config
-    config.rb_type               = rb_type_;
-    config.rlc_mode              = rlc_mode_;
-    config.sn_size               = sn_size;
+  static pdcp_rx_config default_pdcp_rx_config()
+  {
+    pdcp_rx_config config        = {};
+    config.rb_type               = pdcp_rb_type::drb;
+    config.rlc_mode              = pdcp_rlc_mode::am;
+    config.sn_size               = pdcp_sn_size::size12bits;
     config.direction             = pdcp_security_direction::downlink;
-    config.header_compression    = header_compression;
+    config.t_reordering          = pdcp_t_reordering::ms10;
     config.out_of_order_delivery = false;
-    config.t_reordering          = t_reordering;
-    config.custom.max_count      = max_count;
+    config.header_compression    = cfg_rohc_disabled.config;
+    config.custom.max_count      = {pdcp_rx_default_max_count_notify, pdcp_rx_default_max_count_hard};
+    return config;
+  }
+
+  /// \brief Initializes fixture
+  void init()
+  {
+    logger.info("Creating PDCP RX ({} bit nia={} nea={}, {})",
+                pdcp_sn_size_to_uint(config.sn_size),
+                algo,
+                algo,
+                config.header_compression);
 
     // RB_id and security domain
     rb_id_t rb_id;
-    switch (rb_type_) {
+    switch (config.rb_type) {
       case pdcp_rb_type::srb:
         sec_cfg.domain = security::sec_domain::rrc;
         rb_id          = srb_id_t::srb1;
@@ -185,7 +194,7 @@ protected:
   /// \param exp_pdu Expected PDU that is set to the correct test vector
   void get_test_pdu(uint32_t count, byte_buffer& exp_pdu)
   {
-    ASSERT_EQ(true, get_pdu_test_vector(sn_size, count, exp_pdu, algo));
+    ASSERT_EQ(true, get_pdu_test_vector(config.sn_size, count, exp_pdu, algo));
   }
 
   /// \brief Gets test PDU based on the COUNT and SN size and algo
@@ -194,7 +203,7 @@ protected:
   /// \param custom_algo Pick PDU for a specific algorithm (which may differ from current config)
   void get_test_pdu(uint32_t count, byte_buffer& exp_pdu, unsigned custom_algo)
   {
-    ASSERT_EQ(true, get_pdu_test_vector(sn_size, count, exp_pdu, custom_algo));
+    ASSERT_EQ(true, get_pdu_test_vector(config.sn_size, count, exp_pdu, custom_algo));
   }
 
   /// \brief Helper to advance the timers
@@ -207,16 +216,15 @@ protected:
     }
   }
 
-  uint32_t SN(uint32_t count) const { return count & (0xffffffffU >> (32U - static_cast<uint8_t>(sn_size))); }
-  uint32_t HFN(uint32_t count) const { return (count >> static_cast<uint8_t>(sn_size)); }
-  uint32_t COUNT(uint32_t hfn, uint32_t sn) const { return (hfn << static_cast<uint8_t>(sn_size)) | sn; }
+  uint32_t SN(uint32_t count) const { return count & (0xffffffffU >> (32U - static_cast<uint8_t>(config.sn_size))); }
+  uint32_t HFN(uint32_t count) const { return (count >> static_cast<uint8_t>(config.sn_size)); }
+  uint32_t COUNT(uint32_t hfn, uint32_t sn) const { return (hfn << static_cast<uint8_t>(config.sn_size)) | sn; }
 
   ocudulog::basic_logger& logger = ocudulog::fetch_basic_logger("TEST", false);
 
-  pdcp_sn_size                        sn_size = {};
-  unsigned                            algo    = {};
-  std::optional<rohc_config>          header_compression;
-  pdcp_rx_config                      config = {};
+  // Default test params
+  unsigned                            algo   = 2;
+  pdcp_rx_config                      config = default_pdcp_rx_config();
   timer_manager                       timers;
   std::unique_ptr<pdcp_rx_test_frame> test_frame;
 
