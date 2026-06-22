@@ -1,10 +1,10 @@
 # OCUDU 実装技術リファレンス（dev）
 
 本書は OCUDU の実装構造を、DU-High / DU-Low / CU-CP / CU-UP の 4 コンポーネントと、
-5 つの横断章（① task executor・スレッドモデル、② F1/E1/NG インターフェースとコールフロー、
+6 つの横断章（① task executor・スレッドモデル、② F1/E1/NG インターフェースとコールフロー、
 ③ Open Fronthaul (OFH / split 7.2x) のタイミングと締め切り処理、④ 非標準化アルゴリズム
-（scheduler 判断系 / 受信 DSP）、⑤ スケーリング（cell / UE / RU 単位とリソース割当））に
-分けて解説する技術リファレンスである。
+（scheduler 判断系 / 受信 DSP）、⑤ スケーリング（cell / UE / RU 単位とリソース割当）、
+⑥ ライフサイクルと障害時挙動）に分けて解説する技術リファレンスである。
 
 > **記述の根拠について**
 > 本書のすべての記述は、チェックアウト中の作業ツリー（`git` ブランチ
@@ -1778,7 +1778,288 @@ worker 数式（cell・アンテナ）と `ru_txrx`（`txrx_affinities`）のみ
 
 ---
 
-## 11. 未確認事項一覧
+## 11. 横断⑥ ライフサイクルと障害時挙動
+
+本章は「定常状態」ではなく **初期化・停止・異常系** に絞り、(1) 起動順序、(2) graceful shutdown、
+(3) エラー伝播設計、(4) assert/abort 方針、(5) ランタイム障害処理を横断的に合成する。executor 機構は
+§6、F1/E1/NG の procedure・notifier は §7、OFH の `err_notifier`・`closed_rx_window_handler`・
+`iq_compression_death_impl` は §8、worker pool 構成は §10 を参照し、再掲しない。対象は monolithic
+`gnb` アプリを主とし、分離 `cu` / `du` アプリとの差分を併記する。
+
+### 11.1 起動順序
+
+`gnb` アプリは独立した `run()` を持たず、`main()` 本体（`apps/gnb/gnb.cpp:207-647`）で順に組み立てる。
+
+**(a) 前処理**: `set_error_handler(app_error_report_handler)`（`gnb.cpp:210`、§11.5）→
+`register_interrupt_signal_handler` / `register_cleanup_signal_handler`（`:216-217`）→ `enable_backtrace`
+（`:220`）→ CLI parse・validation・log 初期化（`:269,291`）→ buffer pool（`:336`）→ `timer_manager`（`:357`）。
+
+**(b) 生成順（コンストラクタのみ。まだ start しない）**:
+`worker_manager`（`:380`、**コンストラクタで worker pool スレッドを spawn**）→ `io_broker`（epoll、`:385`）→
+DU-high clock controller / timer source（`:388`）→ PCAP（`:396-401`）→ XN-C SCTP gateway（`:406`）→
+**`f1c_local_connector`（`:424`）/ `e1_local_connector`（`:426`）**（後述、in-process）→ GTP-U TEID allocator
+（`:443,449`）→ E2 client gateway（`:466-483`）→ O-CU-CP（`:499`）→ O-CU-UP（`:519`）→ O-DU（`:539`）→
+metrics manager（`:546`）。
+
+**(c) start（"power-on"）順（`gnb.cpp:575-609`）**:
+1. E1AP を CU-CP に attach（`:576`）、XN-C を attach（`:579`）
+2. **O-CU-CP start**（`:585`）。CU-CP は `connect_to_amf`（`cu_cp_impl.cpp:163`）→ `amf_connection_setup_routine`
+   → `ng_setup_procedure`（`lib/ngap/procedures/ng_setup_procedure.cpp:33`）を **イベント駆動（async）** で実行。
+3. **NG Setup ゲート**: `amfs_are_connected()` を **一度だけ同期チェック**し、未接続なら `report_error`（quick_exit）
+   （`gnb.cpp:589-590`）。ループ待ちはせず、CU-CP start 完了時点の接続状態に依存。
+4. F1-C を CU-CP に attach（`:600`）→ **O-CU-UP start**（`:603`）→ **O-DU start（`:606`、ブロックする）** →
+   metrics start（`:609`）。
+5. main wait loop: `while (is_app_running) sleep_for(250ms)`（`:619-621`、`is_app_running` は静的 atomic）。
+
+**(d) O-DU start の内部順と F1 Setup ゲート**:
+`flexible_o_du_impl::start`（DU→RU の順、`flexible_o_du_impl.cpp:24-28`）→ `o_du_impl::start`（DU-high `:59` →
+DU-low `:60` は stateless で no-op）→ `du_high_impl::start` → `du_manager_controller_impl::start`。ここが
+**ブロック点**で、`du_setup_procedure` をスケジュールして `ev.wait()` で待つ（`du_manager_controller_impl.cpp:31-50`）。
+`du_setup_procedure` は F1-C TNL 確立 → `configure_du_cells()` → `start_f1_setup_request()`（F1 Setup Request 送出）→
+**F1 Setup Response 受領まで待ち** → CU-CP が示した `cells_to_activate` に従い **cell を activate**。RU(OFH) は
+`ru_ofh_controller_impl::start`（`:10-16`）で **timing controller を最初に**（`realtime_timing_worker::start`、§8.2）
+→ その後 sector の Tx/Rx。
+
+> 要点: **NG Setup はイベント駆動で接続を待ち（一度だけ同期確認）、F1 Setup ＋ cell activation は O-DU start
+> がブロックして完了を待つ**。つまり `gnb main` は cells が activate されるまで wait loop に進まない。
+
+**(e) cu/du アプリの差分**: `cu_cp` は in-process でなく **実 SCTP の F1-C/E1 server**（`cu_cp.cpp:327,338`）、
+`cu_up` は E1 SCTP client（`cu_up.cpp:384`）、`du` は F1-C client（`du.cpp:306`）。signal handling・wait loop・
+worker_manager は 4 アプリ共通。
+
+```mermaid
+sequenceDiagram
+    participant main as gnb main()
+    participant wm as worker_manager
+    participant cucp as O-CU-CP
+    participant amf as AMF
+    participant cuup as O-CU-UP
+    participant du as O-DU (DU-high/low)
+    participant ru as RU / OFH
+
+    main->>wm: construct (worker threads spawn)
+    main->>main: create gateways (f1c/e1 local, NG/E2 SCTP), CU-CP/UP/DU
+    main->>cucp: start() [:585]
+    cucp->>amf: NG Setup (event-driven)
+    main->>main: amfs_are_connected()? else report_error(quick_exit) [:589]
+    main->>cuup: start() [:603]
+    main->>du: start() [:606] BLOCKS
+    du->>cucp: F1 Setup Request (du_setup_procedure)
+    cucp-->>du: F1 Setup Response (+ cells_to_activate)
+    du->>du: activate cells
+    du->>ru: start RU (timing worker first, then sectors)
+    main->>main: while(is_app_running) sleep 250ms [:619]
+```
+
+### 11.2 graceful shutdown
+
+**(a) シグナル**: `interrupt_signal_handler` が `is_app_running=false`（`gnb.cpp:88-91`）、`cleanup_signal_handler`
+が pcap flush 等（`:96-101`）。低レベルは `lib/support/signal_handling.cpp`: SIGINT/TERM/HUP/ALRM を捕捉
+（`:49-57`）、初回割り込みでユーザハンドラ実行＋ **`::alarm(TERMINATION_TIMEOUT_S)` を arm**（`:39-44`）、SIGALRM
+で "Forcing exit" → **`std::raise(SIGKILL)`**（`:29-34`）。`TERMINATION_TIMEOUT_S` 既定 **5 秒**（`:14-19`、
+`TERM_TIMEOUT_S` / CMake `EXIT_TIMEOUT` で上書き、`CMakeLists.txt:109,293-296`）。これが **hang を強制 kill する
+watchdog**。
+
+**(b) stop chain（`gnb.cpp:625-646`、start の逆順）**: metrics（`:625`）→ remote（`:629`）→ **O-DU**（`:633`）→
+**O-CU-UP**（`:636`）→ **O-CU-CP**（`:639`）→ `f1c_gw`（`:642`）→ `e1_gw`（`:643`）→ `return` 後に RAII で
+逆生成順に破棄（最後に **`worker_manager` デストラクタ → `stop()`**、`worker_manager.cpp:155-158`）。O-DU stop は
+RU→DU の順（`flexible_o_du_impl.cpp:30-34`、`o_du_impl::stop` は MAC-FAPI→DU-low→DU-high、`o_du_impl.cpp:63-70`）。
+
+**(c) worker pool の drain — 未処理タスクは drop**: `worker_manager::stop`（`:160-168`）→ `exec_mng.stop()` →
+`task_worker_pool::stop` が各 worker に `queue.request_stop(); w.join();`（`task_worker_pool.cpp:170-182`）。
+worker ループは `if (not consumer.pop_blocking(job)) break;`（`:22-28`）で、`request_stop` 後は queue に要素が
+残っていても pop が `failed` を返す（`blocking_queue.h:366,380`）→ **残存タスクは drain されず破棄される**。
+（`wait_pending_tasks()` は存在するが shutdown 経路では呼ばれない、`task_worker_pool.cpp:184-232`。）
+
+**(d) RT スレッド停止**: `realtime_timing_worker::stop`（`:81-90`）が stop token を立て notifier を clear。
+`timing_loop` は毎反復で stop を確認して抜ける（`:92-97`）。スレッド join 自体は後段の executor pool stop で行う。
+
+**(e) hang 候補**: ①SIGALRM→SIGKILL watchdog（5 秒、`signal_handling.cpp:30-34`）が最終安全網。②各 AP の
+リンク断 "Keep trying" defer ループ（`ngap_connection_handler.cpp:126-130`、`f1ap_du_connection_handler.cpp:134-138`、
+`e1ap_cu_up_connection_handler.cpp:80-84`、`e2_connection_handler.cpp:122-126`）。③`du_manager_controller_impl::stop`
+の `ev.wait()`（`:62-70`）。④worker `w.join()`（`task_worker_pool.cpp:177`）。⑤`execute_on` の spin
+（`execute_on.h:53-56`）。
+
+```mermaid
+flowchart TD
+  SIG["SIGINT / SIGTERM"] --> FLAG["is_app_running=false [gnb.cpp:88]"]
+  FLAG --> LOOP["main wait loop exits [:619]"]
+  LOOP --> STOP["stop chain: metrics -> O-DU -> O-CU-UP -> O-CU-CP -> f1c_gw -> e1_gw [:625-643]"]
+  STOP --> RAII["RAII reverse -> worker_manager::stop [:155]"]
+  RAII --> DROP["task_worker_pool::stop: request_stop + join<br/>pending tasks DROPPED (not drained)"]
+  SIG -. "first interrupt arms alarm(5s)" .-> ALARM["SIGALRM watchdog"]
+  STOP -. "hang候補: Keep-trying defer / ev.wait / join" .-> ALARM
+  ALARM -. "stop が timeout 超過" .-> KILL["std::raise(SIGKILL) [signal_handling.cpp:30-34]"]
+```
+
+### 11.3 エラー伝播設計
+
+エラー/失敗の上げ方は大きく **3 系統**ある。
+
+**Style 1 — `error_notifier`（リアルタイム層、非同期）**: スロットに間に合わない "late" を datapath から通知する
+抽象 notifier 群。
+- `upper_phy_error_notifier`（`upper_phy_error_notifier.h:12`）: `on_late_downlink_message` / `on_late_uplink_message`
+  / `on_late_prach_message`。
+- `lower_phy_error_notifier`（`lower_phy_error_notifier.h:14`）: `on_late_resource_grid` / `on_prach_request_late`
+  / `on_prach_request_overflow` / `on_puxch_request_late`。
+- `ru_error_notifier`（`ru_error_notifier.h:20`）: `on_late_{downlink,uplink,prach}_message(ru_error_context)`。
+  OFH 実装 `ru_ofh_error_handler_impl`、SDR は `ru_lower_phy_error_adapter`。
+- `ofh::error_notifier`（`ofh_error_notifier.h:21`、§8）: OFH 送信窓ミス時（`ofh_downlink_handler_impl.cpp:94` 等）。
+
+連鎖は **lower PHY / OFH → `ru_error_notifier` → `upper_phy_error_handler` → `upper_phy_error_notifier`（FAPI P7）
+→ FAPI ERROR.indication → MAC**。MAC 側 `fapi_to_mac_error_indication_fastpath_translator`（`:74-86`）が
+`mac_cell_slot_handler::error_event`（`pdsch_discarded`/`pdcch_discarded`/`pusch_and_pucch_discarded`）に変換し、
+`mac_cell_processor::handle_error_indication`（`mac_cell_processor.cpp:194-198`）→ scheduler の `error_outcome`
+（`ocudu_scheduler_adapter.cpp:298-307`）で **当該スロットの grant を破棄**する。
+→ 各層では observe＋log＋critical trace だが、最終的に MAC/scheduler に届いて **スロット単位の grant 無効化という
+回復**を起こす（コネクション単位の回復ではない）。late UL は `upper_phy_error_handler_impl.cpp:36` で即
+`discard_slot()` も行う。
+
+**Style 2 — AP の failure / error indication（F1AP / NGAP / E1AP）**: 手続きが成功/不成功 outcome を出すか、
+ErrorIndication をピアへ送る。F1AP `generate_error_indication`（`f1ap_common_messages.cpp:12-39`）/
+`f1ap_du_impl::send_error_indication`（`f1ap_du_impl.cpp:498-505`）、NGAP `send_error_indication`
+（`ngap_error_indication_helper.h:30-65`）、E1AP bearer context setup の failure outcome
+（`bearer_context_setup_procedure.cpp:73-85`）。→ **ピア/呼び出し元へ signaling として伝播**（ローカルでは
+自己回復せず outcome を返す/送る）。
+
+**Style 3 — 同期戻り値（`expected<>` / `bool` / `optional`）＋ log**: `expected<T,E>` / `error_type<E>`
+（`include/ocudu/adt/expected.h:23,33`）、`byte_buffer::create` の `make_unexpected`（`byte_buffer.cpp:196,206`）、
+config validator の `validator_result`（`serving_cell_config_validator.cpp:26,111`）、factory の `nullptr` 返し
+（`du_processor_factory.h:17` 等）。最下層は `ocudulog` の `.error()/.warning()`（`logger.h:135-141`）。
+→ **即時に呼び出し元へ伝播**（失敗箇所では回復しない）。
+
+```mermaid
+flowchart TD
+  subgraph S1["Style 1: error_notifier (realtime)"]
+    LP["lower PHY / OFH late"] --> RUE["ru_error_notifier"]
+    RUE --> UPE["upper_phy_error_handler"]
+    UPE --> FAPI["upper_phy_error_notifier -> FAPI ERROR.indication"]
+    FAPI --> MACSCHED["MAC handle_error_indication -> scheduler: slot grant 破棄"]
+  end
+  subgraph S2["Style 2: AP failure / error indication"]
+    APF["F1AP/NGAP/E1AP 手続き失敗"] --> PEER["ErrorIndication / unsuccessful outcome -> peer・caller"]
+  end
+  subgraph S3["Style 3: 戻り値 + log"]
+    RET["expected / nullptr / bool / nullopt"] --> CALLER["呼び出し元が判断 (+ ocudulog .error/.warning)"]
+  end
+```
+
+### 11.4 assert / abort 方針（fatal/abort 棚卸し）★
+
+**(a) 終了マクロの意味（`include/ocudu/support/error_handling.h` / `ocudu_assert.h`）**:
+
+| マクロ | 動作 | release で有効か | 箇所 |
+|---|---|---|---|
+| `report_fatal_error` / `_if_not` | `ocudu_terminate` → **`std::abort()`** | **常時** | `error_handling.h:41,68-75` |
+| `report_error` / `_if_not` | **`std::quick_exit(1)`**（graceful 寄り） | **常時** | `error_handling.h:49-61` |
+| `ocudu_assert` | `std::abort()` | **`ASSERTS_ENABLED` 定義時のみ** | `ocudu_assert.h:78-79` |
+| `ocudu_sanity_check` | `std::abort()` | **`PARANOID_ASSERTS_ENABLED` 時のみ** | `ocudu_assert.h:82-83` |
+
+**(b) debug-only が release で no-op である根拠**: `ocudu_assert` は `OCUDU_ALWAYS_ASSERT_IFDEF__(ASSERTS_ENABLED, …)`
+= `(void)((not OCUDU_IS_DEFINED(ASSERTS_ENABLED)) || (…))`（`ocudu_assert.h:66-79`）。`OCUDU_IS_DEFINED(x)` は
+`#x[0]` を見るマクロトリック（`compiler.h:19-20`）で、`ASSERTS_ENABLED` が未定義なら false → 短絡して
+**条件式すら評価されない**（完全に no-op）。`ASSERTS_ENABLED` は `if(NOT ASSERT_LEVEL_DERIVED STREQUAL "NONE")` の
+ときだけ `-D` 定義（`CMakeLists.txt:284-290`）。`ASSERT_LEVEL=AUTO`（既定）の派生は **Debug→PARANOID /
+RelWithDebInfo→NORMAL / それ以外（Release 等）→NONE**（`CMakeLists.txt:96-106`）。
+→ **Release ビルドでは `ocudu_assert` / `ocudu_sanity_check` は完全にコンパイルアウト**。一方
+`report_fatal_error` / `report_error` は **ビルド種別に関係なく常に有効**。
+
+**(c) 出現数（全件 grep、数え方を明記）**: 下記コマンドを `/home/user/ocudu` で実行（4 パターンは相互排他＝
+`report_fatal_error(` は `_if_not(` を含まない）。lib + apps 合計:
+
+```
+rg -o 'report_fatal_error\('        lib/ apps/ | wc -l   # 176
+rg -o 'report_fatal_error_if_not\(' lib/ apps/ | wc -l   # 251
+rg -o 'report_error\('              lib/ apps/ | wc -l   # 160
+rg -o 'report_error_if_not\('       lib/ apps/ | wc -l   #  97
+```
+
+| 系統 | 出現数（lib+apps） | 終了方法 |
+|---|---|---|
+| `report_fatal_error` 系（`(` ＋ `_if_not(`） | **427**（176 + 251） | `std::abort()` |
+| `report_error` 系（`(` ＋ `_if_not(`） | **257**（160 + 97） | `std::quick_exit(1)` |
+| 計（release で生き残る終了点） | **684** | — |
+| `ocudu_assert(`（debug 限定・参考） | 2543 | abort（release で消滅） |
+| `ocudu_sanity_check(`（debug 限定・参考） | 172 | abort（release で消滅） |
+
+主な分布（`report_fatal_error_if_not`）: `lib/phy` 166 が突出（多くは factory/startup、一部 baseband runtime）。
+`report_error` は `apps/units/*`（config 翻訳）に集中（startup）。
+
+**(d) release-active な終了点のカテゴリ（運用中に効きうるか＝runtime / startup の別）**:
+
+| カテゴリ | 例（path:line） | runtime / startup |
+|---|---|---|
+| OFH IQ 圧縮 未対応 | `iq_compression_death_impl.cpp:14,21`（`report_error`→quick_exit）、`packing_utils_avx512.h:231`（`report_fatal_error`→abort） | **runtime（データプレーン）** |
+| scheduler grant 割当 | `ue_cell_grid_allocator.cpp:376`「Unsupported RNTI type」、`search_space_helper.h`、`grant_params_selector.cpp:91` | **runtime（毎スロット）** |
+| MAC DL PDU 組立 | `dl_sch_pdu_assembler.cpp:194,459` | **runtime** |
+| ASN.1 PDU 種別分類 | `ngap_asn1_utils.cpp:48`、`f1ap_asn1_utils.h:52`、`e1ap_asn1_utils.h:47` | **runtime（制御プレーン）** |
+| lower PHY baseband | `downlink_processor_baseband_impl.cpp:170`、`lower_phy_baseband_processor.cpp:158` | **runtime** |
+| executor/worker 生成失敗 | `worker_manager.cpp:187,203,351,461,482`「Failed to instantiate … execution context」 | startup |
+| config 検証 | `apps/units/*config*`（`report_error`→quick_exit）、PHY factory pool 検証（`upper_phy_factories.cpp:444,447`） | startup |
+| HW/DPDK 未対応・init 失敗 | `hw_accelerator_factories.cpp:45`、`dpdk_ethernet_receiver.cpp:53`（`report_error`） | startup |
+| memory/pool 確保 | `byte_buffer.cpp:31-39`（startup）、baseband buffer 枯渇（runtime） | mixed |
+
+> Terry さんの停止デバッグ向け: **運用中（running gNB）に abort/quick_exit しうる**のは主に scheduler grant 割当・
+> MAC PDU 組立・ASN.1 種別分類・lower PHY baseband・OFH live 圧縮。一方 `apps/units/*` の `report_error` 群や
+> worker 生成失敗は **起動時のみ**。
+
+**(e) error handler hook**: `set_error_handler`（`error_handling.h:20`）。各アプリは `app_error_report_handler`
+（**緊急ログ flush のみ**、backtrace は出さない）を登録（`gnb.cpp:104,210`、cu/du/cu_cp/cu_up/du_low も同型）。
+abort/quick_exit 直前に `error_report_handler.exchange(nullptr)` で **一度だけ**呼ばれる。
+
+### 11.5 ランタイム障害処理
+
+実行中の障害は、**リンク断（reconnect か peer 削除か）／UE 単位の解放・再確立／reset・removal／cell 停止再活性**
+に大別される。**いずれの経路もプロセス終了（exit/abort）はしない**（後述）。
+
+**(a) リンク断（SCTP）と断後アクション**:
+
+| リンク | 検出 → 断後アクション | 箇所 |
+|---|---|---|
+| **NG-C (AMF)** | `handle_connection_loss` → NGAP イベント drain → `on_n2_disconnection` → `amf_connection_loss_routine`: ①新規 UE を当該 PLMN でブロック ②`cell_deactivation_routine` で **当該セルの全 UE を release** ③`reconnect_to_amf`（`amf_reconnection_retry_time` で再接続） | `ngap_connection_handler.cpp:119-149`、`amf_connection_loss_routine.cpp:31-52`、`cell_deactivation_routine.cpp:39-44` |
+| **E1（CU-CP 側、CU-UP 切断）** | `handle_e1_gw_connection_closed` → `remove_cu_up`（`get_e1ap_handler().stop()` で当該 CU-UP の UE/transaction を解放）→ processor 削除。**再接続せず**新 CU-UP を待つ | `cu_up_connection_manager.cpp:165-191`、`cu_up_processor_repository.cpp:59-82` |
+| **E1（CU-UP 側、CU-CP 切断）** | `on_connection_loss` → `cu_up_e1_connection_loss_routine`: **E1 上の全 UE を remove** ＋ **再接続ループ（1000ms retry）** | `e1ap_cu_up_connection_handler.cpp:73-102`、`cu_up_e1_connection_loss_routine.cpp:32-49` |
+| **F1（CU-CP 側、DU 切断）** | `handle_f1c_gw_connection_closed` → `remove_du`（`get_f1ap_handler().stop()` で当該 DU の UE を解放）→ processor 削除。**再接続せず** | `du_connection_manager.cpp:167-193`、`du_processor_repository.cpp:58-81` |
+| **F1（DU 側、CU-CP 切断）** | `handle_f1c_connection_loss` → `f1c_disconnection_handling_procedure`: **全 active cell を停止**（`ue_removal_mode::no_f1_triggers`＝F1 メッセージなしでローカル UE 削除）＋ **`du_setup_procedure` で再接続** | `f1ap_du_connection_handler.cpp:141-160`、`f1c_disconnection_handling_procedure.cpp:19-45` |
+
+> monolithic `gnb` では **F1-C/E1 は in-process の local connector**（`f1c_local_connector_impl`、
+> `f1c_local_connector_factory.cpp:50-91`：`handle_du_connection_request` が CU-CP↔DU の notifier を直結し、
+> `get_listen_port()→nullopt`・`stop()` 空＝SCTP なし。E1 も同型 `e1_local_connector_factory.cpp:48-72`）。
+> SCTP 版 connector は「testing purposes only」（`:95`）。よって **gnb では F1/E1 のリンク断は起こらず、外部
+> SCTP 断は NG-C(AMF) と E2(RIC) のみ**。分離 `cu`/`du` では F1/E1 が実 SCTP となり上表の F1/E1 経路が効く。
+
+**(b) UE 単位の解放・再確立**:
+- `ue_context_release_routine`（`:28-96`）: **E1AP bearer context release → F1AP UE context release → UE 削除**
+  （RRC/NGAP は `handle_ue_removal_request` で teardown）。
+- `reestablishment_context_modification_routine`（`:38-162`）: RRC 再確立に伴う bearer/UE-ctxt 再構成。
+  **RRC Reconfiguration 失敗時は cause `release_due_to_ngran_generated_reason` で AMF へ release を要求**（`:143-149`）。
+- `ue_amf_context_release_request_routine`（`:23-42`）: NGAP UE Context Release Request を AMF へ。送れない場合は
+  ローカル release に fallback。
+- inactivity: CU-UP からの **E1AP Bearer Context Inactivity Notification**（`e1ap_cu_cp_impl.cpp:299-377`）→
+  `cu_cp_impl.cpp:265-347`。RRC-Inactive 条件を満たせば `ue_suspend_routine`（suspend、UE 保持）、そうでなければ
+  `request_ue_release(user_inactivity)`（release）。
+
+**(c) reset / removal と cell 停止・再活性**:
+- F1 Reset 受信（DU）: 全 or 部分の **UE context を削除** ＋ Reset Ack（`f1ap_du_reset_procedure.cpp:42-68`）。
+- NG Reset: NG RESET 送出のみで **ack 処理は TODO/log のみ**（`ng_reset_procedure.cpp:24-86`、`:42`）。それ自体は
+  UE を解放せず signaling に留まる。
+- cell 停止/再活性: `cell_scheduler::stop/start`（§10、`cell_scheduler.cpp:146-173,135-144`）、
+  `du_cell_stop_procedure`（UE 削除モード 3 種: `trigger_f1_ue_release_request`＝F1 UE Context Release Request
+  で 500ms grace 後強制、`trigger_f1_reset`＝F1 Reset cause `cell_removal`、`no_f1_triggers`＝F1 なしローカル削除）。
+
+**(d) watchdog / health 監視**: **アプリ層の watchdog / health / liveness 監視は実装されていない**
+（`watchdog`/`health_check`/`heartbeat`/`liveness` を全 grep してアプリ層ヒット無し）。存在する "heartbeat" は
+**SCTP トランスポートの heartbeat のみ**（`sctp_socket.cpp:139,165`、config `sctp_appconfig.h:21` の
+heartbeat interval）。プロセス健全性の能動監視は、§11.2(e) の **SIGALRM→SIGKILL 強制終了 watchdog（停止時のみ）**
+を除いて無い。
+
+> 横断的事実: 追跡したランタイム障害経路はいずれも **プロセスを exit/abort しない**。NG-C・E1(CU-UP 側)・
+> F1(DU 側) は **再接続**、E1/F1 の CU-CP 側は **peer processor を削除**（その UE を解放）して新規接続を待つ。
+> NG Reset と DU 起動 reset は signaling のみ（ack 処理は log/TODO）。
+
+---
+
+## 12. 未確認事項一覧
 
 本書の作成過程で、実ツリーから確証を得られなかった事項を以下にまとめる。
 
@@ -1813,6 +2094,13 @@ worker 数式（cell・アンテナ）と `ru_txrx`（`txrx_affinities`）のみ
 - （§10.5 補足・事実）DU-High の UE→strand も `dedicated` cell executor（§10.4）と同型で、`round_robin`
   （`index_based_ue_executor_mapper`）が実在するが `worker_manager` は `per_cell` を配線する。production が
   `index_based` を選ぶ経路の有無は未照合（dedicated と同様、テスト/直接 API 経由と推測されるが未確認）。
+- （§11.1）NG-C / N2 の SCTP gateway は `o_cu_cp_app_unit->create_o_cu_cp` ユニット factory 内で生成され、
+  本文では gnb.cpp レベルの依存注入（`ngap_pcap`/`broker`、`gnb.cpp:489-490`）のみ確認。N2 SCTP gateway を
+  生成する正確なファイル:line は未照合。
+- （§11.5）NG Reset と DU 起動 F1 Reset の **ACK 内容処理はコード上 TODO/log のみ**（`ng_reset_procedure.cpp:42`
+  の `// TODO`）。ack 受領後に追加の UE アクションを取るかは未確認（コードは明示的に処理していない）。
+- （§11.3 Style 2）F1AP DU 側で **受信した** ErrorIndication に対する能動ハンドラは PDU dispatch 内に見当たらず、
+  log 止まりと推測されるが、受信 ErrorIndication への具体アクションの有無は未確認。
 - 本書の `path:line` は作業ツリー（コミット `7a2b9e3`）時点のもの。以後の編集で行番号がずれる
   可能性がある。
 
@@ -1875,6 +2163,23 @@ worker 数式（cell・アンテナ）と `ru_txrx`（`txrx_affinities`）のみ
   `lib/scheduler/ue_scheduling/ue_scheduler_impl.{h,cpp}`, `lib/ru/ofh/ru_ofh_executor_mapper.cpp`,
   `include/ocudu/ran/{gnb_constants.h, du_cell_index.h, du_types.h}`,
   `apps/units/o_cu_cp/cu_cp/cu_cp_unit_config.h`, `apps/units/o_cu_up/cu_up/cu_up_unit_config.h`
+- 横断（ライフサイクル・障害時挙動）: 起動/停止 `apps/gnb/gnb.cpp`, `apps/{cu,du,cu_cp,cu_up,du_low}/*.cpp`,
+  `lib/support/signal_handling.cpp`, `apps/services/worker_manager/worker_manager.cpp`,
+  `lib/support/executors/{task_worker_pool.cpp, task_execution_manager.cpp}`, `include/ocudu/adt/blocking_queue.h`,
+  `apps/units/flexible_o_du/split_helpers/flexible_o_du_impl.cpp`, `lib/du/o_du_impl.cpp`,
+  `lib/du/du_high/du_manager/du_manager_controller_impl.cpp`,
+  `lib/du/du_high/du_manager/procedures/{du_setup_procedure.cpp, f1c_disconnection_handling_procedure.cpp, du_cell_stop_procedure.cpp}`;
+  abort/assert `include/ocudu/support/{error_handling.h, ocudu_assert.h, compiler.h}`, `CMakeLists.txt`,
+  `lib/ofh/compression/iq_compression_death_impl.cpp`, `lib/scheduler/ue_scheduling/ue_cell_grid_allocator.cpp`;
+  error 伝播 `include/ocudu/phy/upper/upper_phy_error_notifier.h`, `include/ocudu/phy/lower/lower_phy_error_notifier.h`,
+  `include/ocudu/ru/ru_error_notifier.h`, `lib/phy/upper/upper_phy_error_handler_impl.cpp`,
+  `lib/fapi_adaptor/{phy/p7/phy_to_fapi_error_event_fastpath_translator.cpp, mac/p7/fapi_to_mac_error_indication_fastpath_translator.cpp}`,
+  `include/ocudu/adt/expected.h`, `lib/ngap/ngap_error_indication_helper.h`;
+  リンク断/復旧 `lib/ngap/ngap_connection_handler.cpp`, `lib/cu_cp/routines/{amf_connection_loss_routine.cpp, cell_deactivation_routine.cpp, ue_context_release_routine.cpp, reestablishment_context_modification_routine.cpp}`,
+  `lib/cu_cp/cu_cp_controller/{cu_up_connection_manager.cpp, du_connection_manager.cpp}`,
+  `lib/cu_up/routines/cu_up_e1_connection_loss_routine.cpp`, `lib/f1ap/du/f1ap_du_connection_handler.cpp`,
+  `lib/{f1ap/gateways/f1c_local_connector_factory.cpp, e1ap/gateways/e1_local_connector_factory.cpp}`,
+  `lib/gateways/sctp_socket.cpp`, `apps/helpers/network/sctp_appconfig.h`
 - 横断（OFH timing/deadline）: タイミング `include/ocudu/ofh/timing/{slot_symbol_point.h,
   ofh_ota_symbol_boundary_notifier_manager.h}`, `lib/ofh/timing/realtime_timing_worker.{h,cpp}`,
   `lib/ru/ofh/ru_ofh_impl.cpp`; 受信側締め切り `lib/ofh/receiver/{ofh_rx_window_checker.{h,cpp},
