@@ -303,9 +303,12 @@ static mac_rlf_cause to_mac_rlf_cause(rlf_cause cause)
       return mac_rlf_cause::max_consecutive_crc_kos;
     case rlf_cause::max_csi_dtx_reached:
       return mac_rlf_cause::max_consecutive_csi_dtx;
-    default:
+    case rlf_cause::max_harq_nacks_reached:
       return mac_rlf_cause::max_consecutive_harq_kos;
+    default:
+      break;
   }
+  report_fatal_error("Non-MAC RLF cause cannot be converted");
 }
 
 class du_ue_manager_rlf_tester : public du_ue_manager_tester
