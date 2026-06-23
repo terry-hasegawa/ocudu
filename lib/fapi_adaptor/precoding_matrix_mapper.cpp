@@ -11,13 +11,13 @@
 using namespace ocudu;
 using namespace fapi_adaptor;
 
-/// Table of PMI parameter sizes for single-panel type 1 PDSCH precoding codebook. Indexed by the number of layers.
-static const std::array<pmi_typeI_single_panel_param_sizes, 5> pdsch_codebook_param_sizes_sp_type1_4port = {{
+/// Table of PMI parameter ranges for single-panel type 1 PDSCH precoding codebook. Indexed by the number of layers.
+static const std::array<pmi_typeI_single_panel_param_ranges, 5> pdsch_codebook_param_ranges_sp_type1_4port = {{
     {},
-    get_pmi_sizes_typeI_single_panel(get_single_panel_info(pmi_codebook_single_panel_config::two_one), 1),
-    get_pmi_sizes_typeI_single_panel(get_single_panel_info(pmi_codebook_single_panel_config::two_one), 2),
-    get_pmi_sizes_typeI_single_panel(get_single_panel_info(pmi_codebook_single_panel_config::two_one), 3),
-    get_pmi_sizes_typeI_single_panel(get_single_panel_info(pmi_codebook_single_panel_config::two_one), 4),
+    get_pmi_ranges_typeI_single_panel({pmi_codebook_single_panel_config::two_one, pmi_codebook_typeI_mode::one}, 1),
+    get_pmi_ranges_typeI_single_panel({pmi_codebook_single_panel_config::two_one, pmi_codebook_typeI_mode::one}, 2),
+    get_pmi_ranges_typeI_single_panel({pmi_codebook_single_panel_config::two_one, pmi_codebook_typeI_mode::one}, 3),
+    get_pmi_ranges_typeI_single_panel({pmi_codebook_single_panel_config::two_one, pmi_codebook_typeI_mode::one}, 4),
 }};
 
 precoding_matrix_mapper::precoding_matrix_mapper(unsigned sector_id_,
@@ -74,11 +74,14 @@ static unsigned get_pdsch_precoding_matrix_index(unsigned                       
 
     logger.debug("Sector#{}: Two ports PDSCH precoding matrix, pmi={}, nof_layers={}", sector_id, pmi, nof_layers);
 
+    // Make sure the PMI is within the valid range, as per TS38.214 Table 5.2.2.2.1-1.
+    pmi %= (4 >> (nof_layers - 1));
+
     return offset + get_pdsch_two_port_precoding_matrix_index(pmi);
   }
 
   if (nof_ports == 4U) {
-    ocudu_assert(nof_layers < pdsch_codebook_param_sizes_sp_type1_4port.size(),
+    ocudu_assert(nof_layers < pdsch_codebook_param_ranges_sp_type1_4port.size(),
                  "The number of layers exceeds the supported number of layers.");
     ocudu_assert(std::holds_alternative<pmi_typeI_single_panel>(precoding_info), "Invalid PMI information");
     const auto& report = std::get<pmi_typeI_single_panel>(precoding_info);
@@ -91,7 +94,7 @@ static unsigned get_pdsch_precoding_matrix_index(unsigned                       
                  nof_layers);
 
     return offset + get_pdsch_single_panel_type1_precoding_matrix_index(
-                        pdsch_codebook_param_sizes_sp_type1_4port[nof_layers], report);
+                        pdsch_codebook_param_ranges_sp_type1_4port[nof_layers], report);
   }
 
   return 0;

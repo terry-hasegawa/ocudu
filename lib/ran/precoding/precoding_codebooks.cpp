@@ -369,16 +369,14 @@ precoding_weight_matrix ocudu::make_type1_sp_mode1(const precoding_matrix_indica
   // Whether the antenna panel distribution is 2D, i.e., supports vertical beam selection.
   const bool is_2d_panel = panel_info.n2 > 1;
 
-  // Get the bitwidth for the Precoding Matrix Indicator parameters given the selected panel configuration and number of
-  // layers.
-  pmi_typeI_single_panel_param_sizes pmi_param_sizes = get_pmi_sizes_typeI_single_panel(panel_info, nof_layers);
+  // Get the PMI parameters ranges given the selected panel configuration and number of layers.
+  pmi_typeI_single_panel_param_ranges pmi_param_ranges =
+      get_pmi_ranges_typeI_single_panel({type1_sp_pmi->panel_config, pmi_codebook_typeI_mode::one}, nof_layers);
 
-  // Derive the number of horizontal beams from the beam selector parameter (i_1_1) bitwidth.
-  unsigned nof_beams_horizontal = pow2(pmi_param_sizes.i_1_1);
-  // Derive the number of vertical beams from the beam selector parameter (i_1_2) bitwidth.
-  unsigned nof_beams_vertical = pow2(pmi_param_sizes.i_1_2);
-  // Derive the number of possible polarization phase shifts from the selector parameter (i_2) bitwidth.
-  unsigned nof_pol_shifts = pow2(pmi_param_sizes.i_2);
+  unsigned nof_beams_horizontal      = pmi_param_ranges.i_1_1;
+  unsigned nof_beams_vertical        = pmi_param_ranges.i_1_2;
+  unsigned nof_pol_shifts            = pmi_param_ranges.i_2;
+  unsigned nof_possible_beam_offsets = pmi_param_ranges.i_1_3;
 
   // Horizontal beam selector index.
   const unsigned i_1_1 = type1_sp_pmi->i_1_1;
@@ -397,7 +395,7 @@ precoding_weight_matrix ocudu::make_type1_sp_mode1(const precoding_matrix_indica
                beam_horizontal_selector_range);
 
   // Validate the selected vertical beam identifier (i_1_2).
-  const interval<unsigned, true> beam_vertical_selector_range(0, nof_beams_vertical);
+  const interval<unsigned, false> beam_vertical_selector_range(0, nof_beams_vertical);
   ocudu_assert(beam_vertical_selector_range.contains(i_1_2),
                "The given beam identifier i_1_2 (i.e., {}) is out of the range {}.",
                i_1_2,
@@ -437,9 +435,6 @@ precoding_weight_matrix ocudu::make_type1_sp_mode1(const precoding_matrix_indica
                    nof_layers);
     }
   }
-
-  // Derive the number of possible beam offset selector (i_1_3) values from the parameter bitwidth.
-  unsigned nof_possible_beam_offsets = pow2(pmi_param_sizes.i_1_3);
 
   // For a 2, 3 or 4 layer transmission, a beam offset can be applied based on i_1_3 parameter - ensure the selected
   // value is in a valid range.

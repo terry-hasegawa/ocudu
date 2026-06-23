@@ -74,3 +74,88 @@ ocudu::get_pmi_sizes_typeI_single_panel(const pmi_codebook_single_panel_info& pa
 
   report_error("Unhandled case with ri={} nof_csi_rs_antenna_ports={} N2={}.", ri, nof_csi_rs_antenna_ports, N2);
 }
+
+pmi_typeI_single_panel_param_ranges
+ocudu::get_pmi_ranges_typeI_single_panel(const pmi_codebook_typeI_single_panel& panel, uint8_t ri)
+{
+  // Currently, only codebook mode 1 is supported.
+  ocudu_assert(panel.mode == pmi_codebook_typeI_mode::one, "Only codebook mode 1 is supported.");
+
+  // Extract Type-I Single-Panel antenna panel information.
+  const pmi_codebook_single_panel_info& panel_info = get_single_panel_info(panel.n1_n2);
+
+  unsigned N1   = panel_info.n1;
+  unsigned N2   = panel_info.n2;
+  unsigned N1O1 = N1 * panel_info.o1;
+  unsigned N2O2 = N2 * panel_info.o2;
+
+  if (ri == 1) {
+    return {N1O1, N2O2, 1, 4};
+  }
+
+  if ((ri == 2) && (N1 == 2) && (N2 == 1)) {
+    return {N1O1, N2O2, 2, 2};
+  }
+
+  if ((ri == 2) && (N1 > 2) && (N2 == 1)) {
+    return {N1O1, N2O2, 4, 2};
+  }
+
+  if ((ri == 2) && (N1 > 1) && (N2 > 1)) {
+    return {N1O1, N2O2, 4, 2};
+  }
+
+  if ((ri == 2) && (N1 == N2)) {
+    return {N1O1, N2O2, 4, 2};
+  }
+
+  if (((ri == 3) || (ri == 4)) && (N1 == 2) && (N2 == 1)) {
+    return {N1O1, N2O2, 1, 2};
+  }
+
+  if (((ri == 3) || (ri == 4)) && (N1 == 4) && (N2 == 1)) {
+    return {N1O1, N2O2, 3, 2};
+  }
+
+  if (((ri == 3) || (ri == 4)) && (N1 == 6) && (N2 == 1)) {
+    return {N1O1, N2O2, 4, 2};
+  }
+
+  if (((ri == 3) || (ri == 4)) && (N1 == 2) && (N2 == 2)) {
+    return {N1O1, N2O2, 3, 2};
+  }
+
+  if (((ri == 3) || (ri == 4)) && (N1 == 3) && (N2 == 2)) {
+    return {N1O1, N2O2, 4, 2};
+  }
+
+  if (((ri == 5) || (ri == 6)) && (N2 > 1)) {
+    return {N1O1, N2O2, 1, 2};
+  }
+
+  if (((ri == 5) || (ri == 6)) && (N1 > 2) && (N2 == 1)) {
+    return {N1O1, 1, 1, 2};
+  }
+
+  if (((ri == 7) || (ri == 8)) && (N1 == 4) && (N2 == 1)) {
+    return {N1O1 / 2, 1, 1, 2};
+  }
+
+  if (((ri == 7) || (ri == 8)) && (N1 > 4) && (N2 == 1)) {
+    return {N1O1, 1, 1, 2};
+  }
+
+  if (((ri == 7) || (ri == 8)) && (N1 == 2) && (N2 == 2)) {
+    return {N1O1, N2O2, 1, 2};
+  }
+
+  if (((ri == 7) || (ri == 8)) && (N1 > 2) && (N2 == 2)) {
+    return {N1O1, N2O2 / 2, 1, 2};
+  }
+
+  if (((ri == 7) || (ri == 8)) && (N1 > 2) && (N2 > 2)) {
+    return {N1O1, N2O2, 1, 2};
+  }
+
+  report_error("Unhandled case with ri={} panel={}.", ri, to_string(panel));
+}

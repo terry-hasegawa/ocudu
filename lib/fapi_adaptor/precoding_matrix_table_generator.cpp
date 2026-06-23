@@ -145,20 +145,20 @@ static void generate_2_ports_table(precoding_matrix_mapper_codebook_offset_confi
 }
 
 /// Generates PDSCH single-panel type 1 precoding matrices codebook for a number of layers.
-static unsigned generate_pdsch_sp_type1(unsigned                             offset,
-                                        const pmi_codebook_single_panel_info panel_info,
-                                        unsigned                             nof_layers,
-                                        precoding_matrix_repository_builder& repo_builder)
+static unsigned generate_pdsch_sp_type1(unsigned                              offset,
+                                        const pmi_codebook_typeI_single_panel panel,
+                                        unsigned                              nof_layers,
+                                        precoding_matrix_repository_builder&  repo_builder)
 {
   unsigned base_offset = offset;
 
-  // Get parameter sizes
-  pmi_typeI_single_panel_param_sizes param_sizes = get_pmi_sizes_typeI_single_panel(panel_info, nof_layers);
+  // Get parameter ranges.
+  pmi_typeI_single_panel_param_ranges param_ranges = get_pmi_ranges_typeI_single_panel(panel, nof_layers);
 
-  unsigned nof_i_1_1 = pow2(param_sizes.i_1_1);
-  unsigned nof_i_1_2 = pow2(param_sizes.i_1_2);
-  unsigned nof_i_1_3 = pow2(param_sizes.i_1_3);
-  unsigned nof_i_2   = pow2(param_sizes.i_2);
+  unsigned nof_i_1_1 = param_ranges.i_1_1;
+  unsigned nof_i_1_2 = param_ranges.i_1_2;
+  unsigned nof_i_1_3 = param_ranges.i_1_3;
+  unsigned nof_i_2   = param_ranges.i_2;
 
   for (unsigned i_1_1 = 0; i_1_1 != nof_i_1_1; ++i_1_1) {
     for (unsigned i_1_2 = 0; i_1_2 != nof_i_1_2; ++i_1_2) {
@@ -166,11 +166,11 @@ static unsigned generate_pdsch_sp_type1(unsigned                             off
         for (unsigned i_2 = 0; i_2 != nof_i_2; ++i_2) {
           pmi_typeI_single_panel  pmi       = {.panel_config = pmi_codebook_single_panel_config::two_one,
                                                .i_1_1        = i_1_1,
-                                               .i_1_2        = param_sizes.i_1_2 ? std::optional(i_1_2) : std::nullopt,
-                                               .i_1_3        = param_sizes.i_1_3 ? std::optional(i_1_3) : std::nullopt,
+                                               .i_1_2        = (param_ranges.i_1_2 > 0) ? std::optional(i_1_2) : std::nullopt,
+                                               .i_1_3        = (param_ranges.i_1_3 > 0) ? std::optional(i_1_3) : std::nullopt,
                                                .i_2          = i_2};
           precoding_weight_matrix precoding = make_type1_sp_mode1(pmi, nof_layers);
-          unsigned pm_index = base_offset + get_pdsch_single_panel_type1_precoding_matrix_index(param_sizes, pmi);
+          unsigned pm_index = base_offset + get_pdsch_single_panel_type1_precoding_matrix_index(param_ranges, pmi);
           repo_builder.add(pm_index, precoding);
 
           offset = pm_index;
@@ -186,13 +186,11 @@ static unsigned generate_pdsch_sp_type1(unsigned                             off
 static void generate_4_ports_table(precoding_matrix_mapper_codebook_offset_configuration& mapper_offsets,
                                    precoding_matrix_repository_builder&                   repo_builder)
 {
-  static constexpr pmi_codebook_single_panel_config panel_config = pmi_codebook_single_panel_config::two_one;
-  static constexpr unsigned                         nof_ports    = 4U;
+  static constexpr pmi_codebook_typeI_single_panel panel_config = {pmi_codebook_single_panel_config::two_one,
+                                                                   pmi_codebook_typeI_mode::one};
+  static constexpr unsigned                        nof_ports    = 4U;
 
   unsigned offset = 0U;
-
-  // Get panel parameters.
-  pmi_codebook_single_panel_info panel_info = get_single_panel_info(panel_config);
 
   offset = generate_identity_matrix(offset, repo_builder, nof_ports);
   mapper_offsets.ssb_codebook_offsets.push_back(offset);
@@ -203,7 +201,7 @@ static void generate_4_ports_table(precoding_matrix_mapper_codebook_offset_confi
   offset                           = generate_pdsch_omnidirectional(offset, nof_ports, repo_builder);
   for (unsigned nof_layers = 1; nof_layers <= nof_ports; ++nof_layers) {
     mapper_offsets.pdsch_codebook_offsets.push_back(offset);
-    offset = generate_pdsch_sp_type1(offset, panel_info, nof_layers, repo_builder);
+    offset = generate_pdsch_sp_type1(offset, panel_config, nof_layers, repo_builder);
   }
   mapper_offsets.csi_rs_codebook_offsets.push_back(offset);
   generate_csi_rs(offset, nof_ports, repo_builder);

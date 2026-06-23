@@ -46,22 +46,25 @@ inline unsigned get_pdsch_two_port_precoding_matrix_index(unsigned pmi)
 
 /// Returns the precoding matrix index for a single-panel type 1 PDSCH codebook for the given PMI parameters.
 inline unsigned
-get_pdsch_single_panel_type1_precoding_matrix_index(const pmi_typeI_single_panel_param_sizes& param_sizes,
-                                                    const pmi_typeI_single_panel&             pmi)
+get_pdsch_single_panel_type1_precoding_matrix_index(const pmi_typeI_single_panel_param_ranges& param_ranges,
+                                                    const pmi_typeI_single_panel&              pmi)
 {
-  unsigned index = pmi.i_1_1;
+  // Make sure that the PMI fields are within the valid range by applying modulo operator to each of them.
+  unsigned index = pmi.i_1_1 % param_ranges.i_1_1;
 
-  if (param_sizes.i_1_2) {
-    ocudu_assert(pmi.i_1_2.has_value(), "Parameter i_1_2 is missing.");
-    index = (index << param_sizes.i_1_2) + *pmi.i_1_2;
+  if (param_ranges.i_1_2 > 1) {
+    // The PMI report must contain a valid i_1_2 value. If it doesn't, use 0 as a default value to compute a PMI index.
+    unsigned i_1_2 = pmi.i_1_2.value_or(0) % param_ranges.i_1_2;
+    index          = (index * param_ranges.i_1_2) + i_1_2;
   }
 
-  if (param_sizes.i_1_3) {
-    ocudu_assert(pmi.i_1_3.has_value(), "Parameter i_1_3 is missing.");
-    index = (index << param_sizes.i_1_3) + *pmi.i_1_3;
+  if (param_ranges.i_1_3 > 1) {
+    // The PMI report must contain a valid i_1_3 value. If it doesn't, use 0 as a default value to compute a PMI index.
+    unsigned i_1_3 = pmi.i_1_3.value_or(0) % param_ranges.i_1_3;
+    index          = (index * param_ranges.i_1_3) + i_1_3;
   }
 
-  index = (index << param_sizes.i_2) + pmi.i_2;
+  index = (index * param_ranges.i_2) + (pmi.i_2 % param_ranges.i_2);
 
   return index;
 }
