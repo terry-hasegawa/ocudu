@@ -31,7 +31,7 @@ build-and-publish:
     VERSION: ${DOCKER_STATIC_VERSION}
     MULTI_ARCH_BUILD: "true"
     MODE: publish
-    GRYPE_SKIP: "true"
+    GRYPE_SKIP: "false"
   parallel:
     matrix:
       - PLATFORM: ["arm64", "amd64"]

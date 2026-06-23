@@ -19,6 +19,7 @@ RUN apt-get update \
     yamllint \
     file \
     pipx \
+    && rm -f /usr/bin/pebble \
     && apt-get autoremove \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
