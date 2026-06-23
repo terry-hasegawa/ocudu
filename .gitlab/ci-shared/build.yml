@@ -109,6 +109,7 @@ include:
           CTEST_ARGS="-L $TEST_MODE"
           ;;
       esac
+      export CTEST_ARGS
     - |
       echo "OS=${OS}"
       echo "OCUDU_TARGET=${OCUDU_TARGET}"
@@ -136,6 +137,8 @@ include:
         echo "Using LD_LIBRARY_PATH=$LD_LIBRARY_PATH"
         set -x
         ctest -j${CPU_JOBS} --schedule-random --output-on-failure --output-junit xunit.xml $CTEST_ARGS
+        local ctest_ret=$?
         { set +x; } 2>/dev/null
         grep -l "ERROR SUMMARY: 0 errors" Testing/Temporary/MemoryChecker.*.log | xargs rm || true
+        return ${ctest_ret}
       }
