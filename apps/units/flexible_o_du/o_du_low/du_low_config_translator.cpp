@@ -109,6 +109,10 @@ static odu::du_low_config generate_du_low_config(const du_low_unit_config&      
     // PUSCH HARQ process lifetime in slots. It assumes the maximum lifetime is 100ms.
     unsigned expire_pusch_harq_timeout_slots =
         100 * nof_slots_per_subframe + du_low.expert_phy_cfg.max_processing_delay_slots;
+    // In a NTN cell, extend the HARQ process lifetime by the cell-specific-k-offset.
+    if (cell.ntn_cs_koffset) {
+      expire_pusch_harq_timeout_slots += cell.ntn_cs_koffset->count() * nof_slots_per_subframe;
+    }
 
     // Calculate the number of UL slots in a frame and in a PUSCH HARQ process lifetime.
     unsigned nof_ul_slots_in_harq_lifetime = expire_pusch_harq_timeout_slots;

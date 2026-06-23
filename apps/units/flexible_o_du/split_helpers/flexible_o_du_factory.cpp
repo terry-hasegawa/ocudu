@@ -92,6 +92,9 @@ static o_du_low_unit_config generate_o_du_low_config(const du_low_unit_config&  
     du_low_cell.max_puschs_per_slot  = du_hi_cell.cell.pusch_cfg.max_puschs_per_slot;
     du_low_cell.pusch_max_nof_layers = cell.ran.init_bwp.pusch.max_nof_layers;
     du_low_cell.tdd_pattern          = cell.ran.tdd_cfg;
+    if (du_hi_cell.cell.ntn_cfg) {
+      du_low_cell.ntn_cs_koffset = du_hi_cell.cell.ntn_cfg->cell_specific_koffset;
+    }
   }
 
   return odu_low_cfg;

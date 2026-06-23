@@ -8,6 +8,7 @@
 #include "ocudu/du/du_low/du_low_executor_mapper.h"
 #include "ocudu/du/du_low/o_du_low_config.h"
 #include "ocudu/ran/tdd/tdd_ul_dl_config.h"
+#include <chrono>
 
 namespace ocudu {
 
@@ -27,6 +28,8 @@ struct o_du_low_unit_config {
     unsigned                               pusch_max_nof_layers;
     unsigned                               nof_rx_antennas;
     unsigned                               nof_tx_antennas;
+    /// NTN cell-specific K-offset. Empty for terrestrial cells.
+    std::optional<std::chrono::milliseconds> ntn_cs_koffset;
   };
 
   const du_low_unit_config&                      du_low_unit_cfg;
