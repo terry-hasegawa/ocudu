@@ -6,6 +6,7 @@
 
 #include "external/fmt/include/fmt/core.h"
 #include "ocudu/ocudulog/logger.h"
+#include "ocudu/support/format/fmt_to_c_str.h"
 #include "ocudu/support/versioning/build_info.h"
 
 namespace ocudu {
@@ -18,18 +19,30 @@ class application_message_banners
 {
 public:
   /// Announces the application started.
-  application_message_banners(std::string_view app_name, std::string_view log_filename_) : log_filename(log_filename_)
+  application_message_banners(std::string_view        app_name,
+                              std::string_view        log_filename_,
+                              ocudulog::basic_logger& logger_,
+                              ocudulog::basic_levels  original_level_) :
+    log_filename(log_filename_), logger(logger_), original_level(original_level_)
   {
-    fmt::print("==== {} started ===\n", app_name);
-    fmt::print("Type <h> to view help\n");
+    fmt::memory_buffer buffer;
+    fmt::format_to(std::back_inserter(buffer), "==== {} started ===", app_name);
+
+    log_impl(buffer);
+
+    fmt::println("Type <h> to view help");
   }
 
   /// Announces the application is stopping.
   ~application_message_banners()
   {
-    fmt::print("Stopping...\n");
+    fmt::memory_buffer buffer;
+    fmt::format_to(std::back_inserter(buffer), "Stopping...");
+
+    log_impl(buffer);
+
     if (!log_filename.empty()) {
-      fmt::print("Logfile stored in {}\n", log_filename);
+      fmt::println("Logfile stored in {}", log_filename);
     }
   }
 
@@ -47,7 +60,21 @@ public:
   }
 
 private:
-  std::string log_filename;
+  /// Logs the given buffer in the logger and STDOUT.
+  void log_impl(fmt::memory_buffer& buffer) const
+  {
+    logger.set_level(ocudulog::basic_levels::info);
+    logger.info("{}", to_c_str(buffer));
+    ocudulog::flush();
+    logger.set_level(original_level);
+
+    fmt::println("{}", to_c_str(buffer));
+  }
+
+private:
+  std::string                  log_filename;
+  ocudulog::basic_logger&      logger;
+  const ocudulog::basic_levels original_level;
 };
 
 } // namespace app_services

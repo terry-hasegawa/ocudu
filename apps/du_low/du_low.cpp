@@ -295,7 +295,8 @@ int main(int argc, char** argv)
   du.odu_low->start();
 
   {
-    app_services::application_message_banners app_banner(app_name, du_low_cfg.log_cfg.filename);
+    app_services::application_message_banners app_banner(
+        app_name, du_low_cfg.log_cfg.filename, ocudulog::fetch_basic_logger("APP"), du_low_cfg.log_cfg.all_level);
 
     auto exec_metrics_session = exec_metrics_service.service
                                     ? exec_metrics_service.service->create_session(workers.get_metrics_executor())

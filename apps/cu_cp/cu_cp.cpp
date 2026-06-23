@@ -433,7 +433,10 @@ int main(int argc, char** argv)
 
   {
     app_services::application_message_banners app_banner(
-        app_name, cu_cp_cfg.log_cfg.filename == "stdout" ? std::string_view() : cu_cp_cfg.log_cfg.filename);
+        app_name,
+        cu_cp_cfg.log_cfg.filename == "stdout" ? std::string_view() : cu_cp_cfg.log_cfg.filename,
+        ocudulog::fetch_basic_logger("CU-CP"),
+        cu_cp_cfg.log_cfg.all_level);
 
     auto exec_metrics_session = exec_metrics_service.service
                                     ? exec_metrics_service.service->create_session(workers.get_metrics_executor())
