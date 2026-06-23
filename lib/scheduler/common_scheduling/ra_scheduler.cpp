@@ -1360,7 +1360,7 @@ void ra_scheduler::schedule_msg3_retx(cell_resource_allocator& res_alloc, pendin
       continue;
     }
 
-    // For a CFRA UE, avoid slots where it already has a PUCCH: it would multiplex its UCI onto the Msg3 PUSCH,
+    // For a CFRA UE, avoid slots where it already has a PUCCH: it would multiplex its UCI onto the RAR UL grant,
     // which the RA scheduler builds without UCI.
     if (not can_allocate_rar_ul_grant(msg3_ctx.preamble.tc_rnti, pusch_alloc)) {
       continue;
