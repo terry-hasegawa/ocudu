@@ -45,21 +45,38 @@ Configuration and UE lifecycle events, driven by the DU manager:
 
 User-plane SDUs, one bearer per logical channel, bound through `mac_logical_channel_config`:
 
-- a `mac_sdu_tx_builder` supplies DL SDUs (`on_new_tx_sdu`) for MAC PDU assembly and reports each RLC bearer's buffer
-  occupancy (`on_buffer_state_update`), which the MAC forwards to the scheduler, and
-- a `mac_sdu_rx_notifier` (`on_new_sdu`) which the MAC uses to forward decoded UL SDUs to the RLC.
+- **Input (from RLC):** a `mac_sdu_tx_builder` supplies DL SDUs (`on_new_tx_sdu`) for DL PDU assembly and RLC bearer's buffer
+  occupancy reports (`on_buffer_state_update`), which the MAC forwards to the scheduler, and
+- **Output (to RLC):** a `mac_sdu_rx_notifier` (`on_new_sdu`) which the MAC uses to forward decoded UL SDUs to the RLC.
 
 ### FAPI interface
 
 The MAC's lower-edge handlers are translated to and from real FAPI messages by the FAPI adaptor, which
-lives outside `lib/mac`, so the MAC is written purely against these abstract handlers:
+lives outside `lib/mac`, so the MAC is written purely against these abstract handlers.
 
-- **Inputs (from FAPI)** — `mac_cell_slot_handler` (`handle_slot_indication`, `handle_error_indication`),
-  `mac_cell_rach_handler` (`handle_rach_indication`), `mac_cell_control_information_handler`
-  (`handle_crc`/`handle_uci`/`handle_srs`), and `mac_pdu_handler` (`handle_rx_data_indication`).
-- **Outputs (to FAPI)** — `mac_cell_result_notifier` (obtained from `mac_result_notifier::get_cell`):
-  `on_new_downlink_scheduler_results`, `on_new_downlink_data`, `on_new_uplink_scheduler_results`,
-  and `on_cell_results_completion` as the end-of-slot sentinel.
+**Inputs (from FAPI):**
+
+- `mac_cell_slot_handler` — delivers the per-slot timing trigger (`handle_slot_indication`) that drives
+  scheduling and the generation of the slot's DL/UL results; also surfaces lower-layer processing
+  errors (`handle_error_indication`) and the completion of a cell stop (`handle_stop_indication`).
+- `mac_cell_rach_handler` — delivers the PRACH preambles detected by L1 (`handle_rach_indication`),
+  starting the Random Access procedure.
+- `mac_cell_control_information_handler` — delivers the UL control feedback decoded by L1 and forwards
+  it to the scheduler: PUSCH decode results (`handle_crc`), PUCCH/PUSCH UCI carrying SR, HARQ-ACK and
+  CSI (`handle_uci`), and SRS channel reports (`handle_srs`).
+- `mac_pdu_handler` — delivers the decoded UL MAC PDUs (`handle_rx_data_indication`) for
+  decoding and demultiplexing in the UL data path.
+
+**Outputs (to FAPI):** the MAC pushes each slot's results back through `mac_cell_result_notifier`
+(obtained from `mac_result_notifier::get_cell`):
+
+- `on_new_downlink_scheduler_results` — the DL scheduling decisions (encoded PDCCH DCIs, SSB and PDSCH
+  allocations), i.e. the `DL_TTI.request`.
+- `on_new_downlink_data` — the assembled DL MAC PDU payloads (SI, RAR, paging, UE DL-SCH), i.e. the
+  `Tx_Data.request`.
+- `on_new_uplink_scheduler_results` — the UL grants (PUSCH/PUCCH), i.e. the `UL_TTI.request`.
+- `on_cell_results_completion` — the end-of-slot sentinel signalling that all results for the slot have
+  been delivered.
 
 ## Concurrency and Parallelism
 
@@ -218,27 +235,25 @@ thread-safety for indication ingest. Its internal design is documented separatel
 
 ## Configuration Lifecycle
 
-Configuration is handled by the **MAC Controller** (`mac_controller`) on `ctrl_exec`. Adding a cell
-registers it with the timing source, metrics, scheduler and DL handler; removal unwinds these in
-reverse; cell start/stop map onto scheduler cell activation/deactivation.
+Configuration is handled by the **MAC Controller** (`mac_controller`) running on `ctrl_exec`. Adding a cell
+registers it with the timing source, metrics, scheduler and DL handler. Cell removal unwinds these steps in
+reverse order. The MAC cell start/stop controls the scheduler cell activation/deactivation.
 
 UE add, reconfigure and remove are asynchronous procedures (`ue_creation_procedure`,
 `ue_reconfiguration_procedure`, `mac_ue_removal_procedure`) implemented as coroutines that hop between
 the control executor and the per-cell/per-UE executors, setting up or tearing down the DL and UL
-contexts. UE creation is deferred until Msg3 (see the
-[RA Procedure](procedures.md#ra-procedure)); if any step fails, the earlier ones are rolled back in reverse order.
+contexts. These operations dispatched to the per-cell/per-UE executors should be latency bounded, so that other
+latency-sensitive tasks running in these executors do not get affected.
+
+UE creation in the MAC and in the DU as a whole is deferred until Msg3 (see the [RA Procedure](procedures.md#ra-procedure)).
 Removal deletes the scheduler context first — so no further grants are produced — then the UL/DL
 contexts, and finally the controller's UE entry.
 
 ## RNTI Management
 
-`rnti_manager` allocates a TC-RNTI for each detected contention-based PRACH preamble, using an atomic
-counter over the C-RNTI range seeded from `mac_expert_config::initial_crnti` (default `0x4601`);
-contention-free (CFRA) preambles instead use their pre-assigned C-RNTI. On UE creation the TC-RNTI is
-promoted to the UE's C-RNTI. The `rnti_value_table` maps RNTI ↔ `du_ue_index` as an array of atomics
-and is read lock-free from the UL and scheduler paths (relaxed ordering); its correctness relies on
-the higher-level executor and scheduler serialization described under Concurrency rather than on
-per-access locking.
+`rnti_manager` allocates a TC-RNTI for each detected contention-based PRACH preamble and C-RNTIs for
+UEs created from upper layer procedures (e.g. F1AP UE Context Setup Request).
+The `rnti_value_table` maps RNTI ↔ `du_ue_index` in a lock-free manner.
 
 ## Radio Link Failure Detection
 
