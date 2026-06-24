@@ -4,16 +4,6 @@
 include:
   - local: .gitlab/ci/docker/image-matrix.yml
 
-# ---------------------------------------------------------------------------
-# Derive the SIMD label used in the image tag from the MARCH value.
-# ---------------------------------------------------------------------------
-.simd-label: &simd-label |
-  case "${MARCH}" in
-    x86-64-v3)                   SIMD=avx2 ;;
-    x86-64-v4)                   SIMD=avx512 ;;
-    neoverse-n1+crc+crypto+ssbs) SIMD=neon ;;
-    *)                           SIMD="${MARCH}" ;;
-  esac
 
 ################################################################################
 # Legacy all-binary Ubuntu image (docker-compose / dev builds)
@@ -158,7 +148,7 @@ ocudu image update latest:
 ################################################################################
 
 .image-build:
-  extends: .docker-builder
+  extends: .image-build-common
   stage: deploy
   rules:
     - if: $SKIP_OCUDU_BUILDING_CONTAINERS_CI
@@ -170,74 +160,6 @@ ocudu image update latest:
     - if: $ON_API
       when: manual
       allow_failure: true
-  variables:
-    REGISTRY_URI: ${CI_REGISTRY}/${CI_PROJECT_PATH}/images
-    MODE: publish
-    MULTI_ARCH_BUILD: "false"
-    CACHE: "true"
-    CACHE_MODE: "max"
-    COMPONENT: ""
-    DRIVER: ""
-    OS: ubuntu
-    OS_VERSION: "24.04"
-    TARGETARCH: amd64
-    MARCH: x86-64-v4
-  before_script:
-    - *simd-label
-    - export CONTEXT=${CI_PROJECT_DIR}
-    - export DOCKERFILE=${CI_PROJECT_DIR}/docker
-    - |
-      if [ -n "${DRIVER}" ]; then
-        IMAGE_COMPONENT="${COMPONENT}-${DRIVER}"
-      else
-        IMAGE_COMPONENT="${COMPONENT}"
-      fi
-    - DATE=$(date +%Y%m%d)
-    - export NAME="${IMAGE_COMPONENT}"
-    - export VERSION="${OS}-${OS_VERSION}-${SIMD}-${DATE}"
-    - export PLATFORM="${TARGETARCH}"
-    - |
-      case "${COMPONENT}" in
-        cu|cu-cp|cu-up) DOCKER_TARGET=runtime-lean ;;
-        *)
-          case "${DRIVER}" in
-            uhd)  DOCKER_TARGET=runtime-uhd ;;
-            dpdk) DOCKER_TARGET=runtime-dpdk ;;
-            *)    DOCKER_TARGET=runtime ;;
-          esac ;;
-      esac
-    - export DOCKER_TARGET
-    - |
-      ENABLE_UHD=Off
-      ENABLE_DPDK=Off
-      case "${DRIVER}" in
-        uhd)  ENABLE_UHD=On ;;
-        dpdk) ENABLE_DPDK=On ;;
-      esac
-    - |
-      CPU_JOBS="$(/usr/local/bin/get_available_cores.sh 2>/dev/null || ${CI_PROJECT_DIR}/.gitlab/ci/builders/get_available_cores.sh)"
-      if [ -z "${CPU_JOBS}" ] || [ "${CPU_JOBS}" -lt 1 ]; then
-        CPU_JOBS=1
-      fi
-      export CPU_JOBS
-    - |
-      export BUILD_ARGS="\
-      OS=${OS};\
-      OS_VERSION=${OS_VERSION};\
-      UHD_VERSION=${UHD_VERSION};\
-      DPDK_VERSION=${DPDK_VERSION};\
-      ROHC_VERSION=${ROHC_VERSION};\
-      MARCH=${MARCH};\
-      NUM_JOBS=${CPU_JOBS};\
-      TARGETARCH=${TARGETARCH};\
-      COMPONENT=${COMPONENT};\
-      ENABLE_UHD=${ENABLE_UHD};\
-      ENABLE_DPDK=${ENABLE_DPDK};\
-      EXTRA_CMAKE_ARGS=${EXTRA_CMAKE_ARGS}"
-    - |
-      if [ -n "${PKG_VERSIONS}" ]; then
-        BUILD_ARGS="${BUILD_ARGS};PKG_VERSIONS=${PKG_VERSIONS}"
-      fi
   needs: []
 
 build-and-publish:gnb:
