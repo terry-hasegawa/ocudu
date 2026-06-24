@@ -438,6 +438,14 @@ static bool validate_ntn_config(const du_high_unit_cell_ntn_config& ntn_cfg)
     }
   }
 
+  if (ntn_cfg.ntn_gateway_location and ntn_cfg.ta_info) {
+    fmt::print("ntn_gateway_location and ta_info are mutually exclusive. When ntn_gateway_location is set, "
+               "TA-Common/Drift/DriftVariation are computed automatically from the satellite ephemeris and gateway "
+               "position. ta_info is only required when ntn_gateway_location is absent, to force fixed "
+               "TA-Common/Drift/DriftVariation values.\n");
+    valid = false;
+  }
+
   return valid;
 }
 
