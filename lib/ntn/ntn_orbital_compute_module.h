@@ -38,45 +38,26 @@ struct ntn_gateway_location_info {
   std::optional<state_vector> ntn_gateway_ecef_location;
 };
 
-/// Contains parameters for generating a SIB19 NTN-config message.
-struct sib19_ntn_configs_request {
+/// Propagated satellite orbital state at a given epoch time.
+struct ntn_orbital_state {
   using time_point = std::chrono::system_clock::time_point;
-  /// Whether to generate ECEF state vectors or Orbital parameters.
-  bool use_state_vector;
-  /// Indicates whether TA-Info for the feeder link is requested.
-  bool feeder_link_present;
-  /// Specifies SIB19 epoch time for which the NTN-config message content is to be generated.
-  time_point epoch_time;
-  /// Corresponding Tx slot.
-  slot_point epoch_slot;
-  /// Indicates how long the assistance info can be used. Unit is seconds.
-  unsigned ntn_ul_sync_validity_dur;
-};
-
-/// Contains NTN-config message content.
-struct sib19_ntn_configs_reply {
-  using time_point = std::chrono::system_clock::time_point;
-  /// Whether SIB19 NTN-Config was successfully generated.
+  /// Whether computation succeeded.
   bool success;
-  /// Specifies SIB19 epoch time for which the NTN-config message content is generated.
+  /// Epoch time for which the computation was performed.
   time_point epoch_time;
-  /// Corresponding Tx slot.
-  slot_point epoch_slot;
-  /// Indicates how long the assistance info can be used.
-  unsigned ntn_ul_sync_validity_dur;
-  /// Ephemeris info is always present as it is needed for the access link.
+  /// Propagated ephemeris in the requested format. Valid only when success is true.
   std::variant<ecef_coordinates_t, orbital_coordinates_t> ephemeris_info;
-  /// TA-info, present only if feeder link is present.
+  /// TA-info, present when gateway location or TA override is available. Valid only when success is true.
   std::optional<ta_info_t> ta_info;
 };
 
-/// Generates SIB19 NTN-config messages for given times and slots.
-class ntn_assistance_info_generator
+/// Computes satellite orbital propagation, ephemeris, and TA-info for a given epoch time.
+class ntn_orbital_compute_module
 {
 public:
   using time_point = std::chrono::system_clock::time_point;
 
-  explicit ntn_assistance_info_generator(orbit_propagator_type type = orbit_propagator_type::rk4);
+  explicit ntn_orbital_compute_module(orbit_propagator_type type = orbit_propagator_type::rk4);
 
   /// \brief Enqueue new ephemeris information for orbit propagation.
   ///
@@ -84,31 +65,30 @@ public:
   /// \return true if the information was successfully enqueued, false otherwise (e.g., if the queue is full).
   bool enqueue_ephemeris_info(const ephemeris_info_update& info);
 
-  /// \brief Enqueue new NTN gateway location info. Needed only if feedel link is present.
+  /// \brief Enqueue new NTN gateway location info. Needed only if feeder link is present.
   ///
   /// \param info NTN gateway location update (service start/stop time and geodetic coordinates).
   /// \return true if the information was successfully enqueued, false otherwise (e.g., if the queue is full).
   bool enqueue_ntn_gw_location(ntn_gateway_location_info& info);
 
-  /// \brief Generate SIB19 NTN-config message for the requested tx time.
+  /// \brief Sets a fixed TA-info override for transparent-architecture satellites, bypassing TA-info computation
+  /// from the NTN gateway location. Mutually exclusive with the NTN gateway location in practice.
+  void set_ta_info_override(const std::optional<ta_info_t>& info) { ta_info_override = info; }
+
+  /// \brief Propagate the satellite orbit to the given epoch time and compute the orbital state.
   ///
-  /// This function propagates the orbital ephemeris infotmation to the specified tx_time,
-  /// and generates the corresponding SIB19 message content, including ephemeris information and optional TA-info.
-  /// \param req The request containing tx_time, slot and configuration options.
-  /// \return A reply containing the generated SIB19 NTN-config message.
-  sib19_ntn_configs_reply generate_ntn_config(const sib19_ntn_configs_request& req);
+  /// \param epoch_time               Epoch time to propagate to.
+  /// \param ntn_ul_sync_validity_dur UL sync validity window [s], used for TA quadratic-fit.
+  /// \param use_state_vector         Whether to produce ECEF state vectors (true) or orbital parameters (false).
+  /// \return Propagated orbital state (ephemeris + optional TA-info).
+  ntn_orbital_state
+  compute_orbital_state(time_point epoch_time, unsigned ntn_ul_sync_validity_dur, bool use_state_vector = true);
 
 private:
   /// \brief Retrieves the ephemeris information valid at the specified time point.
-  ///
-  /// \param t The time point for which to retrieve ephemeris information.
-  /// \return The ephemeris information if available, or nullptr.
   orbit_ephemeris_info* get_ephemeris_info(time_point t);
 
   /// \brief Retrieves the NTN gateway location information valid at the specified time point.
-  ///
-  /// \param t The time point for which to retrieve NTN gateway location information.
-  /// \return The NTN gateway location information if available, or nullptr.
   const ntn_gateway_location_info* get_ntn_gateway_location_info(time_point t);
 
   /// Logger.
@@ -124,6 +104,9 @@ private:
 
   /// Ring buffer to store NTN gateway location info.
   static_ring_buffer<ntn_gateway_location_info, max_nof_entries> ntn_gateway_queue;
+
+  /// Fixed TA-info override for transparent-architecture satellites, set via \c set_ta_info_override.
+  std::optional<ta_info_t> ta_info_override;
 };
 
 } // namespace ocudu_ntn

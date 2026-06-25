@@ -351,27 +351,50 @@ void ntn_configuration_manager_impl::periodic_ntn_config_update_task(const nr_ce
     ctx.deferred_cell_cfg_queue.pop();
   }
 
-  sib19_ntn_configs_request request;
-  request.use_state_vector    = *ctx.cell_cfg.assistance_info.use_state_vector;
-  request.feeder_link_present = ctx.cell_cfg.assistance_info.feeder_link_info.has_value() &&
-                                ctx.cell_cfg.assistance_info.ntn_gateway_location.has_value();
-  request.epoch_time               = epoch_time;
-  request.epoch_slot               = epoch_slot;
-  request.ntn_ul_sync_validity_dur = ctx.cell_cfg.assistance_info.ntn_ul_sync_validity_dur.value_or(5);
+  unsigned ntn_ul_sync_validity_dur = ctx.cell_cfg.assistance_info.ntn_ul_sync_validity_dur.value_or(5);
+  bool     use_state_vector         = ctx.cell_cfg.assistance_info.use_state_vector.value_or(true);
 
-  sib19_ntn_configs_reply reply = ctx.ntn_info_generator.generate_ntn_config(request);
+  ntn_orbital_state state =
+      ctx.ntn_info_generator.compute_orbital_state(epoch_time, ntn_ul_sync_validity_dur, use_state_vector);
 
-  if (not reply.success) {
+  if (!state.success) {
     logger.warning(
-        "Failed to generate SIB19 NTN config for cell {} at slot={}, epoch={:%T}", nr_cgi.nci, sl, epoch_time);
+        "Failed to generate propagated NTN config for cell {} at slot={}, epoch={:%T}", nr_cgi.nci, sl, epoch_time);
     return;
+  }
+
+  if (ctx.cell_cfg.assistance_info.feeder_link_info &&
+      (ctx.cell_cfg.assistance_info.ntn_gateway_location || ctx.cell_cfg.assistance_info.ta_info) && !state.ta_info) {
+    logger.error("Feeder link is configured for cell {} but TA-info was not computed at slot={}, epoch={:%T}",
+                 nr_cgi.nci,
+                 sl,
+                 epoch_time);
+    return;
+  }
+
+  // Compute sat-switch orbital state if configured.
+  ntn_orbital_state  sat_state;
+  ntn_orbital_state* sat_state_ptr = nullptr;
+  if (ctx.sat_switch_enabled) {
+    const auto& sw_cfg = ctx.cell_cfg.assistance_info.sat_switch_with_resync;
+    if (sw_cfg && sw_cfg->epoch_timestamp && sw_cfg->ntn_cfg.ephemeris_info) {
+      bool     sat_use_sv       = std::holds_alternative<ecef_coordinates_t>(*sw_cfg->ntn_cfg.ephemeris_info);
+      unsigned sat_validity_dur = sw_cfg->ntn_cfg.ntn_ul_sync_validity_dur.value_or(ntn_ul_sync_validity_dur);
+      sat_state = ctx.sat_switch_info_generator.compute_orbital_state(epoch_time, sat_validity_dur, sat_use_sv);
+      if (sat_state.success) {
+        sat_state_ptr = &sat_state;
+      } else {
+        logger.warning("Failed to generate sat-switch propagated config for cell {}. Keeping static sat-switch config.",
+                       nr_cgi.nci);
+      }
+    }
   }
 
   // Send SIB19 PDU to DU.
   if (sib19_pdu_update_handler) {
     if (OCUDU_UNLIKELY(logger.debug.enabled())) {
       assistance_info_wrapper assistance_info{
-          next_si_win_start, next_si_win_end, epoch_slot, epoch_time, reply.ta_info, reply.ephemeris_info};
+          next_si_win_start, next_si_win_end, epoch_slot, epoch_time, state.ta_info, state.ephemeris_info};
       logger.debug("SIB19 msg update for cell {}: {}", nr_cgi.nci, assistance_info);
     }
 
@@ -382,72 +405,7 @@ void ntn_configuration_manager_impl::periodic_ntn_config_update_task(const nr_ce
     ntn_req.slot           = next_si_win_start;
     ntn_req.si_slot_period = ctx.cell_cfg.si_period_rf * next_si_win_start.nof_slots_per_frame();
     ntn_req.epoch_time     = epoch_time;
-
-    sib19_info& sib19         = ntn_req.sib19;
-    sib19.ref_location        = ctx.cell_cfg.assistance_info.reference_location;
-    sib19.distance_thres      = ctx.cell_cfg.assistance_info.distance_threshold;
-    sib19.t_service           = ctx.cell_cfg.assistance_info.t_service;
-    sib19.ncells              = ctx.cell_cfg.assistance_info.ncells;
-    sib19.moving_ref_location = ctx.cell_cfg.assistance_info.moving_reference_location;
-    if (ctx.sat_switch_enabled) {
-      sib19.sat_switch_with_resync = ctx.cell_cfg.assistance_info.sat_switch_with_resync;
-    } else {
-      sib19.sat_switch_with_resync.reset();
-    }
-    sib19.ntn_cfg.emplace();
-    sib19.ntn_cfg->cell_specific_koffset = ctx.cell_cfg.assistance_info.cell_specific_koffset;
-    sib19.ntn_cfg->polarization          = ctx.cell_cfg.assistance_info.polarization;
-    sib19.ntn_cfg->ta_report             = ctx.cell_cfg.assistance_info.ta_report;
-    sib19.ntn_cfg->k_mac                 = ctx.cell_cfg.assistance_info.k_mac;
-    sib19.ntn_cfg->epoch_time.emplace();
-    sib19.ntn_cfg->epoch_time->sfn             = reply.epoch_slot.sfn();
-    sib19.ntn_cfg->epoch_time->subframe_number = reply.epoch_slot.subframe_index();
-    sib19.ntn_cfg->ephemeris_info              = reply.ephemeris_info;
-    sib19.ntn_cfg->ta_info                     = reply.ta_info;
-    sib19.ntn_cfg->ntn_ul_sync_validity_dur    = reply.ntn_ul_sync_validity_dur;
-
-    if (ctx.cell_cfg.assistance_info.ta_info and ctx.cell_cfg.assistance_info.ta_info->ta_common_offset) {
-      if (!sib19.ntn_cfg->ta_info) {
-        sib19.ntn_cfg->ta_info.emplace();
-      }
-      sib19.ntn_cfg->ta_info->ta_common_offset = ctx.cell_cfg.assistance_info.ta_info->ta_common_offset;
-    }
-
-    if (ctx.sat_switch_enabled && sib19.sat_switch_with_resync &&
-        sib19.sat_switch_with_resync->epoch_timestamp.has_value() &&
-        sib19.sat_switch_with_resync->ntn_cfg.ephemeris_info.has_value()) {
-      auto&                     sat_sw = *sib19.sat_switch_with_resync;
-      sib19_ntn_configs_request sat_req;
-      sat_req.use_state_vector    = std::holds_alternative<ecef_coordinates_t>(*sat_sw.ntn_cfg.ephemeris_info);
-      sat_req.feeder_link_present = sat_sw.ntn_gateway_location.has_value();
-      sat_req.epoch_time          = epoch_time;
-      sat_req.epoch_slot          = epoch_slot;
-      sat_req.ntn_ul_sync_validity_dur =
-          sat_sw.ntn_cfg.ntn_ul_sync_validity_dur.value_or(request.ntn_ul_sync_validity_dur);
-
-      sib19_ntn_configs_reply sat_reply = ctx.sat_switch_info_generator.generate_ntn_config(sat_req);
-      if (sat_reply.success) {
-        sat_sw.ntn_cfg.epoch_time.emplace();
-        sat_sw.ntn_cfg.epoch_time->sfn             = sat_reply.epoch_slot.sfn();
-        sat_sw.ntn_cfg.epoch_time->subframe_number = sat_reply.epoch_slot.subframe_index();
-        sat_sw.ntn_cfg.ephemeris_info              = sat_reply.ephemeris_info;
-        sat_sw.ntn_cfg.ta_info                     = sat_reply.ta_info;
-        sat_sw.ntn_cfg.ntn_ul_sync_validity_dur    = sat_reply.ntn_ul_sync_validity_dur;
-      } else {
-        logger.warning("Failed to generate sat-switch propagated config for cell {}. Keeping static sat-switch config.",
-                       nr_cgi.nci);
-      }
-    }
-
-    // If neighbors are present in SIB19, populate the first neighbor NTN config
-    // with the serving-cell NTN config parameters. Specifically, neighboring cell use the same satellite.
-    if (!sib19.ncells.empty()) {
-      if (!sib19.ncells[0].ntn_cfg) {
-        sib19.ncells[0].ntn_cfg.emplace();
-      }
-      sib19.ncells[0].ntn_cfg->ephemeris_info = sib19.ntn_cfg->ephemeris_info;
-      sib19.ncells[0].ntn_cfg->ta_info        = sib19.ntn_cfg->ta_info;
-    }
+    ntn_req.sib19          = generate_sib19_info(ctx.cell_cfg, epoch_slot, state, sat_state_ptr);
 
     ntn_req.si_valuetag_change = sib19_tracked_fields_changed(ctx.last_sib19, ntn_req.sib19);
     if (ntn_req.si_valuetag_change) {
@@ -459,7 +417,7 @@ void ntn_configuration_manager_impl::periodic_ntn_config_update_task(const nr_ce
   }
 
   // Send CFO compensation request to PHY.
-  if (reply.ta_info) {
-    send_cfo_compensation_request(ctx, epoch_time, *reply.ta_info);
+  if (state.ta_info) {
+    send_cfo_compensation_request(ctx, epoch_time, *state.ta_info);
   }
 }

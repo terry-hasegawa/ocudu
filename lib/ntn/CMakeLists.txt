@@ -11,7 +11,8 @@ set(SOURCES
         propagators/keplerian_propagator.cpp
         orbit_ephemeris_info.cpp
         ntn_math_helpers.cpp
-        ntn_assistance_info_generator.cpp
+        ntn_sib19_helpers.cpp
+        ntn_orbital_compute_module.cpp
         ntn_configuration_manager_impl.cpp
         ntn_configuration_manager_factory.cpp
 )

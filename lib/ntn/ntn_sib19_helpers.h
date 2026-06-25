@@ -4,12 +4,27 @@
 
 #pragma once
 
+#include "ntn_orbital_compute_module.h"
+#include "ocudu/ntn/ntn_configuration_manager_config.h"
 #include "ocudu/ran/ntn.h"
 #include "ocudu/ran/sib/system_info_config.h"
+#include "ocudu/ran/slot_point.h"
 #include <optional>
 
 namespace ocudu {
 namespace ocudu_ntn {
+
+/// \brief Assembles sib19_info from OCM results and cell configuration.
+///
+/// \param cell_cfg      Per-cell NTN configuration.
+/// \param epoch_slot    SIB19 epoch Tx slot (used to populate ntn_cfg epoch_time sfn/subframe).
+/// \param serving_reply OCM result for the serving satellite.
+/// \param sat_sw_reply  OCM result for the sat-switch target satellite, or nullptr if not applicable.
+/// \return Assembled sib19_info.
+sib19_info generate_sib19_info(const ntn_cell_config&   cell_cfg,
+                               slot_point               epoch_slot,
+                               const ntn_orbital_state& serving_reply,
+                               const ntn_orbital_state* sat_sw_reply);
 
 /// \brief Returns true when any SIB1 value-tag-tracked SIB19 field differs between \p prev and \p curr,
 /// or when \p prev has no value (first update).

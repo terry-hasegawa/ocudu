@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "ntn_assistance_info_generator.h"
+#include "ntn_orbital_compute_module.h"
 #include "ocudu/ntn/ntn_configuration_manager.h"
 #include "ocudu/ntn/ntn_configuration_manager_config.h"
 #include "ocudu/ntn/ntn_configuration_manager_dependencies.h"
@@ -58,12 +58,12 @@ private:
     {
     }
 
-    ntn_cell_config               cell_cfg;
-    ntn_assistance_info_generator ntn_info_generator;
-    bool                          sat_switch_enabled = false;
-    ntn_assistance_info_generator sat_switch_info_generator;
-    unique_timer                  timer;
-    std::optional<sib19_info>     last_sib19;
+    ntn_cell_config            cell_cfg;
+    ntn_orbital_compute_module ntn_info_generator;
+    bool                       sat_switch_enabled = false;
+    ntn_orbital_compute_module sat_switch_info_generator;
+    unique_timer               timer;
+    std::optional<sib19_info>  last_sib19;
     /// Deferred cell-config updates waiting for SIB19_Tx_time >= epoch_time.
     static_ring_buffer<ntn_cell_config_update_info, 8> deferred_cell_cfg_queue;
   };

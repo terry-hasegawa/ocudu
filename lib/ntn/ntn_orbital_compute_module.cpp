@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: BSD-3-Clause-Open-MPI
 // Portions of this file may implement 3GPP specifications, which may be subject to additional licensing requirements.
 
-#include "ntn_assistance_info_generator.h"
+#include "ntn_orbital_compute_module.h"
 #include "converters/coordinate_converter.h"
 #include "coordinates_types.h"
 #include "ntn_math_helpers.h"
@@ -57,7 +57,7 @@ static ta_info_t compute_ta_info(const orbit_ephemeris_info& init_ephemeris_info
   return ta_info;
 }
 
-ntn_assistance_info_generator::ntn_assistance_info_generator(orbit_propagator_type type) :
+ntn_orbital_compute_module::ntn_orbital_compute_module(orbit_propagator_type type) :
   logger(ocudulog::fetch_basic_logger("NTN"))
 {
   if (type == orbit_propagator_type::keplerian) {
@@ -67,7 +67,7 @@ ntn_assistance_info_generator::ntn_assistance_info_generator(orbit_propagator_ty
   }
 }
 
-bool ntn_assistance_info_generator::enqueue_ephemeris_info(const ephemeris_info_update& info)
+bool ntn_orbital_compute_module::enqueue_ephemeris_info(const ephemeris_info_update& info)
 {
   if (const auto* pos_vel = std::get_if<ecef_coordinates_t>(&info.ephemeris_info)) {
     state_vector ecef_rv;
@@ -94,9 +94,9 @@ bool ntn_assistance_info_generator::enqueue_ephemeris_info(const ephemeris_info_
   return ephemeris_info_queue.try_push(ephemeris_info);
 }
 
-bool ntn_assistance_info_generator::enqueue_ntn_gw_location(ntn_gateway_location_info& ntn_gw_loc_update)
+bool ntn_orbital_compute_module::enqueue_ntn_gw_location(ntn_gateway_location_info& ntn_gw_loc_update)
 {
-  if (!ntn_gw_loc_update.ntn_gateway_ecef_location.has_value()) {
+  if (!ntn_gw_loc_update.ntn_gateway_ecef_location) {
     ntn_gw_loc_update.ntn_gateway_ecef_location =
         coordinate_converter::geodetic_to_ecef(ntn_gw_loc_update.ntn_gateway_location.latitude,
                                                ntn_gw_loc_update.ntn_gateway_location.longitude,
@@ -105,7 +105,7 @@ bool ntn_assistance_info_generator::enqueue_ntn_gw_location(ntn_gateway_location
   return ntn_gateway_queue.try_push(ntn_gw_loc_update);
 }
 
-orbit_ephemeris_info* ntn_assistance_info_generator::get_ephemeris_info(time_point t)
+orbit_ephemeris_info* ntn_orbital_compute_module::get_ephemeris_info(time_point t)
 {
   while (!ephemeris_info_queue.empty()) {
     orbit_ephemeris_info& first = *ephemeris_info_queue.begin();
@@ -133,7 +133,7 @@ orbit_ephemeris_info* ntn_assistance_info_generator::get_ephemeris_info(time_poi
   return nullptr;
 }
 
-const ntn_gateway_location_info* ntn_assistance_info_generator::get_ntn_gateway_location_info(time_point t)
+const ntn_gateway_location_info* ntn_orbital_compute_module::get_ntn_gateway_location_info(time_point t)
 {
   if (ntn_gateway_queue.empty()) {
     return nullptr;
@@ -166,52 +166,32 @@ const ntn_gateway_location_info* ntn_assistance_info_generator::get_ntn_gateway_
   return nullptr;
 }
 
-sib19_ntn_configs_reply ntn_assistance_info_generator::generate_ntn_config(const sib19_ntn_configs_request& req)
+ntn_orbital_state ntn_orbital_compute_module::compute_orbital_state(time_point epoch_time,
+                                                                    unsigned   ntn_ul_sync_validity_dur,
+                                                                    bool       use_state_vector)
 {
-  sib19_ntn_configs_reply reply;
-  reply.success = false;
+  ntn_orbital_state state;
+  state.success    = false;
+  state.epoch_time = epoch_time;
 
   // Cannot generate NTN config without ephemeris info.
   if (ephemeris_info_queue.empty()) {
-    return reply;
+    return state;
   }
 
-  // Cannot generate TA-info for Feeder link without the NTN gateway location.
-  if (req.feeder_link_present and ntn_gateway_queue.empty()) {
-    return reply;
-  }
-
-  orbit_ephemeris_info* ephemeris_info = get_ephemeris_info(req.epoch_time);
+  orbit_ephemeris_info* ephemeris_info = get_ephemeris_info(epoch_time);
   if (ephemeris_info == nullptr) {
-    return reply;
-  }
-
-  const ntn_gateway_location_info* ntn_gateway_location = nullptr;
-  if (req.feeder_link_present) {
-    ntn_gateway_location = get_ntn_gateway_location_info(req.epoch_time);
-    if (ntn_gateway_location == nullptr) {
-      return reply;
-    }
+    return state;
   }
 
   // Propagate ephemeris info until the expected SIB19 Tx time.
-  auto propagation_duration = req.epoch_time - ephemeris_info->epoch_time();
+  auto propagation_duration = epoch_time - ephemeris_info->epoch_time();
   ephemeris_info->propagate(propagation_duration);
 
   // Align ECI with ECEF reference frame at epoch time.
   ephemeris_info->align_reference_frames();
 
-  // Create NTN-Config.
-  reply.ntn_ul_sync_validity_dur = req.ntn_ul_sync_validity_dur;
-  reply.epoch_time               = req.epoch_time;
-  reply.epoch_slot               = req.epoch_slot;
-
-  if (ntn_gateway_location != nullptr) {
-    state_vector ntn_gateway_ecef = *ntn_gateway_location->ntn_gateway_ecef_location;
-    reply.ta_info                 = compute_ta_info(*ephemeris_info, ntn_gateway_ecef, req.ntn_ul_sync_validity_dur);
-  }
-
-  if (req.use_state_vector) {
+  if (use_state_vector) {
     const state_vector& ecef_rv = ephemeris_info->ecef_rv();
     ecef_coordinates_t  ecef_ephemeris_info;
     ecef_ephemeris_info.position_x  = ecef_rv.position.x;
@@ -220,7 +200,7 @@ sib19_ntn_configs_reply ntn_assistance_info_generator::generate_ntn_config(const
     ecef_ephemeris_info.velocity_vx = ecef_rv.velocity.x;
     ecef_ephemeris_info.velocity_vy = ecef_rv.velocity.y;
     ecef_ephemeris_info.velocity_vz = ecef_rv.velocity.z;
-    reply.ephemeris_info            = ecef_ephemeris_info;
+    state.ephemeris_info            = ecef_ephemeris_info;
   } else {
     const orbital_elements& oe = ephemeris_info->oe();
     orbital_coordinates_t   orbital_ephemeris_info;
@@ -230,8 +210,23 @@ sib19_ntn_configs_reply ntn_assistance_info_generator::generate_ntn_config(const
     orbital_ephemeris_info.longitude       = oe.longitude;
     orbital_ephemeris_info.periapsis       = oe.periapsis;
     orbital_ephemeris_info.mean_anomaly    = oe.mean_anomaly;
-    reply.ephemeris_info                   = orbital_ephemeris_info;
+    state.ephemeris_info                   = orbital_ephemeris_info;
   }
-  reply.success = true;
-  return reply;
+
+  // If a gateway is queued (but no override), look up the entry for this epoch.
+  // If no valid entry is found yet, proceed without TA-info (e.g. regenerative architecture).
+  const ntn_gateway_location_info* ntn_gateway_location = nullptr;
+  if (not ta_info_override and not ntn_gateway_queue.empty()) {
+    ntn_gateway_location = get_ntn_gateway_location_info(epoch_time);
+  }
+
+  if (ta_info_override) {
+    state.ta_info = ta_info_override;
+  } else if (ntn_gateway_location != nullptr) {
+    state_vector ntn_gateway_ecef = *ntn_gateway_location->ntn_gateway_ecef_location;
+    state.ta_info                 = compute_ta_info(*ephemeris_info, ntn_gateway_ecef, ntn_ul_sync_validity_dur);
+  }
+
+  state.success = true;
+  return state;
 }

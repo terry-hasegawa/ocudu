@@ -4,7 +4,7 @@
 
 #include "lib/ntn/converters/reference_frame_converter.h"
 #include "lib/ntn/coordinates_types.h"
-#include "lib/ntn/ntn_assistance_info_generator.h"
+#include "lib/ntn/ntn_orbital_compute_module.h"
 #include "ocudu/ran/ntn.h"
 #include "ocudu/ran/slot_point.h"
 #include "ocudu/support/test_utils.h"
@@ -32,6 +32,7 @@ TEST(test_ntn_assistance_info_cfg_generator, access_link_only_scenario)
   // Tolerances.
   double pos_tolerance_m   = 3;   // 3m -> delay error of 10ns
   double vel_tolerance_m_s = 0.1; // 0.1m/s -> doppler error at 2GHz of 0.67Hz
+  bool   use_state_vector  = true;
 
   std::vector<std::tuple<double, state_vector>> test_cases = {
       {0, {{-12451277.795, 40348000.091, -1726486.314}, {35.631, -6.276, -385.708}}},
@@ -58,38 +59,25 @@ TEST(test_ntn_assistance_info_cfg_generator, access_link_only_scenario)
   auto               epoch_time_t6     = string_to_timepoint(epoch_time_utc_t6);
   ecef_coordinates_t ecef_rv_t6        = {-320105.690, 6864002.842, 70594.908, -4049.063, -258.559, 6105.147};
 
-  // Create SIB19 NTN-Config generator.
-  ntn_assistance_info_generator sib19_ntn_cfg_gen;
+  ntn_orbital_compute_module ocm;
 
-  // Feed LEO ephemeris info into SIB19 NTN-Config generator.
   ephemeris_info_update ephemeris_info_t0;
   ephemeris_info_t0.epoch_time     = epoch_time_t0;
   ephemeris_info_t0.ephemeris_info = ecef_rv_t0;
-  sib19_ntn_cfg_gen.enqueue_ephemeris_info(ephemeris_info_t0);
+  ocm.enqueue_ephemeris_info(ephemeris_info_t0);
 
   ephemeris_info_update ephemeris_info_t6;
   ephemeris_info_t6.epoch_time     = epoch_time_t6;
   ephemeris_info_t6.ephemeris_info = ecef_rv_t6;
-  sib19_ntn_cfg_gen.enqueue_ephemeris_info(ephemeris_info_t6);
+  ocm.enqueue_ephemeris_info(ephemeris_info_t6);
 
   for (const auto& [propagation_time, expected_ecef_rv] : test_cases) {
     auto duration = std::chrono::duration_cast<std::chrono::system_clock::duration>(
         std::chrono::duration<double>(propagation_time));
 
-    // Request generation of SIB19 at specific Tx time.
-    sib19_ntn_configs_request request;
-    request.use_state_vector         = true;
-    request.feeder_link_present      = false;
-    request.epoch_time               = epoch_time_t0 + duration;
-    request.epoch_slot               = slot_point(0, propagation_time);
-    request.ntn_ul_sync_validity_dur = 5;
-
-    sib19_ntn_configs_reply reply = sib19_ntn_cfg_gen.generate_ntn_config(request);
+    ntn_orbital_state reply = ocm.compute_orbital_state(epoch_time_t0 + duration, 5);
     ASSERT_TRUE(reply.success);
-    ASSERT_EQ(reply.epoch_time, reply.epoch_time);
-    ASSERT_EQ(reply.epoch_slot, reply.epoch_slot);
-    ASSERT_EQ(reply.ntn_ul_sync_validity_dur, 5);
-    if (request.use_state_vector) {
+    if (use_state_vector) {
       ASSERT_TRUE(std::holds_alternative<ecef_coordinates_t>(reply.ephemeris_info));
       auto ecef = std::get<ecef_coordinates_t>(reply.ephemeris_info);
       ASSERT_NEAR(ecef.position_x, expected_ecef_rv.position.x, pos_tolerance_m);
@@ -113,8 +101,9 @@ TEST(test_ntn_assistance_info_cfg_generator, feeder_link_scenario)
   double fl_delay_tolerance_us           = 0.001; // 1ns
   double fl_delay_drift_tolerance_us     = 0.001; // 1ns/s
   double fl_delay_drift_var_tolerance_us = 0.001; // 1ns/s^2
+  bool   use_state_vector                = true;
 
-  ntn_assistance_info_generator sib19_ntn_cfg_gen;
+  ntn_orbital_compute_module ocm;
 
   std::string epoch_time_utc = "2025-06-24T09:00:00"; // need to set some value
   auto        epoch_time     = string_to_timepoint(epoch_time_utc);
@@ -145,27 +134,16 @@ TEST(test_ntn_assistance_info_cfg_generator, feeder_link_scenario)
   ntn_gw_loc.ntn_gateway_location.longitude = -65.747661460614;
   ntn_gw_loc.ntn_gateway_location.altitude  = 1.0;
 
-  sib19_ntn_cfg_gen.enqueue_ephemeris_info(ephemeris_info);
-  sib19_ntn_cfg_gen.enqueue_ntn_gw_location(ntn_gw_loc);
+  ocm.enqueue_ephemeris_info(ephemeris_info);
+  ocm.enqueue_ntn_gw_location(ntn_gw_loc);
 
   for (const auto& [propagation_time, expected_ta_info, expected_ecef_rv] : test_cases) {
     auto duration = std::chrono::duration_cast<std::chrono::system_clock::duration>(
         std::chrono::duration<double>(propagation_time));
 
-    // Request generation of SIB19 at specific Tx time.
-    sib19_ntn_configs_request request;
-    request.use_state_vector         = true;
-    request.feeder_link_present      = true;
-    request.epoch_time               = epoch_time + duration;
-    request.epoch_slot               = slot_point(0, propagation_time);
-    request.ntn_ul_sync_validity_dur = 5;
-
-    sib19_ntn_configs_reply reply = sib19_ntn_cfg_gen.generate_ntn_config(request);
+    ntn_orbital_state reply = ocm.compute_orbital_state(epoch_time + duration, 5);
     ASSERT_TRUE(reply.success);
-    ASSERT_EQ(reply.epoch_time, reply.epoch_time);
-    ASSERT_EQ(reply.epoch_slot, reply.epoch_slot);
-    ASSERT_EQ(reply.ntn_ul_sync_validity_dur, 5);
-    if (request.use_state_vector) {
+    if (use_state_vector) {
       ASSERT_TRUE(std::holds_alternative<ecef_coordinates_t>(reply.ephemeris_info));
       auto ecef = std::get<ecef_coordinates_t>(reply.ephemeris_info);
       ASSERT_NEAR(ecef.position_x, expected_ecef_rv.position.x, pos_tolerance_m);
