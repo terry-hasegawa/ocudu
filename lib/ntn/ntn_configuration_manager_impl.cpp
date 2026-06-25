@@ -88,17 +88,14 @@ ntn_configuration_manager_impl::ntn_configuration_manager_impl(const ntn_configu
     ctx.sat_switch_enabled = cell_config.assistance_info.sat_switch_with_resync.has_value();
 
     if (cell_config.assistance_info.epoch_timestamp) {
-      ephemeris_info_update ephemeris_info;
-      ephemeris_info.epoch_time     = *cell_config.assistance_info.epoch_timestamp;
-      ephemeris_info.ephemeris_info = cell_config.assistance_info.ephemeris_info;
-      ctx.ntn_info_generator.enqueue_ephemeris_info(ephemeris_info);
+      ctx.ntn_info_generator.enqueue_ephemeris_info(ephemeris_info_update{*cell_config.assistance_info.epoch_timestamp,
+                                                                          cell_config.assistance_info.ephemeris_info});
 
       if (cell_config.assistance_info.ntn_gateway_location) {
-        ntn_gateway_location_info gw_location;
-        gw_location.service_start_time             = ephemeris_info.epoch_time;
-        gw_location.ntn_gateway_location.latitude  = cell_config.assistance_info.ntn_gateway_location->latitude;
-        gw_location.ntn_gateway_location.longitude = cell_config.assistance_info.ntn_gateway_location->longitude;
-        gw_location.ntn_gateway_location.altitude  = cell_config.assistance_info.ntn_gateway_location->altitude;
+        ntn_gateway_location_info gw_location{*cell_config.assistance_info.epoch_timestamp,
+                                              std::nullopt,
+                                              *cell_config.assistance_info.ntn_gateway_location,
+                                              std::nullopt};
         ctx.ntn_info_generator.enqueue_ntn_gw_location(gw_location);
       }
     }
@@ -106,18 +103,13 @@ ntn_configuration_manager_impl::ntn_configuration_manager_impl(const ntn_configu
     if (ctx.sat_switch_enabled) {
       const sat_switch_with_resync_t& sat_sw = *cell_config.assistance_info.sat_switch_with_resync;
       if (sat_sw.epoch_timestamp && sat_sw.ntn_cfg.ephemeris_info) {
-        ephemeris_info_update sat_ephemeris_update;
-        sat_ephemeris_update.epoch_time     = *sat_sw.epoch_timestamp;
-        sat_ephemeris_update.ephemeris_info = *sat_sw.ntn_cfg.ephemeris_info;
-        if (!ctx.sat_switch_info_generator.enqueue_ephemeris_info(sat_ephemeris_update)) {
+        if (!ctx.sat_switch_info_generator.enqueue_ephemeris_info(
+                ephemeris_info_update{*sat_sw.epoch_timestamp, *sat_sw.ntn_cfg.ephemeris_info})) {
           logger.warning("Failed to enqueue sat-switch ephemeris for cell {}", cell_config.nr_cgi.nci);
         }
         if (sat_sw.ntn_gateway_location) {
-          ntn_gateway_location_info sat_gw_location;
-          sat_gw_location.service_start_time             = *sat_sw.epoch_timestamp;
-          sat_gw_location.ntn_gateway_location.latitude  = sat_sw.ntn_gateway_location->latitude;
-          sat_gw_location.ntn_gateway_location.longitude = sat_sw.ntn_gateway_location->longitude;
-          sat_gw_location.ntn_gateway_location.altitude  = sat_sw.ntn_gateway_location->altitude;
+          ntn_gateway_location_info sat_gw_location{
+              *sat_sw.epoch_timestamp, std::nullopt, *sat_sw.ntn_gateway_location, std::nullopt};
           if (!ctx.sat_switch_info_generator.enqueue_ntn_gw_location(sat_gw_location)) {
             logger.warning("Failed to enqueue sat-switch gateway location for cell {}", cell_config.nr_cgi.nci);
           }
@@ -200,19 +192,14 @@ bool ntn_configuration_manager_impl::handle_ntn_cell_config_update(const ntn_cel
   if (cell_req.sat_switch_with_resync) {
     const sat_switch_with_resync_t& sat_sw = *cell_req.sat_switch_with_resync;
     if (sat_sw.epoch_timestamp && sat_sw.ntn_cfg.ephemeris_info) {
-      ephemeris_info_update sat_ephemeris_update;
-      sat_ephemeris_update.epoch_time     = *sat_sw.epoch_timestamp;
-      sat_ephemeris_update.ephemeris_info = *sat_sw.ntn_cfg.ephemeris_info;
-      if (!ctx.sat_switch_info_generator.enqueue_ephemeris_info(sat_ephemeris_update)) {
+      if (!ctx.sat_switch_info_generator.enqueue_ephemeris_info(
+              ephemeris_info_update{*sat_sw.epoch_timestamp, *sat_sw.ntn_cfg.ephemeris_info})) {
         logger.warning("Failed to enqueue sat-switch ephemeris for cell {}", cell_req.nr_cgi.nci);
         return false;
       }
       if (sat_sw.ntn_gateway_location) {
-        ntn_gateway_location_info sat_gw_location;
-        sat_gw_location.service_start_time             = *sat_sw.epoch_timestamp;
-        sat_gw_location.ntn_gateway_location.latitude  = sat_sw.ntn_gateway_location->latitude;
-        sat_gw_location.ntn_gateway_location.longitude = sat_sw.ntn_gateway_location->longitude;
-        sat_gw_location.ntn_gateway_location.altitude  = sat_sw.ntn_gateway_location->altitude;
+        ntn_gateway_location_info sat_gw_location{
+            *sat_sw.epoch_timestamp, std::nullopt, *sat_sw.ntn_gateway_location, std::nullopt};
         if (!ctx.sat_switch_info_generator.enqueue_ntn_gw_location(sat_gw_location)) {
           logger.warning("Failed to enqueue sat-switch gateway location for cell {}", cell_req.nr_cgi.nci);
           return false;
@@ -223,21 +210,16 @@ bool ntn_configuration_manager_impl::handle_ntn_cell_config_update(const ntn_cel
 
   // If provided, send NTN gateway location info to SIB19 NTN config generator.
   if (cell_req.ntn_gateway_location) {
-    ntn_gateway_location_info gw_location;
-    gw_location.service_start_time             = cell_req.epoch_time;
-    gw_location.ntn_gateway_location.latitude  = cell_req.ntn_gateway_location->latitude;
-    gw_location.ntn_gateway_location.longitude = cell_req.ntn_gateway_location->longitude;
-    gw_location.ntn_gateway_location.altitude  = cell_req.ntn_gateway_location->altitude;
+    ntn_gateway_location_info gw_location{
+        cell_req.epoch_time, std::nullopt, *cell_req.ntn_gateway_location, std::nullopt};
     if (not ctx.ntn_info_generator.enqueue_ntn_gw_location(gw_location)) {
       return false;
     }
   }
 
   // Send Ephemeris Info to SIB19 NTN config generator.
-  ephemeris_info_update ephemeris_info;
-  ephemeris_info.epoch_time     = cell_req.epoch_time;
-  ephemeris_info.ephemeris_info = cell_req.ephemeris_info;
-  return ctx.ntn_info_generator.enqueue_ephemeris_info(ephemeris_info);
+  return ctx.ntn_info_generator.enqueue_ephemeris_info(
+      ephemeris_info_update{cell_req.epoch_time, cell_req.ephemeris_info});
 }
 
 void ntn_configuration_manager_impl::apply_deferred_cell_config_update(per_cell_context&                  ctx,
