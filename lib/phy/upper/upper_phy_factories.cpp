@@ -583,11 +583,8 @@ create_ul_processor_factory(const upper_phy_factory_configuration& config,
       create_low_papr_sequence_generator_sw_factory();
   report_fatal_error_if_not(sequence_factory, "Invalid sequence factory.");
 
-  std::shared_ptr<dft_processor_factory> dft_factory = create_dft_processor_factory_fftw_slow();
-  if (!dft_factory) {
-    dft_factory = create_dft_processor_factory_generic();
-    report_fatal_error_if_not(dft_factory, "Invalid DFT factory.");
-  }
+  std::shared_ptr<dft_processor_factory> dft_factory = create_dft_processor_factory();
+  report_fatal_error_if_not(dft_factory, "Invalid DFT factory.");
 
   std::shared_ptr<time_alignment_estimator_factory> ta_est_factory =
       create_time_alignment_estimator_dft_factory(dft_factory);

@@ -69,7 +69,7 @@ static prach_detector_factory& get_detector_factory()
     return *prach_det_factory;
   }
 
-  std::shared_ptr<dft_processor_factory> dft_proc_factory = create_dft_processor_factory_fftw_fast();
+  std::shared_ptr<dft_processor_factory> dft_proc_factory = create_dft_processor_factory();
   report_fatal_error_if_not(dft_proc_factory, "Failed to create DFT processor factory.");
 
   std::shared_ptr<prach_generator_factory> prach_gen_factory = create_prach_generator_factory_sw();

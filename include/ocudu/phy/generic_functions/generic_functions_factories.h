@@ -76,6 +76,32 @@ create_dft_processor_factory_fftw_fast(bool avoid_wisdom = false, const std::str
 #endif
 }
 
+/// \brief Factory helper that automatically selects the best available DFT processor.
+///
+/// This function attempts to create a concrete @ref dft_processor_factory implementation according to the following
+/// priority list:
+/// 1. Fastest FFT in the West (FFTW);
+/// 2. AMD Optimized Computing Library FFT for Zen (AOCL-FFTZ); and
+/// 3. Generic DFT which might not support all DFT sizes.
+inline std::shared_ptr<dft_processor_factory> create_dft_processor_factory()
+{
+  std::shared_ptr<dft_processor_factory> dft_proc_factory;
+
+  if ((dft_proc_factory = create_dft_processor_factory_fftw_fast())) {
+    return dft_proc_factory;
+  }
+
+  if ((dft_proc_factory = create_dft_processor_factory_fftz())) {
+    return dft_proc_factory;
+  }
+
+  if ((dft_proc_factory = create_dft_processor_factory_generic())) {
+    return dft_proc_factory;
+  }
+
+  return nullptr;
+}
+
 /// Factory for the Discrete Fourier Transform (DFT) processor for 16-bit complex integer values.
 class dft_processor_ci16_factory
 {

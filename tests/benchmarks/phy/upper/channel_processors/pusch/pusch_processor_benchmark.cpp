@@ -538,10 +538,7 @@ static std::shared_ptr<pusch_processor_factory> create_pusch_processor_factory()
   std::shared_ptr<short_block_detector_factory> short_block_det_factory = create_short_block_detector_factory_sw();
   TESTASSERT(short_block_det_factory);
 
-  std::shared_ptr<dft_processor_factory> dft_factory = create_dft_processor_factory_fftw_fast();
-  if (!dft_factory) {
-    dft_factory = create_dft_processor_factory_generic();
-  }
+  std::shared_ptr<dft_processor_factory> dft_factory = create_dft_processor_factory();
   TESTASSERT(dft_factory, "Cannot create DFT factory.");
 
   std::shared_ptr<time_alignment_estimator_factory> ta_estimator_factory =

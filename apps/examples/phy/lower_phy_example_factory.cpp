@@ -16,12 +16,8 @@ std::unique_ptr<lower_phy> ocudu::create_lower_phy(const lower_phy_configuration
     fr = frequency_range::FR2;
   }
 
-  // Create DFT factory. It tries to create a FFTW based factory. If FFTW library is not available, it creates a generic
-  // DFT factory.
-  std::shared_ptr<dft_processor_factory> dft_factory = create_dft_processor_factory_fftw_fast();
-  if (dft_factory == nullptr) {
-    dft_factory = create_dft_processor_factory_generic();
-  }
+  // Create DFT factory.
+  std::shared_ptr<dft_processor_factory> dft_factory = create_dft_processor_factory();
   report_fatal_error_if_not(dft_factory, "Failed to create DFT factory.");
 
   // Create OFDM modulator factory.
