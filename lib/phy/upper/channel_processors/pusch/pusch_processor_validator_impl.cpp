@@ -5,7 +5,9 @@
 #include "pusch_processor_validator_impl.h"
 #include "pusch_processor_impl.h"
 #include "ocudu/ran/transform_precoding/transform_precoding_helpers.h"
+#include "ocudu/ran/uci/uci_constants.h"
 #include "ocudu/ran/uci/uci_formatters.h"
+#include <algorithm>
 
 using namespace ocudu;
 
@@ -39,7 +41,7 @@ error_type<std::string> pusch_processor_validator_impl::is_valid(const pusch_pro
         ce_dims.nof_prb));
   }
 
-  // The implementation only works with a single transmit layer.
+  // The number of transmit layers must be within the channel estimate limits.
   if (pdu.nof_tx_layers > ce_dims.nof_tx_layers) {
     return make_unexpected(fmt::format("The number of transmit layers (i.e., {}) is out of the range {}.",
                                        pdu.nof_tx_layers,
@@ -63,21 +65,28 @@ error_type<std::string> pusch_processor_validator_impl::is_valid(const pusch_pro
                     pdu.freq_alloc));
   }
 
-  // Currently, none of the UCI field sizes can exceed 11 bit.
-  static constexpr unsigned max_uci_len = 11;
-  if ((pdu.uci.nof_harq_ack > max_uci_len) || (pdu.uci.nof_csi_part1 > max_uci_len)) {
-    return make_unexpected(fmt::format("UCI field sizes in bits ({}, {}), exceed the maximum bit size, i.e., {}.",
-                                       pdu.uci.nof_harq_ack,
-                                       pdu.uci.nof_csi_part1,
-                                       max_uci_len));
-  }
-
   // CSI Part 2 size parameters must be compatible with the CSI Part 1 number of bits.
   if (!pdu.uci.csi_part2_size.is_valid(pdu.uci.nof_csi_part1)) {
     return make_unexpected(
         fmt::format("CSI Part 1 UCI field length (i.e., {}) does not correspond with the CSI Part 2 (i.e., {}).",
                     pdu.uci.nof_csi_part1,
                     pdu.uci.csi_part2_size));
+  }
+
+  // Compute the total CSI Part 2 payload as the sum of maximum values from each entry's map.
+  unsigned max_csi_part2_bits = 0;
+  for (const auto& entry : pdu.uci.csi_part2_size.entries) {
+    if (!entry.map.empty()) {
+      max_csi_part2_bits += *std::max_element(entry.map.begin(), entry.map.end());
+    }
+  }
+
+  // Total UCI payload must not exceed the global bit limit.
+  unsigned nof_uci_bits = pdu.uci.nof_harq_ack + pdu.uci.nof_csi_part1 + max_csi_part2_bits;
+  if (nof_uci_bits > uci_constants::MAX_NOF_PAYLOAD_BITS) {
+    return make_unexpected(fmt::format("Total UCI size (i.e., {}) exceeds the maximum size, i.e., {}.",
+                                       nof_uci_bits,
+                                       uci_constants::MAX_NOF_PAYLOAD_BITS));
   }
 
   // The limited buffer for rate matching size must not be zero.

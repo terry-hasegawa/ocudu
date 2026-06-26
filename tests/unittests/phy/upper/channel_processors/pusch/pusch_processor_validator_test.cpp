@@ -5,6 +5,7 @@
 #include "ocudu/phy/upper/channel_processors/pusch/factories.h"
 #include "ocudu/phy/upper/channel_processors/pusch/formatters.h"
 #include "ocudu/phy/upper/equalization/equalization_factories.h"
+#include "ocudu/ran/uci/uci_constants.h"
 #include "ocudu/support/executors/inline_task_executor.h"
 #include "fmt/ostream.h"
 #include "gtest/gtest.h"
@@ -86,6 +87,17 @@ const std::vector<test_case_t> pusch_processor_validator_test_data = {
        return pdu;
      },
      R"(CSI Part 1 UCI field length \(i\.e\., 0\) does not correspond with the CSI Part 2 \(i\.e\., entries=\[params=\[offset=0 width=10\] map=\[1\]\]\)\.)"},
+    {[] {
+       pusch_processor::pdu_t pdu = base_pdu;
+       pdu.uci.nof_harq_ack       = 1000;
+       pdu.uci.nof_csi_part1      = 700;
+       auto& part2                = pdu.uci.csi_part2_size;
+       part2.entries.clear();
+       auto& e0 = part2.entries.emplace_back();
+       e0.map.emplace_back(300);
+       return pdu;
+     },
+     R"(Total UCI size \(i\.e\., 2000\) exceeds the maximum size, i\.e\., 1706\.)"},
     {[] {
        pusch_processor::pdu_t pdu = base_pdu;
        pdu.dmrs_symbol_mask       = {true};
@@ -171,18 +183,6 @@ const std::vector<test_case_t> pusch_processor_validator_test_data = {
        return pdu;
      },
      R"(Transform precoding is only possible with a valid number of PRB\.)"},
-    {[] {
-       pusch_processor::pdu_t pdu = base_pdu;
-       pdu.uci.nof_harq_ack       = 12;
-       return pdu;
-     },
-     R"(UCI field sizes in bits \(12, 1\), exceed the maximum bit size, i\.e\., 11\.)"},
-    {[] {
-       pusch_processor::pdu_t pdu = base_pdu;
-       pdu.uci.nof_csi_part1      = 12;
-       return pdu;
-     },
-     R"(UCI field sizes in bits \(0, 12\), exceed the maximum bit size, i\.e\., 11\.)"},
 };
 
 class PuschProcessorFixture : public ::testing::TestWithParam<test_case_t>
@@ -345,6 +345,15 @@ TEST_P(PuschProcessorFixture, PuschProcessorValidatortest)
   ASSERT_FALSE(validator_out.has_value()) << "Validation should fail.";
   ASSERT_TRUE(std::regex_match(validator_out.error(), std::regex(param.expr)))
       << "The assertion message doesn't match the expected pattern.";
+}
+
+TEST_F(PuschProcessorFixture, PuschProcessorValidatorSuccessPath)
+{
+  ASSERT_NE(pdu_validator, nullptr);
+
+  // The base PDU is fully valid and should exercise the success return path.
+  error_type<std::string> validator_out = pdu_validator->is_valid(base_pdu);
+  ASSERT_TRUE(validator_out.has_value()) << "Validation should succeed.";
 }
 
 // Creates test suite that combines all possible parameters.
