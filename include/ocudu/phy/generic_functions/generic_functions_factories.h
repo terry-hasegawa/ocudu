@@ -69,7 +69,7 @@ inline std::shared_ptr<dft_processor_factory>
 create_dft_processor_factory_fftw_fast(bool avoid_wisdom = false, const std::string& wisdom_filename = "")
 {
   std::string optimization_flag;
-#if defined(__SANITIZE_THREAD__) || defined(__SANITIZE_MEMORY__)
+#if !defined(BUILD_TYPE_RELEASE) || !defined(__x86_64__) || defined(__SANITIZE_THREAD__) || defined(__SANITIZE_MEMORY__)
   return create_dft_processor_factory_fftw_slow(avoid_wisdom, wisdom_filename);
 #else
   return create_dft_processor_factory_fftw("measure", 5.0, avoid_wisdom, wisdom_filename);
