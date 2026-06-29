@@ -68,8 +68,12 @@ void pdsch_modulator_impl::map(resource_grid_writer& grid,
   resource_grid_mapper::allocation_configuration allocation = {
       .bwp = config.bwp, .freq_alloc = config.freq_allocation, .time_alloc = config.time_alloc};
 
+  // Create resource grid port list.
+  static_vector<uint8_t, precoding_constants::MAX_NOF_PORTS> port_list(config.precoding.get_nof_ports());
+  std::iota(port_list.begin(), port_list.end(), 0);
+
   // Map into the resource grid.
-  mapper->map(grid, buffer_adapter, allocation, reserved, precoding2);
+  mapper->map(grid, buffer_adapter, allocation, reserved, port_list, precoding2);
 }
 
 void pdsch_modulator_impl::modulate(resource_grid_writer&            grid,

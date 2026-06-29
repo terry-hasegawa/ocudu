@@ -267,8 +267,12 @@ void pdsch_processor_flexible_impl::sync_pdsch_cb_processing()
   resource_grid_mapper::symbol_buffer& grid_buffer =
       block_processor->configure_new_transmission(data.get_buffer(), 0, block_config, *segment_buffer, 0, nof_cb);
 
+  // Create resource grid port list.
+  static_vector<uint8_t, precoding_constants::MAX_NOF_PORTS> port_list(config.precoding.get_nof_ports());
+  std::iota(port_list.begin(), port_list.end(), 0);
+
   // Map PDSCH.
-  mapper->map(*grid, grid_buffer, allocation, reserved, precoding);
+  mapper->map(*grid, grid_buffer, allocation, reserved, port_list, precoding);
 
   // Prepare PT-RS configuration and generate.
   if (config.ptrs) {
@@ -307,13 +311,17 @@ void pdsch_processor_flexible_impl::fork_cb_batches()
   // Set number of codeblock batches.
   cb_task_counter = nof_cb_batches;
 
+  // Create resource grid port list.
+  static_vector<uint8_t, precoding_constants::MAX_NOF_PORTS> port_list(config.precoding.get_nof_ports());
+  std::iota(port_list.begin(), port_list.end(), 0);
+
   // Spawn a task for each codeblock bactch.
   for (unsigned i_task = 0; i_task != nof_cb_batches; ++i_task) {
     // Queue batches in reverse order.
     unsigned i_batch = nof_cb_batches - 1 - i_task;
 
     // Create asynchronous task for the codeblock batch.
-    auto async_task = [this, nof_cb_per_batch, i_batch]() noexcept OCUDU_RTSAN_NONBLOCKING {
+    auto async_task = [this, nof_cb_per_batch, i_batch, port_list]() noexcept OCUDU_RTSAN_NONBLOCKING {
       // Start PDSCH codeblock batch tracing.
       trace_point cb_batch_pdsch_tp = l1_dl_tracer.now();
 
@@ -348,7 +356,7 @@ void pdsch_processor_flexible_impl::fork_cb_batches()
           data.get_buffer(), i_cw, block_config, *segment_buffer, first_cb_index, next_cb_batch_length);
 
       // Map PDSCH.
-      mapper->map(*grid, grid_buffer, allocation, reserved, precoding, re_offset[first_cb_index]);
+      mapper->map(*grid, grid_buffer, allocation, reserved, port_list, precoding, re_offset[first_cb_index]);
 
       // Trace PDSCH.
       l1_dl_tracer << trace_event("CB batch", cb_batch_pdsch_tp);

@@ -115,14 +115,16 @@ public:
   /// \param[in]  buffer     Buffer containing the complex symbols to map.
   /// \param[in]  allocation Resource allocation parameters.
   /// \param[in]  reserved   Reserved resource elements, to be excluded from the allocation pattern.
+  /// \param[in]  ports      List of port identifiers onto which the complex symbols are mapped in the resource grid.
   /// \param[in]  precoding  Precoding configuration.
   /// \param[in]  re_skip    Number of RE to skip before start mapping the buffer.
   virtual void map(resource_grid_writer&           grid,
                    symbol_buffer&                  buffer,
                    const allocation_configuration& allocation,
                    const re_pattern_list&          reserved,
+                   span<const uint8_t>             ports,
                    const precoding_configuration&  precoding,
-                   unsigned                        re_skip = 0) = 0;
+                   unsigned                        re_skip = 0) const = 0;
 };
 
 } // namespace ocudu

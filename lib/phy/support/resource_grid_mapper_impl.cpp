@@ -119,10 +119,11 @@ static void map_dmrs_type1_contiguous(resource_grid_writer&          writer,
 
 void resource_grid_mapper_impl::map_re_block(resource_grid_writer&                      writer,
                                              const bounded_bitset<max_nof_subcarriers>& block_mask,
+                                             span<const uint8_t>                        ports,
                                              const precoding_weight_matrix&             prg_weights,
                                              span<const ci8_t>                          block,
                                              unsigned                                   i_symbol,
-                                             unsigned                                   i_subc)
+                                             unsigned                                   i_subc) const
 {
   // Temporary intermediate buffer for storing precoded symbols.
   static_re_buffer<precoding_constants::MAX_NOF_PORTS, MAX_NOF_SUBCARRIERS, cbf16_t> precoding_buffer_copy;
@@ -137,8 +138,9 @@ void resource_grid_mapper_impl::map_re_block(resource_grid_writer&              
   if (OCUDU_LIKELY(is_contiguous)) {
     precoding_buffer_view.resize(nof_antennas, nof_re_block);
     int i_subc_begin = block_mask.find_lowest();
-    for (unsigned i_port = 0; i_port != nof_antennas; ++i_port) {
-      precoding_buffer_view.set_slice(i_port,
+    for (unsigned i_slice = 0; i_slice != nof_antennas; ++i_slice) {
+      unsigned i_port = ports[i_slice];
+      precoding_buffer_view.set_slice(i_slice,
                                       writer.get_view(i_port, i_symbol).subspan(i_subc + i_subc_begin, nof_re_block));
     }
   } else {
@@ -151,8 +153,9 @@ void resource_grid_mapper_impl::map_re_block(resource_grid_writer&              
 
   // Map for each port it the allocation is not contiguous.
   if (!is_contiguous) {
-    for (unsigned i_port = 0; i_port != nof_antennas; ++i_port) {
-      writer.put(i_port, i_symbol, i_subc, block_mask, precoding_buffer.get().get_slice(i_port));
+    for (unsigned i_slice = 0; i_slice != nof_antennas; ++i_slice) {
+      unsigned i_port = ports[i_slice];
+      writer.put(i_port, i_symbol, i_subc, block_mask, precoding_buffer.get().get_slice(i_slice));
     }
   }
 }
@@ -295,8 +298,9 @@ void resource_grid_mapper_impl::map(resource_grid_writer&           writer,
                                     symbol_buffer&                  buffer,
                                     const allocation_configuration& allocation,
                                     const re_pattern_list&          reserved,
+                                    span<const uint8_t>             ports,
                                     const precoding_configuration&  precoding,
-                                    unsigned                        re_skip)
+                                    unsigned                        re_skip) const
 {
   // The number of layers is equal to the number of ports.
   unsigned nof_layers = precoding.get_nof_layers();
@@ -429,7 +433,7 @@ void resource_grid_mapper_impl::map(resource_grid_writer&           writer,
           span<const ci8_t> block = buffer.pop_symbols(nof_symbols_block);
 
           // Apply layer mapping, precoding and map the resources in the grid.
-          map_re_block(writer, block_mask, prg_weights, block, i_symbol, map_subc_interval.start());
+          map_re_block(writer, block_mask, ports, prg_weights, block, i_symbol, map_subc_interval.start());
         }
 
         // Advance subcarrier interval.

@@ -30,11 +30,12 @@ public:
            symbol_buffer&                  buffer,
            const allocation_configuration& allocation,
            const re_pattern_list&          reserved,
+           span<const uint8_t>             ports,
            const precoding_configuration&  precoding,
-           unsigned                        re_skip) override;
+           unsigned                        re_skip) const override;
 
 private:
-  /// Maximum number of subcarriers that can be accomodated in an OFDM symbol.
+  /// Maximum number of subcarriers that can be accommodated in an OFDM symbol.
   static constexpr unsigned max_nof_subcarriers = MAX_NOF_SUBCARRIERS;
   /// Maximum number of ports to map in a mapping call.
   static constexpr unsigned max_nof_ports = precoding_constants::MAX_NOF_PORTS;
@@ -43,16 +44,18 @@ private:
   ///
   /// \param[out] writer       Destination resource grid.
   /// \param[in]  block_mask   Allocation mask.
+  /// \param[in]  ports        List of port identifiers onto which the complex symbols are mapped in the resource grid.
   /// \param[in]  prg_weights  Precoding weights for the block.
   /// \param[in]  block        Complex symbols to map.
   /// \param[in]  i_symbol     Destination OFDM symbol index within the slot.
   /// \param[in]  i_subc       Initial subcarrier index at which start mapping.
   void map_re_block(resource_grid_writer&                      writer,
                     const bounded_bitset<max_nof_subcarriers>& block_mask,
+                    span<const uint8_t>                        ports,
                     const precoding_weight_matrix&             prg_weights,
                     span<const ci8_t>                          block,
                     unsigned                                   i_symbol,
-                    unsigned                                   i_subc);
+                    unsigned                                   i_subc) const;
 
   /// Channel precoder.
   std::unique_ptr<channel_precoder> precoder;
