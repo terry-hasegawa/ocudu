@@ -139,6 +139,9 @@ include:
         ctest -j${CPU_JOBS} --schedule-random --output-on-failure --output-junit xunit.xml $CTEST_ARGS
         local ctest_ret=$?
         { set +x; } 2>/dev/null
+        if [ -f xunit.xml ]; then
+          OCUDU_COMMIT="${OCUDU_COMMIT:-${CI_COMMIT_SHA}}" python3 /usr/local/bin/add_junit_properties.py xunit.xml
+        fi
         grep -l "ERROR SUMMARY: 0 errors" Testing/Temporary/MemoryChecker.*.log | xargs rm || true
         return ${ctest_ret}
       }

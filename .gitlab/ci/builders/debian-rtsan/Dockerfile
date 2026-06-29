@@ -15,8 +15,8 @@ RUN TZ=Europe/Madrid && \
     update-alternatives --install /usr/bin/clang clang /usr/bin/clang-20 100 && \
     update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-20 100
 
-ADD install_dependencies.sh common.sh builder.sh get_available_cores.sh /usr/local/bin/
-RUN chmod +x /usr/local/bin/install_dependencies.sh /usr/local/bin/builder.sh /usr/local/bin/get_available_cores.sh && \
+ADD install_dependencies.sh common.sh builder.sh add_junit_properties.py get_available_cores.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/install_dependencies.sh /usr/local/bin/builder.sh /usr/local/bin/add_junit_properties.py /usr/local/bin/get_available_cores.sh && \
     /usr/local/bin/install_dependencies.sh && \
     apt-get autoremove -y && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 

@@ -26,7 +26,7 @@ RUN chmod +x /usr/local/bin/builder.sh /usr/local/bin/get_available_cores.sh
 
 RUN python -m venv /usr/local/builder_tools
 RUN /usr/local/builder_tools/bin/pip install "pandas < 3" "psutil < 6"
-ADD changed_tests.py /usr/local/bin
-RUN chmod +x /usr/local/bin/changed_tests.py
+ADD changed_tests.py add_junit_properties.py /usr/local/bin/
+RUN chmod +x /usr/local/bin/changed_tests.py /usr/local/bin/add_junit_properties.py
 
 WORKDIR /workdir
