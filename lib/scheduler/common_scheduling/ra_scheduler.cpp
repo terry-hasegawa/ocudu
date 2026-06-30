@@ -1437,7 +1437,6 @@ void ra_scheduler::schedule_msg3_retx(cell_resource_allocator& res_alloc, pendin
     ul_info.context.ss_id      = ss_cfg.get_id();
     ul_info.context.k2         = k2;
     ul_info.context.nof_retxs  = h_ul.nof_retxs();
-    ul_info.context.rapid      = msg3_ctx.preamble.preamble_id;
     ul_info.pusch_cfg          = msg3_data[pusch_td_res_index].pusch;
     ul_info.pusch_cfg.rnti     = msg3_ctx.preamble.tc_rnti;
     ul_info.pusch_cfg.rbs      = msg3_vrbs;
