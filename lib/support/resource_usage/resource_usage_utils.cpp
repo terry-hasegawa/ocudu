@@ -9,7 +9,7 @@
 using namespace ocudu;
 using namespace resource_usage_utils;
 
-/// Reads the current resident set size of the calling process (in kilobytes) from procfs.
+/// \brief Reads the current resident set size of the calling process (in kilobytes) from procfs.
 /// Unlike getrusage's ru_maxrss, this reflects the live memory footprint and can decrease over time.
 static long current_rss_kb()
 {
@@ -26,8 +26,8 @@ static long current_rss_kb()
   return -1;
 }
 
-/// Reads the total system memory (in kilobytes) from procfs. This value is constant for the lifetime of the process,
-/// so it is read from disk only once.
+/// \brief the total system memory (in kilobytes) from procfs. This value is constant for the lifetime of the
+/// process, so it is read from disk only once.
 static long total_system_memory_kb()
 {
   static const long total_kb = [] {
