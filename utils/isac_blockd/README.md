@@ -56,6 +56,7 @@ python3 server.py --zmq tcp://127.0.0.1:5599
 | `--k` | `4.0` | threshold = mean + k·std |
 | `--hold` | `12` | detection debounce (snapshots) |
 | `--fps` | `15` | display broadcast rate (detection runs at the raw snapshot rate) |
+| `--rnti` | first seen | lock to one UE RNTI (e.g. `0x4601`); other UEs' snapshots are ignored |
 
 > Tip for demo day: if sensitivity is too low, switch `--combine snr` or `--combine max`.
 
@@ -68,6 +69,15 @@ python3 server.py --zmq tcp://127.0.0.1:5599
   normalization) when the header flag is set.
 - **`seq` gaps / large Δt**: a drop (`seq` gap) beyond `max_seq_gap`, or a Δt over `max_dt_s`,
   invalidates that step's metric (held) instead of producing a false spike.
+- **Non-contiguous allocations** (`is_contiguous=0`): the packed body has no contiguous absolute
+  subcarrier axis, so the diff is skipped and the prev-chain is broken (no phantom motion).
+- **UE lock (RNTI)**: snapshots are locked to one UE (`--rnti` or the first RNTI seen); other
+  UEs' channels are never diffed against the target's.
+- **Epoch resets**: if Block A / the gNB restarts (sender clock or `seq` goes backwards), the
+  detector re-arms automatically — fresh baseline and a new calibration window — instead of
+  freezing on the stale threshold.
+- **Robust receive**: malformed/foreign messages and per-snapshot detector errors are counted
+  and skipped; they never terminate the server.
 
 ## Files
 
@@ -76,3 +86,5 @@ python3 server.py --zmq tcp://127.0.0.1:5599
 - `server.py` — ZMQ SUB + detector + WebSocket broadcast + static HTTP.
 - `web/index.html` — browser visualization (waterfall, thumbnails, metric, banner, status).
 - `fake_blocka.py` — synthetic Block A publisher for testing without a gNB.
+- `tests/` — pytest suite (`python3 -m pytest tests/`): wire round-trip/malformed cases and the
+  detector behaviors listed above.

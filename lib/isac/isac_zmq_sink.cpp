@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2026 OCUDU ISAC sensing PoC
+// SPDX-FileCopyrightText: Copyright (C) 2021-2026 Software Radio Systems Limited
 // SPDX-License-Identifier: BSD-3-Clause-Open-MPI
 
 #include "isac_zmq_sink.h"
@@ -6,6 +6,7 @@
 #include "fmt/format.h"
 #include <chrono>
 #include <cstdio>
+#include <cstring>
 #include <zmq.h>
 
 using namespace ocudu;
@@ -79,30 +80,62 @@ isac_zmq_sink::~isac_zmq_sink()
 }
 
 void isac_zmq_sink::publish(const dmrs_pusch_estimator::configuration& config,
-                            const dmrs_pusch_estimator_results&        results) noexcept
+                            const dmrs_pusch_estimator_results&        results,
+                            std::optional<uint16_t>                    rnti) noexcept
 {
   if (!ready) {
     return;
   }
 
-  // Consume a sequence number even if we later drop, so the subscriber detects gaps as drops.
-  const uint32_t this_seq = seq.fetch_add(1, std::memory_order_relaxed);
-
-  // Serialize on the PHY thread (bounded copy; reads the estimate read-only). This is the only
-  // work added to the PHY path; all ZMQ I/O happens on the sender thread.
+  // Gate BEFORE serializing so a full queue costs nothing but this try_lock. A failed try_lock
+  // (momentary contention) also drops; that path cannot bump next_seq, so it is invisible to the
+  // subscriber's gap accounting — accepted as rare.
   std::vector<uint8_t> msg;
-  serialize_csi(config, results, this_seq, static_cast<uint64_t>(now_ns() - start_ns), msg);
+  {
+    std::unique_lock<std::mutex> lk(mtx, std::try_to_lock);
+    if (!lk.owns_lock() || !running) {
+      return;
+    }
+    if (queue.size() >= max_depth) {
+      // Consume a sequence number for the dropped snapshot so the subscriber sees a gap.
+      ++next_seq;
+      return;
+    }
+    if (!free_bufs.empty()) {
+      msg = std::move(free_bufs.back());
+      free_bufs.pop_back();
+    }
+  }
+
+  // Serialize outside the lock (bounded copy; reads the estimate read-only). The seq stamped
+  // here is provisional; the real one is patched in at enqueue time below.
+  serialize_csi(config, results, rnti, /*seq=*/0, static_cast<uint64_t>(now_ns() - start_ns), msg);
   if (msg.empty()) {
     return;
   }
 
-  // Enqueue without ever blocking the PHY thread: if the queue is contended or full, drop.
-  std::unique_lock<std::mutex> lk(mtx, std::try_to_lock);
-  if (!lk.owns_lock() || !running || queue.size() >= max_depth) {
-    return;
+  // Enqueue without ever blocking the PHY thread; assign the sequence number under the same lock
+  // so the stream is monotonic in queue order even with concurrent publishers.
+  {
+    std::unique_lock<std::mutex> lk(mtx, std::try_to_lock);
+    if (!lk.owns_lock() || !running) {
+      return;
+    }
+    if (queue.size() >= max_depth) {
+      ++next_seq;
+      free_bufs.push_back(std::move(msg));
+      return;
+    }
+    const uint32_t seq = next_seq++;
+    std::memcpy(msg.data() + ISAC_CSI_SEQ_OFFSET, &seq, sizeof(seq));
+    try {
+      queue.push_back(std::move(msg));
+    } catch (...) {
+      // Allocation failure while growing the queue: drop instead of terminating (publish() is
+      // noexcept and must never take the gNB down).
+      return;
+    }
   }
-  queue.push_back(std::move(msg));
-  lk.unlock();
   cv.notify_one();
 }
 
@@ -121,5 +154,11 @@ void isac_zmq_sink::run()
     }
     // Non-blocking send. With ZMQ_PUB this drops if no subscriber / HWM reached.
     (void)zmq_send(zmq_sock, msg.data(), msg.size(), ZMQ_DONTWAIT);
+
+    // Recycle the buffer (capacity retained) so steady state does no allocations.
+    std::lock_guard<std::mutex> lk(mtx);
+    if (free_bufs.size() < max_depth) {
+      free_bufs.push_back(std::move(msg));
+    }
   }
 }

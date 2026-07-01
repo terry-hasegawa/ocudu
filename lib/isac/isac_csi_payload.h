@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2026 OCUDU ISAC sensing PoC
+// SPDX-FileCopyrightText: Copyright (C) 2021-2026 Software Radio Systems Limited
 // SPDX-License-Identifier: BSD-3-Clause-Open-MPI
 
 /// \file
@@ -12,6 +12,7 @@
 #include "ocudu/phy/upper/signal_processors/pusch/dmrs_pusch_estimator.h"
 #include "ocudu/ran/resource_block.h"
 #include <cstdint>
+#include <optional>
 #include <vector>
 
 namespace ocudu {
@@ -20,8 +21,8 @@ namespace isac {
 /// Magic value identifying an ISAC CSI message ("ISAC" as little-endian uint32).
 static constexpr uint32_t ISAC_CSI_MAGIC = 0x43415349U; // 'I','S','A','C'
 
-/// Wire format version. Bump on any layout change.
-static constexpr uint16_t ISAC_CSI_VERSION = 1;
+/// Wire format version. Bump on any layout change. v2: adds rnti/rnti_valid, pads to 100 bytes.
+static constexpr uint16_t ISAC_CSI_VERSION = 2;
 
 /// Maximum number of Rx branches carried (matches PUSCH architectural ceiling).
 static constexpr unsigned ISAC_MAX_RX_PORTS = 4;
@@ -31,6 +32,7 @@ static constexpr unsigned ISAC_MAX_RX_PORTS = 4;
 /// Followed immediately by the H body: \c nof_rx_ports * \c nof_re complex coefficients,
 /// branch-major, each stored as two little-endian float32 (real, imag).
 /// Body length in bytes = \c nof_rx_ports * \c nof_re * 2 * sizeof(float).
+/// The header is 100 bytes so the float32 body starts 4-byte aligned.
 #pragma pack(push, 1)
 struct isac_csi_header {
   uint32_t magic;        ///< ISAC_CSI_MAGIC.
@@ -46,18 +48,23 @@ struct isac_csi_header {
   uint8_t  nof_rx_ports; ///< Number of Rx branches in the body (<= ISAC_MAX_RX_PORTS).
   uint8_t  dmrs_symbol;  ///< Representative OFDM symbol index the H snapshot was read at.
   uint16_t prb_start;    ///< Lowest allocated PRB (CRB index).
-  uint16_t prb_count;    ///< Number of allocated PRBs.
+  uint16_t prb_count;    ///< Number of allocated PRBs (packed count, not the span).
   uint16_t nof_re;       ///< Subcarriers per branch (= prb_count * 12).
-  uint8_t  is_contiguous;///< 1 if the PRB allocation is contiguous.
+  uint8_t  is_contiguous;///< 1 if the PRB allocation is contiguous. If 0, the body packs only
+                         ///< the allocated PRBs and the subcarrier axis is NOT a contiguous
+                         ///< absolute range — consumers must not diff across snapshots.
   uint8_t  has_metrics;  ///< 1 if epre/rsrp/snr arrays are valid.
   uint64_t ts_rel_ns;    ///< Steady-clock nanoseconds since sink start.
   float    epre[ISAC_MAX_RX_PORTS]; ///< Per-port EPRE (linear). Valid if has_metrics.
   float    rsrp[ISAC_MAX_RX_PORTS]; ///< Per-port RSRP (linear). Valid if has_metrics.
   float    snr[ISAC_MAX_RX_PORTS];  ///< Per-port SNR  (linear). Valid if has_metrics.
+  uint16_t rnti;         ///< RNTI of the PUSCH PDU. Valid if rnti_valid.
+  uint8_t  rnti_valid;   ///< 1 if rnti carries the UE identity of this snapshot.
+  uint8_t  reserved[3];  ///< Zero. Pads the header to 100 bytes (4-byte-aligned body).
 };
 #pragma pack(pop)
 
-static_assert(sizeof(isac_csi_header) == 94, "Unexpected ISAC CSI header size; update README/Block D.");
+static_assert(sizeof(isac_csi_header) == 100, "Unexpected ISAC CSI header size; update README/Block D.");
 
 /// \brief Serializes one per-PDU CSI snapshot into \c out (header + H body).
 ///
@@ -67,14 +74,19 @@ static_assert(sizeof(isac_csi_header) == 94, "Unexpected ISAC CSI header size; u
 ///
 /// \param[in]  config      The estimator configuration captured at estimate() time (metadata).
 /// \param[in]  results     The completed estimator results (H reader); read-only.
+/// \param[in]  rnti        RNTI of the PUSCH PDU, if known (bridged via isac_tap_context).
 /// \param[in]  seq         Monotonic sequence number to stamp.
 /// \param[in]  ts_rel_ns   Relative timestamp (ns) to stamp.
 /// \param[out] out         Destination byte buffer (resized to the full message).
 void serialize_csi(const dmrs_pusch_estimator::configuration& config,
                    const dmrs_pusch_estimator_results&        results,
+                   std::optional<uint16_t>                    rnti,
                    uint32_t                                   seq,
                    uint64_t                                   ts_rel_ns,
                    std::vector<uint8_t>&                      out) noexcept;
+
+/// Byte offset of the \c seq field inside isac_csi_header (for late stamping at enqueue time).
+static constexpr size_t ISAC_CSI_SEQ_OFFSET = 8;
 
 } // namespace isac
 } // namespace ocudu

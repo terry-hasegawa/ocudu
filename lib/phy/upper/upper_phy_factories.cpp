@@ -845,12 +845,23 @@ create_ul_processor_factory(const upper_phy_factory_configuration& config,
     report_fatal_error_if_not(pusch_factory, "Failed to create factory.");
   }
 
+#ifdef ENABLE_ISAC_TAP
+  // ISAC sensing PoC (Block A): stamp the PDU RNTI in the thread-local tap context so the
+  // estimator tap can attach a UE identity to each CSI snapshot. No-op when the env gate is off.
+  pusch_factory = isac::maybe_wrap_pusch_processor_factory(std::move(pusch_factory));
+#endif
+
   // Create synchronous PUSCH processor for UCI only.
   pusch_config.decoder_factory =
       create_pusch_decoder_empty_factory(config.ul_bw_rb, pusch_config.ch_estimate_dimensions.nof_tx_layers);
   report_fatal_error_if_not(pusch_config.decoder_factory, "Invalid PUSCH decoder factory for UCI.");
   std::shared_ptr<pusch_processor_factory> uci_proc_factory = create_pusch_processor_factory_sw(pusch_config);
   report_fatal_error_if_not(uci_proc_factory, "Invalid PUSCH processor factory for UCI.");
+
+#ifdef ENABLE_ISAC_TAP
+  // Same RNTI stamping for the UCI-only PUSCH processors (they share the tapped estimator).
+  uci_proc_factory = isac::maybe_wrap_pusch_processor_factory(std::move(uci_proc_factory));
+#endif
 
   // If PUSCH decoders operate in asynchronous mode the number of PUSCH regular processors is equal to the maximum
   // number of enqueued PUSCH transmissions in one slot. Otherwise, the number of PUSCH regular processors is equal to

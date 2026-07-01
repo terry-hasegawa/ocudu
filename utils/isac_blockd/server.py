@@ -1,10 +1,14 @@
-# SPDX-FileCopyrightText: 2026 OCUDU ISAC sensing PoC
+# SPDX-FileCopyrightText: Copyright (C) 2021-2026 Software Radio Systems Limited
 # SPDX-License-Identifier: BSD-3-Clause-Open-MPI
+
 """ISAC sensing PoC - Block D server.
 
 Receives CSI snapshots from Block A over ZMQ SUB and runs the detector at the raw snapshot
 rate (detection loop), while broadcasting the latest frame to browser clients over WebSocket at
 a throttled display rate (10-20 fps). Also serves the visualization page over HTTP.
+
+Robustness: a malformed message or a per-message processing error is logged and skipped —
+it never terminates the server.
 """
 
 from __future__ import annotations
@@ -39,15 +43,17 @@ def serve_http(port: int) -> None:
 
 
 class App:
+    MAX_ERROR_LOGS = 10
+
     def __init__(self, args: argparse.Namespace) -> None:
         self.args = args
         self.det = Detector(DetectorConfig(
             calib_seconds=args.calib_seconds, calib_k=args.k, hold_frames=args.hold,
-            combine=args.combine, normalize=args.normalize))
-        self.latest: dict | None = None
+            combine=args.combine, normalize=args.normalize, target_rnti=args.rnti))
         self.clients: set = set()
         self.t0 = time.time()
-        self.count = 0
+        self.malformed = 0
+        self.errors = 0
 
     async def recv_loop(self) -> None:
         ctx = zmq.asyncio.Context.instance()
@@ -59,19 +65,28 @@ class App:
             raw = await sub.recv()
             snap = parse(raw)
             if snap is None:
+                self.malformed += 1
+                if self.malformed <= self.MAX_ERROR_LOGS:
+                    print(f"[blockd] dropped malformed message ({len(raw)} bytes, total {self.malformed})")
                 continue
-            frame = self.det.process(snap)              # detection at raw rate
-            frame["uptime"] = int(time.time() - self.t0)
-            self.latest = frame
-            self.count += 1
+            try:
+                self.det.process(snap)  # detection at raw rate (display is built lazily)
+            except Exception as exc:  # noqa: BLE001 - one bad snapshot must not kill the server
+                self.errors += 1
+                if self.errors <= self.MAX_ERROR_LOGS:
+                    print(f"[blockd] detector error (total {self.errors}): {exc!r}")
 
     async def broadcast_loop(self) -> None:
         period = 1.0 / self.args.fps
         while True:
             await asyncio.sleep(period)
-            if not self.clients or self.latest is None:
+            if not self.clients:
                 continue
-            msg = json.dumps(self.latest)
+            frame = self.det.render_frame()  # None when nothing new arrived -> skip the tick
+            if frame is None:
+                continue
+            frame["uptime"] = int(time.time() - self.t0)
+            msg = json.dumps(frame)
             await asyncio.gather(*(c.send(msg) for c in list(self.clients)), return_exceptions=True)
 
     async def ws_handler(self, ws) -> None:
@@ -109,6 +124,8 @@ def main() -> None:
     ap.add_argument("--calib-seconds", type=float, default=4.0)
     ap.add_argument("--k", type=float, default=4.0)
     ap.add_argument("--hold", type=int, default=12)
+    ap.add_argument("--rnti", type=lambda v: int(v, 0), default=None,
+                    help="lock to this UE RNTI (e.g. 0x4601); default: first RNTI seen")
     args = ap.parse_args()
     args.zmq = connect_endpoint(args.zmq)
     try:

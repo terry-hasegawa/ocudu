@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SPDX-FileCopyrightText: 2026 OCUDU ISAC sensing PoC -->
+<!-- SPDX-FileCopyrightText: Copyright (C) 2021-2026 Software Radio Systems Limited -->
 <!-- SPDX-License-Identifier: BSD-3-Clause-Open-MPI -->
 <html lang="ja">
 <head>
@@ -40,7 +40,7 @@
     </div>
     <div style="display:flex;gap:6px;flex-wrap:wrap">
       <span class="pill"><span class="dot" id="live" style="background:#5f768c"></span><span id="conn">connecting</span></span>
-      <span class="pill">layers/Rx <span class="mono" id="lr" style="color:var(--tx)">1L / 4R</span></span>
+      <span class="pill">layers/Rx <span class="mono" id="lr" style="color:var(--tx)">--</span></span>
     </div>
   </div>
 
@@ -60,14 +60,14 @@
 
   <div class="panel">
     <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px">
-      <div class="lbl">CSI |H| &mdash; composite (4 Rx averaged)</div>
+      <div class="lbl">CSI |H| &mdash; composite (<span id="nrx1">4</span> Rx averaged)</div>
       <div class="lbl mono"><span id="nre">--</span> sc &middot; SCS <span id="scs">--</span> kHz</div>
     </div>
     <canvas id="main" style="height:150px;border-radius:8px"></canvas>
   </div>
 
   <div>
-    <div class="lbl" style="margin-bottom:6px">per Rx branch &mdash; same DMRS port, 4 antenna branches (with per-branch SNR)</div>
+    <div class="lbl" style="margin-bottom:6px">per Rx branch &mdash; same DMRS port, <span id="nrx2">4</span> antenna branches (with per-branch SNR)</div>
     <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px">
       <div class="panel" style="padding:6px"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px"><span class="lbl mono">Rx0</span><span class="lbl mono" id="snr0">--</span></div><canvas class="thumb" style="height:58px;border-radius:6px"></canvas></div>
       <div class="panel" style="padding:6px"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px"><span class="lbl mono">Rx1</span><span class="lbl mono" id="snr1">--</span></div><canvas class="thumb" style="height:58px;border-radius:6px"></canvas></div>
@@ -84,7 +84,7 @@
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(0,1fr));gap:8px">
     <div class="panel"><div class="lbl">slot</div><div class="mono" id="ss" style="font-size:15px;margin-top:2px">--</div></div>
     <div class="panel"><div class="lbl">snapshot rate</div><div class="mono" id="rate" style="font-size:15px;margin-top:2px">~0/s</div></div>
-    <div class="panel"><div class="lbl">layers / Rx</div><div class="mono" style="font-size:15px;margin-top:2px">1L / 4R</div></div>
+    <div class="panel"><div class="lbl">layers / Rx</div><div class="mono" id="lr2" style="font-size:15px;margin-top:2px">--</div></div>
     <div class="panel"><div class="lbl">detections</div><div class="mono" id="det" style="font-size:15px;margin-top:2px">0</div></div>
     <div class="panel"><div class="lbl">uptime</div><div class="mono" id="up" style="font-size:15px;margin-top:2px">0:00</div></div>
   </div>
@@ -148,6 +148,7 @@
   const banner=document.getElementById('banner'),bstate=document.getElementById('bstate'),bsub=document.getElementById('bsub'),bdot=document.getElementById('bdot');
   const mval=document.getElementById('mval'),thrEl=document.getElementById('thr'),det=document.getElementById('det'),ss=document.getElementById('ss'),up=document.getElementById('up'),rateEl=document.getElementById('rate');
   const connEl=document.getElementById('conn'),liveEl=document.getElementById('live'),nreEl=document.getElementById('nre'),scsEl=document.getElementById('scs'),combineEl=document.getElementById('combine');
+  const lrEl=document.getElementById('lr'),lr2El=document.getElementById('lr2'),nrx1El=document.getElementById('nrx1'),nrx2El=document.getElementById('nrx2');
 
   function setBanner(state){
     if(state==='detected'){banner.style.background='var(--amber-bg)';bstate.textContent='motion detected';bstate.style.color='var(--amber-tx)';bsub.textContent='disturbance across Rx branches';bsub.style.color='var(--amber-tx)';bdot.style.background='var(--amber-tx)';}
@@ -174,7 +175,8 @@
     ss.textContent=f.slot;
     rateEl.textContent='~'+Math.round(f.rate)+'/s';
     const el=f.uptime||0;up.textContent=Math.floor(el/60)+':'+String(el%60).padStart(2,'0');
-    nreEl.textContent=f.nof_re; scsEl.textContent=f.scs_khz; combineEl.textContent=combineMode||'mean';
+    nreEl.textContent=f.nof_re; scsEl.textContent=f.scs_khz; combineEl.textContent=f.combine||'mean';
+    const lr=(f.rank||1)+'L / '+(f.nof_rx||4)+'R'; lrEl.textContent=lr; lr2El.textContent=lr; nrx1El.textContent=f.nof_rx||4; nrx2El.textContent=f.nof_rx||4;
     for(let b=0;b<B;b++)snrEl[b].textContent=(f.snr&&f.snr[b]!=null)?f.snr[b].toFixed(1)+' dB':'--';
     setBanner(f.calibrating?'calibrating':(active?'detected':'clear'));
   }
@@ -183,7 +185,6 @@
   const params=new URLSearchParams(location.search);
   const wsPort=params.get('ws')||'8765';
   const wsUrl='ws://'+(location.hostname||'localhost')+':'+wsPort;
-  let combineMode='mean';
   function connect(){
     const ws=new WebSocket(wsUrl);
     ws.onopen=()=>{connEl.textContent='live';liveEl.style.background='var(--teal-tx)';};

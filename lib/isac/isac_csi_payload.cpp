@@ -1,9 +1,10 @@
-// SPDX-FileCopyrightText: 2026 OCUDU ISAC sensing PoC
+// SPDX-FileCopyrightText: Copyright (C) 2021-2026 Software Radio Systems Limited
 // SPDX-License-Identifier: BSD-3-Clause-Open-MPI
 
 #include "isac_csi_payload.h"
 #include "ocudu/adt/complex.h"
 #include "ocudu/adt/span.h"
+#include "ocudu/ocuduvec/conversion.h"
 #include "ocudu/ran/subcarrier_spacing.h"
 #include <array>
 #include <cstring>
@@ -13,14 +14,16 @@ using namespace ocudu::isac;
 
 void ocudu::isac::serialize_csi(const dmrs_pusch_estimator::configuration& config,
                                 const dmrs_pusch_estimator_results&        results,
+                                std::optional<uint16_t>                    rnti,
                                 uint32_t                                   seq,
                                 uint64_t                                   ts_rel_ns,
                                 std::vector<uint8_t>&                      out) noexcept
 {
   out.clear();
 
-  // Number of Rx branches actually estimated (rank-1 => single Tx layer, index 0).
-  const unsigned nof_rx_ports = config.rx_ports.size();
+  // Number of Rx branches actually estimated (rank-1 => single Tx layer, index 0). Clamp to the
+  // wire maximum so the fixed-size metric arrays and the body never disagree with the header.
+  const unsigned nof_rx_ports = std::min<unsigned>(config.rx_ports.size(), ISAC_MAX_RX_PORTS);
   if (nof_rx_ports == 0) {
     return;
   }
@@ -65,9 +68,11 @@ void ocudu::isac::serialize_csi(const dmrs_pusch_estimator::configuration& confi
   hdr.is_contiguous = (static_cast<unsigned>(highest_prb + 1 - lowest_prb) == rb_count) ? 1U : 0U;
   hdr.has_metrics   = 1U;
   hdr.ts_rel_ns     = ts_rel_ns;
+  hdr.rnti          = rnti.value_or(0);
+  hdr.rnti_valid    = rnti.has_value() ? 1U : 0U;
 
   // Per-port signal metrics (linear scale). Read-only getters on the estimator results.
-  for (unsigned i_port = 0; i_port != nof_rx_ports && i_port != ISAC_MAX_RX_PORTS; ++i_port) {
+  for (unsigned i_port = 0; i_port != nof_rx_ports; ++i_port) {
     hdr.epre[i_port] = results.get_epre(i_port);
     hdr.rsrp[i_port] = results.get_rsrp(i_port, /*tx_layer=*/0);
     hdr.snr[i_port]  = results.get_snr(i_port);
@@ -85,19 +90,15 @@ void ocudu::isac::serialize_csi(const dmrs_pusch_estimator::configuration& confi
   }
 
   std::memcpy(out.data(), &hdr, sizeof(isac_csi_header));
-  auto* body = reinterpret_cast<float*>(out.data() + sizeof(isac_csi_header));
 
-  // Read-only copy of the channel estimate for each Rx branch at the representative symbol.
+  // Read-only copy of the channel estimate for each Rx branch at the representative symbol. The
+  // 100-byte header keeps the body 4-byte aligned, so it can be written as cf_t (a (re,im) float
+  // pair) directly through the SIMD conversion kernel.
   std::array<cbf16_t, MAX_NOF_SUBCARRIERS> tmp;
   span<cbf16_t>                            tmp_view(tmp.data(), nof_re);
+  auto* body = reinterpret_cast<cf_t*>(out.data() + sizeof(isac_csi_header));
   for (unsigned i_port = 0; i_port != nof_rx_ports; ++i_port) {
     results.get_symbol_ch_estimate(tmp_view, static_cast<unsigned>(dmrs_symbol), i_port, /*tx_layer=*/0);
-
-    float* dst = body + static_cast<size_t>(i_port) * nof_re * 2U;
-    for (unsigned i_re = 0; i_re != nof_re; ++i_re) {
-      const cf_t h          = to_cf(tmp_view[i_re]);
-      dst[2U * i_re]        = h.real();
-      dst[2U * i_re + 1U]   = h.imag();
-    }
+    ocuduvec::convert(span<cf_t>(body + static_cast<size_t>(i_port) * nof_re, nof_re), tmp_view);
   }
 }

@@ -1,5 +1,6 @@
-# SPDX-FileCopyrightText: 2026 OCUDU ISAC sensing PoC
+# SPDX-FileCopyrightText: Copyright (C) 2021-2026 Software Radio Systems Limited
 # SPDX-License-Identifier: BSD-3-Clause-Open-MPI
+
 """Synthetic Block A publisher for testing Block D without a gNB.
 
 Binds a ZMQ PUB socket and emits per-slot CSI snapshots in the exact Block A wire format
@@ -18,18 +19,21 @@ import time
 
 import numpy as np
 
-from wire import HDR_FMT, MAGIC, SC_PER_PRB
-
-NSYMB = 14
+from wire import HDR_FMT, HDR_SIZE, MAGIC, MAX_RX_PORTS, SC_PER_PRB, VERSION
 
 
 def pack(seq, sfn, slot, system_slot, scs_khz, numerology, rank, nof_rx, dmrs_symbol,
-         prb_start, prb_count, ts_rel_ns, epre, rsrp, snr, hmag):
+         prb_start, prb_count, ts_rel_ns, epre, rsrp, snr, hmag, rnti):
     nof_re = prb_count * SC_PER_PRB
+
+    def pad4(vals):
+        vals = [float(x) for x in vals][:MAX_RX_PORTS]
+        return vals + [0.0] * (MAX_RX_PORTS - len(vals))
+
     hdr = struct.pack(
-        HDR_FMT, MAGIC, 1, 94, seq, sfn, slot, system_slot, scs_khz, numerology, rank,
-        nof_rx, dmrs_symbol, prb_start, prb_count, nof_re, 1, 1, ts_rel_ns,
-        *[float(x) for x in epre], *[float(x) for x in rsrp], *[float(x) for x in snr],
+        HDR_FMT, MAGIC, VERSION, HDR_SIZE, seq, sfn, slot, system_slot, scs_khz, numerology,
+        rank, nof_rx, dmrs_symbol, prb_start, prb_count, nof_re, 1, 1, ts_rel_ns,
+        *pad4(epre), *pad4(rsrp), *pad4(snr), rnti, 1,
     )
     body = np.zeros((nof_rx, nof_re, 2), dtype="<f4")
     body[..., 0] = hmag  # real = |H| (amplitude only; receiver takes |.|)
@@ -42,20 +46,22 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--bind", default=os.environ.get("OCUDU_ISAC_ZMQ_ENDPOINT", "tcp://*:5599"))
     ap.add_argument("--rate", type=float, default=120.0, help="snapshots per second")
-    ap.add_argument("--nof-rx", type=int, default=4)
+    ap.add_argument("--nof-rx", type=int, default=4, choices=range(1, MAX_RX_PORTS + 1))
     ap.add_argument("--prb", type=int, default=8, help="allocated PRBs (nof_re = prb*12)")
+    ap.add_argument("--rnti", type=lambda v: int(v, 0), default=0x4601)
     ap.add_argument("--motion", action="store_true", help="force continuous motion")
     args = ap.parse_args()
 
     ctx = zmq.Context()
     pub = ctx.socket(zmq.PUB)
     pub.bind(args.bind)
-    print(f"[fake-blocka] PUB bound on {args.bind}  rate={args.rate}/s nof_rx={args.nof_rx} prb={args.prb}")
+    print(f"[fake-blocka] PUB bound on {args.bind}  rate={args.rate}/s nof_rx={args.nof_rx} "
+          f"prb={args.prb} rnti={args.rnti:#x}")
     time.sleep(0.3)  # let subscribers connect
 
     nof_rx = args.nof_rx
     scs_khz, numerology = 30, 1
-    nslots = 20  # 30 kHz
+    nslots = 20  # slots per frame at 30 kHz
     start = time.monotonic_ns()
     seq = 0
     prb_start = 10
@@ -103,7 +109,7 @@ def main() -> None:
             system_slot = t
 
             msg = pack(seq, sfn, slot, system_slot, scs_khz, numerology, 1, nof_rx,
-                       2, prb_start, args.prb, ts, epre, rsrp, snr, hmag)
+                       2, prb_start, args.prb, ts, epre, rsrp, snr, hmag, args.rnti)
             pub.send(msg)
 
             # Occasionally drop a few seq numbers (tests gap handling).
