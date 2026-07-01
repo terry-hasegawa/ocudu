@@ -28,6 +28,12 @@
   canvas{display:block;width:100%}
   h1{font-size:15px;font-weight:600;margin:0}
   sub{font-size:.7em}
+  .zctl{background:var(--panel);border:1px solid var(--line);color:var(--tx2);font-size:11px;
+    padding:5px 8px;border-radius:7px;cursor:pointer;font-family:var(--mono)}
+  .zctl:hover{color:var(--tx);border-color:rgba(255,255,255,.25)}
+  .zcell{position:relative;border-radius:8px;border:1px solid var(--line);display:flex;
+    align-items:center;justify-content:center;transition:background .2s}
+  .zcell span{font-family:var(--mono);font-size:13px;color:var(--tx2)}
 </style>
 </head>
 <body>
@@ -73,6 +79,28 @@
       <div class="panel" style="padding:6px"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px"><span class="lbl mono">Rx1</span><span class="lbl mono" id="snr1">--</span></div><canvas class="thumb" style="height:58px;border-radius:6px"></canvas></div>
       <div class="panel" style="padding:6px"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px"><span class="lbl mono">Rx2</span><span class="lbl mono" id="snr2">--</span></div><canvas class="thumb" style="height:58px;border-radius:6px"></canvas></div>
       <div class="panel" style="padding:6px"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px"><span class="lbl mono">Rx3</span><span class="lbl mono" id="snr3">--</span></div><canvas class="thumb" style="height:58px;border-radius:6px"></canvas></div>
+    </div>
+  </div>
+
+
+  <div class="panel" id="zonepanel" style="display:none">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px">
+      <span class="lbl">zone heatmap &mdash; room view (AI-calibrated fingerprints, nearest-centroid)</span>
+      <span class="lbl mono" id="zstate">idle</span>
+    </div>
+    <div style="display:flex;gap:12px;align-items:stretch;flex-wrap:wrap">
+      <div id="roomgrid" style="flex:1;min-width:220px;aspect-ratio:4/3;display:grid;gap:6px;background:#0a1420;border:1px solid var(--line);border-radius:10px;padding:8px"></div>
+      <div style="display:flex;flex-direction:column;gap:6px;min-width:130px">
+        <span class="lbl">calibrate (stand in zone, then click)</span>
+        <div id="zbtns" style="display:flex;flex-direction:column;gap:4px"></div>
+        <div style="display:flex;gap:4px;margin-top:4px">
+          <button class="zctl" data-cmd="zone_save">save</button>
+          <button class="zctl" data-cmd="zone_load">load</button>
+          <button class="zctl" data-cmd="zone_clear">clear</button>
+        </div>
+        <button class="zctl" data-cmd="rearm" style="margin-top:2px">re-arm detector</button>
+        <div class="lbl mono" id="zpresence" style="margin-top:auto">presence: --</div>
+      </div>
     </div>
   </div>
 
@@ -179,6 +207,40 @@
     const lr=(f.rank||1)+'L / '+(f.nof_rx||4)+'R'; lrEl.textContent=lr; lr2El.textContent=lr; nrx1El.textContent=f.nof_rx||4; nrx2El.textContent=f.nof_rx||4;
     for(let b=0;b<B;b++)snrEl[b].textContent=(f.snr&&f.snr[b]!=null)?f.snr[b].toFixed(1)+' dB':'--';
     setBanner(f.calibrating?'calibrating':(active?'detected':'clear'));
+    renderZones(f.zones);
+  }
+
+
+  // ---- Phase 2: zone heatmap ----
+  const zpanel=document.getElementById('zonepanel'),roomgrid=document.getElementById('roomgrid');
+  const zbtns=document.getElementById('zbtns'),zstate=document.getElementById('zstate'),zpres=document.getElementById('zpresence');
+  let zoneCells=null, zoneLabels=null, wsRef=null;
+  function sendCmd(o){ if(wsRef&&wsRef.readyState===1) wsRef.send(JSON.stringify(o)); }
+  document.querySelectorAll('.zctl').forEach(b=>b.addEventListener('click',()=>sendCmd({cmd:b.dataset.cmd})));
+  function buildZones(z){
+    zoneLabels=z.labels;
+    roomgrid.style.gridTemplateRows='repeat('+z.grid[0]+',1fr)';
+    roomgrid.style.gridTemplateColumns='repeat('+z.grid[1]+',1fr)';
+    roomgrid.innerHTML=''; zoneCells={};
+    z.labels.forEach(l=>{const c=document.createElement('div');c.className='zcell';
+      c.innerHTML='<span>'+l+'</span>';roomgrid.appendChild(c);zoneCells[l]=c;});
+    zbtns.innerHTML='';
+    ['empty'].concat(z.labels).forEach(l=>{const b=document.createElement('button');b.className='zctl';
+      b.textContent='capture '+l;b.addEventListener('click',()=>sendCmd({cmd:'zone_calib',label:l}));zbtns.appendChild(b);});
+  }
+  function renderZones(z){
+    if(!z){zpanel.style.display='none';return;}
+    zpanel.style.display='';
+    if(!zoneCells||JSON.stringify(zoneLabels)!==JSON.stringify(z.labels))buildZones(z);
+    const st=z.state.startsWith('collecting')?z.state+' '+Math.round(z.progress*100)+'%':z.state;
+    zstate.textContent=st+'  ['+(z.calibrated||[]).join(',')+']';
+    z.labels.forEach((l,i)=>{
+      const p=(z.probs&&z.probs[i]!=null)?z.probs[i]:0;
+      zoneCells[l].style.background='rgba(239,159,39,'+(0.06+0.85*p).toFixed(3)+')';
+      zoneCells[l].querySelector('span').style.color=p>0.35?'#0a1420':'var(--tx2)';
+    });
+    zpres.textContent='presence: '+(z.presence==null?'--':(z.presence?'YES':'no'));
+    zpres.style.color=z.presence?'var(--amber-tx)':'var(--tx3)';
   }
 
   // ---- WebSocket ----
@@ -186,7 +248,7 @@
   const wsPort=params.get('ws')||'8765';
   const wsUrl='ws://'+(location.hostname||'localhost')+':'+wsPort;
   function connect(){
-    const ws=new WebSocket(wsUrl);
+    const ws=new WebSocket(wsUrl); wsRef=ws;
     ws.onopen=()=>{connEl.textContent='live';liveEl.style.background='var(--teal-tx)';};
     ws.onclose=()=>{connEl.textContent='reconnecting';liveEl.style.background='#5f768c';setTimeout(connect,1000);};
     ws.onerror=()=>ws.close();

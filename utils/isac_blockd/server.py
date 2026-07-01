@@ -27,6 +27,7 @@ import zmq.asyncio
 
 from detector import Detector, DetectorConfig
 from wire import parse
+from zones import ZoneClassifier, ZoneConfig
 
 WEB_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web")
 
@@ -54,6 +55,14 @@ class App:
         self.t0 = time.time()
         self.malformed = 0
         self.errors = 0
+        self.zones: ZoneClassifier | None = None
+        if args.zones:
+            labels = [z.strip() for z in args.zones.split(",") if z.strip()]
+            rows, cols = (int(v) for v in args.zone_grid.lower().split("x"))
+            self.zones = ZoneClassifier(ZoneConfig(labels=labels, grid=(rows, cols)))
+            if args.zones_file and os.path.exists(args.zones_file):
+                if self.zones.load(args.zones_file):
+                    print(f"[blockd] zone fingerprints loaded from {args.zones_file}")
 
     async def recv_loop(self) -> None:
         ctx = zmq.asyncio.Context.instance()
@@ -70,7 +79,9 @@ class App:
                     print(f"[blockd] dropped malformed message ({len(raw)} bytes, total {self.malformed})")
                 continue
             try:
-                self.det.process(snap)  # detection at raw rate (display is built lazily)
+                status = self.det.process(snap)  # detection at raw rate (display built lazily)
+                if status is not None and self.zones is not None and snap.is_contiguous:
+                    self.zones.feed(snap)  # Phase 2: zone fingerprint features
             except Exception as exc:  # noqa: BLE001 - one bad snapshot must not kill the server
                 self.errors += 1
                 if self.errors <= self.MAX_ERROR_LOGS:
@@ -86,15 +97,41 @@ class App:
             if frame is None:
                 continue
             frame["uptime"] = int(time.time() - self.t0)
+            if self.zones is not None:
+                frame["zones"] = self.zones.state()
             msg = json.dumps(frame)
             await asyncio.gather(*(c.send(msg) for c in list(self.clients)), return_exceptions=True)
+
+    def handle_command(self, msg: str) -> None:
+        try:
+            cmd = json.loads(msg)
+        except ValueError:
+            return
+        name = cmd.get("cmd")
+        if name == "rearm":
+            self.det.rearm()
+            print("[blockd] detector re-armed by client")
+        elif name == "zone_calib" and self.zones is not None:
+            label = str(cmd.get("label", ""))
+            secs = float(cmd.get("seconds", 0) or 0) or None
+            if self.zones.start_collect(label, secs):
+                print(f"[blockd] zone calibration started: '{label}'")
+        elif name == "zone_clear" and self.zones is not None:
+            self.zones.clear()
+            print("[blockd] zone fingerprints cleared")
+        elif name == "zone_save" and self.zones is not None and self.args.zones_file:
+            ok = self.zones.save(self.args.zones_file)
+            print(f"[blockd] zone fingerprints {'saved to ' + self.args.zones_file if ok else 'NOT saved (not ready)'}")
+        elif name == "zone_load" and self.zones is not None and self.args.zones_file:
+            ok = self.zones.load(self.args.zones_file)
+            print(f"[blockd] zone fingerprints {'loaded' if ok else 'NOT loaded'} from {self.args.zones_file}")
 
     async def ws_handler(self, ws) -> None:
         self.clients.add(ws)
         print(f"[blockd] client connected ({len(self.clients)} total)")
         try:
-            async for _ in ws:  # ignore inbound; keep the connection open
-                pass
+            async for msg in ws:  # inbound = calibration/control commands
+                self.handle_command(msg)
         except Exception:
             pass
         finally:
@@ -126,6 +163,10 @@ def main() -> None:
     ap.add_argument("--hold", type=int, default=12)
     ap.add_argument("--rnti", type=lambda v: int(v, 0), default=None,
                     help="lock to this UE RNTI (e.g. 0x4601); default: first RNTI seen")
+    ap.add_argument("--zones", default=None,
+                    help="Phase 2: comma-separated zone labels (e.g. A,B,C,D) enables the room heatmap")
+    ap.add_argument("--zone-grid", default="2x2", help="room panel grid as ROWSxCOLS")
+    ap.add_argument("--zones-file", default="zones.json", help="fingerprint save/load path")
     args = ap.parse_args()
     args.zmq = connect_endpoint(args.zmq)
     try:

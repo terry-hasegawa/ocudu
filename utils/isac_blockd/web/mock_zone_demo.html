@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<!-- SPDX-FileCopyrightText: Copyright (C) 2021-2026 Software Radio Systems Limited -->
+<!-- SPDX-License-Identifier: BSD-3-Clause-Open-MPI -->
+<!-- Standalone design mock (synthetic data) for the Phase 2 screen incl. the zone heatmap.
+     No server needed: open in a browser. The live screen is web/index.html fed by server.py. -->
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OCUDU ISAC sensing PoC — Phase 2 mock</title>
+<style>
+  :root{
+    --bg:#0a1420; --panel:#0f1d2d; --line:rgba(255,255,255,.08);
+    --tx:#e8eef5; --tx2:#8aa0b8; --tx3:#5f768c;
+    --teal-tx:#5DCAA5; --teal-bg:rgba(29,158,117,.15);
+    --amber:#EF9F27; --amber-tx:#FAC775; --amber-bg:rgba(239,159,39,.16);
+    --mono:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI","Yu Gothic","Hiragino Kaku Gothic ProN",Meiryo,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--tx);font-family:var(--sans);
+    -webkit-font-smoothing:antialiased;display:flex;justify-content:center;padding:20px 14px 40px}
+  .wrap{width:100%;max-width:720px;display:flex;flex-direction:column;gap:12px}
+  .mono{font-family:var(--mono)}
+  .lbl{font-size:11px;color:var(--tx3);letter-spacing:.03em}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+  .pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;padding:5px 11px;border-radius:8px;
+    background:var(--panel);border:1px solid var(--line);color:var(--tx2)}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--teal-tx)}
+  canvas{display:block;width:100%}
+  h1{font-size:15px;font-weight:600;margin:0}
+  .zcell{position:relative;border-radius:8px;border:1px solid var(--line);display:flex;
+    align-items:center;justify-content:center;transition:background .25s}
+  .zcell span{font-family:var(--mono);font-size:14px;color:var(--tx2)}
+  .zctl{background:var(--panel);border:1px solid var(--line);color:var(--tx2);font-size:11px;
+    padding:5px 8px;border-radius:7px;font-family:var(--mono)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+    <div>
+      <h1>OCUDU ISAC sensing PoC — Phase 2</h1>
+      <div style="font-size:12px;color:var(--tx3);margin-top:2px">PHY TAP &rarr; ZMQ &rarr; motion + <b style="color:var(--tx2)">AI zone fingerprinting</b> &middot; rank-1 / 4R &middot; per-slot</div>
+    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">
+      <span class="pill"><span class="dot" id="live"></span>live</span>
+      <span class="pill">UE <span class="mono" style="color:var(--tx)">rnti 0x4601</span></span>
+      <span class="pill">layers/Rx <span class="mono" style="color:var(--tx)">1L / 4R</span></span>
+    </div>
+  </div>
+
+  <div id="banner" style="border-radius:12px;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--teal-bg);border:1px solid var(--line);transition:background .15s">
+    <div style="display:flex;align-items:center;gap:14px">
+      <span id="bdot" style="width:14px;height:14px;border-radius:50%;background:var(--teal-tx)"></span>
+      <div>
+        <div id="bstate" style="font-size:19px;font-weight:600;color:var(--teal-tx)">clear</div>
+        <div class="lbl" id="bsub" style="color:var(--teal-tx)">no motion in sensing field</div>
+      </div>
+    </div>
+    <div style="text-align:right">
+      <div class="lbl">metric / thr</div>
+      <div class="mono" style="font-size:17px"><span id="mval">0.02</span> <span style="color:var(--tx3)">/ 0.08</span></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px">
+      <span class="lbl">zone heatmap &mdash; room view (AI-calibrated fingerprints, nearest-centroid)</span>
+      <span class="lbl mono" id="zstate">calibrating…</span>
+    </div>
+    <div style="display:flex;gap:12px;align-items:stretch;flex-wrap:wrap">
+      <div id="roomgrid" style="flex:1;min-width:230px;aspect-ratio:4/3;display:grid;grid-template-rows:1fr 1fr;grid-template-columns:1fr 1fr;gap:6px;background:#0a1420;border:1px solid var(--line);border-radius:10px;padding:8px">
+        <div class="zcell" id="zA"><span>A</span></div>
+        <div class="zcell" id="zB"><span>B</span></div>
+        <div class="zcell" id="zC"><span>C</span></div>
+        <div class="zcell" id="zD"><span>D</span></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px;min-width:130px">
+        <span class="lbl">calibrate (stand in zone, then click)</span>
+        <span class="zctl">capture empty</span><span class="zctl">capture A</span>
+        <span class="zctl">capture B</span><span class="zctl">capture C</span><span class="zctl">capture D</span>
+        <div class="lbl mono" id="zpresence" style="margin-top:auto">presence: --</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px">
+      <div class="lbl">CSI |H| &mdash; composite (4 Rx averaged)</div>
+      <div class="lbl mono">64 sc &middot; SCS 30 kHz</div>
+    </div>
+    <canvas id="main" style="height:120px;border-radius:8px"></canvas>
+  </div>
+
+  <div class="panel">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px"><span class="lbl">motion metric &mdash; 4 Rx combined</span><span class="lbl mono" id="det">detections 0</span></div>
+    <canvas id="mt" style="height:80px"></canvas>
+  </div>
+
+  <div style="font-size:11px;color:var(--tx3)">synthetic data &mdash; design mock for the Phase 2 screen; the live page is <span class="mono">index.html</span> fed by <span class="mono">server.py --zones A,B,C,D</span></div>
+</div>
+
+<script>
+(function(){
+  const N=64,W=200,dpr=Math.min(window.devicePixelRatio||1,2);
+  const mainC=document.getElementById('main'),mt=document.getElementById('mt');
+  let mctxMain,mctx;
+  const off=document.createElement('canvas');off.width=W;off.height=N;const octx=off.getContext('2d');
+  const id=octx.createImageData(W,N);
+  function fit(c){const r=c.getBoundingClientRect();c.width=Math.max(1,r.width*dpr);c.height=Math.max(1,r.height*dpr);return c.getContext('2d');}
+  function fitAll(){mctxMain=fit(mainC);mctx=fit(mt);}
+  fitAll();window.addEventListener('resize',fitAll);
+  const stops=[[0,4,52,44],[0.42,29,158,117],[0.72,239,159,39],[1,250,199,117]];
+  function cmap(v){v=v<0?0:v>1?1:v;for(let i=0;i<stops.length-1;i++){const a=stops[i],b=stops[i+1];if(v<=b[0]){const t=(v-a[0])/(b[0]-a[0]);return[a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t,a[3]+(b[3]-a[3])*t];}}return[250,199,117];}
+
+  const cols=[];for(let i=0;i<W;i++)cols.push(new Float32Array(N));
+  const hist=new Array(W).fill(0);
+  const THR=0.08;
+  let t=0,detections=0,state=false,hold=0;
+
+  // ---- scripted scenario ----
+  // 0-3s: zone calibration sweep (empty,A,B,C,D). Then loop: idle -> walk to A -> stand ->
+  // walk to C -> stand -> leave. Walking segments = motion + smeared probs; standing = one hot zone.
+  const FPS=15, CAL_T=3*FPS;
+  const script=[ // [durationFrames, kind, zone]  kind: idle|walk|stand
+    [4*FPS,'idle',null],[2*FPS,'walk','A'],[4*FPS,'stand','A'],[2*FPS,'walk','C'],
+    [4*FPS,'stand','C'],[2*FPS,'walk','B'],[3*FPS,'stand','B'],[2*FPS,'walk',null],[3*FPS,'idle',null]];
+  let si=0,sf=0;
+  const cells={A:document.getElementById('zA'),B:document.getElementById('zB'),C:document.getElementById('zC'),D:document.getElementById('zD')};
+  const probs={A:0,B:0,C:0,D:0};
+  const zstate=document.getElementById('zstate'),zpres=document.getElementById('zpresence');
+  const banner=document.getElementById('banner'),bstate=document.getElementById('bstate'),bsub=document.getElementById('bsub'),bdot=document.getElementById('bdot');
+  const mval=document.getElementById('mval'),det=document.getElementById('det'),live=document.getElementById('live');
+  const calSeq=['empty','A','B','C','D'];
+
+  function step(){
+    t++;
+    const calibrating=t<CAL_T;
+    let kind='idle',zone=null,motion=0;
+    if(!calibrating){
+      const seg=script[si];sf++;
+      if(sf>=seg[0]){si=(si+1)%script.length;sf=0;}
+      kind=seg[1];zone=seg[2];
+      motion = kind==='walk' ? 0.7+0.3*Math.sin(sf*0.5) : (kind==='stand'?0.08:0);
+    }
+
+    // waterfall column
+    const col=cols.shift();cols.push(col);
+    for(let y=0;y<N;y++){
+      let v=0.34+0.15*Math.sin(y*0.22+t*0.01)+(Math.random()-0.5)*0.03;
+      if(motion>0.2){const ctr=N*0.5+10*Math.sin(t*0.2);v+=motion*Math.exp(-Math.pow((y-ctr)/10,2))*0.5;}
+      col[y]=Math.max(0,Math.min(1,v));
+    }
+    // metric
+    const m = calibrating?0.02:(motion>0.2?0.10+0.10*motion*Math.random():0.02+Math.random()*0.015);
+    hist.shift();hist.push(m);
+    const on=m>THR; if(on)hold=12;else if(hold>0)hold--;
+    const active=hold>0; if(active&&!state)detections++; state=active;
+
+    // zone probs (EMA toward target)
+    let target={A:0,B:0,C:0,D:0};
+    if(!calibrating&&zone){ if(kind==='stand')target[zone]=0.9;
+      else{target[zone]=0.5; const adj={A:'B',B:'D',C:'A',D:'C'}[zone]; target[adj]=0.25;} }
+    for(const k in probs){probs[k]+=0.12*(target[k]-probs[k]);
+      cells[k].style.background='rgba(239,159,39,'+(0.06+0.85*probs[k]).toFixed(3)+')';
+      cells[k].querySelector('span').style.color=probs[k]>0.35?'#0a1420':'var(--tx2)';}
+    const present=Object.values(probs).some(p=>p>0.3);
+    if(calibrating){const ci=Math.min(Math.floor(t/(CAL_T/5)),4);
+      zstate.textContent='collecting:'+calSeq[ci]+' '+Math.round(((t%(CAL_T/5))/(CAL_T/5))*100)+'%';}
+    else zstate.textContent='ready  [empty,A,B,C,D]';
+    zpres.textContent='presence: '+(calibrating?'--':(present?'YES':'no'));
+    zpres.style.color=present?'var(--amber-tx)':'var(--tx3)';
+
+    // draw waterfall
+    const d=id.data;
+    for(let x=0;x<W;x++)for(let y=0;y<N;y++){const rgb=cmap(cols[x][y]);const p=(y*W+x)*4;d[p]=rgb[0];d[p+1]=rgb[1];d[p+2]=rgb[2];d[p+3]=255;}
+    octx.putImageData(id,0,0);
+    mctxMain.imageSmoothingEnabled=true;mctxMain.clearRect(0,0,mainC.width,mainC.height);
+    mctxMain.drawImage(off,0,0,W,N,0,0,mainC.width,mainC.height);
+    // metric plot
+    const w=mt.width,h=mt.height,top=6*dpr,bot=h-6*dpr,sc=v=>bot-(Math.min(v,0.3)/0.3)*(bot-top);
+    mctx.clearRect(0,0,w,h);
+    mctx.strokeStyle='rgba(239,159,39,0.55)';mctx.setLineDash([5*dpr,4*dpr]);mctx.lineWidth=1*dpr;
+    mctx.beginPath();mctx.moveTo(0,sc(THR));mctx.lineTo(w,sc(THR));mctx.stroke();mctx.setLineDash([]);
+    mctx.beginPath();for(let i=0;i<W;i++){const x=i/(W-1)*w,y=sc(hist[i]);i?mctx.lineTo(x,y):mctx.moveTo(x,y);}
+    mctx.strokeStyle=active?'#EF9F27':'#1D9E75';mctx.lineWidth=1.6*dpr;mctx.stroke();
+
+    mval.textContent=m.toFixed(3);det.textContent='detections '+detections;
+    if(calibrating){banner.style.background='var(--panel)';bstate.textContent='calibrating zones';bstate.style.color='var(--tx2)';bsub.textContent='AI fingerprint capture in progress';bsub.style.color='var(--tx2)';bdot.style.background='var(--tx2)';}
+    else if(active){banner.style.background='var(--amber-bg)';bstate.textContent=(zone?('motion — zone '+zone):'motion detected');bstate.style.color='var(--amber-tx)';bsub.textContent='disturbance across Rx branches';bsub.style.color='var(--amber-tx)';bdot.style.background='var(--amber-tx)';}
+    else{banner.style.background='var(--teal-bg)';bstate.textContent=present&&zone?('person at zone '+zone):'clear';bstate.style.color='var(--teal-tx)';bsub.textContent=present?'stationary presence localized':'no motion in sensing field';bsub.style.color='var(--teal-tx)';bdot.style.background='var(--teal-tx)';}
+    live.style.opacity=(t%20<10)?'1':'0.35';
+  }
+  setInterval(step,1000/FPS);
+})();
+</script>
+</body>
+</html>

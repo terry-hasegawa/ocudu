@@ -85,6 +85,12 @@ python3 server.py --zmq tcp://127.0.0.1:5599
 - `detector.py` — detection core (metric, combine/normalize, calibration, the 3 handlings).
 - `server.py` — ZMQ SUB + detector + WebSocket broadcast + static HTTP.
 - `web/index.html` — browser visualization (waterfall, thumbnails, metric, banner, status).
+- `zones.py` — Phase 2 zone classifier: nearest-centroid fingerprinting with interactive
+  calibration (room heatmap; enable with `server.py --zones A,B,C,D`).
+- `recorder.py` — labelled CSI recorder (D2-a): captures .npz training data for the D2-b
+  classifier upgrade (RandomForest/CNN on the same features).
 - `fake_blocka.py` — synthetic Block A publisher for testing without a gNB.
-- `tests/` — pytest suite (`python3 -m pytest tests/`): wire round-trip/malformed cases and the
-  detector behaviors listed above.
+- `web/mock_zone_demo.html` — standalone design mock (synthetic data) of the Phase 2 screen.
+- `RUNBOOK.ja.md` — Phase 1 (motion only) -> Phase 2 (zone calibration) operating procedure.
+- `tests/` — pytest suite (`python3 -m pytest tests/`): wire round-trip/malformed cases, the
+  detector behaviors listed above, and the zone classifier.
