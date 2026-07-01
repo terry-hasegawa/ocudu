@@ -57,6 +57,8 @@ python3 server.py --zmq tcp://127.0.0.1:5599
 | `--hold` | `12` | detection debounce (snapshots) |
 | `--fps` | `15` | display broadcast rate (detection runs at the raw snapshot rate) |
 | `--rnti` | first seen | lock to one UE RNTI (e.g. `0x4601`); other UEs' snapshots are ignored |
+| `--zones` | off | Phase 2: zone labels (e.g. `A,B,C,D`) — enables the room heatmap |
+| `--zone-model` | off | D2-b: trained bundle from `train_zones.py` (replaces on-site fingerprints) |
 
 > Tip for demo day: if sensitivity is too low, switch `--combine snr` or `--combine max`.
 
@@ -87,8 +89,9 @@ python3 server.py --zmq tcp://127.0.0.1:5599
 - `web/index.html` — browser visualization (waterfall, thumbnails, metric, banner, status).
 - `zones.py` — Phase 2 zone classifier: nearest-centroid fingerprinting with interactive
   calibration (room heatmap; enable with `server.py --zones A,B,C,D`).
-- `recorder.py` — labelled CSI recorder (D2-a): captures .npz training data for the D2-b
-  classifier upgrade (RandomForest/CNN on the same features).
+- `recorder.py` — labelled CSI recorder (D2-a): captures .npz training data.
+- `train_zones.py` — D2-b offline trainer: RandomForest/logreg on recorded captures; deploy the
+  bundle with `server.py --zone-model zones_model.joblib` (zone panel shows "D2-b model").
 - `fake_blocka.py` — synthetic Block A publisher for testing without a gNB.
 - `web/mock_zone_demo.html` — standalone design mock (synthetic data) of the Phase 2 screen.
 - `RUNBOOK.ja.md` — Phase 1 (motion only) -> Phase 2 (zone calibration) operating procedure.

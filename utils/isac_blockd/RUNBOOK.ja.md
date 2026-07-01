@@ -29,7 +29,7 @@ cell_cfg:
 ```bash
 cd utils/isac_blockd
 pip install -r requirements.txt
-python3 -m pytest tests/   # 16 件パスすることを確認
+python3 -m pytest tests/   # 18 件パスすることを確認
 ```
 
 ### 0-4. illuminator（UE）
@@ -112,15 +112,29 @@ python3 server.py --zmq tcp://<gnb-host>:5599 --zones A,B,C,D --zone-grid 2x2
 - 全員退出 → 全セル消灯、`presence: no`。
 - 説明トーク例: 「起動時にその場で採取したラベル付き CSI から **AI（最近傍分類器）をキャリブレーション**しています。学習データを増やせば同じ枠組みで RandomForest/CNN に差し替え可能です」
 
-### 2-4.（任意・D2-b への布石）ラベル付きデータの録画
-学習用データを貯めたい場合は、キャリブ台本と同じ手順で recorder を回す:
+### 2-4. D2-b: 学習済みモデルへのアップグレード（任意）
+
+centroid 方式で精度が足りない場合、同じ台本で録画 → RandomForest を訓練 → 差し替え。
+**ラベル名は runtime のゾーン名と完全一致させる**（`empty` / `A` / `B` / `C` / `D`）。
+
 ```bash
+# (1) 録画（キャリブ台本と同じ状況で。各 15-20 秒）
 python3 recorder.py --label empty --seconds 20 --out s1_empty.npz
-python3 recorder.py --label zoneA --seconds 20 --out s1_zoneA.npz   # 各ゾーン分
-python3 recorder.py --label walk  --seconds 30 --out s1_walk.npz
+python3 recorder.py --label A     --seconds 20 --out s1_A.npz
+python3 recorder.py --label B     --seconds 20 --out s1_B.npz   # C, D も同様
+
+# (2) 訓練（RandomForest。--model logreg も可）
+python3 train_zones.py --data 's1_*.npz' --out zones_model.joblib
+
+# (3) モデルで起動（fingerprint の代わりに学習済みモデルを使用）
+python3 server.py --zmq tcp://<gnb-host>:5599 --zones A,B,C,D --zone-model zones_model.joblib
+# 画面の zone パネルに「· D2-b model」と表示され、キャリブ操作なしで即 ready になる
 ```
+
+- 表示される CV accuracy は**同一セッション内評価なので楽観的**。正直な数字が要る場合は
+  もう 1 セッション録画して `--eval 's2_*.npz'` でホールドアウト評価する。
 - `.npz` 内容: `hmag (n, nof_rx, bins)` / `meta (seq, ts, prb...)` / `label` / `rnti`。
-- これが将来の RF/CNN 訓練（leave-one-session-out で評価）の入力になる。
+- アンテナ数を変えたらモデルは自動無効化（要・再録画/再訓練）。
 
 ---
 

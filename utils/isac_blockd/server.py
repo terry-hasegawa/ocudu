@@ -60,7 +60,13 @@ class App:
             labels = [z.strip() for z in args.zones.split(",") if z.strip()]
             rows, cols = (int(v) for v in args.zone_grid.lower().split("x"))
             self.zones = ZoneClassifier(ZoneConfig(labels=labels, grid=(rows, cols)))
-            if args.zones_file and os.path.exists(args.zones_file):
+            if args.zone_model:
+                if self.zones.load_model(args.zone_model):
+                    print(f"[blockd] D2-b zone model loaded from {args.zone_model}")
+                else:
+                    print(f"[blockd] WARNING: could not load zone model {args.zone_model} "
+                          "(bins/labels mismatch?); falling back to on-site calibration")
+            if self.zones.model is None and args.zones_file and os.path.exists(args.zones_file):
                 if self.zones.load(args.zones_file):
                     print(f"[blockd] zone fingerprints loaded from {args.zones_file}")
 
@@ -166,6 +172,8 @@ def main() -> None:
     ap.add_argument("--zones", default=None,
                     help="Phase 2: comma-separated zone labels (e.g. A,B,C,D) enables the room heatmap")
     ap.add_argument("--zone-grid", default="2x2", help="room panel grid as ROWSxCOLS")
+    ap.add_argument("--zone-model", default=None,
+                    help="D2-b: trained model bundle from train_zones.py (overrides fingerprints)")
     ap.add_argument("--zones-file", default="zones.json", help="fingerprint save/load path")
     args = ap.parse_args()
     args.zmq = connect_endpoint(args.zmq)

@@ -10,8 +10,9 @@ fingerprints and converted to per-zone probabilities (softmax over negative dist
 the UI renders as a room heatmap.
 
 This is supervised machine learning in its smallest useful form (a nearest-centroid / 1-NN
-classifier trained on labelled captures); the classifier is swappable by design so a
-RandomForest/CNN can replace it later using the same recorded features (see recorder.py).
+classifier trained on labelled captures). The classifier is swappable: load_model() replaces the
+centroid backend with a scikit-learn model trained offline by train_zones.py on recorder.py
+captures (D2-b) — same features, same UI, higher robustness.
 
 Features are amplitude-only, per-branch mean-normalized (removes rx-gain and pathloss scale,
 keeps the spectral shape that the person's position imprints on the multipath channel) and
@@ -32,6 +33,21 @@ from wire import CsiSnapshot
 
 EPS = 1e-9
 EMPTY_LABEL = "empty"
+
+
+def profile_feature(mat: np.ndarray, bins: int) -> np.ndarray:
+    """Shared feature: per-branch |H| profile resampled to `bins`, mean-normalized, concatenated.
+
+    Used identically by the live classifier (on CsiSnapshot.hmag) and by train_zones.py (on
+    recorded captures) so offline-trained models see the same distribution.
+    """
+    x = np.linspace(0.0, 1.0, bins)
+    parts = []
+    for b in range(mat.shape[0]):
+        vec = mat[b]
+        prof = np.interp(x, np.linspace(0.0, 1.0, vec.size), vec)
+        parts.append(prof / max(float(prof.mean()), EPS))
+    return np.concatenate(parts).astype(np.float32)
 
 
 @dataclass
@@ -57,20 +73,14 @@ class ZoneClassifier:
         self._collect_label: str | None = None
         self._collect_until: float = 0.0
         self._collect_buf: list[np.ndarray] = []
+        self.model = None                            # D2-b: sklearn model (predict_proba)
+        self._model_classes: list[str] = []
 
     # -- features -------------------------------------------------------------------------------
 
     def _feature(self, snap: CsiSnapshot) -> np.ndarray:
         """Per-branch mean-normalized spectral profile, concatenated across branches."""
-        bins = self.cfg.feature_bins
-        x = np.linspace(0.0, 1.0, bins)
-        parts = []
-        for b in range(snap.nof_rx_ports):
-            vec = snap.hmag[b]
-            xp = np.linspace(0.0, 1.0, vec.size)
-            prof = np.interp(x, xp, vec)
-            parts.append(prof / max(float(prof.mean()), EPS))  # scale-invariant shape
-        return np.concatenate(parts).astype(np.float32)
+        return profile_feature(snap.hmag, self.cfg.feature_bins)
 
     def feed(self, snap: CsiSnapshot) -> None:
         """Feeds one accepted snapshot (call after the detector accepted it)."""
@@ -78,8 +88,10 @@ class ZoneClassifier:
         if self._feat is None or self._feat.shape != f.shape:
             # First frame or antenna-count change: restart the EMA (and invalidate fingerprints
             # on a dimensionality change, since stored centroids no longer compare).
-            if self._feat is not None and self.centroids:
+            if self._feat is not None and (self.centroids or self.model is not None):
                 self.clear()
+                self.model = None
+                self._model_classes = []
             self._feat = f
         else:
             dt = (snap.ts_rel_ns - self._feat_ts) / 1e9 if self._feat_ts is not None else 0.0
@@ -152,11 +164,32 @@ class ZoneClassifier:
         except (OSError, KeyError, ValueError, TypeError):
             return False
 
+    def load_model(self, path: str) -> bool:
+        """Loads a D2-b model bundle (train_zones.py output); replaces the centroid backend."""
+        try:
+            import joblib
+
+            bundle = joblib.load(path)
+            if bundle.get("feature_bins") != self.cfg.feature_bins:
+                return False
+            classes = [str(c) for c in bundle["classes"]]
+            allowed = {EMPTY_LABEL, *self.cfg.labels}
+            if not set(classes) <= allowed or EMPTY_LABEL not in classes:
+                return False
+            self.model = bundle["model"]
+            self._model_classes = classes
+            self._probs = None
+            return True
+        except Exception:  # noqa: BLE001 - a bad model file must not kill the server
+            return False
+
     # -- inference ------------------------------------------------------------------------------
 
     @property
     def ready(self) -> bool:
-        """Ready once 'empty' and at least one zone are calibrated."""
+        """Ready with a trained model, or once 'empty' and at least one zone are calibrated."""
+        if self.model is not None:
+            return True
         return EMPTY_LABEL in self.centroids and any(l in self.centroids for l in self.cfg.labels)
 
     def state(self) -> dict:
@@ -171,33 +204,45 @@ class ZoneClassifier:
         out = {
             "labels": self.cfg.labels,
             "grid": list(self.cfg.grid),
-            "calibrated": sorted(self.centroids.keys()),
+            "backend": "model" if self.model is not None else "centroid",
+            "calibrated": (sorted(self._model_classes) if self.model is not None
+                           else sorted(self.centroids.keys())),
             "state": f"collecting:{collecting}" if collecting else ("ready" if self.ready else "idle"),
             "progress": round(progress, 2),
             "probs": None,
             "presence": None,
         }
 
-        if self.ready and self._feat is not None and self.spread is not None:
+        if self.model is not None and self._feat is not None:
+            labels = self._model_classes
+            p = np.asarray(self.model.predict_proba(self._feat.reshape(1, -1))[0], dtype=np.float64)
+            # Reorder so index 0 is 'empty' (presence logic below relies on it).
+            order = [labels.index(EMPTY_LABEL)] + [i for i, l in enumerate(labels) if l != EMPTY_LABEL]
+            labels = [labels[i] for i in order]
+            p = p[order]
+            p /= max(p.sum(), EPS)
+        elif self.ready and self._feat is not None and self.spread is not None:
             labels = [EMPTY_LABEL] + [l for l in self.cfg.labels if l in self.centroids]
             d = np.array([np.linalg.norm(self._feat - self.centroids[l]) for l in labels])
             logits = -d / (2.0 * self.spread)
             logits -= logits.max()
             p = np.exp(logits)
             p /= p.sum()
+        else:
+            return out
 
-            if self._probs is None or self._probs.shape != p.shape:
-                self._probs = p
-            else:
-                # Display smoothing at broadcast cadence (~15 fps).
-                a = 1.0 - math.exp(-(1.0 / 15.0) / self.cfg.prob_tc_s)
-                self._probs = self._probs + a * (p - self._probs)
+        if self._probs is None or self._probs.shape != p.shape:
+            self._probs = p
+        else:
+            # Display smoothing at broadcast cadence (~15 fps).
+            a = 1.0 - math.exp(-(1.0 / 15.0) / self.cfg.prob_tc_s)
+            self._probs = self._probs + a * (p - self._probs)
 
-            sm = self._probs / max(float(self._probs.sum()), EPS)
-            zone_probs = {l: 0.0 for l in self.cfg.labels}
-            for l, v in zip(labels, sm):
-                if l != EMPTY_LABEL:
-                    zone_probs[l] = float(v)
-            out["probs"] = [round(zone_probs[l], 3) for l in self.cfg.labels]
-            out["presence"] = bool(sm[0] < 0.5)  # empty prob below 50% -> someone is present
+        sm = self._probs / max(float(self._probs.sum()), EPS)
+        zone_probs = {l: 0.0 for l in self.cfg.labels}
+        for l, v in zip(labels, sm):
+            if l != EMPTY_LABEL:
+                zone_probs[l] = float(v)
+        out["probs"] = [round(zone_probs[l], 3) for l in self.cfg.labels]
+        out["presence"] = bool(sm[0] < 0.5)  # empty prob below 50% -> someone is present
         return out

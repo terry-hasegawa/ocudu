@@ -233,7 +233,7 @@
     zpanel.style.display='';
     if(!zoneCells||JSON.stringify(zoneLabels)!==JSON.stringify(z.labels))buildZones(z);
     const st=z.state.startsWith('collecting')?z.state+' '+Math.round(z.progress*100)+'%':z.state;
-    zstate.textContent=st+'  ['+(z.calibrated||[]).join(',')+']';
+    zstate.textContent=st+'  ['+(z.calibrated||[]).join(',')+']'+(z.backend==='model'?' \u00b7 D2-b model':'');
     z.labels.forEach((l,i)=>{
       const p=(z.probs&&z.probs[i]!=null)?z.probs[i]:0;
       zoneCells[l].style.background='rgba(239,159,39,'+(0.06+0.85*p).toFixed(3)+')';
