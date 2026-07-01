@@ -587,7 +587,7 @@ void fapi_to_phy_fastpath_translator::send_ul_dci_request(const fapi::ul_dci_req
     return;
   }
 
-  static_vector<pdcch_processor::pdu_t, MAX_PUCCH_PDUS_PER_SLOT> pdus;
+  static_vector<pdcch_processor::pdu_t, MAX_UL_PDCCH_PDUS_PER_SLOT> pdus;
   for (const auto& pdu : msg.pdus) {
     // Create a pdcch_processor::pdu_t for the DCI in the PDCCH PDU.
     pdcch_processor::pdu_t& pdcch_pdu = pdus.emplace_back();
