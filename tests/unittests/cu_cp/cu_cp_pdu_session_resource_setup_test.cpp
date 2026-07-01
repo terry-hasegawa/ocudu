@@ -11,6 +11,7 @@
 #include "tests/unittests/cu_cp/test_helpers.h"
 #include "tests/unittests/e1ap/common/e1ap_cu_cp_test_messages.h"
 #include "tests/unittests/ngap/ngap_test_messages.h"
+#include "ocudu/asn1/f1ap/f1ap_pdu_contents_ue.h"
 #include "ocudu/e1ap/common/e1ap_types.h"
 #include "ocudu/f1ap/f1ap_message.h"
 #include "ocudu/ngap/ngap_message.h"
@@ -698,4 +699,58 @@ TEST_F(cu_cp_pdu_session_resource_setup_test, when_security_indication_present_t
   // Inject RRC Reconfiguration Complete and await successful PDU Session Resource Setup Response.
   ASSERT_TRUE(send_rrc_reconfiguration_complete_and_await_pdu_session_setup_response(
       generate_rrc_reconfiguration_complete_pdu(3, 7), {psi}, {}));
+}
+
+TEST_F(cu_cp_pdu_session_resource_setup_test,
+       when_srb2_already_setup_for_ue_then_it_is_not_setup_again_on_new_bearer_context_creation)
+{
+  // Setup and fully complete first PDU session; this establishes SRB2 (and DRB1) for the UE.
+  ASSERT_TRUE(setup_pdu_session(psi, drb_id_t::drb1, qfi));
+
+  // Release the only PDU session. As no PDU session remains afterwards, this triggers a full E1AP Bearer Context
+  // Release rather than a modification.
+  get_amf().push_tx_pdu(generate_valid_pdu_session_resource_release_command(amf_ue_id, ue_ctx->ran_ue_id.value(), psi));
+  ASSERT_TRUE(this->wait_for_e1ap_tx_pdu(cu_up_idx, e1ap_pdu));
+  ASSERT_TRUE(test_helpers::is_valid_bearer_context_release_command(e1ap_pdu));
+
+  get_cu_up(cu_up_idx).push_tx_pdu(
+      generate_bearer_context_release_complete(ue_ctx->cu_cp_e1ap_id.value(), ue_ctx->cu_up_e1ap_id.value()));
+  ASSERT_TRUE(this->wait_for_f1ap_tx_pdu(du_idx, f1ap_pdu));
+  ASSERT_TRUE(test_helpers::is_valid_ue_context_modification_request(f1ap_pdu));
+
+  get_du(du_idx).push_ul_pdu(
+      test_helpers::generate_ue_context_modification_response(du_ue_id, ue_ctx->cu_ue_id.value(), crnti));
+  ASSERT_TRUE(this->wait_for_f1ap_tx_pdu(du_idx, f1ap_pdu));
+  ASSERT_TRUE(test_helpers::is_valid_dl_rrc_message_transfer(f1ap_pdu));
+
+  get_du(du_idx).push_ul_pdu(test_helpers::generate_ul_rrc_message_transfer(
+      du_ue_id, ue_ctx->cu_ue_id.value(), srb_id_t::srb1, generate_rrc_reconfiguration_complete_pdu(0, 8)));
+  ASSERT_TRUE(this->wait_for_ngap_tx_pdu(ngap_pdu));
+  ASSERT_TRUE(test_helpers::is_valid_pdu_session_resource_release_response(ngap_pdu));
+
+  // Request a new PDU session. As all PDU sessions were just released, this creates a brand-new E1AP bearer context
+  // (nof_drbs()==0), even though SRB2 is still configured for the UE from the first PDU session.
+  ASSERT_TRUE(send_pdu_session_resource_setup_request_and_await_bearer_context_setup_request(
+      generate_valid_pdu_session_resource_setup_request_message(
+          ue_ctx->amf_ue_id.value(), ue_ctx->ran_ue_id.value(), {{psi2, {pdu_session_type_t::ipv4, {{qfi2, 9}}}}})));
+
+  get_cu_up(cu_up_idx).push_tx_pdu(generate_bearer_context_setup_response(
+      ue_ctx->cu_cp_e1ap_id.value(), cu_up_e1ap_id, {{psi2, {drb_test_params{drb_id_t::drb2, qfi2}}}}));
+  ASSERT_TRUE(this->wait_for_f1ap_tx_pdu(du_idx, f1ap_pdu));
+  ASSERT_TRUE(test_helpers::is_valid_ue_context_modification_request(f1ap_pdu));
+
+  // Verify the F1AP UE Context Modification Request does not attempt to set up SRB2 again.
+  {
+    const asn1::f1ap::ue_context_mod_request_s& mod_req = f1ap_pdu.pdu.init_msg().value.ue_context_mod_request();
+    for (const auto& srb : mod_req->srbs_to_be_setup_mod_list) {
+      ASSERT_NE(int_to_srb_id(srb.value().srbs_to_be_setup_mod_item().srb_id), srb_id_t::srb2);
+    }
+  }
+
+  // Drive the rest of the procedure to completion.
+  ASSERT_TRUE(send_ue_context_modification_response_and_await_bearer_context_modification_request());
+  ASSERT_TRUE(send_bearer_context_modification_response_and_await_rrc_reconfiguration(
+      {}, {{psi2, drb_id_t::drb2}}, std::vector<srb_id_t>{}, std::vector<drb_id_t>{drb_id_t::drb2}));
+  ASSERT_TRUE(send_rrc_reconfiguration_complete_and_await_pdu_session_setup_response(
+      generate_rrc_reconfiguration_complete_pdu(1, 9), {psi2}, {}));
 }
