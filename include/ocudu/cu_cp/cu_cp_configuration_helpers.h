@@ -258,7 +258,7 @@ inline std::map<five_qi_t, ocucp::cu_cp_qos_config> make_default_cu_cp_qos_confi
 
     // > Tx
     pdcp_cfg.tx.sn_size                = pdcp_sn_size::size18bits;
-    pdcp_cfg.tx.discard_timer          = pdcp_discard_timer::infinity;
+    pdcp_cfg.tx.discard_timer          = pdcp_discard_timer::ms1500;
     pdcp_cfg.tx.status_report_required = false;
 
     // > Rx
@@ -306,7 +306,7 @@ inline std::map<five_qi_t, ocucp::cu_cp_qos_config> make_default_cu_cp_qos_confi
 
     // > Tx
     pdcp_cfg.tx.sn_size                = pdcp_sn_size::size18bits;
-    pdcp_cfg.tx.discard_timer          = pdcp_discard_timer::infinity;
+    pdcp_cfg.tx.discard_timer          = pdcp_discard_timer::ms1500;
     pdcp_cfg.tx.status_report_required = false;
 
     // > Rx

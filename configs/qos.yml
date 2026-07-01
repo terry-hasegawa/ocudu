@@ -281,7 +281,7 @@ qos:
     pdcp:
       tx:
         sn: 18
-        discard_timer: -1
+        discard_timer: 1500
         status_report_required: false
       rx:
         sn: 18
@@ -340,7 +340,7 @@ qos:
     pdcp:
       tx:
         sn: 18
-        discard_timer: -1
+        discard_timer: 1500
         status_report_required: false
       rx:
         sn: 18
