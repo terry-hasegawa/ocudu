@@ -111,8 +111,6 @@
     reports:
       dotenv: build.env
   rules:
-    - if: $CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "main"
-    - if: $CI_PIPELINE_SCHEDULE_DESCRIPTION =~ /Nightly/
     - if: $ON_MR
       when: manual
       allow_failure: true
@@ -122,6 +120,8 @@
     - if: $ON_API
       when: manual
       allow_failure: true
+    - if: $CI_PIPELINE_SCHEDULE_DESCRIPTION =~ /Nightly/
+    - if: $ON_MAIN
 
 .matrix-legacy-image:
   parallel:

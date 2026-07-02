@@ -142,46 +142,23 @@ trigger deploy:
           - docker/scripts/**/*
           - docker/Dockerfile
     - if: $ON_WEB
-      when: manual
-      allow_failure: true
     - if: $ON_API
-      when: manual
-      allow_failure: true
     - if: $CI_PIPELINE_SCHEDULE_DESCRIPTION =~ /Nightly/
       variables:
         CI_PIPELINE_SCHEDULE_DESCRIPTION: Nightly
-  variables:
-    OCUDU_RUNNER_TAG: $OCUDU_RUNNER_TAG
-  trigger:
-    include: .gitlab/ci/deploy/.gitlab-ci.yml
-    strategy: mirror
-  needs:
-    - job: trigger buildkit
-      optional: true
-      artifacts: false
-
-promote stable docker images:
-  stage: ci
+    - if: $CI_PIPELINE_SCHEDULE_DESCRIPTION =~ /Alternative OSs/
+      variables:
+        CI_PIPELINE_SCHEDULE_DESCRIPTION: Alternative OSs
+    - if: $CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "main"
+      variables:
+        ON_MAIN: "true"
   variables:
     PROMOTE_IMAGE_TAG: "$[[ inputs.promote-image-tag ]]"
     PFLT_SUBMIT: "$[[ inputs.pflt-submit ]]"
     OCUDU_RUNNER_TAG: $OCUDU_RUNNER_TAG
-  rules:
-    - if: $SKIP_OCUDU_BUILDING_CONTAINERS_CI
-      when: never
-    - if: $CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "main"
-    - if: $ON_WEB
-      when: manual
-      allow_failure: true
-    - if: $ON_API
-      when: manual
-      allow_failure: true
   trigger:
-    include: .gitlab/ci/deploy/promote-stable-preflight.yml
+    include: .gitlab/ci/deploy/.gitlab-ci.yml
     strategy: mirror
-    forward:
-      yaml_variables: true
-      pipeline_variables: true
   needs:
     - job: trigger buildkit
       optional: true

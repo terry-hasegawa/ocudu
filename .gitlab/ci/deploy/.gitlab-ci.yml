@@ -6,12 +6,15 @@ include:
   - local: .gitlab/ci/deploy/image-matrix.yml
   - local: .gitlab/ci/deploy/image-build.yml
   - local: .gitlab/ci/deploy/image-build-rh.yml
+  - local: .gitlab/ci/deploy/promote-stable-preflight.yml
 
 ################################################################################
 # Stages
 ################################################################################
 stages:
   - publish
+  - promote-stable
+  - preflight
 
 ################################################################################
 # Legacy all-binary Ubuntu image (docker-compose / dev builds)
@@ -21,7 +24,6 @@ ocudu image:
   extends: .docker-builder
   stage: publish
   rules:
-    - if: $CI_PIPELINE_SCHEDULE_DESCRIPTION =~ /Nightly/
     - if: $ON_MR
       when: manual
       allow_failure: true
@@ -31,6 +33,7 @@ ocudu image:
     - if: $ON_API
       when: manual
       allow_failure: true
+    - if: $CI_PIPELINE_SCHEDULE_DESCRIPTION =~ /Nightly/
   retry: 2
   variables:
     REGISTRY_URI: ${OCUDU_REGISTRY_URI}
@@ -100,6 +103,15 @@ ocudu image:
 ocudu image alternative os:
   extends: ocudu image
   rules:
+    - if: $ON_MR
+      when: manual
+      allow_failure: true
+    - if: $ON_WEB
+      when: manual
+      allow_failure: true
+    - if: $ON_API
+      when: manual
+      allow_failure: true
     - if: $CI_PIPELINE_SCHEDULE_DESCRIPTION =~ /Alternative OSs/
   variables:
     MODE: build

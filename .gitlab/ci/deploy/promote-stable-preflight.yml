@@ -1,17 +1,6 @@
 # SPDX-FileCopyrightText: Copyright (C) 2021-2026 Software Radio Systems Limited
 # SPDX-License-Identifier: BSD-3-Clause-Open-MPI
 
-include:
-  - local: .gitlab/ci-shared/docker.yml
-  - local: .gitlab/ci/deploy/image-matrix.yml
-  - local: .gitlab/ci/deploy/image-build.yml
-  - local: .gitlab/ci/deploy/image-build-rh.yml
-
-stages:
-  - publish
-  - promote-stable
-  - preflight
-
 .simd-label: &simd-label |
   case "${MARCH}" in
     x86-64-v3)                   SIMD=avx2 ;;
@@ -23,8 +12,17 @@ stages:
 .promote-stable:
   extends: .docker copy
   stage: promote-stable
-  rules:
-    - if: $CI_PIPELINE_SOURCE == "parent_pipeline"
+  rules: &promote_rules
+    - if: $ON_MR
+      when: manual
+      allow_failure: true
+    - if: $ON_WEB
+      when: manual
+      allow_failure: true
+    - if: $ON_API
+      when: manual
+      allow_failure: true
+    - if: $ON_MAIN
 
 .preflight-stable:
   stage: preflight
@@ -71,8 +69,7 @@ stages:
       - preflight-results/
     expire_in: 7 days
     when: always
-  rules:
-    - if: $CI_PIPELINE_SOURCE == "parent_pipeline"
+  rules: *promote_rules
 
 .legacy-image-build:
   extends:
@@ -109,8 +106,7 @@ stages:
       fi
       export VERSION
       export BUILD_ARGS="OS=${OS};OS_VERSION=${OS_VERSION};UHD_VERSION=${DOCKER_UHD_VERSION};DPDK_VERSION=${DOCKER_DPDK_VERSION};OCUDU_IMAGE_VERSION=${VERSION};OCUDU_IMAGE_RELEASE=${CI_COMMIT_SHORT_SHA};MARCH=${MARCH};NUM_JOBS=${CPU_JOBS};EXTRA_CMAKE_ARGS=\"${EXTRA_CMAKE_ARGS}\""
-  rules:
-    - if: $CI_PIPELINE_SOURCE == "parent_pipeline"
+  rules: *promote_rules
 
 build-stable-source:legacy:
   extends: .legacy-image-build
