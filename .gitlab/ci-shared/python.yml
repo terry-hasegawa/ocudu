@@ -68,13 +68,13 @@
   # Doc: https://cibuildwheel.readthedocs.io/en/stable/
   # Gitlab Integration: https://cibuildwheel.readthedocs.io/en/stable/setup/#gitlab-ci
   extends: .python_publish
-  image: docker:24.0.7-dind
+  image: docker:29.6.1-dind
   variables:
     CIBW_ENVIRONMENT_PASS_LINUX: ""
+    DOCKER_TLS_CERTDIR: ""
   before_script:
     - |
       export DOCKER_HOST=unix:///var/run/docker.sock
-      export DOCKER_TLS_CERTDIR=""
       dockerd-entrypoint.sh --host=${DOCKER_HOST} --tls=false 2>&1 &
     - |
       i=0
