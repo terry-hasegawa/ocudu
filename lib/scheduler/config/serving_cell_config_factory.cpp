@@ -276,8 +276,11 @@ static uplink_config make_default_ue_uplink_config(const ran_cell_config&     ce
 static pdsch_serving_cell_config make_default_pdsch_serving_cell_config(const pdsch_builder_params& pdsch_params)
 {
   pdsch_serving_cell_config cfg;
-  cfg.nof_harq_proc   = static_cast<pdsch_serving_cell_config::nof_harq_proc_for_pdsch>(pdsch_params.max_harq_procs);
-  cfg.max_mimo_layers = 1;
+  cfg.nof_harq_proc = static_cast<pdsch_serving_cell_config::nof_harq_proc_for_pdsch>(pdsch_params.max_harq_procs);
+  // Signal in maxMIMO-Layers the same maximum number of DL layers used to generate the CSI-MeasConfig RI restriction
+  // (see pdsch_builder_params::max_nof_layers), so that the UE LBRM TBS assumption (TS 38.212, Section 5.4.2.1)
+  // matches the maximum rank the UE can report.
+  cfg.max_mimo_layers           = pdsch_params.max_nof_layers.value_or(1);
   cfg.dl_harq_feedback_disabled = pdsch_params.dl_harq_feedback_disabled;
 
   return cfg;

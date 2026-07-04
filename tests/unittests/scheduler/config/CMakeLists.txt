@@ -3,6 +3,7 @@
 # Portions of this file may implement 3GPP specifications, which may be subject to additional licensing requirements.
 
 
-add_executable(sched_config_test csi_helper_test.cpp pucch_resource_generator_test.cpp)
+add_executable(sched_config_test csi_helper_test.cpp pucch_resource_generator_test.cpp
+               serving_cell_config_factory_test.cpp)
 target_link_libraries(sched_config_test sched_config sched_test_doubles ocudulog gtest ocudu_gtest_main)
 gtest_discover_tests(sched_config_test)
