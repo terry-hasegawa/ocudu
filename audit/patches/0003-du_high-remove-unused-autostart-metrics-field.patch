@@ -1,0 +1,37 @@
+From 8adc6a0fb6759b0f1a05e02f91107e08015b4f65 Mon Sep 17 00:00:00 2001
+From: Terry Hasegawa <t.hasegawa_2@fujitsu.com>
+Date: Sat, 4 Jul 2026 18:25:40 +0000
+Subject: [PATCH 3/3] du_high: remove unused autostart metrics field
+
+du_high_unit_metrics_config::autostart_stdout_metrics had no CLI
+binding, no yaml writer entry and no reader; its declaration was the
+only reference in the tree. The working autostart_stdout_metrics
+knobs live in the application-level gnb/du configs. Remove the dead
+field to avoid suggesting a per-unit knob that does not exist.
+
+Verified with sched_config_test and serving_cell_config_converter_test
+(compilation of du_high unit helpers and dependents).
+
+Assisted-by: Claude (Anthropic)
+Signed-off-by: Terry Hasegawa <t.hasegawa_2@fujitsu.com>
+---
+ apps/units/flexible_o_du/o_du_high/du_high/du_high_config.h | 3 +--
+ 1 file changed, 1 insertion(+), 2 deletions(-)
+
+diff --git a/apps/units/flexible_o_du/o_du_high/du_high/du_high_config.h b/apps/units/flexible_o_du/o_du_high/du_high/du_high_config.h
+index be86b8d..d3ca818 100644
+--- a/apps/units/flexible_o_du/o_du_high/du_high/du_high_config.h
++++ b/apps/units/flexible_o_du/o_du_high/du_high/du_high_config.h
+@@ -1208,8 +1208,7 @@ struct du_high_unit_metrics_layer_config {
+ /// Metrics report configuration.
+ struct du_high_unit_metrics_config {
+   /// Scheduler report period in milliseconds.
+-  unsigned                          du_report_period         = 1000;
+-  bool                              autostart_stdout_metrics = false;
++  unsigned                          du_report_period = 1000;
+   app_helpers::metrics_config       common_metrics_cfg;
+   du_high_unit_metrics_layer_config layers_cfg;
+ };
+-- 
+2.43.0
+

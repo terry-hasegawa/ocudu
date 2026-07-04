@@ -1,0 +1,48 @@
+From c29878cc052f29e1372e6b36a97dc2d4e1ccdf09 Mon Sep 17 00:00:00 2001
+From: Terry Hasegawa <t.hasegawa_2@fujitsu.com>
+Date: Sat, 4 Jul 2026 18:25:40 +0000
+Subject: [PATCH 1/3] du_high: wire f4_enable_occ into pucch builder
+
+The FORMAT_4 branch of the pucch translator never copied the
+f4_enable_occ option into pucch_f4_params::occ_supported, so enabling
+OCC multiplexing for PUCCH Format 4 was silently ignored and the
+resource generator kept mapping a single UE per F4 PRB. Format 1
+already wires the equivalent flag. Also emit the missing
+f4_enable_occ key in the yaml writer.
+
+Verified with sched_config_test and serving_cell_config_converter_test.
+
+Assisted-by: Claude (Anthropic)
+Signed-off-by: Terry Hasegawa <t.hasegawa_2@fujitsu.com>
+---
+ .../o_du_high/du_high/du_high_config_translators.cpp             | 1 +
+ .../o_du_high/du_high/du_high_config_yaml_writer.cpp             | 1 +
+ 2 files changed, 2 insertions(+)
+
+diff --git a/apps/units/flexible_o_du/o_du_high/du_high/du_high_config_translators.cpp b/apps/units/flexible_o_du/o_du_high/du_high/du_high_config_translators.cpp
+index f6adfdd..290cc1e 100644
+--- a/apps/units/flexible_o_du/o_du_high/du_high/du_high_config_translators.cpp
++++ b/apps/units/flexible_o_du/o_du_high/du_high/du_high_config_translators.cpp
+@@ -914,6 +914,7 @@ std::vector<odu::du_cell_config> ocudu::generate_du_cell_config(const du_high_un
+         f4_params.intraslot_freq_hopping = user_pucch_cfg.f4_intraslot_freq_hopping;
+         f4_params.additional_dmrs        = user_pucch_cfg.f4_additional_dmrs;
+         f4_params.pi2_bpsk               = user_pucch_cfg.f4_pi2_bpsk;
++        f4_params.occ_supported          = user_pucch_cfg.f4_enable_occ;
+         f4_params.occ_length             = static_cast<pucch_f4_occ_len>(user_pucch_cfg.f4_occ_length);
+       } break;
+       default:
+diff --git a/apps/units/flexible_o_du/o_du_high/du_high/du_high_config_yaml_writer.cpp b/apps/units/flexible_o_du/o_du_high/du_high/du_high_config_yaml_writer.cpp
+index 28b11fc..043ac3c 100644
+--- a/apps/units/flexible_o_du/o_du_high/du_high/du_high_config_yaml_writer.cpp
++++ b/apps/units/flexible_o_du/o_du_high/du_high/du_high_config_yaml_writer.cpp
+@@ -407,6 +407,7 @@ static YAML::Node build_du_high_pucch_section(const du_high_unit_pucch_config& c
+   node["f4_max_code_rate"]             = to_string(config.f4_max_code_rate);
+   node["f4_additional_dmrs"]           = config.f4_additional_dmrs;
+   node["f4_pi2_bpsk"]                  = config.f4_pi2_bpsk;
++  node["f4_enable_occ"]                = config.f4_enable_occ;
+   node["f4_occ_length"]                = config.f4_occ_length;
+   node["min_k1"]                       = config.min_k1;
+   node["max_consecutive_kos"]          = config.max_consecutive_kos;
+-- 
+2.43.0
+

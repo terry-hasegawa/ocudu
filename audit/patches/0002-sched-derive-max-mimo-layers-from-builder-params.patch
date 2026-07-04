@@ -1,0 +1,103 @@
+From 63769bed99b56a9e5c300b2de8c09d6e084facb2 Mon Sep 17 00:00:00 2001
+From: Terry Hasegawa <t.hasegawa_2@fujitsu.com>
+Date: Sat, 4 Jul 2026 18:25:40 +0000
+Subject: [PATCH 2/3] sched: derive max mimo layers from builder params
+
+make_default_pdsch_serving_cell_config() hardcoded max_mimo_layers to
+1 while receiving pdsch_builder_params, whose max_nof_layers member
+carries the configured maximum number of DL layers. As the only
+writer of this field, the hardcode made every UE receive
+PDSCH-ServingCellConfig.maxMIMO-Layers = 1, contradicting the
+CSI-MeasConfig RI restriction generated from the same parameter and
+skewing the UE LBRM TBS assumption (TS 38.212, Section 5.4.2.1) away
+from the gNB one. Cells with a single DL antenna port or max_rank 1
+keep the same behavior.
+
+Verified with serving_cell_config_factory_test (new),
+sched_config_test and serving_cell_config_converter_test.
+
+Assisted-by: Claude (Anthropic)
+Signed-off-by: Terry Hasegawa <t.hasegawa_2@fujitsu.com>
+---
+ .../config/serving_cell_config_factory.cpp    |  7 ++--
+ .../unittests/scheduler/config/CMakeLists.txt |  3 +-
+ .../serving_cell_config_factory_test.cpp      | 36 +++++++++++++++++++
+ 3 files changed, 43 insertions(+), 3 deletions(-)
+ create mode 100644 tests/unittests/scheduler/config/serving_cell_config_factory_test.cpp
+
+diff --git a/lib/scheduler/config/serving_cell_config_factory.cpp b/lib/scheduler/config/serving_cell_config_factory.cpp
+index 87e6f95..9297ef7 100644
+--- a/lib/scheduler/config/serving_cell_config_factory.cpp
++++ b/lib/scheduler/config/serving_cell_config_factory.cpp
+@@ -276,8 +276,11 @@ static uplink_config make_default_ue_uplink_config(const ran_cell_config&     ce
+ static pdsch_serving_cell_config make_default_pdsch_serving_cell_config(const pdsch_builder_params& pdsch_params)
+ {
+   pdsch_serving_cell_config cfg;
+-  cfg.nof_harq_proc   = static_cast<pdsch_serving_cell_config::nof_harq_proc_for_pdsch>(pdsch_params.max_harq_procs);
+-  cfg.max_mimo_layers = 1;
++  cfg.nof_harq_proc = static_cast<pdsch_serving_cell_config::nof_harq_proc_for_pdsch>(pdsch_params.max_harq_procs);
++  // Signal in maxMIMO-Layers the same maximum number of DL layers used to generate the CSI-MeasConfig RI restriction
++  // (see pdsch_builder_params::max_nof_layers), so that the UE LBRM TBS assumption (TS 38.212, Section 5.4.2.1)
++  // matches the maximum rank the UE can report.
++  cfg.max_mimo_layers           = pdsch_params.max_nof_layers.value_or(1);
+   cfg.dl_harq_feedback_disabled = pdsch_params.dl_harq_feedback_disabled;
+ 
+   return cfg;
+diff --git a/tests/unittests/scheduler/config/CMakeLists.txt b/tests/unittests/scheduler/config/CMakeLists.txt
+index 611391d..c57c15a 100644
+--- a/tests/unittests/scheduler/config/CMakeLists.txt
++++ b/tests/unittests/scheduler/config/CMakeLists.txt
+@@ -3,6 +3,7 @@
+ # Portions of this file may implement 3GPP specifications, which may be subject to additional licensing requirements.
+ 
+ 
+-add_executable(sched_config_test csi_helper_test.cpp pucch_resource_generator_test.cpp)
++add_executable(sched_config_test csi_helper_test.cpp pucch_resource_generator_test.cpp
++               serving_cell_config_factory_test.cpp)
+ target_link_libraries(sched_config_test sched_config sched_test_doubles ocudulog gtest ocudu_gtest_main)
+ gtest_discover_tests(sched_config_test)
+diff --git a/tests/unittests/scheduler/config/serving_cell_config_factory_test.cpp b/tests/unittests/scheduler/config/serving_cell_config_factory_test.cpp
+new file mode 100644
+index 0000000..42dd56e
+--- /dev/null
++++ b/tests/unittests/scheduler/config/serving_cell_config_factory_test.cpp
+@@ -0,0 +1,36 @@
++// SPDX-FileCopyrightText: Copyright (C) 2021-2026 Software Radio Systems Limited
++// SPDX-License-Identifier: BSD-3-Clause-Open-MPI
++// Portions of this file may implement 3GPP specifications, which may be subject to additional licensing requirements.
++
++#include "ocudu/scheduler/config/cell_config_builder_params.h"
++#include "ocudu/scheduler/config/ran_cell_config_helper.h"
++#include "ocudu/scheduler/config/serving_cell_config_factory.h"
++#include <gtest/gtest.h>
++
++using namespace ocudu;
++
++TEST(serving_cell_config_factory_test, pdsch_max_mimo_layers_follows_max_nof_layers)
++{
++  cell_config_builder_params params{};
++  params.dl_carrier.nof_ant = 2;
++
++  const ue_cell_config ue_cfg =
++      config_helpers::make_default_ue_cell_config(config_helpers::make_default_ran_cell_config(params));
++
++  ASSERT_TRUE(ue_cfg.serv_cell_cfg.pdsch_serv_cell_cfg.has_value());
++  // When not explicitly set, the maximum number of DL layers is derived from the number of DL antenna ports.
++  EXPECT_EQ(ue_cfg.serv_cell_cfg.pdsch_serv_cell_cfg->max_mimo_layers, 2U);
++}
++
++TEST(serving_cell_config_factory_test, pdsch_max_mimo_layers_capped_by_explicit_max_nof_layers)
++{
++  cell_config_builder_params params{};
++  params.dl_carrier.nof_ant = 2;
++  params.max_nof_layers     = 1;
++
++  const ue_cell_config ue_cfg =
++      config_helpers::make_default_ue_cell_config(config_helpers::make_default_ran_cell_config(params));
++
++  ASSERT_TRUE(ue_cfg.serv_cell_cfg.pdsch_serv_cell_cfg.has_value());
++  EXPECT_EQ(ue_cfg.serv_cell_cfg.pdsch_serv_cell_cfg->max_mimo_layers, 1U);
++}
+-- 
+2.43.0
+
