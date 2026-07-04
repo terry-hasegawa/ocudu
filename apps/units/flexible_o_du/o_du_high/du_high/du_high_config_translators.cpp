@@ -914,6 +914,7 @@ std::vector<odu::du_cell_config> ocudu::generate_du_cell_config(const du_high_un
         f4_params.intraslot_freq_hopping = user_pucch_cfg.f4_intraslot_freq_hopping;
         f4_params.additional_dmrs        = user_pucch_cfg.f4_additional_dmrs;
         f4_params.pi2_bpsk               = user_pucch_cfg.f4_pi2_bpsk;
+        f4_params.occ_supported          = user_pucch_cfg.f4_enable_occ;
         f4_params.occ_length             = static_cast<pucch_f4_occ_len>(user_pucch_cfg.f4_occ_length);
       } break;
       default:

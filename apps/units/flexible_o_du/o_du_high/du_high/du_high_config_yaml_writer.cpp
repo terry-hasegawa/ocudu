@@ -407,6 +407,7 @@ static YAML::Node build_du_high_pucch_section(const du_high_unit_pucch_config& c
   node["f4_max_code_rate"]             = to_string(config.f4_max_code_rate);
   node["f4_additional_dmrs"]           = config.f4_additional_dmrs;
   node["f4_pi2_bpsk"]                  = config.f4_pi2_bpsk;
+  node["f4_enable_occ"]                = config.f4_enable_occ;
   node["f4_occ_length"]                = config.f4_occ_length;
   node["min_k1"]                       = config.min_k1;
   node["max_consecutive_kos"]          = config.max_consecutive_kos;
