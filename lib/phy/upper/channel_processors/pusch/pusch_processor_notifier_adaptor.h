@@ -147,6 +147,9 @@ private:
         csi.set_total_evm(*stats.evm);
         csi.set_sinr_dB(channel_state_information::sinr_type::evm, -20.0F * log10f(*stats.evm) - 3.7F);
       }
+      if (stats.diagnostics.has_value()) {
+        csi.set_diagnostics(*stats.diagnostics);
+      }
     }
 
   private:

@@ -232,6 +232,12 @@ static void configure_cli11_expert_phy_args(CLI::App& app, du_low_unit_expert_up
       ->capture_default_str()
       ->check(pusch_channel_equalizer_algorithm_method_check);
   add_option(app,
+             "--pusch_diagnostics_enabled",
+             expert_phy_params.pusch_diagnostics_enabled,
+             "Collects PUSCH link diagnostics (SINR flavors, per-layer SINR, condition number, LLR statistics) and "
+             "appends them to the PUSCH log entries.")
+      ->capture_default_str();
+  add_option(app,
              "--max_request_headroom_slots",
              expert_phy_params.nof_slots_request_headroom,
              "Maximum request headroom size in slots.")

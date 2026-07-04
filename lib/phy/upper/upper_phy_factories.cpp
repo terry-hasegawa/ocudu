@@ -781,13 +781,15 @@ create_ul_processor_factory(const upper_phy_factory_configuration& config,
       create_uci_decoder_factory_generic(short_block_det_factory, polar_dec_factory, crc_calc_factory);
   report_fatal_error_if_not(uci_dec_factory, "Invalid UCI decoder factory.");
 
-  // Enable EVM calculation if PUSCH SINR is obtained from EVM or if it is logged by the PHY.
+  // Enable EVM calculation if PUSCH SINR is obtained from EVM, if it is logged by the PHY or if the PUSCH
+  // diagnostics are enabled.
   bool enable_evm = (config.pusch_sinr_calc_method == channel_state_information::sinr_type::evm) ||
-                    (config.log_level == ocudulog::basic_levels::debug);
+                    (config.log_level == ocudulog::basic_levels::debug) || config.pusch_diagnostics_enabled;
 
-  // Enable post-equalization SINR if selected as PUSCH SINR method or if it is logged by the PHY.
+  // Enable post-equalization SINR if selected as PUSCH SINR method, if it is logged by the PHY or if the PUSCH
+  // diagnostics are enabled.
   bool enable_eq_sinr = (config.pusch_sinr_calc_method == channel_state_information::sinr_type::post_equalization) ||
-                        (config.log_level == ocudulog::basic_levels::debug);
+                        (config.log_level == ocudulog::basic_levels::debug) || config.pusch_diagnostics_enabled;
 
   // Create PUSCH demodulator.
   std::shared_ptr<pusch_demodulator_factory> pusch_demod_factory =
@@ -797,7 +799,8 @@ create_ul_processor_factory(const upper_phy_factory_configuration& config,
                                           (enable_evm) ? pusch_evm_calc_factory : nullptr,
                                           pusch_scrambling_factory,
                                           config.ul_bw_rb,
-                                          enable_eq_sinr);
+                                          enable_eq_sinr,
+                                          config.pusch_diagnostics_enabled);
   report_fatal_error_if_not(uci_dec_factory, "Invalid PUSCH demodulator.");
 
   // Wrap PUSCH demodulator with the metric decorator if necessary.

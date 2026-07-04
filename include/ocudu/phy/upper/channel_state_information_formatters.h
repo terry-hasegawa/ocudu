@@ -135,6 +135,11 @@ struct formatter<ocudu::channel_state_information> {
       } else {
         helper.format_if_verbose(ctx, "cfo=na");
       }
+
+      // Print the PUSCH diagnostics when they were collected.
+      if (csi.get_diagnostics().has_value()) {
+        format_diagnostics(ctx, *csi.get_diagnostics());
+      }
     } else {
       // Short representation only prints the SINR selected for CSI reporting to higher layers.
       std::optional<float> sinr_dB = csi.get_sinr_dB();
@@ -144,8 +149,44 @@ struct formatter<ocudu::channel_state_information> {
         // SINR is not available.
         helper.format_always(ctx, "sinr=na");
       }
+
+      // When the PUSCH diagnostics are enabled, append the full measurement set to the short representation so that
+      // a single info-level log line is sufficient for link troubleshooting.
+      if (csi.get_diagnostics().has_value()) {
+        helper.format_always(ctx, "sinr_ce={:.1f}dB", csi.sinr_ch_estimator_dB);
+        helper.format_always(ctx, "sinr_eq={:.1f}dB", csi.sinr_post_eq_dB);
+        helper.format_always(ctx, "sinr_evm={:.1f}dB", csi.sinr_evm_dB);
+        helper.format_always(ctx, "evm={:.3f}", csi.get_total_evm());
+        format_diagnostics(ctx, *csi.get_diagnostics());
+
+        ocudu::span<const float> port_rsrp = csi.get_port_rsrp_dB();
+        if (!port_rsrp.empty()) {
+          helper.format_always(ctx, "rsrp=[{:.1f}]dB", port_rsrp);
+        }
+        helper.format_always(ctx, "epre={:.1f}dB", csi.get_epre_dB());
+        if (std::optional<ocudu::phy_time_unit> time_alignment = csi.get_time_alignment()) {
+          helper.format_always(ctx, "t_align={:.2f}us", time_alignment->to_seconds() * 1e6);
+        }
+        if (std::optional<float> cfo_Hz = csi.get_cfo_Hz()) {
+          helper.format_always(ctx, "cfo={:+.1f}Hz", *cfo_Hz);
+        }
+      }
     }
     return ctx.out();
+  }
+
+private:
+  /// Formats the optional PUSCH diagnostic measurements.
+  template <typename FormatContext>
+  void format_diagnostics(FormatContext& ctx, const ocudu::pusch_diagnostics& diag) const
+  {
+    helper.format_always(ctx, "sinr_lyr=[{:.1f}]dB", ocudu::span<const float>(diag.sinr_layer_dB));
+    if (diag.ch_cond_dB.has_value()) {
+      helper.format_always(ctx, "cond={:.1f}dB", *diag.ch_cond_dB);
+    }
+    helper.format_always(ctx, "nvar_p=[{:.1f}]dB", ocudu::span<const float>(diag.port_noise_var_dB));
+    helper.format_always(ctx, "llr_sat={:.3f}", diag.llr_sat_ratio);
+    helper.format_always(ctx, "llr_avg={:.1f}", diag.llr_abs_mean);
   }
 };
 

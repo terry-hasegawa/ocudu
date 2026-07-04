@@ -9,6 +9,9 @@
 #include "ocudu/ocuduvec/simd.h"
 #include "ocudu/phy/upper/channel_processors/pusch/pusch_codeword_buffer.h"
 #include "ocudu/phy/upper/channel_processors/pusch/pusch_demodulator_notifier.h"
+#include "ocudu/support/math/math_utils.h"
+#include <algorithm>
+#include <cmath>
 
 #if defined(__SSE3__)
 #include <immintrin.h>
@@ -204,6 +207,92 @@ revert_scrambling(span<log_likelihood_ratio> out, span<const log_likelihood_rati
   }
 }
 
+/// \brief Accumulates the equalizer output noise variances of each transmission layer separately.
+///
+/// The equalizer output noise variances are interleaved by layer (i.e., the noise variance of RE \c k and layer \c l
+/// is at position <tt>k * nof_layers + l</tt>). Infinite values (e.g., produced by the DC position) are excluded.
+static void accumulate_noise_var_per_layer(span<double>      layer_sum,
+                                           span<unsigned>    layer_count,
+                                           span<const float> eq_noise_vars,
+                                           unsigned          nof_layers)
+{
+  for (unsigned i = 0, i_end = eq_noise_vars.size(); i != i_end; ++i) {
+    float nvar = eq_noise_vars[i];
+    if (std::isinf(nvar) || std::isnan(nvar)) {
+      continue;
+    }
+    unsigned i_layer = i % nof_layers;
+    layer_sum[i_layer] += nvar;
+    ++layer_count[i_layer];
+  }
+}
+
+/// \brief Accumulates LLR magnitude statistics of a processed codeword block.
+///
+/// Counts soft bits saturated at the maximum LLR amplitude and accumulates the total absolute amplitude.
+static void accumulate_llr_stats(uint64_t&                        sat_count,
+                                 uint64_t&                        abs_sum,
+                                 span<const log_likelihood_ratio> soft_bits)
+{
+  static constexpr int llr_max = log_likelihood_ratio::max().to_int();
+  for (log_likelihood_ratio llr : soft_bits) {
+    int v = std::abs(llr.to_int());
+    abs_sum += static_cast<uint64_t>(v);
+    if (v >= llr_max) {
+      ++sat_count;
+    }
+  }
+}
+
+/// \brief Estimates the condition number of the channel Gram matrix for two-layer transmissions.
+///
+/// Samples up to 64 resource elements of the given channel estimates, computes the eigenvalue ratio of the 2x2
+/// Gram matrix \f$H^H H\f$ for each of them and returns the median value in decibels.
+static std::optional<float> estimate_condition_number_2layer(const channel_equalizer::ch_est_list& ch_estimates)
+{
+  unsigned nof_re    = ch_estimates.get_nof_re();
+  unsigned nof_ports = ch_estimates.get_nof_rx_ports();
+  if ((ch_estimates.get_nof_tx_layers() != 2) || (nof_re == 0)) {
+    return std::nullopt;
+  }
+
+  static constexpr unsigned          max_nof_samples = 64;
+  unsigned                           stride          = std::max(1U, nof_re / max_nof_samples);
+  static_vector<float, max_nof_samples> cond_samples;
+
+  for (unsigned i_re = 0; (i_re < nof_re) && (cond_samples.size() < max_nof_samples); i_re += stride) {
+    float               g00 = 0.0F;
+    float               g11 = 0.0F;
+    std::complex<float> g01 = 0.0F;
+    for (unsigned i_port = 0; i_port != nof_ports; ++i_port) {
+      cf_t h0 = to_cf(ch_estimates.get_channel(i_port, 0)[i_re]);
+      cf_t h1 = to_cf(ch_estimates.get_channel(i_port, 1)[i_re]);
+      g00 += std::norm(h0);
+      g11 += std::norm(h1);
+      g01 += std::conj(h0) * h1;
+    }
+
+    // Eigenvalues of the Hermitian 2x2 Gram matrix.
+    float trace = g00 + g11;
+    float det   = g00 * g11 - std::norm(g01);
+    float disc  = std::sqrt(std::max(0.25F * trace * trace - det, 0.0F));
+    float l_max = 0.5F * trace + disc;
+    float l_min = 0.5F * trace - disc;
+    if (!std::isnormal(l_min) || !std::isnormal(l_max) || (l_min <= 0.0F)) {
+      continue;
+    }
+    cond_samples.push_back(l_max / l_min);
+  }
+
+  if (cond_samples.empty()) {
+    return std::nullopt;
+  }
+
+  auto mid = cond_samples.begin() + cond_samples.size() / 2;
+  std::nth_element(cond_samples.begin(), mid, cond_samples.end());
+  return convert_power_to_dB(*mid);
+}
+
 static float filter_infinite_and_accumulate(unsigned& count, span<const float> input)
 {
   float    sum = 0;
@@ -290,6 +379,14 @@ void pusch_demodulator_impl::demodulate(pusch_codeword_buffer&              code
   float    total_noise_var_accumulate = 0.0;
   float    total_evm_accumulate       = 0.0;
 
+  // Diagnostics accumulators, only updated when the PUSCH diagnostics are enabled.
+  std::array<double, pusch_constants::MAX_NOF_LAYERS>   diag_layer_nvar_sum   = {};
+  std::array<unsigned, pusch_constants::MAX_NOF_LAYERS> diag_layer_nvar_count = {};
+  uint64_t                                              diag_llr_sat_count    = 0;
+  uint64_t                                              diag_llr_abs_sum      = 0;
+  uint64_t                                              diag_llr_total_count  = 0;
+  std::optional<float>                                  diag_ch_cond_dB;
+
   // Process each OFDM symbol.
   for (unsigned i_symbol = config.start_symbol_index, i_symbol_end = config.start_symbol_index + config.nof_symbols;
        i_symbol != i_symbol_end;
@@ -357,6 +454,17 @@ void pusch_demodulator_impl::demodulate(pusch_codeword_buffer&              code
       symbol_noise_var_accumulate += filter_infinite_and_accumulate(symbol_sinr_softbit_count, eq_noise_vars);
     }
 
+    // Collect diagnostics from the equalizer output and the channel estimates.
+    if (enable_diagnostics) {
+      accumulate_noise_var_per_layer(
+          diag_layer_nvar_sum, diag_layer_nvar_count, eq_noise_vars, config.nof_tx_layers);
+
+      // Estimate the channel condition number once per transmission, on the first processed OFDM symbol.
+      if (!diag_ch_cond_dB.has_value() && (config.nof_tx_layers == 2)) {
+        diag_ch_cond_dB = estimate_condition_number_2layer(ch_estimates);
+      }
+    }
+
     // Counts the number of processed RE for the OFDM symbol.
     unsigned count_re_symbol = 0;
 
@@ -397,6 +505,12 @@ void pusch_demodulator_impl::demodulate(pusch_codeword_buffer&              code
 
       // Revert scrambling.
       revert_scrambling(codeword, codeword, scrambling_seq);
+
+      // Collect LLR statistics (scrambling does not affect the LLR amplitudes).
+      if (enable_diagnostics) {
+        accumulate_llr_stats(diag_llr_sat_count, diag_llr_abs_sum, codeword);
+        diag_llr_total_count += codeword.size();
+      }
 
       // Increment the number of processed RE within the OFDM symbol.
       count_re_symbol += nof_block_softbits / nof_bits_per_re;
@@ -439,6 +553,33 @@ void pusch_demodulator_impl::demodulate(pusch_codeword_buffer&              code
   }
   if (total_evm_symbol_count != 0) {
     stats.evm.emplace(total_evm_accumulate / static_cast<float>(total_evm_symbol_count));
+  }
+
+  // Assemble the diagnostics.
+  if (enable_diagnostics) {
+    pusch_diagnostics& diag = stats.diagnostics.emplace();
+
+    // Per-layer post-equalization SINR (the equalized symbols have unit gain, hence SINR = 1 / noise variance).
+    for (unsigned i_layer = 0; i_layer != config.nof_tx_layers; ++i_layer) {
+      float sinr_dB = std::numeric_limits<float>::infinity();
+      if ((diag_layer_nvar_count[i_layer] != 0) && (diag_layer_nvar_sum[i_layer] > 0.0)) {
+        double mean_nvar = diag_layer_nvar_sum[i_layer] / static_cast<double>(diag_layer_nvar_count[i_layer]);
+        sinr_dB          = -convert_power_to_dB(static_cast<float>(mean_nvar));
+      }
+      diag.sinr_layer_dB.push_back(sinr_dB);
+    }
+
+    // Channel estimator noise variance for each receive port.
+    for (unsigned i_port = 0; i_port != nof_rx_ports; ++i_port) {
+      diag.port_noise_var_dB.push_back(convert_power_to_dB(noise_var_estimates[i_port]));
+    }
+
+    diag.ch_cond_dB = diag_ch_cond_dB;
+
+    if (diag_llr_total_count != 0) {
+      diag.llr_sat_ratio = static_cast<float>(diag_llr_sat_count) / static_cast<float>(diag_llr_total_count);
+      diag.llr_abs_mean  = static_cast<float>(diag_llr_abs_sum) / static_cast<float>(diag_llr_total_count);
+    }
   }
 
   notifier.on_end_stats(stats);

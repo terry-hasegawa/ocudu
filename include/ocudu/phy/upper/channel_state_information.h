@@ -7,6 +7,7 @@
 #include "ocudu/adt/span.h"
 #include "ocudu/adt/static_vector.h"
 #include "ocudu/phy/antenna_ports.h"
+#include "ocudu/phy/upper/pusch_diagnostics.h"
 #include "ocudu/ran/cyclic_prefix.h"
 #include "ocudu/ran/phy_time_unit.h"
 #include <cmath>
@@ -264,6 +265,13 @@ public:
   /// \return The measured CFO if present, \c std::nullopt otherwise.
   std::optional<float> get_cfo_Hz() const { return cfo_Hz; }
 
+  /// Sets the optional PUSCH diagnostic measurements.
+  void set_diagnostics(const pusch_diagnostics& diagnostics_) { diagnostics.emplace(diagnostics_); }
+
+  /// \brief Gets the PUSCH diagnostic measurements.
+  /// \return The diagnostics if they were collected, \c std::nullopt otherwise.
+  const std::optional<pusch_diagnostics>& get_diagnostics() const { return diagnostics; }
+
 private:
   friend struct fmt::formatter<channel_state_information>;
   /// \brief SINR type that can be accessed by \ref get_sinr_dB.
@@ -291,6 +299,8 @@ private:
   static_vector<float, MAX_PORTS> port_rsrp_dB;
   /// CFO measurement in hertz.
   std::optional<float> cfo_Hz;
+  /// Optional PUSCH diagnostic measurements, only collected when the PUSCH diagnostics are enabled.
+  std::optional<pusch_diagnostics> diagnostics;
 };
 
 } // namespace ocudu

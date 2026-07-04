@@ -31,7 +31,8 @@ public:
                          std::unique_ptr<evm_calculator>          evm_calc_,
                          std::unique_ptr<pseudo_random_generator> descrambler_,
                          unsigned                                 max_nof_rb,
-                         bool                                     compute_post_eq_sinr_) :
+                         bool                                     compute_post_eq_sinr_,
+                         bool                                     enable_diagnostics_ = false) :
     equalizer(std::move(equalizer_)),
     precoder(std::move(precoder_)),
     demapper(std::move(demapper_)),
@@ -43,7 +44,8 @@ public:
     ch_estimates_copy(max_nof_rb * NOF_SUBCARRIERS_PER_RB,
                       pusch_constants::MAX_NOF_RX_PORTS,
                       pusch_constants::MAX_NOF_LAYERS),
-    compute_post_eq_sinr(compute_post_eq_sinr_)
+    compute_post_eq_sinr(compute_post_eq_sinr_),
+    enable_diagnostics(enable_diagnostics_)
   {
     ocudu_assert(equalizer, "Invalid pointer to channel_equalizer object.");
     ocudu_assert(demapper, "Invalid pointer to demodulation_mapper object.");
@@ -124,6 +126,8 @@ private:
 
   /// Enables post equalization SINR calculation.
   bool compute_post_eq_sinr;
+  /// Enables the collection of PUSCH diagnostics (per-layer SINR, condition number, LLR statistics).
+  bool enable_diagnostics;
 };
 
 } // namespace ocudu

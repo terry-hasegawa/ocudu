@@ -78,7 +78,8 @@ create_pusch_demodulator_factory_sw(std::shared_ptr<channel_equalizer_factory>  
                                     std::shared_ptr<evm_calculator_factory>          evm_calc_factory,
                                     std::shared_ptr<pseudo_random_generator_factory> prg_factory,
                                     unsigned                                         max_nof_prb,
-                                    bool                                             enable_post_eq_sinr = false);
+                                    bool                                             enable_post_eq_sinr = false,
+                                    bool                                             enable_diagnostics  = false);
 
 class pusch_processor_factory
 {

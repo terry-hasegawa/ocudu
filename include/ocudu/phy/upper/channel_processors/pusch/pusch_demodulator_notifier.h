@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "ocudu/phy/upper/pusch_diagnostics.h"
 #include <optional>
 
 namespace ocudu {
@@ -18,6 +19,8 @@ public:
     std::optional<float> sinr_dB;
     /// Measured EVM.
     std::optional<float> evm;
+    /// Diagnostic measurements, only collected when the PUSCH diagnostics are enabled.
+    std::optional<pusch_diagnostics> diagnostics;
   };
 
   /// Default destructor.

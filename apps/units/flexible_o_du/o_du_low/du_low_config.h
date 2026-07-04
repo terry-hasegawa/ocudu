@@ -56,6 +56,12 @@ struct du_low_unit_expert_upper_phy_config {
   /// - \c zf: use zero-forcing algorithm, or
   /// - \c mmse: use minimum mean square error algorithm.
   std::string pusch_channel_equalizer_algorithm = "zf";
+  /// \brief Enables the PUSCH diagnostics.
+  ///
+  /// When enabled, the PUSCH demodulator collects extra link-quality measurements (all SINR flavors, per-layer SINR,
+  /// channel condition number, per-port noise variance and LLR statistics) and appends them to the PUSCH log entries
+  /// at info level. Intended for troubleshooting; it adds a small processing overhead per PUSCH transmission.
+  bool pusch_diagnostics_enabled = false;
   /// \brief Request headroom size in slots.
   ///
   /// The request headroom size is the number of delayed slots that the upper physical layer will accept, ie, if the

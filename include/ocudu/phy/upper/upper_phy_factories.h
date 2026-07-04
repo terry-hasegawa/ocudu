@@ -343,6 +343,12 @@ struct upper_phy_factory_configuration {
   /// - \c zf: use zero-forcing algorithm, or
   /// - \c mmse: use minimum mean square error algorithm.
   std::string pusch_channel_equalizer_algorithm;
+  /// \brief Enables the PUSCH diagnostics.
+  ///
+  /// When enabled, the PUSCH demodulator collects extra link-quality measurements (all SINR flavors, per-layer SINR,
+  /// channel condition number, per-port noise variance and LLR statistics) and they are appended to the PUSCH log
+  /// entries. It has a small processing overhead, for troubleshooting purposes only.
+  bool pusch_diagnostics_enabled = false;
   /// Number of LDPC decoder iterations.
   unsigned ldpc_decoder_iterations;
   /// Set to true to enable the LDPC decoder early stop.

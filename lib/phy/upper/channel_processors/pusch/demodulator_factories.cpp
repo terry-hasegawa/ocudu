@@ -21,14 +21,16 @@ public:
                                     std::shared_ptr<evm_calculator_factory>          evm_calc_factory_,
                                     std::shared_ptr<pseudo_random_generator_factory> prg_factory_,
                                     unsigned                                         max_nof_prb_,
-                                    bool                                             enable_post_eq_sinr_) :
+                                    bool                                             enable_post_eq_sinr_,
+                                    bool                                             enable_diagnostics_) :
     equalizer_factory(std::move(equalizer_factory_)),
     precoder_factory(std::move(precoder_factory_)),
     demodulation_factory(std::move(demodulation_factory_)),
     evm_calc_factory(std::move(evm_calc_factory_)),
     prg_factory(std::move(prg_factory_)),
     max_nof_prb(max_nof_prb_),
-    enable_post_eq_sinr(enable_post_eq_sinr_)
+    enable_post_eq_sinr(enable_post_eq_sinr_),
+    enable_diagnostics(enable_diagnostics_)
   {
     ocudu_assert(equalizer_factory, "Invalid equalizer factory.");
     ocudu_assert(precoder_factory, "Invalid transform precoder factory.");
@@ -48,7 +50,8 @@ public:
                                                     std::move(evm_calc),
                                                     prg_factory->create(),
                                                     max_nof_prb,
-                                                    enable_post_eq_sinr);
+                                                    enable_post_eq_sinr,
+                                                    enable_diagnostics);
   }
 
 private:
@@ -59,6 +62,7 @@ private:
   std::shared_ptr<pseudo_random_generator_factory> prg_factory;
   unsigned                                         max_nof_prb;
   bool                                             enable_post_eq_sinr;
+  bool                                             enable_diagnostics;
 };
 
 } // namespace
@@ -70,7 +74,8 @@ ocudu::create_pusch_demodulator_factory_sw(std::shared_ptr<channel_equalizer_fac
                                            std::shared_ptr<evm_calculator_factory>          evm_calc_factory,
                                            std::shared_ptr<pseudo_random_generator_factory> prg_factory,
                                            unsigned                                         max_nof_prb,
-                                           bool                                             enable_post_eq_sinr)
+                                           bool                                             enable_post_eq_sinr,
+                                           bool                                             enable_diagnostics)
 {
   return std::make_shared<pusch_demodulator_factory_generic>(std::move(equalizer_factory),
                                                              std::move(precoder_factory),
@@ -78,5 +83,6 @@ ocudu::create_pusch_demodulator_factory_sw(std::shared_ptr<channel_equalizer_fac
                                                              std::move(evm_calc_factory),
                                                              std::move(prg_factory),
                                                              max_nof_prb,
-                                                             enable_post_eq_sinr);
+                                                             enable_post_eq_sinr,
+                                                             enable_diagnostics);
 }
