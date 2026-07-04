@@ -218,8 +218,11 @@ void port_channel_estimator_average_impl::get_symbol_ch_estimate(
   int end   = re_mask.find_highest();
   ocudu_assert((begin >= 0) && (end >= 0), "Invalid mask.");
 
-  // Check if the mask is contiguous.
-  if (nof_active == static_cast<unsigned>(end - begin)) {
+  // Take the straight path only if the mask selects all the subcarriers, as the unmasked variant writes the channel
+  // estimate for the entire hop bandwidth. Note that a mask spanning [begin, end] (both included) is contiguous when
+  // it contains exactly end + 1 - begin active entries - the previous check (end - begin) misclassified masks with a
+  // single hole as contiguous and never detected truly contiguous ones.
+  if ((nof_active == static_cast<unsigned>(end + 1 - begin)) && (nof_active == nof_subcarriers)) {
     get_symbol_ch_estimate(symbol, i_symbol, tx_layer);
   } else {
     std::array<cbf16_t, MAX_NOF_SUBCARRIERS> storage;
