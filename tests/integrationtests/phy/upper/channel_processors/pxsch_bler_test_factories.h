@@ -35,6 +35,7 @@ create_sw_pusch_processor_factory(task_executor&                                
                                   bool                                             dec_enable_early_stop,
                                   const std::string&                               pxsch_type,
                                   port_channel_estimator_td_interpolation_strategy td_interpolation_strategy,
-                                  channel_equalizer_algorithm_type                 equalizer_algorithm_type);
+                                  channel_equalizer_algorithm_type                 equalizer_algorithm_type,
+                                  bool                                             enable_pusch_diagnostics = false);
 
 } // namespace ocudu

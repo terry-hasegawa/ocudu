@@ -180,7 +180,8 @@ ocudu::create_sw_pusch_processor_factory(task_executor&                         
                                          bool                                             dec_enable_early_stop,
                                          const std::string&                               pxsch_type,
                                          port_channel_estimator_td_interpolation_strategy td_interpolation_strategy,
-                                         channel_equalizer_algorithm_type                 equalizer_algorithm_type)
+                                         channel_equalizer_algorithm_type                 equalizer_algorithm_type,
+                                         bool                                             enable_pusch_diagnostics)
 {
   std::shared_ptr<dft_processor_factory> dft_proc_factory = create_dft_processor_factory_fftw_slow();
   report_fatal_error_if_not(dft_proc_factory, "Failed to create factory.");
@@ -278,7 +279,8 @@ ocudu::create_sw_pusch_processor_factory(task_executor&                         
                                           evm_calc_factory,
                                           pseudo_random_gen_factory,
                                           MAX_NOF_PRBS,
-                                          true);
+                                          true,
+                                          enable_pusch_diagnostics);
   report_fatal_error_if_not(pusch_demod_factory, "Failed to create factory.");
 
   std::shared_ptr<ulsch_demultiplex_factory> demux_factory = create_ulsch_demultiplex_factory_sw();

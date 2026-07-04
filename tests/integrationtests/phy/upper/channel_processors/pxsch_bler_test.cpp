@@ -54,6 +54,7 @@ static unsigned                     bwp_size_rb                      = 273;
 static pusch_mcs_table              mcs_table                        = pusch_mcs_table::qam64;
 static sch_mcs_index                mcs_index                        = 20;
 static bool                         enable_dc_position               = false;
+static bool                         enable_pusch_diagnostics         = false;
 static std::string                  pxsch_type                       = "auto";
 static std::string                  eal_arguments                    = "pxsch_bler_test";
 
@@ -236,7 +237,8 @@ private:
                                           use_early_stop,
                                           pxsch_type,
                                           port_channel_estimator_td_interpolation_strategy::average,
-                                          channel_equalizer_algorithm_type::zf);
+                                          channel_equalizer_algorithm_type::zf,
+                                          enable_pusch_diagnostics);
     report_fatal_error_if_not(pusch_proc_factory, "Failed to create PUSCH processor factory.");
 
     // Create resource grid factory.
@@ -381,6 +383,14 @@ private:
                cfo_stats_Hz.get_max(),
                cfo_stats_Hz.get_mean(),
                pxsch_type);
+
+    if (enable_pusch_diagnostics) {
+      fmt::print("\n  diag: sinr_lyr0={:+.2f}dB sinr_lyr1={:+.2f}dB cond={:.2f}dB llr_sat={:.3f}\n",
+                 sinr_lyr0_stats.get_mean(),
+                 sinr_lyr1_stats.get_mean(),
+                 cond_stats_dB.get_mean(),
+                 llr_sat_stats.get_mean());
+    }
   }
 
   void loop()
@@ -435,6 +445,19 @@ private:
       if (sch_result.csi.get_cfo_Hz().has_value()) {
         cfo_stats_Hz.update(*sch_result.csi.get_cfo_Hz());
       }
+      if (sch_result.csi.get_diagnostics().has_value()) {
+        const pusch_diagnostics& diag = *sch_result.csi.get_diagnostics();
+        if (!diag.sinr_layer_dB.empty()) {
+          sinr_lyr0_stats.update(diag.sinr_layer_dB[0]);
+        }
+        if (diag.sinr_layer_dB.size() > 1) {
+          sinr_lyr1_stats.update(diag.sinr_layer_dB[1]);
+        }
+        if (diag.ch_cond_dB.has_value()) {
+          cond_stats_dB.update(*diag.ch_cond_dB);
+        }
+        llr_sat_stats.update(diag.llr_sat_ratio);
+      }
 
       // Increment slots.
       ++pdsch_config.slot;
@@ -461,6 +484,10 @@ private:
   sample_statistics<float> evm_stats;
   sample_statistics<float> ta_stats_us;
   sample_statistics<float> cfo_stats_Hz;
+  sample_statistics<float> sinr_lyr0_stats;
+  sample_statistics<float> sinr_lyr1_stats;
+  sample_statistics<float> cond_stats_dB;
+  sample_statistics<float> llr_sat_stats;
 
   std::unique_ptr<pdsch_processor>           transmitter;
   std::unique_ptr<pusch_processor>           receiver;
@@ -488,6 +515,7 @@ static void usage(std::string_view prog)
   fmt::print("\t-F       Channel fading distribution: uniform-phase, rayleigh or butler. [Default {}]\n",
              channel_fading_distribution);
   fmt::print("\t-D       Toggle enable DC position. [Default {}]\n", enable_dc_position);
+  fmt::print("\t-d       Toggle PUSCH diagnostics collection. [Default {}]\n", enable_pusch_diagnostics);
   fmt::print("\t-S       SINR. [Default {}]\n", sinr_dB);
   fmt::print("\t-N       Number of corrupted RE per OFDM symbol. [Default {}]\n", nof_corrupted_re_per_ofdm_symbol);
   fmt::print("\t-P       Number of receive ports. [Default {}]\n", nof_rx_ports);
@@ -506,7 +534,7 @@ static void usage(std::string_view prog)
 static void parse_args(int argc, char** argv)
 {
   int opt = 0;
-  while ((opt = getopt(argc, argv, "C:F:S:N:P:L:R:B:M:m:DT:vh")) != -1) {
+  while ((opt = getopt(argc, argv, "C:F:S:N:P:L:R:B:M:m:DdT:vh")) != -1) {
     switch (opt) {
       case 'C':
         if (optarg != nullptr) {
@@ -520,6 +548,9 @@ static void parse_args(int argc, char** argv)
         break;
       case 'D':
         enable_dc_position = !enable_dc_position;
+        break;
+      case 'd':
+        enable_pusch_diagnostics = !enable_pusch_diagnostics;
         break;
       case 'S':
         sinr_dB = std::strtof(optarg, nullptr);
