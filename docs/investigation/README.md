@@ -52,6 +52,8 @@ Phases 0-1 only; no source modified. All file:line references are relative to th
 | `phase1_cuda_map.md` | CUDA delta: runtime infra (streams/memory/device), config + auto-mode selection model, upper-PHY backends + resident-buffer contract, lower-PHY + OFH backends |
 | `phase1_pipeline_transfers.md` | Per-slot UL/DL pipelines in accelerated mode + complete host↔device transfer/sync inventory with sizes, and the discrete-vs-coherent delta |
 | `phase1_sm80_portability.md` | sm_80 / CUDA-version / coherent-memory portability audit (arch guards, memory policies, VkFFT/NVRTC) |
+| `phase2_prep.md` | Benchmark-infra enumeration, container CPU baseline (caveated), and what Phase 2 will conclude |
+| `phase2_a100x_runbook.sh` | One-command A100X measurement battery (gate, sweeps incl. 4x4 + managed-vs-pinned, OFH matrix, SRS, Nsight, ctest) |
 
 ## What `auto` resolves to on the A100X (summary table)
 
